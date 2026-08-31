@@ -11,7 +11,7 @@ No measured cell in this document is typed by hand.
 
 The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; run it with `pnpm --filter=ekrina-bench test`.
 Index memory is a diagnostic too ([`bench/memory.ts`](../bench/memory.ts), `node --expose-gc bench/memory.ts`): it measures what each configuration's index retains at 100k, in a fresh process per cell, and what survives dropping the searcher.
-It is not published because the answer is uninteresting in the way that matters — every library reclaims its index within the harness's ~0.1 MB resolution floor.
+It is not published because the answer is uninteresting in the way that matters, every library reclaims its index within the harness's ~0.1 MB resolution floor.
 The single exception is by design rather than a defect: fuzzysort's `prepare()` cache is process-wide and unevicted, so its footprint is permanent process cost until you call its `cleanup()`.
 Improvements to the benchmarks are welcome.
 
@@ -56,9 +56,9 @@ An "(all opts)" row in the corpus tables shares its base library's size, deps, a
 Ekrina's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only matching opt-in, so the honest name is the specific one.
 The specific opt-ins the "(all opts)" rows switch on, and where output shapes differ:
 
-- `Ekrina`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier — a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
+- `Ekrina`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier, a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
 - `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Ekrina's one-edit rescue
-- `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order — the same result set Ekrina's multi-word tier returns. Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
+- `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order, the same result set Ekrina's multi-word tier returns. Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
 - `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalisation doesn't strip accents
 - `fuzzy`: its "ranges" are a pre-wrapped string, not numeric indices
 
@@ -73,30 +73,30 @@ The methodology lives here, once; the result sections point back to it instead o
 
 ### One measurement model: process-cold
 
-Every time cell in this document comes from [`bench/run.ts`](../bench/run.ts): a **fresh node process per sample**, so the JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty by construction — nothing is reconstructed by arithmetic, and no harness state can leak between cells.
+Every time cell in this document comes from [`bench/run.ts`](../bench/run.ts): a **fresh node process per sample**, so the JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty by construction, nothing is reconstructed by arithmetic, and no harness state can leak between cells.
 Each child times:
 
 - **index** = the constructor call, whatever the configuration builds there (uFuzzy (all opts) latinizing the haystack included; fuzzysort has no constructor at all, so its prepare-all pass lands in its first query, which is where a real user pays it).
-- **cold query** = the first answer to the probe — every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, microfuzz's first-search slice, fuzzysort's prepare-all.
-- **batch** = one process answering a short-word warmup match (`grady`-shaped: guaranteed literal hit, absorbs the JIT and the first full scan) and then all twenty probes, once each: the realistic session. Warmth here is earned only by answering distinct real queries — no query is ever repeated, anywhere in the harness. The batch reports its total, the warmup (`first`), the mean of the twenty (`batch/query`), and each probe's own post-warmup time, which the per-probe tables show as **batch ms**.
+- **cold query** = the first answer to the probe, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, microfuzz's first-search slice, fuzzysort's prepare-all.
+- **batch** = one process answering a short-word warmup match (`grady`-shaped: guaranteed literal hit, absorbs the JIT and the first full scan) and then all twenty probes, once each: the realistic session. Warmth here is earned only by answering distinct real queries, no query is ever repeated, anywhere in the harness. The batch reports its total, the warmup (`first`), the mean of the twenty (`batch/query`), and each probe's own post-warmup time, which the per-probe tables show as **batch ms**.
 - **one-shot** = constructor + first answer, summed inside one child's consecutive windows: the full price of "given a list, get an answer".
 
 The JIT is included deliberately.
 A cold first call runs unoptimised code, and that is exactly what a user's first call runs; by the twentieth distinct query the engine is as warm as a real session ever makes it.
-The previous harness sampled hundreds of repeats of one query, which tiered the JIT far past anything realistic and hid every first-call cost inside an untimed calibration probe — [docs/measurement.md](./measurement.md) records the move.
+The previous harness sampled hundreds of repeats of one query, which tiered the JIT far past anything realistic and hid every first-call cost inside an untimed calibration probe, [docs/measurement.md](./measurement.md) records the move.
 
 Which column matters depends on workload: search-as-you-type → **batch/query** (and the session table below for the keystroke chain); a backend one-shot over fresh data → **one-shot**; a first-keystroke latency budget over a prebuilt index → **cold query**.
 
 ### Timing method
 
 **Medians across fresh processes, published; minimums kept.**
-Timing noise is one-sided (GC, scheduler, and thermal interruptions only ever _add_ time), so the median across processes rejects spikes; the per-cell minimum — the noise-free floor — stays in [`bench/results.json`](../bench/results.json) but is never the headline, because best-of-N flatters.
-Five processes per cell is the dev default and ten the publish setting (`pnpm bench --runs=N`): every number is milliseconds-scale under this model, so a handful of process samples resolves it — the old hundreds-of-samples machinery existed only to resolve steady-state microseconds that no real user ever sees.
+Timing noise is one-sided (GC, scheduler, and thermal interruptions only ever _add_ time), so the median across processes rejects spikes; the per-cell minimum, the noise-free floor, stays in [`bench/results.json`](../bench/results.json) but is never the headline, because best-of-N flatters.
+Five processes per cell is the dev default and ten the publish setting (`pnpm bench --runs=N`): every number is milliseconds-scale under this model, so a handful of process samples resolves it, the old hundreds-of-samples machinery existed only to resolve steady-state microseconds that no real user ever sees.
 
 Four guards keep a run honest:
 result counts must be identical across a cell's processes (a variant whose answer drifts is not timing comparable work);
 variant order rotates per repetition so thermal and load drift land evenly instead of on whichever library ran last;
-base Ekrina measuring slower than its strictly-more-code acronym configuration fails the run outright (more code cannot be faster — a violated invariant means absorbed load, and the artifact is not written);
+base Ekrina measuring slower than its strictly-more-code acronym configuration fails the run outright (more code cannot be faster, a violated invariant means absorbed load, and the artifact is not written);
 and the first cell is re-timed after the last as a drift canary.
 
 Numbers are expected to vary per machine: swapping between a Mac ARM host and an AMD x64 showed subtly different relative results.
@@ -144,7 +144,7 @@ The resulting probes:
 | 6     | two words, second mistyped    | `handcrafted wooxen`      | the rescue must find the failing word, not assume it  |
 | 7     | reversed phrase, one mistyped | `wooden handcxafted`      | the correction must survive order-independence        |
 | 8     | two words, both mistyped      | `handcxafted wooxen`      | two edits: refusal beats guessing (unscored)          |
-| 9     | plural typed, singular stored | `romanowskis`             | a trailing `-s` the corpus lacks — one deletion       |
+| 9     | plural typed, singular stored | `romanowskis`             | a trailing `-s` the corpus lacks, one deletion       |
 | 10    | prefix / partial word         | `auxen`                   | precision at a near-unique singleton                  |
 | 11    | mid-word infix                | `gonom`                   | contains-anywhere vs start-anchored ranking           |
 | 12–14 | typo gradient (light → heavy) | `hugutte` `huuete` `hget` | each engine's effective fuzzy limit                   |
@@ -170,10 +170,10 @@ MRR over eighteen scored queries is correspondingly coarse: read differences of 
 Measured on the mixed corpus (process-cold constructor timings; build cost barely differs between corpora).
 Fuse.js's near-free build is the flip side of its slow queries: its "index" is trivial and the work is deferred to query time.
 fast-fuzzy's trie is the opposite trade: the heaviest build in the set buys its subtree pruning.
-fuzzysort has no constructor at all, so it has no column here — its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually pays it.
-uFuzzy's ~6 ms base construction is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction costs 0.03 ms), so "keeps no index" is true per item but not per process — the base cell is near-identical at 10k and 100k, which is the proof it never touches the list; the (all opts) column shown here also latinizes the haystack, which is why it grows with the corpus (6.8 → 11.6 ms).
+fuzzysort has no constructor at all, so it has no column here, its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually pays it.
+uFuzzy's ~6 ms base construction is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction costs 0.03 ms), so "keeps no index" is true per item but not per process, the base cell is near-identical at 10k and 100k, which is the proof it never touches the list; the (all opts) column shown here also latinizes the haystack, which is why it grows with the corpus (6.8 → 11.6 ms).
 microfuzz's column is its eager constructor; its lazy first-search slice shows up in the cold cells instead.
-Ekrina's constructor only allocates — field text is trimmed, normalised and masked the first time an item survives a gate — so a 100k list swap costs about a millisecond, and the first query then carries what construction deferred (its cold cells).
+Ekrina's constructor only allocates - field text is trimmed, normalised and masked the first time an item survives a gate - so a 100k list swap costs about a millisecond, and the first query then carries what construction deferred (its cold cells).
 
 ## Match quality, probe by probe
 
@@ -181,12 +181,12 @@ Each library has its own definition of a match, so raw outputs aren't directly c
 To surface the differences, the twenty probes run against every library; queries are from the mixed corpus at 10k.
 One small table per query:
 
-- **rank** = where the queried item placed (1 = top hit; ✗ = matched other things but lost the source; — = returned nothing)
+- **rank** = where the queried item placed (1 = top hit; ✗ = matched other things but lost the source;, = returned nothing)
 - **matches** = how many of the 10,000 items the library returned
 - **index ms** = the constructor call, in the same fresh process
-- **cold ms** = the first answer to this query in a fresh process — JIT, caches and lazy slices all genuinely cold
+- **cold ms** = the first answer to this query in a fresh process, JIT, caches and lazy slices all genuinely cold
 - **total ms** = index + cold, summed inside each child's consecutive windows: the cold one-shot for this exact query
-- **batch ms** = this probe's time inside the batch run — after the warmup match, mid-session, lazy costs landing on whichever probe triggers them
+- **batch ms** = this probe's time inside the batch run, after the warmup match, mid-session, lazy costs landing on whichever probe triggers them
 
 Every cell is process-cold ("One measurement model"), so the per-probe tables show exactly which query shapes make each library pay: ekrina's rescue mask build appears on the typo probes and nowhere else, fuzzysort's prepare-all on every first call.
 Magnitude only; the rigorous timings are the speed tables below.
@@ -230,7 +230,7 @@ Rank is the differentiator: Ekrina/microfuzz put the source first; fuzzysort and
 | uFuzzy           |    2 |      19 |     6.42 |    1.36 |     7.78 |     0.26 |
 <!-- bench:end -->
 
-A second plain-word probe from elsewhere in the corpus. Ekrina ranks the source first, as on the long word, and matches uFuzzy's 19-row set — the tightest here — because the one-edit rescue stops once ten literal hits fill the page, so a query this ordinary pays for no corrections.
+A second plain-word probe from elsewhere in the corpus. Ekrina ranks the source first, as on the long word, and matches uFuzzy's 19-row set, the tightest here, because the one-edit rescue stops once ten literal hits fill the page, so a query this ordinary pays for no corrections.
 
 ### two words: `handcrafted wooden`
 
@@ -283,9 +283,9 @@ The tokenizing engines keep exactly the five items at rank 1; uFuzzy's default (
 <!-- bench:end -->
 
 The same phrase with one character wrong in the first word.
-This used to be the probe Ekrina did not answer — a fifteen-character query offers fifteen substitution positions to guess from, and the old restriction to single-word queries is what stopped the rescue inventing matches at that width.
+This used to be the probe Ekrina did not answer, a fifteen-character query offers fifteen substitution positions to guess from, and the old restriction to single-word queries is what stopped the rescue inventing matches at that width.
 The multi-word rescue reaches it without reopening that hazard by inverting the search: the words that _do_ occur literally pin the candidate fields first, and only the one failing word is corrected, over that handful of fields rather than the corpus.
-The three probes after this one stress the same mechanism from each side — the typo in the other word, the phrase reversed, and both words wrong at once, where refusing is the only right answer.
+The three probes after this one stress the same mechanism from each side, the typo in the other word, the phrase reversed, and both words wrong at once, where refusing is the only right answer.
 
 ### two words, second mistyped: `handcrafted wooxen`
 
@@ -336,7 +336,7 @@ The corrected phrase must still match through the order-independent multi-word t
 <!-- bench:end -->
 
 Two edits in one phrase, so no one-edit rescue can explain it, and like the garbage probe there is no rank column that matters: the honest answer is nothing.
-Ekrina must return 0 here — anything else means the rescue guessed — while the edit-distance engines legitimately match it, at their usual candidate-set width.
+Ekrina must return 0 here, anything else means the rescue guessed, while the edit-distance engines legitimately match it, at their usual candidate-set width.
 [`bench/hits.test.ts`](../bench/hits.test.ts) pins the refusal as an assertion, the same way the garbage probe is pinned.
 
 ### plural typed, singular stored: `romanowskis`
@@ -355,7 +355,7 @@ Ekrina must return 0 here — anything else means the rescue guessed — while t
 
 A trailing `s` the corpus does not hold, which is one deletion and therefore exactly what the one-edit rescue exists for.
 The subsequence engines return _0_: a plural is not a subsequence of its singular, because the trailing character has nothing left to match.
-Only edit-distance matching reaches it, and Ekrina and uFuzzy's SingleError configuration both land the source at rank 1 from two candidates — uFuzzy's own default finds nothing.
+Only edit-distance matching reaches it, and Ekrina and uFuzzy's SingleError configuration both land the source at rank 1 from two candidates, uFuzzy's own default finds nothing.
 fast-fuzzy and Fuse.js also rank it first, from 53 and 51 candidates, twenty-five times the set for the same answer.
 Only the `-s` plural is reachable this way: `-es`, `-ves` and `-ies` are two or three edits, and no rescue tiering closes that without a stemmer.
 
@@ -390,7 +390,7 @@ The typo engines are the other end of that trade, ~450 candidates for the same o
 <!-- bench:end -->
 
 A mid-word slice of "ergonomic", so nothing can prefix-match: this probe separates contains-anywhere ranking from start-anchored ranking.
-Ekrina, microfuzz and Fuse.js agree on rank 5 — four items outrank the source legitimately — while the start-anchored rankers sink it (fuzzysort 13th, uFuzzy 58th).
+Ekrina, microfuzz and Fuse.js agree on rank 5, four items outrank the source legitimately, while the start-anchored rankers sink it (fuzzysort 13th, uFuzzy 58th).
 
 ### the fuzzy limit: `hugutte` / `huuete` / `hget`
 
@@ -556,9 +556,9 @@ fast-fuzzy's matches come from edit distance rather than folding, which is why t
 No rank column: every library correctly returns nothing, which is the only right answer.
 What separates them is the price of that answer, shown against each library's own cost for the long-word probe (a query that does match), so the column reads as "what fraction of a real query does a hopeless one cost you".
 Process-cold, this probe inverted: Ekrina's miss costs _more_ than its hit (156%, the only ratio above 100% in the table), and the reason is diligence, not waste.
-A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query — the same second pass that takes every typo probe above at rank 1 with a single row.
+A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query, the same second pass that takes every typo probe above at rank 1 with a single row.
 The engines with cheap misses are cheap because they never tried; uFuzzy's 0.8 ms refusal and Ekrina's 4.5 ms one bought different amounts of certainty that nothing was there.
-The bill is also once per searcher, not per miss: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it — a session's first thin query pays it and the other nineteen ride it.
+The bill is also once per searcher, not per miss: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first thin query pays it and the other nineteen ride it.
 (The old warm harness showed the opposite ratio, 3%, because the masks were pre-paid; both numbers are true, and the cold one is what a fresh searcher feels.)
 
 ## Scorecard
@@ -567,7 +567,7 @@ One line per configuration: MRR from [`bench/hits.test.ts`](../bench/hits.test.t
 **MRR** = mean reciprocal rank of the queried item across the 18 scored queries, with the top-10 cutoff from "The corpus and the twenty probes": misses and ranks outside the top 10 score 0.
 **index ms** = the constructor call (from the batch cell's fresh processes).
 **cold ms** = the mean first-answer cost across all twenty probes, each in its own fresh process.
-**batch ms** = one fresh process answering a short-word warmup match and then all twenty probes once — the realistic session, whole.
+**batch ms** = one fresh process answering a short-word warmup match and then all twenty probes once, the realistic session, whole.
 **batch/query** = the mean of the twenty post-warmup probes: what a query costs once the searcher has genuinely worked.
 Which column matters depends on workload: search-as-you-type → **batch/query**; backend one-shot → index + cold ("One measurement model"'s one-shot); a first-keystroke budget → **cold**.
 
@@ -631,11 +631,11 @@ The scorecard's cost columns are exactly what the Pareto charts draw, one per wo
   <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a twenty-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Ekrina, Ekrina (acronym): Ekrina (acronym) tops MRR at 0.87 at 0.81 ms per query, and everything above 0.5 MRR that isn't Ekrina, including Fuse.js (all opts) at 0.81 and ~17 ms, is dominated." src="./pareto-query-light.svg">
 </picture>
 
-Its x-axis is the batch's per-query cost — what a query costs once the searcher has answered nineteen real ones — and its frontier runs uFuzzy → fuzzysort → Ekrina → Ekrina (acronym).
+Its x-axis is the batch's per-query cost, what a query costs once the searcher has answered nineteen real ones, and its frontier runs uFuzzy → fuzzysort → Ekrina → Ekrina (acronym).
 The cheap end belongs to the bare-output engines and their MRR says why (0.11 and 0.42); nothing above 0.5 MRR comes within 25% of Ekrina's 0.81 ms, and everything typo-tolerant is 9–25× dearer.
 
 **Backend one-shot workload** (a fresh process pays constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
-Its frontier runs `fuzzy` → Ekrina → Ekrina (acronym): a no-index substring scan at 0.35 MRR owns the cheap end, and every other configuration — uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised — is dominated.
+Its frontier runs `fuzzy` → Ekrina → Ekrina (acronym): a no-index substring scan at 0.35 MRR owns the cheap end, and every other configuration - uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised - is dominated.
 This is the ledger where Ekrina's lazy preparation presents its bill: the first answer carries the raw-gate scan and, on typo-shaped queries, the mask build (~4.4 ms at 10k against a 0.14 ms constructor), and the batch's `first` vs `rest` split shows the whole bill paid by query one.
 
 _Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
@@ -648,14 +648,14 @@ Every cell is process-cold ("One measurement model"), and each corpus gets two t
 The scale table is the one-shot ledger: **index** = the constructor, **cold query** = mean first answer across the twenty probes (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each probe's own child, **total rel** = that total relative to Ekrina (100% = same, lower = faster).
 The batch table is the session ledger: **batch total** = one fresh process answering a short-word warmup match then all twenty probes once, **batch/query** = the mean of the twenty post-warmup probes, **batch rel** = batch total relative to Ekrina.
 The aggregate row is a **geometric mean**: per-library times span orders of magnitude, so an arithmetic mean would only describe the slowest library; the geomean is the standard aggregate for multiplicative spreads, and the rel cells are equally the geomean of each rel column (a geomean of ratios is the ratio of geomeans).
-These tables publish the 100k size; the full 10k matrix — scorecard and per-probe tables — carries the fine-grained view, and every cell of both sits in [`bench/results.json`](../bench/results.json).
+These tables publish the 100k size; the full 10k matrix, scorecard and per-probe tables, carries the fine-grained view, and every cell of both sits in [`bench/results.json`](../bench/results.json).
 The two corpora are described in "The corpus and the twenty probes"; they're benched separately.
 The mixed table only lists configurations that fold diacritics, i.e. actually do that corpus's task (cross-checked per query by [`bench/hits.test.ts`](../bench/hits.test.ts)); a fast non-folding row would be fast at a different, easier job, so those are omitted and named below the table.
 The **_all libraries_** row is the corpus-wide view: the geometric mean of every shown configuration at that size.
 **(all opts)** rows switch on every opt-in the library has: diacritic folding, multi-word, highlight/ranges output, and typo modes; base rows are stock defaults, and [Libraries](#libraries) itemizes which opt-in is which.
 Typo modes are included because Ekrina's one-edit matching is always on and cannot be disabled, so holding another engine's typo mode off would time two engines doing different jobs.
 Only uFuzzy is affected in practice. Fuse.js (Bitap) and fast-fuzzy (edit distance) are typo-tolerant in every configuration here.
-Every child consumes its result counts, the runner asserts they are identical across a cell's processes, and [`bench/hits.test.ts`](../bench/hits.test.ts) records per-library match counts for every query — so the timings above are known to be timing comparable work.
+Every child consumes its result counts, the runner asserts they are identical across a cell's processes, and [`bench/hits.test.ts`](../bench/hits.test.ts) records per-library match counts for every query, so the timings above are known to be timing comparable work.
 Per-cell minimums and heap footprints are in [`bench/results.json`](../bench/results.json).
 Ekrina leads its own table; the rest are alphabetical, so each library's base and (all opts) rows sit together and nothing is ordered by how well it did.
 
@@ -746,9 +746,9 @@ Omitted: uFuzzy and fuse.js base configs (their (all opts) rows fold and stay), 
 
 Every cell is process-cold, so read the columns as three different workloads, not three qualities of one number.
 The **batch** column is the honest headline: one process, twenty distinct queries, and the amortisation each design promises either shows up or doesn't.
-Ekrina's batch is carried by its architecture — a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation is paid once, by the first typo-shaped query, for the whole session.
+Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation is paid once, by the first typo-shaped query, for the whole session.
 _uFuzzy wins the raw batch at 100k on ascii_ (55% of Ekrina bare, 88% folding) and its bare `batch/query` is the cheapest in the set; on mixed its folding configuration lands inside the tie band (105%), and its MRR (0.08–0.11 bare, 0.39–0.52 folding) is what the price buys.
-Ekrina's batch beats everything else — ~4× its parent microfuzz, 2× fuzzysort, ~8× match-sorter, ~15× fast-fuzzy (ascii; it can't fold), ~47× Fuse.js on mixed — while topping both scorecards outright.
+Ekrina's batch beats everything else - ~4× its parent microfuzz, 2× fuzzysort, ~8× match-sorter, ~15× fast-fuzzy (ascii; it can't fold), ~47× Fuse.js on mixed - while topping both scorecards outright.
 The **cold query** column is where Ekrina's laziness presents its bill: ~17 ms mean at 100k, most of it the rescue's union-and-bigram mask build, paid once per searcher and visible per probe kind in the 10k tables (typo probes pay it, literal probes pay the ~4 ms raw gate).
 An eager-index engine inverts the shape: fast-fuzzy's first answer is cheap only because its constructor already spent ~360–390 ms.
 The **index** column plus the first answer is the one-shot ledger, and there `fuzzy`'s bare substring scan is the only thing cheaper than Ekrina at any quality level.
@@ -773,7 +773,7 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:end -->
 
 Ekrina's per-keystroke cost falls _over 4×_ across the word (3.05 → 1.71 → 0.70) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that pays.
-Ekrina takes every step of the session, the wide opener included (3.05 vs uFuzzy's 4.65), and the session total by 1.7× (5.46 vs 9.53) — while returning tiers and ranges against uFuzzy's bare index array, at 0.52 MRR to Ekrina's 0.84.
+Ekrina takes every step of the session, the wide opener included (3.05 vs uFuzzy's 4.65), and the session total by 1.7× (5.46 vs 9.53), while returning tiers and ranges against uFuzzy's bare index array, at 0.52 MRR to Ekrina's 0.84.
 microfuzz stays flat at ~36–43 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 Unlike the scorecard, this table is a single process rather than a median of five, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time costs (Ekrina's mask build, fuzzysort's lazy target prep) are paid at load, not on keystroke one; the cold cells above price them.
@@ -814,14 +814,14 @@ Three things carry the claim, each measured in its own section:
 
 - **Quality**: Ekrina (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.82 ascii), with the smallest result sets of the subsequence engines (median 7 rows on structured queries where Fuse.js ships ~90); the phrase-typo probes are what pushed the lead past the tie band.
 - **Cost, measured cold**: the cheapest twenty-query session of anything above 0.5 MRR at both sizes (batch 18.7 ms at mixed 10k, ~0.8 ms per query after the first; ~4–47× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Ekrina's lazy preparation lands its whole bill on query one (~4.4 ms at 10k, ~17 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot ledger, where bare `fuzzy` is cheaper.
-- **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length — phrase probes included — so the same engine covers documents, not just labels.
+- **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length, phrase probes included, so the same engine covers documents, not just labels.
 
 The carve-outs:
 
-- **Typo tolerance beyond a single edit.** The one-edit tiers rescue every single-character typo (transposition, insertion, deletion and substitution) at rank 1 with a single row — inside phrases too, where the failing word is corrected alone — but _two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter ("the fuzzy limit") and the double-typo phrase.
+- **Typo tolerance beyond a single edit.** The one-edit tiers rescue every single-character typo (transposition, insertion, deletion and substitution) at rank 1 with a single row - inside phrases too, where the failing word is corrected alone - but _two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter ("the fuzzy limit") and the double-typo phrase.
   If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool; the scorecard prices what that buys and costs: 0.81/0.59 MRR on mixed, ~18–24 ms per cold query, ~90–450-row result sets.
 - **Raw throughput when a bare index array is enough.** uFuzzy wins the 100k ascii batch outright (55% of Ekrina bare, 88% with folding; on mixed its folding config only ties) and owns the cheapest bare per-query and miss cells at every size.
-  It costs most of the match quality to get there — 0.08–0.11 MRR bare, 0.39–0.52 folded, against Ekrina's 0.79–0.87 — and no ranges, tiers, or per-field config. A real trade, priced in full above.
+  It costs most of the match quality to get there - 0.08–0.11 MRR bare, 0.39–0.52 folded, against Ekrina's 0.79–0.87 - and no ranges, tiers, or per-field config. A real trade, priced in full above.
 
 The rest of the field is dominated on these benchmarks:
 

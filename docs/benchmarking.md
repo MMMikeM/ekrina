@@ -49,7 +49,7 @@ flowchart TD
 ```
 
 Nothing warm-loops.
-The JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty because the process is new — no cache busting, no subtraction, no calibration blind spots.
+The JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty because the process is new, no cache busting, no subtraction, no calibration blind spots.
 
 ## What each cell means
 
@@ -66,10 +66,10 @@ flowchart LR
     C & D -->|"total · first · rest-mean"| BA[("batch")]
 ```
 
-- **index** — what the constructor builds: fast-fuzzy's trie is expensive here, ekrina allocates buffers, fuzzysort has no constructor at all.
-- **cold query** — the first answer, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per probe kind.
-- **one-shot** — index + first answer summed inside one child's consecutive windows: the whole price of "given a list, get an answer".
-- **batch** — a short-word warmup match, then the twenty distinct probes once each through one process: the realistic session, and the only warmth anywhere — earned by real queries, never repetition. The warmup absorbs JIT and first-scan cost; each probe's own post-warmup time feeds the per-probe tables' `batch ms` column.
+- **index**, what the constructor builds: fast-fuzzy's trie is expensive here, ekrina allocates buffers, fuzzysort has no constructor at all.
+- **cold query**, the first answer, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per probe kind.
+- **one-shot**, index + first answer summed inside one child's consecutive windows: the whole price of "given a list, get an answer".
+- **batch** - a short-word warmup match, then the twenty distinct probes once each through one process: the realistic session, and the only warmth anywhere - earned by real queries, never repetition. The warmup absorbs JIT and first-scan cost; each probe's own post-warmup time feeds the per-probe tables' `batch ms` column.
 
 ## Where each published table draws from
 
