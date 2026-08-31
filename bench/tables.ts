@@ -114,8 +114,8 @@ const librariesTable = (): string =>
 	);
 
 // The 100k tables: every cell process-cold. The scale table is the one-shot
-// ledger (constructor, mean first answer, and their measured sum); the batch
-// table is the session ledger (warmup match + twenty probes, one process).
+// measurement (constructor, mean first answer, and their measured sum); the
+// batch table is the session (warmup match + twenty probes, one process).
 const scaleTable = (a: Artifact, corpus: string): string => {
 	const size = String(PUBLISHED_SIZE);
 	const shown = variantsOf(a, corpus)

@@ -1,7 +1,7 @@
-// Pareto-frontier charts: accuracy (MRR) vs cost, one chart per ledger.
-// - pareto-query-*.svg — query ms with the index prebuilt (frontend ledger:
+// Pareto-frontier charts: accuracy (MRR) vs time, one chart per workload.
+// - pareto-query-*.svg — query ms with the index prebuilt (frontend workload:
 //   the index is built eagerly at load, keystrokes pay query only).
-// - pareto-total-*.svg — total ms = index + first (cold) query (backend one-shot ledger).
+// - pareto-total-*.svg — total ms = index + first (cold) query (backend one-shot workload).
 // All styling is inlined because GitHub strips <style> blocks from SVGs.
 import { writeFileSync } from "node:fs";
 import type { Artifact } from "../bench/artifact.ts";

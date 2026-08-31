@@ -20,7 +20,7 @@ Counted per query on the ascii corpus at 100k:
    390 results
 ```
 
-The shape that matters: **the pre-filter was never the problem.**
+The finding that matters: **the pre-filter was never the problem.**
 Ekrina's entire gate, a per-item `Int32Array` mask read plus a native regex on survivors, costs less than uFuzzy's _whole_ query, which has no index at all.
 Everything expensive happens per surviving candidate, and only 53% of candidates that reach the ladder produce a result.
 

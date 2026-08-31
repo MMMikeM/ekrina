@@ -60,7 +60,7 @@ ascii 100k, mean over fourteen single-word probes:
 | union mask + bigram build |    100,000 |                — | **11.8 ms**, once per searcher |
 | relaxed scan + rescue     |    100,000 | **5,222 — 5.2%** |                        1.39 ms |
 
-Mixed 100k is the same shape and tighter: the raw gate leaves **197 records, 0.20%**, at 3.29 ms; the ladder produces 147 results in 0.03 ms; the rescue's mask build is 12.0 ms and its relaxed scan admits 3,223 records (3.2%) at 0.90 ms.
+Mixed 100k behaves the same, and tighter: the raw gate leaves **197 records, 0.20%**, at 3.29 ms; the ladder produces 147 results in 0.03 ms; the rescue's mask build is 12.0 ms and its relaxed scan admits 3,223 records (3.2%) at 0.90 ms.
 
 Two things stand out.
 

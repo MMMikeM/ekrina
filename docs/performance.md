@@ -2,7 +2,7 @@
 
 Why Ekrina is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
 Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
-The numbers quoted here are decision evidence: each comes from the run that settled its decision, the relative shape is the claim, and none of it is regenerated.
+The numbers quoted here are decision evidence: each comes from the run that settled its decision, the relative ordering is the claim, and none of it is regenerated.
 
 ## No corpus index
 
@@ -64,7 +64,7 @@ Bigram hashes collide by merging bits: false-pass again.
 `createFuzzySearch` only allocates; a field is trimmed, normalised and masked the first time it survives a gate (`materialise` in `src/search.ts`), so the caches warm to the working set rather than the corpus.
 Single-word gating runs on the caller's raw strings (`buildRawGate`), and `bench/raw-mask.test.ts` sweeps both bench corpora to pin that the raw scan never drops a mask bit against the eager equivalent.
 The one structure that costs a whole-corpus pass (the rescue's union masks and bigram sets) is built by the first query that reaches the relaxed scan; a session whose queries all match literally never pays it.
-The cost lands where a user pays it: construction is allocation, the first rescue-shaped query carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
+The cost lands where a user pays it: construction is allocation, the first query that reaches the rescue carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
 
 ### Survivors carry across keystrokes
 
@@ -88,7 +88,7 @@ Revisit trigger: a long-field corpus probe showing the multi-word tier dominatin
 ## Decision evidence
 
 The tables here justify constants and behaviour that look arbitrary in the source.
-Each is quoted from the run that settled the decision; harnesses have changed since, so read relative shape, not current standings.
+Each is quoted from the run that settled the decision; harnesses have changed since, so read relative ordering, not current standings.
 
 ### Bounded chunk-start retries
 
@@ -139,7 +139,7 @@ A constant minimum query length for the rescues has to pick one workload to fail
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.
 
-- **Corpus shape drives the table.** The fast-fuzzy flip above is the proof: fastest-ish on a shared-prefix word grid, among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
+- **The corpus drives the table.** The fast-fuzzy flip above is the proof: fastest-ish on a shared-prefix word grid, among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
 - **Verify the matching, then time it.** A speed table over unverified matchers compares different jobs. `bench/hits.test.ts` records every library's match count and the queried item's rank per query; it caught uFuzzy silently returning nothing on accent-stripped queries without `latinize`.
 - **Design the corpus property you mean to test.** The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed, not assumed.
 - **Amortisation is a claim, not a given.** Lazy and cached designs move cost rather than remove it; only process-cold measurement (fresh process per sample, benchmarks.md "One measurement model") shows who actually pays and when.
