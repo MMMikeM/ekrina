@@ -77,6 +77,7 @@ The class mask and the bigram sets come from one fused scan per field (`rawField
 **The raw gate, ~3.3 ms.** Paid by any query that cannot narrow: the first one, and any later one that isn't an extension of its predecessor. A typed sequence pays it once; a searcher handed unrelated queries pays it every time.
 
 Those two are the design's central trade, and it is a trade, not a win: against an eagerly-built index the first query is cheaper and a long run of unrelated queries is dearer.
+`search.buildIndex()` takes the other side of it on request: the mask build moves into construction, and every query that cannot narrow filters on the masks instead of running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 

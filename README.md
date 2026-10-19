@@ -12,7 +12,7 @@ Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a sc
 
 - **Tells you how it matched.** Every match carries `tier`, `ranges` and `score`, so ranking, highlighting and "showing results for…" are all reads off the result.
 - **Survives a typo.** A transposition, an insertion, a deletion or a substitution each break the subsequence property; the four one-edit tiers still take all three at rank 1.
-- **Tops the match-quality scorecard.** 0.87 MRR on the mixed corpus at ~0.8 ms per query, against seven other libraries.
+- **Tops the match-quality scorecard.** 0.87 MRR on the mixed corpus at ~0.6 ms per query, against seven other libraries.
 - **Runs anywhere.** No `node:` imports, no DOM, nothing above ES2022: browsers, Node, Deno, Bun and edge runtimes, ESM and CJS.
 - **Stays small.** ~5.5 kB gzip, zero runtime dependencies, TS-first.
 
@@ -62,7 +62,18 @@ byField("ban");
 // so the title hit leads even though both are prefix matches.
 ```
 
-Results are sorted best-first (stable), and preprocessing is cached; the index is built on the first call and reused by every query after.
+Results are sorted best-first (stable), and preprocessing is cached: each item is prepared the first time a query matches it, and the whole-list mask index the first time a query needs it.
+
+To build the mask index ahead of time instead, once the list has loaded or during idle time, call `buildIndex()`:
+
+```typescript
+const search = createFuzzySearch(products, (p) => p.title);
+search.buildIndex();
+```
+
+Over 100k items it takes ~12 ms, after which a first answer averages ~2.6 ms instead of ~13 ms and a twenty-query session drops from ~55 to ~32 ms (the `Ekrina (indexed)` rows in [docs/benchmarks.md](./docs/benchmarks.md)).
+Results are identical either way.
+A searcher that answers a single query and is thrown away comes out slightly behind, so leave it lazy there.
 
 ### Highlighting a result
 
@@ -127,10 +138,10 @@ Options: `fuzzyMatch(text, query, { acronym? })`.
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
 - **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, over 4× by its last letter even over 100k items.
-  Starting a second word, or typing five or more characters that match fewer than ten items literally (a possible typo), rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher.
+  Starting a second word, or typing five or more characters that match fewer than ten items literally (a possible typo), rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; a structured query returns a median of 7 rows where Fuse.js ships ~90.
-- **Backend one-shot lookups**: constructor + first answer takes ~4.5 ms in a genuinely cold process over 10k items, so indexing per request is fine.
-- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.29 ms, and the density floor keeps absent words at exactly 0 false matches.
+- **Backend one-shot lookups**: constructor + first answer takes ~3.5 ms in a genuinely cold process over 10k items, so indexing per request is fine.
+- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.20 ms, and the density floor keeps absent words at exactly 0 false matches.
 
 ## Scores and tiers
 
@@ -213,21 +224,21 @@ Ekrina is ~5.5 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to mic
 
 ## How it compares
 
-At any realistic size these libraries all answer fast enough: a twenty-query session over 100,000 items averages ~3.4 ms per query after the first (~1 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.29 ms.
+At any realistic size these libraries all answer fast enough: a twenty-query session over 100,000 items averages ~2.5 ms per query after the first (~0.5 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.20 ms.
 What separates them is _match quality_ and _what you get back_.
 
-Each library at its best-scoring configuration, mixed corpus at 10k items, measured August 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)):
+Each library at its best-scoring configuration, mixed corpus at 10k items, measured October 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)):
 
 | Library                     |    Gzip | Deps |  MRR | ms/query | Tiers | Ranges | Typos    |
 | --------------------------- | ------: | ---: | ---: | -------: | :---: | :----: | -------- |
-| **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.87 | **0.81** |  🟢   |   🟢   | one edit |
-| Fuse.js (all opts)          | ~9.3 kB |    0 | 0.81 |    17.11 |  🔴   |   🟡   | full     |
-| fast-fuzzy                  |  ~11 kB |    1 | 0.59 |     7.41 |  🔴   |   🟡   | full     |
-| uFuzzy (all opts)           | ~4.1 kB |    0 | 0.52 |     1.04 |  🔴   |   🟢   | one edit |
-| @nozbe/microfuzz            | ~1.7 kB |    0 | 0.46 |     1.50 |  🔴   |   🟢   | 🔴       |
-| fuzzysort                   | ~3.7 kB |    0 | 0.42 |     0.42 |  🔴   |   🟢   | 🔴       |
-| fuzzy                       | ~0.8 kB |    0 | 0.35 |     1.92 |  🔴   |   🟡   | 🔴       |
-| match-sorter                | ~3.4 kB |    2 | 0.32 |     3.03 |  🟢   |   🔴   | 🔴       |
+| **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.87 | **0.57** |  🟢   |   🟢   | one edit |
+| Fuse.js (all opts)          | ~9.3 kB |    0 | 0.81 |    12.95 |  🔴   |   🟡   | full     |
+| fast-fuzzy                  |  ~11 kB |    1 | 0.59 |     5.21 |  🔴   |   🟡   | full     |
+| uFuzzy (all opts)           | ~4.1 kB |    0 | 0.52 |     0.82 |  🔴   |   🟢   | one edit |
+| @nozbe/microfuzz            | ~1.7 kB |    0 | 0.46 |     1.16 |  🔴   |   🟢   | 🔴       |
+| fuzzysort                   | ~3.7 kB |    0 | 0.42 |     0.30 |  🔴   |   🟢   | 🔴       |
+| fuzzy                       | ~0.8 kB |    0 | 0.35 |     1.49 |  🔴   |   🟡   | 🔴       |
+| match-sorter                | ~3.4 kB |    2 | 0.32 |     2.13 |  🟢   |   🔴   | 🔴       |
 
 **MRR** is the mean reciprocal rank of the queried item across 18 scored probes, top-10 cutoff.
 **ms/query** is how long one query takes once the searcher has answered nineteen real ones, the search-as-you-type number.
@@ -238,7 +249,7 @@ Accuracy against one whole cold search (index + one query) is the least flatteri
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy then Ekrina (acronym): Ekrina (acronym) scores 0.87 at ~4.7 ms one-shot, and everything else, including Fuse.js (all opts) at 0.81 and ~25 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.84 at ~3.3 ms one-shot and Ekrina (acronym) 0.87 at ~3.6 ms, and everything else, including Fuse.js (all opts) at 0.81 and ~19 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
 Ekrina is the only library that by default:
@@ -257,10 +268,10 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 - **Match quality**: Ekrina returns the smallest result set of the subsequence libraries and ranks the queried item _first on every structured query_; a one-char slip still matches, and at two dropped chars it returns nothing where its parent returns 67 junk chains.
   A transposition, an insertion and a substitution each break the subsequence property; Ekrina's four one-edit tiers take all three at rank 1 with a single row.
   A typo inside a phrase is corrected too: the words that do occur pin the field, and only the failing word is rescued. Two or more edits in one query remain the edit-distance engines' edge.
-- **Speed, measured cold**: a twenty-query session (one searcher, twenty distinct queries, fresh process) runs 19 ms at 10k and 75 ms at 100k, the fastest of anything above 0.5 MRR, and ~4–47× under every typo-tolerant or tiered alternative, ~1–3.4 ms per query after the first.
-  Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list.
-  A first answer averages ~4.4 ms at 10k and ~17 ms at 100k across the twenty probes, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
-  Only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session faster, at a fraction of the match quality.
+- **Speed, measured cold**: a twenty-query session (one searcher, twenty distinct queries, fresh process) runs 13 ms at 10k and 55 ms at 100k, faster than any other library above 0.5 MRR, and ~4–49× under every typo-tolerant or tiered alternative, ~0.5–2.5 ms per query after the first.
+  Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
+  A first answer averages ~3.4 ms at 10k and ~13 ms at 100k across the twenty probes, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
+  Of the other libraries, only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session faster, at a fraction of the match quality.
   A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
 
 ### What to pick
@@ -269,7 +280,7 @@ Pick Ekrina. It tops the quality scorecard on both benchmark corpora outright an
 At ~5.5 kB gzip it sits mid-pack on size, and the one-edit rescue machinery is where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped). Fuse.js and fast-fuzzy are 1.7–2× larger.
 One workload genuinely points elsewhere:
 
-- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle, ~7–20 ms queries, and ~90–450-row result sets.
+- **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake, but two or more edits in one query need real edit distance. Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle, ~5–15 ms queries, and ~90–450-row result sets.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 

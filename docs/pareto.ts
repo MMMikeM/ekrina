@@ -17,7 +17,8 @@ const lab = (a: Anchor, dy: number, dx = 0): Placement => ({ a, dy, dx });
 // points move. Numbers come from the artifact, never from here.
 const PLACEMENT: Record<string, Record<Metric, Placement>> = {
 	"ekrina (acronym)": { query: lab("start", -8), total: lab("start", -8) },
-	ekrina: { query: lab("start", 16), total: lab("end", 16) },
+	ekrina: { query: lab("start", 16), total: lab("start", 16) },
+	"ekrina (indexed)": { query: lab("end", 24, -8), total: lab("end", 5, -12) },
 	"fuse.js": { query: lab("middle", -15), total: lab("middle", -15) },
 	"fuse.js (all opts)": { query: lab("end", 20, -10), total: lab("middle", 20) },
 	"@nozbe/microfuzz": { query: lab("start", 4), total: lab("end", 4) },
@@ -68,7 +69,7 @@ const METRICS: Record<
 		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot cost",
-		tail: "The no-index engines own the cheapest cold one-shots; the two Ekrina configurations share one pooled build cost and differ only in query time, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		tail: "The no-index engines own the cheapest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out cheaper than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
