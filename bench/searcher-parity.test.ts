@@ -40,3 +40,18 @@ it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 6
 		}
 	}
 });
+
+it("an indexed searcher answers every bench query as a fresh lazy one does", { timeout: 600_000 }, () => {
+	for (const { name, build, queries } of CORPORA) {
+		for (const size of [10_000, 100_000]) {
+			const list = build(size);
+			const indexed = createFuzzySearch(list);
+			indexed.buildIndex();
+			for (const query of queries) {
+				expect(indexed(query), `[${name}-${size}] "${query}"`).toEqual(
+					createFuzzySearch(list)(query),
+				);
+			}
+		}
+	}
+});

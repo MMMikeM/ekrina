@@ -73,6 +73,7 @@ const variantsOf = (a: Artifact, corpus: string): string[] =>
 
 const BUILD_COLUMNS: Array<[library: string, label: string]> = [
 	["ekrina", "Ekrina"],
+	["ekrina (indexed)", "Ekrina (indexed)"],
 	["@nozbe/microfuzz", "@nozbe/microfuzz"],
 	["fast-fuzzy", "fast-fuzzy"],
 	["fuse.js", "Fuse.js"],

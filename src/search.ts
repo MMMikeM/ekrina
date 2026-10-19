@@ -122,8 +122,9 @@ export function createFuzzySearch<T>(
 
 	// The one structure that knows something about every item, so the one that
 	// costs a whole-list pass. Only the one-edit rescue needs it — the literal
-	// gate runs against the caller's own strings — so it is built the first time
-	// a query does, and never for a session whose queries all match literally.
+	// gate runs against the caller's own strings — so unless the caller asks for
+	// it up front, it is built the first time a query does, and never for a
+	// session whose queries all match literally.
 	let unionIndex: UnionIndex | null = null;
 	const buildUnionIndex = (): UnionIndex => {
 		// With one field per item (every plain string list) the per-field masks ARE
@@ -182,7 +183,7 @@ export function createFuzzySearch<T>(
 		count: 0,
 	};
 
-	return (query: string) => {
+	const search = (query: string): FuzzyResult<T>[] => {
 		const normalisedQuery = normaliseText(query);
 		if (normalisedQuery.length < MIN_QUERY_LENGTH) return [];
 
@@ -349,4 +350,10 @@ export function createFuzzySearch<T>(
 
 		return results.sort(sortByScore);
 	};
+
+	const buildIndex = (): void => {
+		unionIndex ??= buildUnionIndex();
+	};
+
+	return Object.assign(search, { buildIndex });
 }

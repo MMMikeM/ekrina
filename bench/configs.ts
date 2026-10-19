@@ -161,6 +161,23 @@ const definitions = (list: string[]): Definition[] => [
 		},
 	},
 	{
+		name: "ekrina (indexed)",
+		make: () => {
+			const indexed = createFuzzySearch(list);
+			indexed.buildIndex();
+			return {
+				count: (q) => indexed(q).length,
+				probe: (q) => rankedOnly(indexed(q).map((r) => r.item)),
+				index: () => {
+					const fresh = createFuzzySearch(list);
+					fresh.buildIndex();
+					return consume(fresh);
+				},
+				stateful: true,
+			};
+		},
+	},
+	{
 		name: "ekrina (acronym)",
 		make: () => {
 			const spec = [{ text: (x: string) => x, acronym: true }];
