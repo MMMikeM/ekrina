@@ -6,13 +6,10 @@ No measured cell in this document is typed by hand.
 
 - `pnpm bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
 - `pnpm bench --check` exits nonzero if any table here disagrees with `results.json`.
-- `pnpm bench --speed` and `pnpm bench --quality` run one half of the measurement; `--runs=N` sets the fresh processes per cold cell (default 5, publish runs use 10).
+- `pnpm bench --speed`, `pnpm bench --quality` and `pnpm bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 5, publish runs use 10).
 - `pnpm bench --scope=mixed-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable). A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor this document is touched.
 
 The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; run it with `pnpm --filter=ekrina-bench test`.
-Index memory is a diagnostic too ([`bench/memory.ts`](../bench/memory.ts), `node --expose-gc bench/memory.ts`): it measures what each configuration's index retains at 100k, in a fresh process per cell, and what survives dropping the searcher.
-It is not published because the answer is uninteresting in the way that matters, every library reclaims its index within the harness's ~0.1 MB resolution floor.
-The single exception is by design rather than a defect: fuzzysort's `prepare()` cache is process-wide and unevicted, so its footprint stays for the life of the process until you call its `cleanup()`.
 Improvements to the benchmarks are welcome.
 
 ## Libraries
@@ -174,6 +171,35 @@ fuzzysort has no constructor at all, so it has no column here, its lazy prepare-
 uFuzzy's ~6 ms base construction is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction takes 0.03 ms), so "keeps no index" is true per item but not per process, the base cell is near-identical at 10k and 100k, which is the proof it never touches the list; the (all opts) column shown here also latinizes the haystack, which is why it grows with the corpus (6.8 → 11.6 ms).
 microfuzz's column is its eager constructor; its lazy first-search slice shows up in the cold cells instead.
 Ekrina's constructor only allocates - field text is trimmed, normalised and masked the first time an item survives a gate - so a 100k list swap takes about a millisecond, and the first query then carries what construction deferred (its cold cells).
+
+## Memory
+
+<!-- bench:memory -->
+| Library                     | built MB | + `grady` | + `qxzwkv` | + `ergonomic` | dropped MB |
+|-----------------------------|---------:|----------:|-----------:|--------------:|-----------:|
+| Ekrina                      |     1.93 |      2.45 |       3.24 |          3.36 |       0.17 |
+| Ekrina (acronym)            |     1.93 |      2.45 |       3.25 |          3.37 |       0.18 |
+| @nozbe/microfuzz            |    45.74 |     45.79 |      45.79 |         45.79 |       0.11 |
+| @nozbe/microfuzz (all opts) |    45.74 |     45.79 |      45.79 |         45.79 |       0.11 |
+| fast-fuzzy                  |   194.20 |    195.57 |     195.57 |        195.57 |       0.14 |
+| fast-fuzzy (all opts)       |   194.20 |    195.57 |     195.58 |        195.58 |       0.15 |
+| Fuse.js                     |     6.92 |      7.00 |       7.00 |          7.00 |       0.11 |
+| Fuse.js (all opts)          |     6.92 |      7.03 |       7.12 |          7.06 |       0.17 |
+| fuzzy                       |     0.02 |      0.04 |       0.05 |          0.05 |       0.04 |
+| fuzzy (all opts)            |     0.02 |      0.03 |       0.03 |          0.03 |       0.03 |
+| fuzzysort                   |     0.02 |     40.73 |      40.73 |         40.95 |      40.95 |
+| match-sorter                |     0.02 |      0.13 |       0.13 |          0.13 |       0.13 |
+| uFuzzy                      |     0.03 |      0.09 |       0.09 |          0.11 |       0.08 |
+| uFuzzy (all opts)           |     1.09 |      1.17 |       1.17 |          1.18 |       0.10 |
+<!-- bench:end -->
+
+What each configuration retains at 100k on the mixed corpus: `heapUsed + external` over a baseline taken with the list already in memory, so typed arrays count and the caller's own strings don't.
+Each row is one fresh process ([`bench/memory.ts`](../bench/memory.ts)): the searcher is built, then answers `grady`, `qxzwkv` and `ergonomic` warm in that order, so each column includes every query before it.
+**dropped MB** is what is still retained once the searcher is unreachable and collected.
+Ekrina allocates its per-item caches empty at construction; `grady` prepares the items it matches (~0.5 MB), and `qxzwkv`, the first query to reach the one-edit rescue, adds the mask index's bigram arrays (~0.8 MB).
+fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, which is process-wide and unevicted, so its **dropped** column equals its footprint until you call `cleanup()`.
+Every other library gives its index back, leaving under 0.2 MB.
+The ascii cells, in [`bench/results.json`](../bench/results.json), tell the same story.
 
 ## Match quality, probe by probe
 

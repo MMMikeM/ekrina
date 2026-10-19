@@ -10,7 +10,7 @@
 	},
 	"libraries": {
 		"ekrina": {
-			"gzipKB": 5.4,
+			"gzipKB": 5.5,
 			"deps": 0,
 			"type": "subsequence (tiered)",
 			"module": "esm",
@@ -3607,201 +3607,677 @@
 	"memory": {
 		"ascii": {
 			"ekrina": {
-				"heapBytes": 27383888,
-				"externalBytes": 1200040,
-				"totalBytes": 28583928,
-				"residueBytes": 154248,
+				"built": {
+					"heapBytes": 1623000,
+					"externalBytes": 400040,
+					"totalBytes": 2023040
+				},
+				"match": {
+					"heapBytes": 1744512,
+					"externalBytes": 800040,
+					"totalBytes": 2544552
+				},
+				"miss": {
+					"heapBytes": 1778608,
+					"externalBytes": 1600040,
+					"totalBytes": 3378648
+				},
+				"long": {
+					"heapBytes": 2171520,
+					"externalBytes": 1600040,
+					"totalBytes": 3771560
+				},
+				"residueBytes": 176064,
 				"collected": true
 			},
 			"ekrina (acronym)": {
-				"heapBytes": 27395208,
-				"externalBytes": 1200040,
-				"totalBytes": 28595248,
-				"residueBytes": 165536,
+				"built": {
+					"heapBytes": 1623720,
+					"externalBytes": 400040,
+					"totalBytes": 2023760
+				},
+				"match": {
+					"heapBytes": 1749424,
+					"externalBytes": 800040,
+					"totalBytes": 2549464
+				},
+				"miss": {
+					"heapBytes": 1783520,
+					"externalBytes": 1600040,
+					"totalBytes": 3383560
+				},
+				"long": {
+					"heapBytes": 2176392,
+					"externalBytes": 1600040,
+					"totalBytes": 3776432
+				},
+				"residueBytes": 180608,
 				"collected": true
 			},
 			"@nozbe/microfuzz": {
-				"heapBytes": 47987984,
-				"externalBytes": 40,
-				"totalBytes": 47988024,
-				"residueBytes": 114752,
+				"built": {
+					"heapBytes": 47938872,
+					"externalBytes": 40,
+					"totalBytes": 47938912
+				},
+				"match": {
+					"heapBytes": 47995888,
+					"externalBytes": 40,
+					"totalBytes": 47995928
+				},
+				"miss": {
+					"heapBytes": 47996432,
+					"externalBytes": 40,
+					"totalBytes": 47996472
+				},
+				"long": {
+					"heapBytes": 47996528,
+					"externalBytes": 40,
+					"totalBytes": 47996568
+				},
+				"residueBytes": 118832,
 				"collected": true
 			},
 			"@nozbe/microfuzz (all opts)": {
-				"heapBytes": 47988248,
-				"externalBytes": 40,
-				"totalBytes": 47988288,
-				"residueBytes": 114688,
+				"built": {
+					"heapBytes": 47939152,
+					"externalBytes": 40,
+					"totalBytes": 47939192
+				},
+				"match": {
+					"heapBytes": 47996128,
+					"externalBytes": 40,
+					"totalBytes": 47996168
+				},
+				"miss": {
+					"heapBytes": 47996384,
+					"externalBytes": 40,
+					"totalBytes": 47996424
+				},
+				"long": {
+					"heapBytes": 47996720,
+					"externalBytes": 40,
+					"totalBytes": 47996760
+				},
+				"residueBytes": 118792,
 				"collected": true
 			},
 			"fuzzy": {
-				"heapBytes": 37248,
-				"externalBytes": 40,
-				"totalBytes": 37288,
-				"residueBytes": 45216,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 47048,
+					"externalBytes": 40,
+					"totalBytes": 47088
+				},
+				"miss": {
+					"heapBytes": 47256,
+					"externalBytes": 40,
+					"totalBytes": 47296
+				},
+				"long": {
+					"heapBytes": 47696,
+					"externalBytes": 40,
+					"totalBytes": 47736
+				},
+				"residueBytes": 46984,
 				"collected": true
 			},
 			"fuzzy (all opts)": {
-				"heapBytes": 25512,
-				"externalBytes": 40,
-				"totalBytes": 25552,
-				"residueBytes": 33568,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 34344,
+					"externalBytes": 40,
+					"totalBytes": 34384
+				},
+				"miss": {
+					"heapBytes": 35176,
+					"externalBytes": 40,
+					"totalBytes": 35216
+				},
+				"long": {
+					"heapBytes": 35600,
+					"externalBytes": 40,
+					"totalBytes": 35640
+				},
+				"residueBytes": 35000,
 				"collected": true
 			},
 			"fuzzysort": {
-				"heapBytes": 41766704,
-				"externalBytes": 40,
-				"totalBytes": 41766744,
-				"residueBytes": 41780912,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 41342992,
+					"externalBytes": 40,
+					"totalBytes": 41343032
+				},
+				"miss": {
+					"heapBytes": 41345096,
+					"externalBytes": 40,
+					"totalBytes": 41345136
+				},
+				"long": {
+					"heapBytes": 41626480,
+					"externalBytes": 40,
+					"totalBytes": 41626520
+				},
+				"residueBytes": 41625752,
 				"collected": true
 			},
 			"match-sorter": {
-				"heapBytes": 93592,
-				"externalBytes": 40,
-				"totalBytes": 93632,
-				"residueBytes": 93336,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 127336,
+					"externalBytes": 40,
+					"totalBytes": 127376
+				},
+				"miss": {
+					"heapBytes": 127520,
+					"externalBytes": 40,
+					"totalBytes": 127560
+				},
+				"long": {
+					"heapBytes": 127856,
+					"externalBytes": 40,
+					"totalBytes": 127896
+				},
+				"residueBytes": 127128,
 				"collected": true
 			},
 			"fast-fuzzy": {
-				"heapBytes": 203268472,
-				"externalBytes": 40,
-				"totalBytes": 203268512,
-				"residueBytes": 142072,
+				"built": {
+					"heapBytes": 201972096,
+					"externalBytes": 40,
+					"totalBytes": 201972136
+				},
+				"match": {
+					"heapBytes": 203276232,
+					"externalBytes": 40,
+					"totalBytes": 203276272
+				},
+				"miss": {
+					"heapBytes": 203277216,
+					"externalBytes": 40,
+					"totalBytes": 203277256
+				},
+				"long": {
+					"heapBytes": 203278528,
+					"externalBytes": 40,
+					"totalBytes": 203278568
+				},
+				"residueBytes": 149640,
 				"collected": true
 			},
 			"fast-fuzzy (all opts)": {
-				"heapBytes": 203277776,
-				"externalBytes": 40,
-				"totalBytes": 203277816,
-				"residueBytes": 143288,
+				"built": {
+					"heapBytes": 201972128,
+					"externalBytes": 40,
+					"totalBytes": 201972168
+				},
+				"match": {
+					"heapBytes": 203280872,
+					"externalBytes": 40,
+					"totalBytes": 203280912
+				},
+				"miss": {
+					"heapBytes": 203281688,
+					"externalBytes": 40,
+					"totalBytes": 203281728
+				},
+				"long": {
+					"heapBytes": 203283048,
+					"externalBytes": 40,
+					"totalBytes": 203283088
+				},
+				"residueBytes": 154208,
 				"collected": true
 			},
 			"uFuzzy": {
-				"heapBytes": 89080,
-				"externalBytes": 40,
-				"totalBytes": 89120,
-				"residueBytes": 82944,
+				"built": {
+					"heapBytes": 28328,
+					"externalBytes": 40,
+					"totalBytes": 28368
+				},
+				"match": {
+					"heapBytes": 97048,
+					"externalBytes": 40,
+					"totalBytes": 97088
+				},
+				"miss": {
+					"heapBytes": 97496,
+					"externalBytes": 40,
+					"totalBytes": 97536
+				},
+				"long": {
+					"heapBytes": 112168,
+					"externalBytes": 40,
+					"totalBytes": 112208
+				},
+				"residueBytes": 88368,
 				"collected": true
 			},
 			"uFuzzy (all opts)": {
-				"heapBytes": 920216,
-				"externalBytes": 40,
-				"totalBytes": 920256,
-				"residueBytes": 98536,
+				"built": {
+					"heapBytes": 857040,
+					"externalBytes": 40,
+					"totalBytes": 857080
+				},
+				"match": {
+					"heapBytes": 937144,
+					"externalBytes": 40,
+					"totalBytes": 937184
+				},
+				"miss": {
+					"heapBytes": 943912,
+					"externalBytes": 40,
+					"totalBytes": 943952
+				},
+				"long": {
+					"heapBytes": 952744,
+					"externalBytes": 40,
+					"totalBytes": 952784
+				},
+				"residueBytes": 105432,
 				"collected": true
 			},
 			"fuse.js": {
-				"heapBytes": 7331856,
-				"externalBytes": 40,
-				"totalBytes": 7331896,
-				"residueBytes": 110384,
+				"built": {
+					"heapBytes": 7252320,
+					"externalBytes": 40,
+					"totalBytes": 7252360
+				},
+				"match": {
+					"heapBytes": 7345576,
+					"externalBytes": 40,
+					"totalBytes": 7345616
+				},
+				"miss": {
+					"heapBytes": 7346552,
+					"externalBytes": 40,
+					"totalBytes": 7346592
+				},
+				"long": {
+					"heapBytes": 7347432,
+					"externalBytes": 40,
+					"totalBytes": 7347472
+				},
+				"residueBytes": 118664,
 				"collected": true
 			},
 			"fuse.js (all opts)": {
-				"heapBytes": 7356440,
-				"externalBytes": 40,
-				"totalBytes": 7356480,
-				"residueBytes": 151768,
+				"built": {
+					"heapBytes": 7252320,
+					"externalBytes": 40,
+					"totalBytes": 7252360
+				},
+				"match": {
+					"heapBytes": 7372608,
+					"externalBytes": 40,
+					"totalBytes": 7372648
+				},
+				"miss": {
+					"heapBytes": 7460048,
+					"externalBytes": 40,
+					"totalBytes": 7460088
+				},
+				"long": {
+					"heapBytes": 7401976,
+					"externalBytes": 40,
+					"totalBytes": 7402016
+				},
+				"residueBytes": 178120,
 				"collected": true
 			}
 		},
 		"mixed": {
 			"ekrina": {
-				"heapBytes": 27393024,
-				"externalBytes": 1200040,
-				"totalBytes": 28593064,
-				"residueBytes": 200328,
+				"built": {
+					"heapBytes": 1623000,
+					"externalBytes": 400040,
+					"totalBytes": 2023040
+				},
+				"match": {
+					"heapBytes": 1767296,
+					"externalBytes": 800040,
+					"totalBytes": 2567336
+				},
+				"miss": {
+					"heapBytes": 1800120,
+					"externalBytes": 1600040,
+					"totalBytes": 3400160
+				},
+				"long": {
+					"heapBytes": 1928336,
+					"externalBytes": 1600040,
+					"totalBytes": 3528376
+				},
+				"residueBytes": 181864,
 				"collected": true
 			},
 			"ekrina (acronym)": {
-				"heapBytes": 27425464,
-				"externalBytes": 1200040,
-				"totalBytes": 28625504,
-				"residueBytes": 204624,
+				"built": {
+					"heapBytes": 1623720,
+					"externalBytes": 400040,
+					"totalBytes": 2023760
+				},
+				"match": {
+					"heapBytes": 1771760,
+					"externalBytes": 800040,
+					"totalBytes": 2571800
+				},
+				"miss": {
+					"heapBytes": 1804728,
+					"externalBytes": 1600040,
+					"totalBytes": 3404768
+				},
+				"long": {
+					"heapBytes": 1933360,
+					"externalBytes": 1600040,
+					"totalBytes": 3533400
+				},
+				"residueBytes": 186544,
 				"collected": true
 			},
 			"@nozbe/microfuzz": {
-				"heapBytes": 48024360,
-				"externalBytes": 40,
-				"totalBytes": 48024400,
-				"residueBytes": 118560,
+				"built": {
+					"heapBytes": 47960384,
+					"externalBytes": 40,
+					"totalBytes": 47960424
+				},
+				"match": {
+					"heapBytes": 48018640,
+					"externalBytes": 40,
+					"totalBytes": 48018680
+				},
+				"miss": {
+					"heapBytes": 48019184,
+					"externalBytes": 40,
+					"totalBytes": 48019224
+				},
+				"long": {
+					"heapBytes": 48019280,
+					"externalBytes": 40,
+					"totalBytes": 48019320
+				},
+				"residueBytes": 120432,
 				"collected": true
 			},
 			"@nozbe/microfuzz (all opts)": {
-				"heapBytes": 48031912,
-				"externalBytes": 40,
-				"totalBytes": 48031952,
-				"residueBytes": 118536,
+				"built": {
+					"heapBytes": 47960720,
+					"externalBytes": 40,
+					"totalBytes": 47960760
+				},
+				"match": {
+					"heapBytes": 48018816,
+					"externalBytes": 40,
+					"totalBytes": 48018856
+				},
+				"miss": {
+					"heapBytes": 48019072,
+					"externalBytes": 40,
+					"totalBytes": 48019112
+				},
+				"long": {
+					"heapBytes": 48019408,
+					"externalBytes": 40,
+					"totalBytes": 48019448
+				},
+				"residueBytes": 120224,
 				"collected": true
 			},
 			"fuzzy": {
-				"heapBytes": 37456,
-				"externalBytes": 40,
-				"totalBytes": 37496,
-				"residueBytes": 45232,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 46872,
+					"externalBytes": 40,
+					"totalBytes": 46912
+				},
+				"miss": {
+					"heapBytes": 47152,
+					"externalBytes": 40,
+					"totalBytes": 47192
+				},
+				"long": {
+					"heapBytes": 47592,
+					"externalBytes": 40,
+					"totalBytes": 47632
+				},
+				"residueBytes": 46880,
 				"collected": true
 			},
 			"fuzzy (all opts)": {
-				"heapBytes": 25576,
-				"externalBytes": 40,
-				"totalBytes": 25616,
-				"residueBytes": 33856,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 34888,
+					"externalBytes": 40,
+					"totalBytes": 34928
+				},
+				"miss": {
+					"heapBytes": 35608,
+					"externalBytes": 40,
+					"totalBytes": 35648
+				},
+				"long": {
+					"heapBytes": 36056,
+					"externalBytes": 40,
+					"totalBytes": 36096
+				},
+				"residueBytes": 35456,
 				"collected": true
 			},
 			"fuzzysort": {
-				"heapBytes": 42584160,
-				"externalBytes": 40,
-				"totalBytes": 42584200,
-				"residueBytes": 42583344,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 42710480,
+					"externalBytes": 40,
+					"totalBytes": 42710520
+				},
+				"miss": {
+					"heapBytes": 42711912,
+					"externalBytes": 40,
+					"totalBytes": 42711952
+				},
+				"long": {
+					"heapBytes": 42940976,
+					"externalBytes": 40,
+					"totalBytes": 42941016
+				},
+				"residueBytes": 42940248,
 				"collected": true
 			},
 			"match-sorter": {
-				"heapBytes": 119488,
-				"externalBytes": 40,
-				"totalBytes": 119528,
-				"residueBytes": 127240,
+				"built": {
+					"heapBytes": 18144,
+					"externalBytes": 40,
+					"totalBytes": 18184
+				},
+				"match": {
+					"heapBytes": 136352,
+					"externalBytes": 40,
+					"totalBytes": 136392
+				},
+				"miss": {
+					"heapBytes": 136536,
+					"externalBytes": 40,
+					"totalBytes": 136576
+				},
+				"long": {
+					"heapBytes": 137176,
+					"externalBytes": 40,
+					"totalBytes": 137216
+				},
+				"residueBytes": 136448,
 				"collected": true
 			},
 			"fast-fuzzy": {
-				"heapBytes": 205055896,
-				"externalBytes": 40,
-				"totalBytes": 205055936,
-				"residueBytes": 150904,
+				"built": {
+					"heapBytes": 203633368,
+					"externalBytes": 40,
+					"totalBytes": 203633408
+				},
+				"match": {
+					"heapBytes": 205066048,
+					"externalBytes": 40,
+					"totalBytes": 205066088
+				},
+				"miss": {
+					"heapBytes": 205067056,
+					"externalBytes": 40,
+					"totalBytes": 205067096
+				},
+				"long": {
+					"heapBytes": 205065136,
+					"externalBytes": 40,
+					"totalBytes": 205065176
+				},
+				"residueBytes": 149064,
 				"collected": true
 			},
 			"fast-fuzzy (all opts)": {
-				"heapBytes": 205065336,
-				"externalBytes": 40,
-				"totalBytes": 205065376,
-				"residueBytes": 152120,
+				"built": {
+					"heapBytes": 203637936,
+					"externalBytes": 40,
+					"totalBytes": 203637976
+				},
+				"match": {
+					"heapBytes": 205075168,
+					"externalBytes": 40,
+					"totalBytes": 205075208
+				},
+				"miss": {
+					"heapBytes": 205076104,
+					"externalBytes": 40,
+					"totalBytes": 205076144
+				},
+				"long": {
+					"heapBytes": 205078520,
+					"externalBytes": 40,
+					"totalBytes": 205078560
+				},
+				"residueBytes": 157616,
 				"collected": true
 			},
 			"uFuzzy": {
-				"heapBytes": 82896,
-				"externalBytes": 40,
-				"totalBytes": 82936,
-				"residueBytes": 77032,
+				"built": {
+					"heapBytes": 28328,
+					"externalBytes": 40,
+					"totalBytes": 28368
+				},
+				"match": {
+					"heapBytes": 97048,
+					"externalBytes": 40,
+					"totalBytes": 97088
+				},
+				"miss": {
+					"heapBytes": 97496,
+					"externalBytes": 40,
+					"totalBytes": 97536
+				},
+				"long": {
+					"heapBytes": 112168,
+					"externalBytes": 40,
+					"totalBytes": 112208
+				},
+				"residueBytes": 88368,
 				"collected": true
 			},
 			"uFuzzy (all opts)": {
-				"heapBytes": 1207920,
-				"externalBytes": 40,
-				"totalBytes": 1207960,
-				"residueBytes": 94688,
+				"built": {
+					"heapBytes": 1141560,
+					"externalBytes": 40,
+					"totalBytes": 1141600
+				},
+				"match": {
+					"heapBytes": 1221728,
+					"externalBytes": 40,
+					"totalBytes": 1221768
+				},
+				"miss": {
+					"heapBytes": 1228528,
+					"externalBytes": 40,
+					"totalBytes": 1228568
+				},
+				"long": {
+					"heapBytes": 1237280,
+					"externalBytes": 40,
+					"totalBytes": 1237320
+				},
+				"residueBytes": 107048,
 				"collected": true
 			},
 			"fuse.js": {
-				"heapBytes": 7332912,
-				"externalBytes": 40,
-				"totalBytes": 7332952,
-				"residueBytes": 110944,
+				"built": {
+					"heapBytes": 7252576,
+					"externalBytes": 40,
+					"totalBytes": 7252616
+				},
+				"match": {
+					"heapBytes": 7341968,
+					"externalBytes": 40,
+					"totalBytes": 7342008
+				},
+				"miss": {
+					"heapBytes": 7343392,
+					"externalBytes": 40,
+					"totalBytes": 7343432
+				},
+				"long": {
+					"heapBytes": 7343968,
+					"externalBytes": 40,
+					"totalBytes": 7344008
+				},
+				"residueBytes": 115200,
 				"collected": true
 			},
 			"fuse.js (all opts)": {
-				"heapBytes": 7359912,
-				"externalBytes": 40,
-				"totalBytes": 7359952,
-				"residueBytes": 146368,
+				"built": {
+					"heapBytes": 7252576,
+					"externalBytes": 40,
+					"totalBytes": 7252616
+				},
+				"match": {
+					"heapBytes": 7373048,
+					"externalBytes": 40,
+					"totalBytes": 7373088
+				},
+				"miss": {
+					"heapBytes": 7460648,
+					"externalBytes": 40,
+					"totalBytes": 7460688
+				},
+				"long": {
+					"heapBytes": 7403016,
+					"externalBytes": 40,
+					"totalBytes": 7403056
+				},
+				"residueBytes": 178944,
 				"collected": true
 			}
 		}

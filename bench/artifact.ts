@@ -51,6 +51,27 @@ export type Artifact = {
 	probes: Record<string, ProbeTable[]>;
 	session: { size: number; corpus: string; steps: string[]; rows: SessionRow[] } | null;
 	longtext: { rows: LongtextRow[] } | null;
+	memory: MemoryMatrix | null;
+};
+
+/** corpus → configuration → cell. */
+export type MemoryMatrix = Record<string, Record<string, MemoryCell>>;
+
+/** Bytes retained over the pre-construction baseline: `heapUsed + external`, typed arrays included. */
+export type MemoryReading = { heapBytes: number; externalBytes: number; totalBytes: number };
+
+/**
+ * One 100k configuration in a fresh process. The query readings are
+ * cumulative: each query runs warm, after the ones before it.
+ */
+export type MemoryCell = {
+	built: MemoryReading;
+	match: MemoryReading;
+	miss: MemoryReading;
+	long: MemoryReading;
+	/** Still retained once the searcher is dropped and collected. */
+	residueBytes: number;
+	collected: boolean;
 };
 
 export const ARTIFACT = new URL("./results.json", import.meta.url);
@@ -76,6 +97,7 @@ const EMPTY: Artifact = {
 	probes: {},
 	session: null,
 	longtext: null,
+	memory: null,
 };
 
 export const load = (): Artifact =>

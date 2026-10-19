@@ -30,7 +30,7 @@ Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run ove
 
 - `pnpm bench --docs` re-emits every table from the committed `results.json` without measuring. This is the one to reach for when reworking prose around a table.
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
-- `pnpm bench --speed` / `--quality` run one half; `--runs=N` sets the scorecard's process count (default 5).
+- `pnpm bench --speed` / `--quality` / `--memory` run one stage; `--runs=N` sets the scorecard's process count (default 5).
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact — guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
 - `pnpm --filter=ekrina-bench test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
 

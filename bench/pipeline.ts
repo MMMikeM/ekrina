@@ -5,6 +5,7 @@ import { renderPareto } from "../docs/pareto.ts";
 import {
 	type Artifact,
 	type ColdMatrix,
+	type MemoryMatrix,
 	type ProbeTable,
 	type ScorecardRow,
 	ensureRawDir,
@@ -42,10 +43,11 @@ const ONLY = options.get("--only") ?? "";
 const DRY = SCOPE !== "";
 
 const measures = !DOCS_ONLY && !CHECK;
-const named = flags.has("--speed") || flags.has("--quality");
+const named = flags.has("--speed") || flags.has("--quality") || flags.has("--memory");
 const stages = {
 	cold: measures && (flags.has("--speed") || !named),
 	quality: measures && (flags.has("--quality") || (!named && !DRY)),
+	memory: measures && !DRY && (flags.has("--memory") || !named),
 };
 
 // A scoped run has no artifact to render afterwards, so the runner's own
@@ -204,6 +206,17 @@ const runQuality = (artifact: Artifact): void => {
 	}
 };
 
+const runMemory = (artifact: Artifact): void => {
+	console.error("memory stage: retained footprint at 100k, one process per cell…");
+	execFileSync(process.execPath, ["--expose-gc", `${here}memory.ts`, ONLY || "all"], {
+		cwd: here,
+		stdio: ["ignore", "inherit", "inherit"],
+	});
+	const fresh = readRaw<MemoryMatrix>("memory.json");
+	if (ONLY && artifact.memory) overlay(artifact.memory, fresh);
+	else artifact.memory = fresh;
+};
+
 const MARKER = /<!-- bench:([a-z0-9-]+) -->\n[\s\S]*?\n<!-- bench:end -->/g;
 
 const inject = (doc: string, tables: Record<string, string>): { doc: string; stale: string[] } => {
@@ -237,6 +250,7 @@ if (ONLY) {
 
 if (stages.cold) runCold(artifact);
 if (stages.quality) runQuality(artifact);
+if (stages.memory) runMemory(artifact);
 
 if (DRY) {
 	console.error("\nscoped run: artifact and docs left untouched.");
@@ -245,7 +259,7 @@ if (DRY) {
 
 const tables = regions(artifact);
 
-if (stages.cold || stages.quality) save(artifact);
+if (stages.cold || stages.quality || stages.memory) save(artifact);
 
 const { doc, stale } = inject(readFileSync(DOC, "utf8"), tables);
 

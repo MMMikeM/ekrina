@@ -338,6 +338,38 @@ const longtextTable = (a: Artifact): string => {
 	);
 };
 
+const mb = (bytes: number): string => (bytes / 2 ** 20).toFixed(2);
+
+const MEMORY_STEPS = [
+	["match", "short-word"],
+	["miss", "miss"],
+	["long", "long-word"],
+] as const;
+
+const memoryTable = (a: Artifact): string => {
+	const cells = a.memory?.[PROBE_CORPUS];
+	if (!cells) throw new Error(`no ${PROBE_CORPUS} memory data — run the memory stage first`);
+	const stepLabel = (kind: string): string => {
+		const query = a.probes[PROBE_CORPUS]?.find((p) => p.kind === kind)?.query;
+		return query ? `+ \`${query}\`` : `+ ${kind}`;
+	};
+	return mdTable(
+		["Library", "built MB", ...MEMORY_STEPS.map(([, kind]) => stepLabel(kind)), "dropped MB"],
+		Object.keys(cells)
+			.sort(speedOrder)
+			.map((lib) => {
+				const cell = cells[lib];
+				return [
+					displayName(lib),
+					mb(cell.built.totalBytes),
+					...MEMORY_STEPS.map(([step]) => mb(cell[step].totalBytes)),
+					cell.collected ? mb(cell.residueBytes) : `${mb(cell.residueBytes)} (not collected)`,
+				];
+			}),
+		["left", "right", ...MEMORY_STEPS.map((): Align => "right"), "right"],
+	);
+};
+
 /** Every injectable region, keyed by the id its marker carries. */
 export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
@@ -362,5 +394,6 @@ export const regions = (a: Artifact): Record<string, string> => {
 
 	if (a.session) out.session = sessionTable(a);
 	if (a.longtext) out.longtext = longtextTable(a);
+	if (a.memory) out.memory = memoryTable(a);
 	return out;
 };

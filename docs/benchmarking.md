@@ -9,9 +9,11 @@ Companion to [benchmarks.md](./benchmarks.md) (the numbers), [measurement.md](./
 flowchart TD
     CLI["pnpm bench --runs=10"] --> COLD["cold stage<br/>bench/run.ts: full matrix<br/>~30 tests × 14 variants × 2 sizes"]
     CLI --> QUAL["quality stage<br/>hits.test.ts — ranks/MRR, untimed<br/>session.test.ts — typing chain<br/>longtext.test.ts — junk guard"]
+    CLI --> MEM["memory stage<br/>bench/memory.ts: 14 variants × 2 corpora at 100k<br/>retained after build, three queries, drop"]
 
     COLD -->|".raw/cold-matrix.json"| ART[("bench/results.json<br/>the committed artifact")]
     QUAL -->|".raw/hits.json<br/>session.json · longtext.json"| ART
+    MEM -->|".raw/memory.json"| ART
 
     ART --> REG["tables.ts regions()"]
     REG -->|"inject between<br/>&lt;!-- bench:id --&gt; markers"| DOC["docs/benchmarks.md"]
