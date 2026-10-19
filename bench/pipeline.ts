@@ -54,7 +54,7 @@ const stages = {
 // A scoped run has no artifact to render afterwards, so the runner's own
 // output is the result and has to reach the terminal.
 const vitest = (args: string, env: Record<string, string> = {}): void => {
-	execSync(`pnpm exec vitest ${args}`, {
+	execSync(`pnpm exec vp test ${args}`, {
 		cwd: here,
 		stdio: ["ignore", DRY ? "inherit" : "ignore", "inherit"],
 		env: { ...process.env, ...(ONLY ? { BENCH_ONLY: ONLY } : {}), ...env },
