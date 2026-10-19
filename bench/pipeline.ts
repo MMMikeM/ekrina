@@ -14,6 +14,7 @@ import {
 	readRaw,
 	save,
 } from "./artifact.ts";
+import { inject } from "./inject.ts";
 import { omittedFrom, regions } from "./tables.ts";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
@@ -217,26 +218,6 @@ const runMemory = (artifact: Artifact): void => {
 	else artifact.memory = fresh;
 };
 
-const MARKER = /<!-- bench:([a-z0-9-]+) -->\n[\s\S]*?\n<!-- bench:end -->/g;
-
-const inject = (doc: string, tables: Record<string, string>): { doc: string; stale: string[] } => {
-	const stale: string[] = [];
-	const seen = new Set<string>();
-	const next = doc.replace(MARKER, (match, id: string) => {
-		const table = tables[id];
-		if (table == null)
-			throw new Error(`docs/benchmarks.md marks region '${id}', which nothing generates`);
-		seen.add(id);
-		const replacement = `<!-- bench:${id} -->\n${table}\n<!-- bench:end -->`;
-		if (replacement !== match) stale.push(id);
-		return replacement;
-	});
-	const unmarked = Object.keys(tables).filter((id) => !seen.has(id));
-	if (unmarked.length)
-		console.error(`note: generated but not marked in the doc: ${unmarked.join(", ")}`);
-	return { doc: next, stale };
-};
-
 const artifact = load();
 
 if (ONLY) {
@@ -261,14 +242,17 @@ const tables = regions(artifact);
 
 if (stages.cold || stages.quality || stages.memory) save(artifact);
 
-const { doc, stale } = inject(readFileSync(DOC, "utf8"), tables);
+const { doc, stale, unmarked } = inject(readFileSync(DOC, "utf8"), tables);
+
+if (unmarked.length)
+	console.error(`generated but not marked in docs/benchmarks.md: ${unmarked.join(", ")}`);
 
 if (CHECK) {
 	if (stale.length) {
 		console.error(`stale regions in docs/benchmarks.md: ${stale.join(", ")}`);
 		console.error("run `pnpm bench --docs` to bring them up to date.");
-		process.exit(1);
 	}
+	if (stale.length || unmarked.length) process.exit(1);
 	console.error("docs/benchmarks.md agrees with bench/results.json.");
 } else {
 	writeFileSync(DOC, doc);
