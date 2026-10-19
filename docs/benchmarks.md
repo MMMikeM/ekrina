@@ -214,7 +214,7 @@ One small table per query:
 - **total ms** = index + cold, summed inside each child's consecutive windows: the cold one-shot for this exact query
 - **batch ms** = this probe's time inside the batch run, after the warmup match, mid-session, lazy work landing on whichever probe triggers them
 
-Every cell is process-cold ("One measurement model"), so the per-probe tables show exactly which queries make each library do the work: ekrina's rescue mask build appears on the typo probes and nowhere else, fuzzysort's prepare-all on every first call.
+Every cell is process-cold ("One measurement model"), so the per-probe tables show exactly which queries make each library do the work: ekrina's mask build appears on every multi-word probe and on every probe of five or more characters with fewer than ten literal matches, fuzzysort's prepare-all on every first call.
 Magnitude only; the rigorous timings are the speed tables below.
 
 Each library appears once, at its base configuration.
@@ -662,7 +662,11 @@ The fast end belongs to the bare-output engines and their MRR says why (0.11 and
 
 **Backend one-shot workload** (a fresh process runs constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
 Its frontier runs `fuzzy` → Ekrina → Ekrina (acronym): a no-index substring scan at 0.35 MRR owns the fast end, and every other configuration - uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised - is dominated.
-This is where Ekrina's lazy preparation shows up: the first answer carries the raw-gate scan and, on queries that reach the rescue, the mask build (~4.4 ms at 10k against a 0.14 ms constructor), and the batch's `first` vs `rest` split shows all of it happening on query one.
+This is where Ekrina's lazy preparation shows up, in two parts against a 0.14 ms constructor.
+A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings (2–3 ms at 10k).
+The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the one-edit rescue, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
+That is why a cold `two-words` answer costs ~4.3 ms at 10k against ~2.6 ms for `short-word`, and why `prefix`, a single word with too few literal matches to rule out a typo, costs ~6.9 ms.
+The batch's literal warmup never needs it, so its `first` column carries only the first part; the build lands on the third probe, the first multi-word one, and the `two-words` probe table shows it as that probe's batch cost.
 
 _Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
 
@@ -772,10 +776,10 @@ Omitted: uFuzzy and fuse.js base configs (their (all opts) rows fold and stay), 
 
 Every cell is process-cold, so read the columns as three different workloads, not three qualities of one number.
 The **batch** column is the honest headline: one process, twenty distinct queries, and the amortisation each design promises either shows up or doesn't.
-Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation happens once, on the first query that reaches the rescue, for the whole session.
+Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
 _uFuzzy wins the raw batch at 100k on ascii_ (55% of Ekrina bare, 88% folding) and its bare `batch/query` is the fastest in the set; on mixed its folding configuration lands inside the tie band (105%), and its MRR (0.08–0.11 bare, 0.39–0.52 folding) is what that speed leaves you with.
 Ekrina's batch beats everything else - ~4× its parent microfuzz, 2× fuzzysort, ~8× match-sorter, ~15× fast-fuzzy (ascii; it can't fold), ~47× Fuse.js on mixed - while topping both scorecards outright.
-The **cold query** column is where Ekrina's laziness shows up: ~17 ms mean at 100k, most of it the rescue's union-and-bigram mask build, done once per searcher and visible per probe kind in the 10k tables (typo probes carry it, literal probes carry the ~4 ms raw gate).
+The **cold query** column is where Ekrina's laziness shows up: ~17 ms mean at 100k, most of it the rescue's union-and-bigram mask build, done once per searcher and visible per probe kind in the 10k tables (it lands on the multi-word probes and on every probe of five or more characters with fewer than ten literal matches, the typos, `prefix` and the longer fuzzy-limit probes among them; the other single-word probes carry only the 2–3 ms raw-gate scan).
 An eager-index engine inverts this: fast-fuzzy's first answer is quick only because its constructor already ran for ~360–390 ms.
 The **index** column plus the first answer is the one-shot measurement, and there `fuzzy`'s bare substring scan is the only thing faster than Ekrina at any quality level.
 Cross-_type_ speed isn't apples-to-apples: **typo-tolerant** libs (Fuse.js, fast-fuzzy) do far more work per query, and non-folding configurations are omitted from the mixed table entirely (they would be timing a different task).
@@ -839,7 +843,7 @@ Everything above condenses to one recommendation: _pick Ekrina for list matching
 Three things carry the claim, each measured in its own section:
 
 - **Quality**: Ekrina (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.82 ascii), with the smallest result sets of the subsequence engines (median 7 rows on structured queries where Fuse.js ships ~90); the phrase-typo probes are what pushed the lead past the tie band.
-- **Speed, measured cold**: the fastest twenty-query session of anything above 0.5 MRR at both sizes (batch 18.7 ms at mixed 10k, ~0.8 ms per query after the first; ~4–47× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Ekrina's lazy preparation does all its work on query one (~4.4 ms at 10k, ~17 ms at 100k), and a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
+- **Speed, measured cold**: the fastest twenty-query session of anything above 0.5 MRR at both sizes (batch 18.7 ms at mixed 10k, ~0.8 ms per query after the first; ~4–47× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages ~4.4 ms at 10k and ~17 ms at 100k across the twenty probes); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length, phrase probes included, so the same engine covers documents, not just labels.
 
 The carve-outs:

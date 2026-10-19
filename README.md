@@ -126,7 +126,8 @@ Options: `fuzzyMatch(text, query, { acronym? })`.
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
-- **Search-as-you-type**: each keystroke rescans only the previous one's survivors, so the first keystroke is the slow one and the last runs over 4× faster, even over 100k items.
+- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, over 4× by its last letter even over 100k items.
+  Starting a second word, or typing five or more characters that match fewer than ten items literally (a possible typo), rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; a structured query returns a median of 7 rows where Fuse.js ships ~90.
 - **Backend one-shot lookups**: constructor + first answer takes ~4.5 ms in a genuinely cold process over 10k items, so indexing per request is fine.
 - **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.29 ms, and the density floor keeps absent words at exactly 0 false matches.
@@ -257,8 +258,10 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
   A transposition, an insertion and a substitution each break the subsequence property; Ekrina's four one-edit tiers take all three at rank 1 with a single row.
   A typo inside a phrase is corrected too: the words that do occur pin the field, and only the failing word is rescued. Two or more edits in one query remain the edit-distance engines' edge.
 - **Speed, measured cold**: a twenty-query session (one searcher, twenty distinct queries, fresh process) runs 19 ms at 10k and 75 ms at 100k, the fastest of anything above 0.5 MRR, and ~4–47× under every typo-tolerant or tiered alternative, ~1–3.4 ms per query after the first.
-  The whole preparation happens on the first query (~4.4 ms at 10k, ~17 ms at 100k), the cold column in [docs/benchmarks.md](./docs/benchmarks.md); only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session faster, at a fraction of the match quality.
-  A prefix-narrowing cache makes each keystroke after the first faster as the phrase grows.
+  Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list.
+  A first answer averages ~4.4 ms at 10k and ~17 ms at 100k across the twenty probes, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
+  Only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session faster, at a fraction of the match quality.
+  A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
 
 ### What to pick
 
