@@ -273,6 +273,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
   A first answer averages ~3.4 ms at 10k and ~13 ms at 100k across the twenty probes, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
   Of the other libraries, only the bare-output engines (uFuzzy, and fuzzysort at 10k) run the session faster, at a fraction of the match quality.
   A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
+  These speeds are for Latin text: results are identical in any script, but the mask index cannot tell non-Latin letters apart, so it admits every item and each query scans the whole list (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
 
 ### What to pick
 
