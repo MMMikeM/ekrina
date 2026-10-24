@@ -30,7 +30,7 @@ export default defineConfig({
 	},
 	run: {
 		tasks: {
-			gate: {
+			verify: {
 				command: ["vp lint", "vp test run"],
 				dependsOn: ["types"],
 			},
@@ -41,7 +41,7 @@ export default defineConfig({
 				dependsOn: ["build"],
 				cache: false,
 			},
-			"bench:test": {
+			suite: {
 				command: "vp test run",
 				cwd: "bench",
 				dependsOn: ["build"],

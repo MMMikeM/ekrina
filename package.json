@@ -53,7 +53,9 @@
 		"format": "vp fmt",
 		"lint:types": "tsc --noEmit && tsc -p bench --noEmit",
 		"test": "vp test run",
+		"gate": "vp run verify",
 		"bench": "pnpm build && node bench/pipeline.ts",
+		"bench:test": "vp run suite",
 		"prepublishOnly": "pnpm lint:types && pnpm test && pnpm build"
 	},
 	"devDependencies": {
