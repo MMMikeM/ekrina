@@ -17,9 +17,9 @@ Nothing has been published yet, so public-surface changes are cheap until launch
 
 ## Commands
 
-There is no aggregate script. The gate is `pnpm lint && pnpm lint:types && pnpm test`, and it runs before claiming done. `lint:types` covers `src`/`test` and, via `bench/tsconfig.json`, `bench/` and `docs/pareto.ts`. `pnpm format` runs oxfmt over `src` and `test`. `pnpm build` is tsdown → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
+The gate is `pnpm exec vp run gate`, and it runs before claiming done: build, then `lint:types`, lint and test, all as `vite.config.ts` tasks. Lint and test replay from the task cache when nothing they read changed; the type checks never do, because tsc 7 is a native binary the cache can't see read. `lint:types` covers `src`/`test` and, via `bench/tsconfig.json`, `bench/` and `docs/pareto.ts`. `pnpm format` runs oxfmt over `src` and `test`. `pnpm build` is tsdown → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
 
-`pnpm test` covers `test/**` only. The bench workspace has its own suite — `pnpm --filter=ekrina-bench test` — and it imports the built `ekrina`, so build first.
+`pnpm test` covers `test/**` only. The bench workspace has its own suite — `pnpm exec vp run bench:test` — which builds first, because it imports the built `ekrina`, and replays from cache when neither `dist/` nor `bench/` changed. `pnpm bench` stays a plain script on purpose: a measurement must never be replayed from a cache.
 
 ## Benchmarks and published numbers
 
@@ -32,7 +32,7 @@ Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run ove
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
 - `pnpm bench --speed` / `--quality` / `--memory` run one stage; `--runs=N` sets the scorecard's process count (default 5).
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact — guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
-- `pnpm --filter=ekrina-bench test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
+- `pnpm exec vp run bench:test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
 
 `bench/results.json` is committed: it is the evidence for every published cell, so a number that moves is a reviewable diff.
 Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers.

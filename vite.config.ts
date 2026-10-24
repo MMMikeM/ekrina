@@ -28,4 +28,25 @@ export default defineConfig({
 	test: {
 		include: ["test/**/*.test.ts"],
 	},
+	run: {
+		tasks: {
+			gate: {
+				command: ["vp lint", "vp test run"],
+				dependsOn: ["types"],
+			},
+			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
+			// so a cached run would replay a pass over code it never read.
+			types: {
+				command: ["tsc --noEmit", "tsc -p bench --noEmit"],
+				dependsOn: ["build"],
+				cache: false,
+			},
+			"bench:test": {
+				command: "vp test run",
+				cwd: "bench",
+				dependsOn: ["build"],
+				input: [{ auto: true }, "!bench/node_modules/.vite/**"],
+			},
+		},
+	},
 });
