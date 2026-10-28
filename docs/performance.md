@@ -63,8 +63,8 @@ Bigram hashes collide by merging bits: false-pass again.
 
 `createFuzzySearch` only allocates; a field is trimmed, normalised and masked the first time it survives a gate (`materialise` in `src/search.ts`), so the caches warm to the working set rather than the corpus.
 Single-word gating runs on the caller's raw strings (`buildRawGate`), and `bench/raw-mask.test.ts` sweeps both bench corpora to pin that the raw scan never drops a mask bit against the eager equivalent.
-The one structure that costs a whole-corpus pass (the rescue's union masks and bigram sets) is built by the first query that reaches the relaxed scan; a session whose queries all match literally never pays it.
-The cost lands where a user pays it: construction is allocation, the first query that reaches the rescue carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
+The one structure that costs a whole-corpus pass (the union masks and bigram sets) is built by the first query that needs it: a multi-word query, one with a character the raw scan cannot fold, or one that reaches the relaxed scan; a session of single words that all match literally never pays it.
+The cost lands where a user pays it: construction is allocation, the first query that needs the masks carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
 
 ### Survivors carry across keystrokes
 
@@ -77,6 +77,7 @@ Backspace and replacement queries fall back to a full scan, and the relaxed resc
 
 Every correction scores at least `TYPO_PENALTY` (2.1), above `SCORES.CONTAINS` (2), so once ten literal hits sit at or below `CONTAINS` no correction can reach a top-ten page.
 The rescue is then skipped as provably invisible work.
+The count is taken over the whole corpus before any correction is attempted, so whether an item is corrected cannot depend on its position in the list or on what the searcher was asked before; `test/search-history.test.ts` replays typing, backspacing and dead-end sessions against fresh searchers.
 
 ### Word membership scans instead of hashing
 

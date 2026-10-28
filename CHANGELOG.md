@@ -30,10 +30,11 @@ Design decisions worth recording, with the measurements that made them:
   Relaxed-scan admissions drop from 19.3% of a 100k corpus to 5.2% (ascii) and 16.7% to 3.2% (mixed), with result sets, ranks and MRR byte-identical (`bench/searcher-parity.test.ts`).
 - **The rescue stops once ten literal hits exist.**
   No correction (≥ 2.1) can reach a top ten already filled at or below `SCORES.CONTAINS` (2), so the rescue becomes provably invisible work and is skipped.
+  The count covers the whole corpus before any correction is tried, so a result never depends on list order or on earlier searches (`test/search-history.test.ts`).
 - **The fuzzy tier retries its first chunk from up to four admissible placements** and keeps the cheapest assembly, so a query whose first character also opens an earlier word ("towls" hitting the T of "Tasty Silk Towels") is not stranded: 307 → 0 missed assemblies over the ascii bench corpus.
   Later chunks stay leftmost-greedy, reconsidering those is what starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
-  Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the rescue's union-and-bigram masks) waits for the first query that needs the relaxed scan, so literal-only sessions never pay it.
+  Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never pays it.
   A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.4 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
 - **`buildIndex()` pays the whole-corpus pass up front, on request.**
   Every query that doesn't extend its predecessor then filters on the masks instead of scanning the raw strings: over mixed 100k the mean first answer falls from 13.4 to 2.6 ms and the twenty-query batch from 55 to 32 ms, for a 12.4 ms constructor and 0.8 MB more held from the start (docs/benchmarks.md, the `Ekrina (indexed)` rows).

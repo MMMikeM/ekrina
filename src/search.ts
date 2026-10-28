@@ -121,10 +121,10 @@ export function createFuzzySearch<T>(
 	let leads: Int32Array | null = null;
 
 	// The one structure that knows something about every item, so the one that
-	// costs a whole-list pass. Only the one-edit rescue needs it — the literal
-	// gate runs against the caller's own strings — so unless the caller asks for
-	// it up front, it is built the first time a query does, and never for a
-	// session whose queries all match literally.
+	// costs a whole-list pass. Single-word literal gating runs against the
+	// caller's own strings instead, so unless the caller asks for it up front, it
+	// is built by the first multi-word query or rescue, and never for a session
+	// of single words that all match literally.
 	let unionIndex: UnionIndex | null = null;
 	const buildUnionIndex = (): UnionIndex => {
 		// With one field per item (every plain string list) the per-field masks ARE
@@ -216,7 +216,7 @@ export function createFuzzySearch<T>(
 					fieldMasks[base + f],
 					prepared,
 					spec.acronym,
-					mayRescue && literalHits < RESCUE_BUDGET,
+					mayRescue,
 					preGated,
 				);
 				if (result) {
@@ -244,9 +244,8 @@ export function createFuzzySearch<T>(
 			multiWord === survivorCache.multiWord;
 
 		// Every field the ladder can match outright, none of the near-misses only
-		// a correction reaches. Needs no union masks — it runs against the
-		// caller's own strings. Returns whether it could run at all.
-		const literalPass = (): boolean => {
+		// a correction reaches.
+		const literalPass = (): void => {
 			if (narrowed) {
 				// The gate runs out here because its verdict is what shrinks the
 				// cached set for the next keystroke; `preGated` stops matchField
@@ -264,23 +263,22 @@ export function createFuzzySearch<T>(
 					survivors[survivorCount++] = i;
 					scoreItem(i, false, specCount === 1);
 				}
-				return true;
+				return;
 			}
-			if (unionIndex !== null) {
+			// The presence gate has no raw-text form yet, so multi-word queries
+			// take the mask path.
+			const gate = unionIndex === null && !multiWord ? buildRawGate(normalisedQuery) : null;
+			if (gate === null) {
 				// A superset of what the gate admits, so caching these survivors
 				// keeps the narrowing sound.
-				const masks = unionIndex.masks;
+				const { masks } = (unionIndex ??= buildUnionIndex());
 				for (let i = 0; i < count; i++) {
 					if ((queryMask & ~masks[i]) !== 0) continue;
 					survivors[survivorCount++] = i;
 					scoreItem(i, false);
 				}
-				return true;
+				return;
 			}
-			// The presence gate has no raw-text form yet, so multi-word queries
-			// take the mask path.
-			const gate = multiWord ? null : buildRawGate(normalisedQuery);
-			if (gate === null) return false;
 			for (let i = 0; i < count; i++) {
 				const item = list[i];
 				let admitted = false;
@@ -291,23 +289,18 @@ export function createFuzzySearch<T>(
 				survivors[survivorCount++] = i;
 				scoreItem(i, false);
 			}
-			return true;
 		};
 
 		// Restart from the whole corpus, tolerating one missing character class —
-		// what a substitution typo looks like from a mask (see matchField). The
-		// only thing that forces the whole-corpus union scan; most sessions never
-		// reach it.
+		// what a substitution typo looks like from a mask (see matchField).
 		const relaxedPass = (): void => {
 			const { masks, bigramsLo, bigramsHi } = (unionIndex ??= buildUnionIndex());
-			const bigramGate = relaxable ? buildRescueBigramGate(normalisedQuery) : null;
+			const bigramGate = buildRescueBigramGate(normalisedQuery);
 			results = [];
-			survivorCount = 0;
-			literalHits = 0;
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
-				if (relaxable ? missingClasses & (missingClasses - 1) : missingClasses) continue;
-				if (missingClasses !== 0 && bigramGate !== null) {
+				if (missingClasses & (missingClasses - 1)) continue;
+				if (missingClasses !== 0) {
 					// Exactly one class absent: only an edit at that class's position
 					// can rescue, so the query's remaining bigrams must all be present
 					// (see buildRescueBigramGate).
@@ -319,7 +312,6 @@ export function createFuzzySearch<T>(
 						continue;
 					}
 				}
-				survivors[survivorCount++] = i;
 				scoreItem(i, true);
 			}
 		};
@@ -336,17 +328,14 @@ export function createFuzzySearch<T>(
 			}
 		};
 
-		const ranLiteral = literalPass();
+		literalPass();
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at.
-		let cacheable = ranLiteral;
-		if (!ranLiteral || (relaxable && literalHits < RESCUE_BUDGET)) {
-			// The relaxed set is not a gate-passing set, so it cannot seed the
-			// cache; the next query starts from a full pass.
-			cacheable = false;
-			relaxedPass();
-		}
-		commitSurvivorCache(cacheable);
+		const rescuing = relaxable && literalHits < RESCUE_BUDGET;
+		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
+		// the next query starts from a full pass.
+		if (rescuing) relaxedPass();
+		commitSurvivorCache(!rescuing);
 
 		return results.sort(sortByScore);
 	};

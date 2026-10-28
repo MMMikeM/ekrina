@@ -31,15 +31,16 @@ flowchart TD
     N -->|yes| NAR["scan cached survivors<br/>gate on normalised text"]
     N -->|no| RG{"single word, and every<br/>character in UNFOLD?"}
     RG -->|yes| RAW["compile raw gate<br/>scan all N against the caller's own strings"]
-    RG -->|no| MASK
+    RG -->|no| MASK["build union masks + bigram sets<br/>over all N (once per searcher)"]
+    MASK --> MSCAN["scan all N against the union masks"]
 
     NAR --> MAT
     RAW --> MAT["materialise survivors<br/>trim + normalise + per-field mask, cached"]
+    MSCAN --> MAT
     MAT --> LAD["tier ladder<br/>exact -> prefix -> boundary -> multi-word<br/>-> acronym -> contains -> fuzzy chain"]
     LAD --> LIT{"rescuable query with<br/>fewer than 10 literal hits?"}
     LIT -->|no| OUT["build results, sort by score"]
-    LIT -->|yes| MASK["build union masks + bigram sets<br/>over all N (once per searcher)"]
-    MASK --> REL["relaxed scan: admit items missing at most one<br/>character class, and only if every query bigram<br/>away from that class's position is present"]
+    LIT -->|yes| REL["relaxed scan over the union masks, built first if missing:<br/>admit items missing at most one<br/>character class, and only if every query bigram<br/>away from that class's position is present"]
     REL --> RES["ladder + one-edit rescue"]
     RES --> OUT
 ```
