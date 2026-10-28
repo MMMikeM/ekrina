@@ -2,7 +2,6 @@ import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, isExactMask } from "./gates";
 import {
-	admitsMissingClass,
 	isRescuableQuery,
 	preferCheaper,
 	missingCharRescue,
@@ -25,7 +24,7 @@ export type PreparedQuery = {
 	queryMask: number;
 	presenceGate: RegExp | null;
 	fuzzyGate: RegExp;
-	rescueState: RescueState | null | undefined;
+	rescueState: RescueState | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
 	wordVariants: (RescueVariant[] | null)[] | undefined;
@@ -134,11 +133,7 @@ const containsTier = (normalisedField: string, normalisedQuery: string): MatchRe
 		: null;
 };
 
-const fuzzyOrRescue = (
-	rescue: RescueContext,
-	mayRescue: boolean,
-	rescuable: boolean,
-): MatchResult | null => {
+const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult | null => {
 	const { normalisedField, prepared } = rescue;
 	// Single-word queries already passed fuzzyGate as the ladder's front gate;
 	// only multi-word queries (presence-gated up front) still owe this test. A
@@ -150,12 +145,11 @@ const fuzzyOrRescue = (
 	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
 	if (fuzzy) {
 		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
-		if (!mayRescue) return chain;
+		if (!rescuable) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
 		// literally contain the corrected word, so both rescues are still priced.
 		const dropped = missingCharRescue(rescue, fuzzy.ranges);
-		const corrected = rescuable ? rescueField(rescue) : null;
-		return preferCheaper(preferCheaper(dropped, corrected), chain);
+		return preferCheaper(preferCheaper(dropped, rescueField(rescue)), chain);
 	}
 	// The chain can refuse past the gate via its density floor.
 	return rescuable ? rescueField(rescue) : null;
@@ -221,8 +215,7 @@ export const matchField = (
 	// exactly one, so a genuinely missing class goes straight to the rescue.
 	const rescuable = mayRescue && isRescuableQuery(normalisedQuery, queryWords);
 	const missingClasses = prepared.queryMask & ~fieldMask;
-	const relaxed = rescuable && admitsMissingClass(normalisedQuery, queryWords);
-	if (relaxed ? missingClasses & (missingClasses - 1) : missingClasses) return null;
+	if (rescuable ? missingClasses & (missingClasses - 1) : missingClasses) return null;
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
@@ -245,6 +238,6 @@ export const matchField = (
 
 	return (
 		literalTiers(field, normalisedField, prepared, acronym) ??
-		fuzzyOrRescue(rescueContext(), mayRescue, rescuable)
+		fuzzyOrRescue(rescueContext(), rescuable)
 	);
 };

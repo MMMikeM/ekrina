@@ -31,6 +31,9 @@ Design decisions worth recording, with the measurements that made them:
 - **The rescue stops once ten literal hits exist.**
   No correction (≥ 2.1) can reach a top ten already filled at or below `SCORES.CONTAINS` (2), so the rescue becomes provably invisible work and is skipped.
   The count covers the whole corpus before any correction is tried, so a result never depends on list order or on earlier searches (`test/search-history.test.ts`).
+- **No correction below five characters, in `fuzzyMatch` and the searcher alike.**
+  A single word needs five characters and a phrase one five-character word, inside which the mistyped word may be four.
+  Giving the searcher four-character corrections made short-query probes 2.9–3.8× slower at 100k and changed no result on them (docs/performance.md, "No correction below five characters").
 - **The fuzzy tier retries its first chunk from up to four admissible placements** and keeps the cheapest assembly, so a query whose first character also opens an earlier word ("towls" hitting the T of "Tasty Silk Towels") is not stranded: 307 → 0 missed assemblies over the ascii bench corpus.
   Later chunks stay leftmost-greedy, reconsidering those is what starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**

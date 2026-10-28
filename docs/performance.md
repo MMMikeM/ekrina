@@ -136,6 +136,20 @@ A correction must never outrank a literal hit; `test/tier-constants.test.ts` pin
 A constant minimum query length for the rescues has to pick one workload to fail: at a floor of 7 the long-text junk rate was 0 but short queries lost their insertion and substitution ranking (MRR 0.547 and 0.000); at 5 the ranking held (0.952 and 0.923) but long text junked 30 probes.
 `minTypoQueryLength(fieldLength)` gets both, and it is the same lesson as the retry cap: junk risk grows with the field, so the guard has to grow with it.
 
+### No correction below five characters
+
+`fuzzyMatch` used to correct four-character queries (a swap, `sfot`; a drop, `soth`) and phrases of short words (`bg oak`), but the searcher only ran its rescue pass from five characters, so it returned those corrections on a fresh searcher's first multi-word query and never again.
+Teaching the searcher the four-character rescue was measured both ways it can be built, each interleaved against the searcher without it over the full Ekrina matrix, five rounds (base Ekrina, cold query, without → with):
+
+| Build                            | mixed acronym @100k | mixed scatter-heavy @100k | mixed accent-stripped @10k |
+| -------------------------------- | ------------------: | ------------------------: | -------------------------: |
+| rescue pass over the union index |   5.74 → 20.32 ms   |      4.97 → 18.93 ms      |       2.10 → 4.42 ms       |
+| raw-text swap gate, no index     |   5.63 → 16.16 ms   |      4.88 → 14.17 ms      |       2.08 → 5.15 ms       |
+
+Neither build changed a single result, rank or tier on those probes.
+Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex cost of that test is the whole slowdown.
+So the matcher holds the searcher's floor instead — five characters for a single word, one five-character word for a phrase, inside which the mistyped word may still be four (`sfot golden` is corrected).
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.

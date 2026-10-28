@@ -24,22 +24,14 @@ describe("a query missing a character", () => {
 		expect(fuzzyMatch("Tasty Silk Towels", "towls")?.score).toBeCloseTo(3.1);
 	});
 
-	it("holds the same 4-character minimum as every other rescue", () => {
+	it("holds a single-word query to the 5-character typo floor", () => {
 		// The chain may still survive ("cat" is a genuine subsequence of "coat"),
 		// just not the typo tier and the rank that comes with it.
 		expect(fuzzyMatch("coat", "cat")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("axb", "ab")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("the", "hte")).toBeNull(); // transposed, for comparison
-		expect(fuzzyMatch("South Raven, Bangladesh", "soth")).toMatchObject({
-			score: 2.6,
-			tier: "corrected",
-			corrected: "south",
-		});
-		expect(fuzzyMatch("Small Silk Chair", "smll")).toMatchObject({
-			score: 2.6,
-			tier: "corrected",
-			corrected: "small",
-		});
+		expect(fuzzyMatch("South Raven, Bangladesh", "soth")?.tier).toBe("fuzzy");
+		expect(fuzzyMatch("Small Silk Chair", "smll")?.tier).toBe("fuzzy");
 	});
 
 	describe("a skipped separator is not a typo", () => {
@@ -211,6 +203,40 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 	it("a multi-word query keeps the strict gate while every word is under the floor", () => {
 		expect(fuzzyMatch("big oak", "big oakx")).toBeNull();
 		expect(createFuzzySearch(["big oak"])("big oakx")).toHaveLength(0);
+	});
+});
+
+describe("matcher and searcher agree on the typo floor", () => {
+	const tierFrom = (results: { fields: ({ tier: string } | null)[] }[]) =>
+		results[0]?.fields[0]?.tier ?? null;
+
+	// The searcher is asked three ways: first search, second search, indexed.
+	const agreedTier = (field: string, query: string): string | null => {
+		const matched = fuzzyMatch(field, query)?.tier ?? null;
+		const lazy = createFuzzySearch([field]);
+		const indexed = createFuzzySearch([field]);
+		indexed.buildIndex();
+		for (const tier of [tierFrom(lazy(query)), tierFrom(lazy(query)), tierFrom(indexed(query))]) {
+			expect(tier, query).toBe(matched);
+		}
+		return matched;
+	};
+
+	it("a four-character swap is not corrected", () => {
+		expect(agreedTier("Soft Gold Hat", "sfot")).not.toBe("corrected");
+	});
+
+	it("a four-character dropped keystroke is not corrected", () => {
+		expect(agreedTier("South Raven, Bangladesh", "soth")).not.toBe("corrected");
+	});
+
+	it("a phrase whose words are all under five characters is not corrected", () => {
+		expect(agreedTier("Soft Gold Hat", "sfot gold")).not.toBe("corrected");
+		expect(agreedTier("Big Oak Table", "bg oak")).not.toBe("corrected");
+	});
+
+	it("a four-character word is corrected inside a phrase that reaches the floor", () => {
+		expect(agreedTier("Soft Golden Hat", "sfot golden")).toBe("corrected");
 	});
 });
 

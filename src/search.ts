@@ -1,7 +1,7 @@
 import { buildRawGate, buildRescueBigramGate, charMask } from "./gates";
 import { matchField, prepareQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
-import { admitsMissingClass } from "./rescue";
+import { isRescuableQuery } from "./rescue";
 import { SCORES } from "./scores";
 import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
 
@@ -190,7 +190,7 @@ export function createFuzzySearch<T>(
 		const prepared = prepareQuery(query, normalisedQuery);
 		const { queryMask } = prepared;
 		// Same predicate matchField's mask gate uses, so the two cannot drift.
-		const relaxable = admitsMissingClass(normalisedQuery, prepared.queryWords);
+		const rescuable = isRescuableQuery(normalisedQuery, prepared.queryWords);
 		const multiWord = prepared.queryWords.length > 1;
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
@@ -331,7 +331,7 @@ export function createFuzzySearch<T>(
 		literalPass();
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at.
-		const rescuing = relaxable && literalHits < RESCUE_BUDGET;
+		const rescuing = rescuable && literalHits < RESCUE_BUDGET;
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass.
 		if (rescuing) relaxedPass();

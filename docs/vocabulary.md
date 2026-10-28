@@ -26,7 +26,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `class`                    | unqualified: a charMask bucket (`bigramClass`, `missingClasses`, `classBit`); regex character classes always say "char class"                       | `charMask`, `escapeCharClass`                |
 | `bigram`                   | an adjacent pair of char classes, hashed into a 64-bit presence set for the rescue gate                                                             | `FieldBigrams`, `RescueBigramGate`           |
 | `survivor`                 | an item index that passed the gate for the previous query                                                                                           | `survivorCache`                              |
-| `relaxed` / `relaxable`    | the mask gate tolerating exactly one missing class (what a substitution typo looks like from a mask)                                                | `relaxedPass`, `admitsMissingClass`          |
+| `relaxed`                  | the mask gate tolerating exactly one missing class (what a substitution typo looks like from a mask)                                                | `relaxedPass`, `isRescuableQuery`            |
 | `rescue`                   | the one-edit correction machinery; `rescueState` is its per-query gate cache, `RescueContext` the per-field call state                              | `rescue.ts`                                  |
 | `variant`                  | one enumerated one-edit correction candidate (swap or drop)                                                                                         | `RescueVariant`                              |
 | `subject`                  | what a rescue corrects, the whole query, or a phrase's one absent word                                                                             | `CorrectionSubject`                          |
@@ -47,7 +47,7 @@ Schemes the code follows deliberately; new code joins them.
 - **Bigram halves** carry the `Lo`/`Hi` suffix; field-side sets are `bigrams*`, query-side requirements are `required*`; the per-field accumulator keeps bare `{ lo, hi }` (`FieldBigrams`).
 - **Tier probes** in match.ts are `<name>Tier(…): MatchResult | null`; `fuzzyMatch` (public) and `fuzzyChainMatch` (a chain scorer, not a rung probe) are the deliberate exceptions.
 - **Ends are exclusive** in bare locals (`end`, `chunkEnd`, `wordEnd`, the JS slice idiom); inclusive ends exist only inside `Range` tuples and are always destructured `[start, end]`.
-- **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`), a domain verb (`admitsChunk`, `admitsMissingClass`), or `hits*` for a threshold test (`hitsRescueFloor`).
+- **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`), a domain verb (`admitsChunk`), or `hits*` for a threshold test (`hitsRescueFloor`).
 - **`*Occurrence`** returns an index or -1 (`boundaryOccurrence`, `wholeWordOccurrence`).
 - **`build*` constructs fresh** per-query state (`buildFuzzyGate`, `buildRescueVariants`); **`prepare*` constructs caller-cached state** (`prepareQuery`, `prepareCorrection`); noun and `*Of` accessors may memoise transparently (`unfoldTable`, `wordStartsOf`).
 - **`prefer*`** names an asymmetric selection and its parameters carry the policy: `preferCheaper(incumbent, challenger)` keeps the incumbent on ties unless it is fuzzy.

@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "ekrina";
 import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
-import { admitsMissingClass } from "../src/rescue";
+import { isRescuableQuery } from "../src/rescue";
 import { splitWords } from "../src/boundaries";
 import { normaliseText, rawFieldScan } from "../src/normalise";
 import { CORPORA } from "./corpus";
@@ -74,7 +74,7 @@ describe("pre-filter funnel", () => {
 
 					// Modelling the relaxed gate unconditionally would count items
 					// through a filter production never applies, overstating the cut.
-					const relaxed = admitsMissingClass(normalisedQuery, splitWords(normalisedQuery));
+					const relaxed = isRescuableQuery(normalisedQuery, splitWords(normalisedQuery));
 					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery) : null;
 
 					let maskPass = 0;

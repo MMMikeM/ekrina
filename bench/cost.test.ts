@@ -11,7 +11,7 @@ import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
 import { buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
 import { matchField, prepareQuery } from "../src/match";
-import { admitsMissingClass } from "../src/rescue";
+import { isRescuableQuery } from "../src/rescue";
 import { normaliseText, rawFieldScan } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createFuzzySearch } from "../src/search";
@@ -77,7 +77,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 
 			// What the rescue costs when a query needs it: the whole-corpus mask
 			// build, then a relaxed scan admitting one missing character class.
-			const relax = admitsMissingClass(nq, q.queryWords);
+			const relax = isRescuableQuery(nq, q.queryWords);
 			const search = createFuzzySearch(list);
 			const literal = search(query).filter((r) => r.score <= SCORES.CONTAINS).length;
 			results += search(query).length;

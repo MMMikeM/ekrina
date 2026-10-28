@@ -51,13 +51,12 @@ const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: numb
 		? normalisedQuery.length >= floor
 		: queryWords.some((word) => word.length >= floor);
 
-export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH);
-
-// Whether the mask gate may relax to one missing class for this query.
+// Whether any rescue may run, and so whether the mask gate may relax to one
+// missing class. Held at the typo floor because below it the searcher cannot
+// find swap candidates without scanning the whole corpus (@see docs/performance.md).
 // matchField and the searcher's survivor scan must ask this same question, or
-// the searcher silently drops hits the matcher would accept.
-export const admitsMissingClass = (normalisedQuery: string, queryWords: string[]): boolean =>
+// one corrects what the other cannot.
+export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
 
 const SCORE_EPSILON = 1e-9;
@@ -190,22 +189,17 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 
 // The broad gate carries the variant texts plus the query's two halves, so one
 // native test rules out the enumerated and substitution families both. It may
-// only false-pass, so it uses the flat floor and leaves the real one to the
-// window phase.
-const buildRescueGates = (prepared: PreparedQuery): RescueState | null => {
+// only false-pass, so it leaves the field-scaled floor to the window phase.
+const buildRescueGates = (prepared: PreparedQuery): RescueState => {
 	const variants = buildRescueVariants(prepared.query, prepared.normalisedQuery);
 	const literals = variants.map((variant) => escapeRegex(variant.normalised));
 	const variantGate = literals.length ? new RegExp(literals.join("|")) : null;
-	if (prepared.normalisedQuery.length >= MIN_TYPO_QUERY_LENGTH) {
-		const splitAt = prepared.normalisedQuery.length >> 1;
-		literals.push(
-			escapeRegex(prepared.normalisedQuery.slice(0, splitAt)),
-			escapeRegex(prepared.normalisedQuery.slice(splitAt)),
-		);
-	}
-	return (prepared.rescueState = literals.length
-		? { variants, variantGate, gate: new RegExp(literals.join("|")) }
-		: null);
+	const splitAt = prepared.normalisedQuery.length >> 1;
+	literals.push(
+		escapeRegex(prepared.normalisedQuery.slice(0, splitAt)),
+		escapeRegex(prepared.normalisedQuery.slice(splitAt)),
+	);
+	return (prepared.rescueState = { variants, variantGate, gate: new RegExp(literals.join("|")) });
 };
 
 // By the pigeonhole principle a single substitution leaves at least one half of
@@ -405,9 +399,8 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
-	const gates =
-		prepared.rescueState !== undefined ? prepared.rescueState : buildRescueGates(prepared);
-	if (gates === null || !gates.gate.test(normalisedField)) return null;
+	const gates = prepared.rescueState ?? buildRescueGates(prepared);
+	if (!gates.gate.test(normalisedField)) return null;
 	const variants = gates.variantGate?.test(normalisedField) ? gates.variants : [];
 	return correctSubject(rescue, wholeQuerySubject(prepared, variants));
 };
@@ -415,15 +408,14 @@ const typoRescue = (rescue: RescueContext): MatchResult | null => {
 // A fuzzy assembly of exactly two chunks around a one-character gap is a
 // dropped keystroke: the missing character is the gap itself. The gap must be a
 // word character — a skipped separator is concatenated-word matching, not a
-// typo. Takes the flat floor: this shape pins the correction to one contiguous
-// window, so the multiple-comparisons hazard the field-scaled floor guards
-// never arises (@see bench/longtext.test.ts).
+// typo. Skips the field-scaled floor: this shape pins the correction to one
+// contiguous window, so the multiple-comparisons hazard that floor guards never
+// arises (@see bench/longtext.test.ts).
 export const missingCharRescue = (
 	rescue: RescueContext,
 	ranges: HighlightRanges,
 ): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
-	if (prepared.normalisedQuery.length < MIN_RESCUE_QUERY_LENGTH) return null;
 	if (ranges.length !== 2) return null;
 	const [[firstStart, firstEnd], [secondStart, secondEnd]] = ranges;
 	const gapChar = normalisedField[firstEnd + 1];
