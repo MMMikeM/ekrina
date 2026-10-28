@@ -71,7 +71,9 @@ export const buildRawGate = (normalisedQuery: string): RegExp | null => {
 		const sources = unfold[char];
 		if (sources === undefined) return null;
 		const gapBody = escapeCharClass(sources);
-		positions.push({ matcher: `[${gapBody}]`, gapBody });
+		// A decomposed accent sits between letters in the raw text but not after
+		// normaliseText strips it, so the run steps over the same range it strips.
+		positions.push({ matcher: `[${gapBody}][\\u0300-\\u036f]*`, gapBody });
 	}
 	return subsequenceGate(positions);
 };

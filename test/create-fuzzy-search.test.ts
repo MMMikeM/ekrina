@@ -170,4 +170,12 @@ describe("unicode", () => {
 	it("normalised-exact for special characters", () => {
 		expect(createFuzzySearch(["Łódź"])("lodz")[0]!.score).toBe(0.1);
 	});
+
+	it("finds a mid-word match whose accent is a separate combining mark", () => {
+		const decomposed = "Re\u0301sume\u0301";
+		expect(fuzzyMatch(decomposed, "esum")?.tier).toBe("contains");
+		expect(createFuzzySearch([decomposed])("esum").map((r) => r.fields[0]?.tier)).toEqual([
+			"contains",
+		]);
+	});
 });
