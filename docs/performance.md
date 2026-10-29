@@ -69,7 +69,7 @@ The cost lands where a user pays it: construction is allocation, the first query
 ### Survivors carry across keystrokes
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
-This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"the quick brown fox"` matches `fox brown` via the multi-word tier and fails `fox brow`), so caching matches would be wrong.
+This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borwn` as a corrected `brown` and fails `borw`, which is below the typo floor), so caching matches would be wrong.
 Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
@@ -81,7 +81,7 @@ The count is taken over the whole corpus before any correction is attempted, so 
 
 ### Word membership scans instead of hashing
 
-`wholeWordOccurrence` finds a boundary-bounded occurrence with an `indexOf` walk, yielding membership and position in one pass, with no per-field `Set` living on the heap.
+`wordStartOccurrence` finds an occurrence that starts a word with an `indexOf` walk, yielding membership and position in one pass, with no per-field `Set` living on the heap.
 The stated trade: for document-length fields (`strategy: "off"` body text) membership is O(field length) per query word where a Set was O(1).
 It is bounded in practice (the mask rejects most items first, the scan stops at the first absent word, and the tier only runs for multi-word queries that missed every earlier tier) and unmeasured by the short-string bench corpora.
 Revisit trigger: a long-field corpus probe showing the multi-word tier dominating query time; the fix is an opt-in per-field word index for long fields, not a return of the always-on Set.

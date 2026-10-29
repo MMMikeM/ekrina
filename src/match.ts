@@ -58,16 +58,10 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
 
-const wholeWordOccurrence = (haystack: string, needle: string): number => {
+const wordStartOccurrence = (haystack: string, needle: string): number => {
 	let at = haystack.indexOf(needle);
 	while (at > -1) {
-		const end = at + needle.length;
-		if (
-			(at === 0 || !wordChar.test(haystack[at - 1])) &&
-			(end === haystack.length || !wordChar.test(haystack[end]))
-		) {
-			return at;
-		}
+		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
 		at = haystack.indexOf(needle, at + 1);
 	}
 	return -1;
@@ -96,7 +90,7 @@ const boundaryTier = (
 const multiWordTier = (normalisedField: string, queryWords: string[]): MatchResult | null => {
 	const ranges: Range[] = [];
 	for (const word of queryWords) {
-		const at = wholeWordOccurrence(normalisedField, word);
+		const at = wordStartOccurrence(normalisedField, word);
 		if (at === -1) return null;
 		ranges.push([at, at + word.length - 1]);
 	}

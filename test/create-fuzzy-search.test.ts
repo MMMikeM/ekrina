@@ -137,13 +137,13 @@ describe("prefix-narrowing cache", () => {
 		}
 	});
 
-	it("multi-word match reappears when a partial word completes", () => {
-		// "fox brow" matches nothing on "the quick brown fox" (no whole word
-		// "brow", no substring, no in-order subsequence) but "fox brown" matches
-		// via the multi-word tier — the narrowed rescan must not lose it.
+	it("a correction appears once the query is long enough to correct", () => {
+		// "borw" is below the typo floor and no item holds it as a subsequence, so
+		// nothing survives it; "borwn" is one swap from "brown", and the narrowed
+		// rescan must not lose it.
 		const search = createFuzzySearch(collection);
-		expect(search("fox brow").map((r) => r.item)).toEqual([]);
-		expect(search("fox brown").map((r) => r.item)).toEqual(["the quick brown fox"]);
+		expect(search("borw").map((r) => r.item)).toEqual([]);
+		expect(search("borwn").map((r) => r.item)).toEqual(["brown bread", "the quick brown fox"]);
 	});
 
 	it("non-extension queries (backspace, replacement) fall back to a full scan", () => {

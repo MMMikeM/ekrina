@@ -154,7 +154,7 @@ Lower is better. Each match reports a numeric `score` (for sorting) and a catego
 | 0.5   | `prefix`           | starts with query                          |
 | 0.9   | `boundary-exact`   | at a word boundary, exact case             |
 | 1     | `boundary`         | at a word boundary                         |
-| 1.5   | `multi-word`       | all query words present, any order         |
+| 1.5   | `multi-word`       | every query word starts a word, any order  |
 | 1.8   | `acronym`          | word initials (opt-in via `acronym: true`) |
 | 2     | `contains`         | contains query anywhere                    |
 | > 2   | `fuzzy`            | fuzzy chain (fewer chunks = better)        |

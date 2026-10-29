@@ -172,9 +172,9 @@ export function createFuzzySearch<T>(
 	// previous survivors need rescanning. Sound because every filter is monotone
 	// under query extension — an item the shorter query rejected stays rejected —
 	// and the cached set is always a GATE-passing set of the same gate kind; the
-	// match set itself is not monotone (a field can match "fox brown" via the
-	// multi-word tier while failing "fox brow"). The two lists double-buffer so
-	// the query path stays allocation-free.
+	// match set itself is not monotone (a field can match "borwn" as a corrected
+	// "brown" while failing "borw", which is below the typo floor). The two lists
+	// double-buffer so the query path stays allocation-free.
 	const survivorCache = {
 		query: "",
 		multiWord: false,

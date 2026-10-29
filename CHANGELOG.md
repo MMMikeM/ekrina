@@ -19,6 +19,8 @@ Design decisions worth recording, with the measurements that made them:
 - **Phrase rescues correct exactly one word.**
   A multi-word query with one absent word rescues that word alone and rescores the whole phrase; the literally-occurring words pin the candidate fields first, so enumeration runs over a handful of fields rather than the corpus.
   Two mistyped words stay unmatched by design, refusal beats guessing, and `bench/longtext.test.ts` asserts a mistyped word beside a real one never invents a phrase match at any document length.
+- **Each word of a multi-word query only has to start a word of the field.**
+  `woo handcrafted` matches "Handcrafted Wooden Chair" at the `multi-word` tier, so a phrase stays a literal match, in any order, while its last word is half-typed (docs/benchmarks.md, the half-typed probe at rank 1).
 - **A density floor instead of a strategy knob.**
   The fuzzy tier rejects any chunk assembly covering less than 18% of its span (measured junk chains ≤ 0.143 density, sparsest genuine match 0.211).
   Junk rate over document-length text: 5–98% across measured lengths → 0%, with label behaviour unchanged.
