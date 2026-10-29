@@ -291,6 +291,9 @@ export type SampledQuery = {
 
 const SAMPLES_PER_FAMILY = 10;
 const SAMPLE_SIZE = 10_000;
+// A query dozens of items could answer is scored by whether a library matches
+// at all, not by how it ranks, so only near-unique intents are sampled.
+const MAX_RELEVANT_ITEMS = 3;
 
 // Relevance is judged on the bench's own folding, never the library under test's.
 const fold = (s: string): string => stripAccents(s).toLowerCase();
@@ -326,6 +329,12 @@ const shuffledIndices = (n: number, seed: number): number[] => {
 		[order[i], order[j]] = [order[j], order[i]];
 	}
 	return order;
+};
+
+const answeredByFew = (items: string[], relevant: (item: string) => boolean): boolean => {
+	let found = 0;
+	for (const item of items) if (relevant(item) && ++found > MAX_RELEVANT_ITEMS) return false;
+	return true;
 };
 
 type Derived = { query: string; relevant: ((item: string) => boolean) | null } | null;
@@ -481,6 +490,7 @@ const sampleQueries = (build: (n: number) => string[]): SampledQuery[] => {
 			if (seen.size === SAMPLES_PER_FAMILY) break;
 			const derived = derive(wordsOf(items[at].toLowerCase()), items[at]);
 			if (!derived || seen.has(derived.query)) continue;
+			if (derived.relevant && !answeredByFew(items, derived.relevant)) continue;
 			seen.add(derived.query);
 			sampled.push({ kind, ...derived });
 		}

@@ -10,7 +10,7 @@ A one-character query now returns its word-start matches, where 1.0.0 returned n
   `woo handcrafted` matches "Handcrafted Wooden Chair" at the `multi-word` tier, so a phrase stays a literal match, in any order, while its last word is half-typed (docs/benchmarks.md, the two-words-partial-reversed family).
 - **Within a score, a whole word ranks first.**
   A match that ends on a word boundary sorts ahead of one that stops inside a word, then list order, so `will` finds "Will Smith" before "Willa Corkery" and a correction that completes a word before one that doesn't; score values are unchanged.
-  MRR rises 0.84 → 0.87 on both corpora (0.87 → 0.90 with acronyms), from the plain-word, typo and four-character typo families (docs/benchmarks.md, the family tables).
+  MRR rises 0.84 → 0.87 on both corpora (0.87 → 0.90 with acronyms), from the plain-word, typo and four-character typo families, measured before the sampled queries were limited to those three items or fewer could answer.
 - **One character matches only where it starts a word.**
   Anywhere, one character matches most of any list; at word starts, a 100-item list returns a median of 9 rows per letter and 100k items about a quarter of the list.
   `fuzzyMatch` applies the same rule, so `fuzzyMatch("banana", "n")` is null.

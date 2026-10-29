@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ufuzzy-scorecard-mixed -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.76 |     4.95 |    1.68 |    23.40 |        0.91 |
-| uFuzzy                | 0.24 |     4.25 |    0.92 |     6.04 |        0.21 |
+| **uFuzzy (all opts)** | 0.75 |     4.95 |    1.68 |    23.40 |        0.91 |
+| uFuzzy                | 0.25 |     4.25 |    0.92 |     6.04 |        0.21 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ufuzzy-scorecard-ascii -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.75 |     4.73 |    1.39 |    17.27 |        0.66 |
-| uFuzzy                | 0.24 |     4.22 |    0.82 |     5.56 |        0.19 |
+| **uFuzzy (all opts)** | 0.74 |     4.73 |    1.39 |    17.27 |        0.66 |
+| uFuzzy                | 0.26 |     4.22 |    0.82 |     5.56 |        0.19 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -64,24 +64,24 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | long-word                  |   1.00 |              1.00 |
 | short-word                 |   1.00 |              1.00 |
 | two-words                  |   1.00 |              1.00 |
-| two-words-reversed         |   0.10 |              1.00 |
+| two-words-reversed         |   0.10 |              0.95 |
 | two-words-partial-reversed |   0.00 |              1.00 |
 | two-words-joined           |   0.00 |              0.00 |
 | two-words-typo             |   0.00 |              1.00 |
 | two-words-typo-second      |   0.00 |              1.00 |
 | two-words-typo-reversed    |   0.00 |              1.00 |
-| plural-to-singular         |   0.00 |              1.00 |
+| plural-to-singular         |   0.00 |              0.93 |
 | short-word-typo            |   0.00 |              0.00 |
 | prefix                     |   1.00 |              1.00 |
 | infix                      |   1.00 |              1.00 |
-| scatter-light              |   0.00 |              1.00 |
+| scatter-light              |   0.00 |              0.85 |
 | scatter-medium             |   0.00 |              0.00 |
 | scatter-heavy              |   0.00 |              0.00 |
 | transposition              |   0.00 |              1.00 |
 | insertion                  |   0.00 |              1.00 |
 | substitution               |   0.00 |              1.00 |
 | acronym                    |   0.00 |              0.00 |
-| accent-stripped            |   0.00 |              1.00 |
+| accent-stripped            |   0.10 |              1.00 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -98,16 +98,15 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | two-words-typo             |   0.00 |              1.00 |
 | two-words-typo-second      |   0.00 |              1.00 |
 | two-words-typo-reversed    |   0.00 |              1.00 |
-| plural-to-singular         |   0.00 |              1.00 |
+| plural-to-singular         |   0.00 |              0.95 |
 | short-word-typo            |   0.00 |              0.00 |
 | prefix                     |   1.00 |              1.00 |
 | infix                      |   1.00 |              1.00 |
-| scatter-light              |   0.00 |              0.75 |
+| scatter-light              |   0.00 |              0.80 |
 | scatter-medium             |   0.00 |              0.00 |
 | scatter-heavy              |   0.00 |              0.00 |
 | transposition              |   0.00 |              1.00 |
 | insertion                  |   0.00 |              1.00 |
 | substitution               |   0.00 |              1.00 |
 | acronym                    |   0.00 |              0.00 |
-| accent-stripped            |   0.00 |              1.00 |
 <!-- bench:end -->

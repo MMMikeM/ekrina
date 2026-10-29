@@ -51,7 +51,7 @@ const FUSE_ALL: IFuseOptions<string> = {
 	useExtendedSearch: true,
 };
 
-const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.5 };
+const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.45 };
 
 // SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
 const UFUZZY_ALL: uFuzzy.Options = {
@@ -306,8 +306,8 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js (tuned)",
 		make: () => {
-			// Swept over 0.2–0.6 with and without ignoreLocation: 0.5 ties the best
-			// MRR with a quarter of the default's rows (docs/libraries/fuse.md).
+			// Swept over 0.2–0.6 with and without ignoreLocation: 0.45 scores the best
+			// MRR, from a median 33 rows against the default's 560 (docs/libraries/fuse.md).
 			const fuseTuned = new Fuse(list, FUSE_TUNED);
 			return {
 				count: (q) => fuseTuned.search(q).length,

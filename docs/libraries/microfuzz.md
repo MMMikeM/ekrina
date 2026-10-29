@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-microfuzz-scorecard-mixed -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.52 |     3.71 |    1.41 |    30.06 |        1.19 |
-| @nozbe/microfuzz (all opts) | 0.52 |     3.77 |    1.43 |    30.05 |        1.19 |
+| **@nozbe/microfuzz**        | 0.47 |     3.71 |    1.41 |    30.06 |        1.19 |
+| @nozbe/microfuzz (all opts) | 0.47 |     3.77 |    1.43 |    30.05 |        1.19 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-microfuzz-scorecard-ascii -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.53 |     3.49 |    1.35 |    28.39 |        1.13 |
-| @nozbe/microfuzz (all opts) | 0.53 |     3.66 |    1.32 |    28.59 |        1.13 |
+| **@nozbe/microfuzz**        | 0.47 |     3.49 |    1.35 |    28.39 |        1.13 |
+| @nozbe/microfuzz (all opts) | 0.47 |     3.66 |    1.32 |    28.59 |        1.13 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -78,27 +78,27 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 <!-- bench:library-microfuzz-families-mixed -->
 | Family                     | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
 |----------------------------|-----------------:|----------------------------:|
-| long-word                  |             0.99 |                        0.99 |
-| short-word                 |             0.91 |                        0.91 |
+| long-word                  |             0.94 |                        0.94 |
+| short-word                 |             0.81 |                        0.81 |
 | two-words                  |             0.90 |                        0.90 |
-| two-words-reversed         |             0.60 |                        0.60 |
+| two-words-reversed         |             0.40 |                        0.40 |
 | two-words-partial-reversed |             0.00 |                        0.00 |
 | two-words-joined           |             1.00 |                        1.00 |
 | two-words-typo             |             0.00 |                        0.00 |
 | two-words-typo-second      |             0.00 |                        0.00 |
 | two-words-typo-reversed    |             0.00 |                        0.00 |
-| plural-to-singular         |             0.70 |                        0.70 |
+| plural-to-singular         |             0.40 |                        0.40 |
 | short-word-typo            |             0.00 |                        0.00 |
 | prefix                     |             1.00 |                        1.00 |
 | infix                      |             1.00 |                        1.00 |
-| scatter-light              |             0.99 |                        0.99 |
-| scatter-medium             |             0.66 |                        0.66 |
-| scatter-heavy              |             0.30 |                        0.30 |
-| transposition              |             0.35 |                        0.35 |
-| insertion                  |             0.20 |                        0.20 |
+| scatter-light              |             0.95 |                        0.95 |
+| scatter-medium             |             0.67 |                        0.67 |
+| scatter-heavy              |             0.23 |                        0.23 |
+| transposition              |             0.00 |                        0.00 |
+| insertion                  |             0.00 |                        0.00 |
 | substitution               |             0.00 |                        0.00 |
-| acronym                    |             0.42 |                        0.42 |
-| accent-stripped            |             1.00 |                        1.00 |
+| acronym                    |             0.52 |                        0.52 |
+| accent-stripped            |             0.97 |                        0.97 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -106,25 +106,24 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 <!-- bench:library-microfuzz-families-ascii -->
 | Family                     | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
 |----------------------------|-----------------:|----------------------------:|
-| long-word                  |             0.93 |                        0.93 |
-| short-word                 |             0.86 |                        0.86 |
+| long-word                  |             0.96 |                        0.96 |
+| short-word                 |             0.93 |                        0.93 |
 | two-words                  |             1.00 |                        1.00 |
-| two-words-reversed         |             0.70 |                        0.70 |
+| two-words-reversed         |             0.50 |                        0.50 |
 | two-words-partial-reversed |             0.10 |                        0.10 |
 | two-words-joined           |             1.00 |                        1.00 |
 | two-words-typo             |             0.00 |                        0.00 |
 | two-words-typo-second      |             0.00 |                        0.00 |
 | two-words-typo-reversed    |             0.00 |                        0.00 |
-| plural-to-singular         |             0.90 |                        0.90 |
-| short-word-typo            |             0.20 |                        0.20 |
+| plural-to-singular         |             0.40 |                        0.40 |
+| short-word-typo            |             0.00 |                        0.00 |
 | prefix                     |             1.00 |                        1.00 |
 | infix                      |             1.00 |                        1.00 |
-| scatter-light              |             0.95 |                        0.95 |
-| scatter-medium             |             0.80 |                        0.80 |
-| scatter-heavy              |             0.10 |                        0.10 |
-| transposition              |             0.15 |                        0.15 |
+| scatter-light              |             0.93 |                        0.93 |
+| scatter-medium             |             0.73 |                        0.73 |
+| scatter-heavy              |             0.07 |                        0.07 |
+| transposition              |             0.00 |                        0.00 |
 | insertion                  |             0.10 |                        0.10 |
 | substitution               |             0.00 |                        0.00 |
-| acronym                    |             0.31 |                        0.31 |
-| accent-stripped            |             1.00 |                        1.00 |
+| acronym                    |             0.60 |                        0.60 |
 <!-- bench:end -->

@@ -840,7 +840,73 @@
 			"ascii": [
 				{
 					"library": "ekrina (acronym)",
-					"mrr": 0.9
+					"mrr": 0.89
+				},
+				{
+					"library": "ekrina",
+					"mrr": 0.86
+				},
+				{
+					"library": "ekrina (indexed)",
+					"mrr": 0.86
+				},
+				{
+					"library": "fuse.js (all opts)",
+					"mrr": 0.82
+				},
+				{
+					"library": "fuse.js (tuned)",
+					"mrr": 0.82
+				},
+				{
+					"library": "uFuzzy (all opts)",
+					"mrr": 0.74
+				},
+				{
+					"library": "fuse.js",
+					"mrr": 0.71
+				},
+				{
+					"library": "fast-fuzzy",
+					"mrr": 0.7
+				},
+				{
+					"library": "fast-fuzzy (all opts)",
+					"mrr": 0.7
+				},
+				{
+					"library": "fuzzysort",
+					"mrr": 0.57
+				},
+				{
+					"library": "match-sorter",
+					"mrr": 0.51
+				},
+				{
+					"library": "@nozbe/microfuzz",
+					"mrr": 0.47
+				},
+				{
+					"library": "@nozbe/microfuzz (all opts)",
+					"mrr": 0.47
+				},
+				{
+					"library": "fuzzy",
+					"mrr": 0.39
+				},
+				{
+					"library": "fuzzy (all opts)",
+					"mrr": 0.39
+				},
+				{
+					"library": "uFuzzy",
+					"mrr": 0.26
+				}
+			],
+			"mixed": [
+				{
+					"library": "ekrina (acronym)",
+					"mrr": 0.89
 				},
 				{
 					"library": "ekrina",
@@ -852,11 +918,11 @@
 				},
 				{
 					"library": "fuse.js (tuned)",
-					"mrr": 0.79
+					"mrr": 0.82
 				},
 				{
 					"library": "fuse.js (all opts)",
-					"mrr": 0.79
+					"mrr": 0.81
 				},
 				{
 					"library": "uFuzzy (all opts)",
@@ -864,77 +930,11 @@
 				},
 				{
 					"library": "fast-fuzzy",
-					"mrr": 0.7
+					"mrr": 0.71
 				},
 				{
 					"library": "fast-fuzzy (all opts)",
-					"mrr": 0.7
-				},
-				{
-					"library": "fuse.js",
-					"mrr": 0.67
-				},
-				{
-					"library": "fuzzysort",
-					"mrr": 0.62
-				},
-				{
-					"library": "match-sorter",
-					"mrr": 0.56
-				},
-				{
-					"library": "@nozbe/microfuzz",
-					"mrr": 0.53
-				},
-				{
-					"library": "@nozbe/microfuzz (all opts)",
-					"mrr": 0.53
-				},
-				{
-					"library": "fuzzy",
-					"mrr": 0.42
-				},
-				{
-					"library": "fuzzy (all opts)",
-					"mrr": 0.42
-				},
-				{
-					"library": "uFuzzy",
-					"mrr": 0.24
-				}
-			],
-			"mixed": [
-				{
-					"library": "ekrina (acronym)",
-					"mrr": 0.9
-				},
-				{
-					"library": "ekrina",
-					"mrr": 0.87
-				},
-				{
-					"library": "ekrina (indexed)",
-					"mrr": 0.87
-				},
-				{
-					"library": "fuse.js (tuned)",
-					"mrr": 0.81
-				},
-				{
-					"library": "fuse.js (all opts)",
-					"mrr": 0.81
-				},
-				{
-					"library": "uFuzzy (all opts)",
-					"mrr": 0.76
-				},
-				{
-					"library": "fast-fuzzy",
-					"mrr": 0.72
-				},
-				{
-					"library": "fast-fuzzy (all opts)",
-					"mrr": 0.72
+					"mrr": 0.71
 				},
 				{
 					"library": "fuse.js",
@@ -942,31 +942,31 @@
 				},
 				{
 					"library": "fuzzysort",
-					"mrr": 0.64
+					"mrr": 0.59
 				},
 				{
 					"library": "match-sorter",
-					"mrr": 0.56
+					"mrr": 0.51
 				},
 				{
 					"library": "@nozbe/microfuzz",
-					"mrr": 0.52
+					"mrr": 0.47
 				},
 				{
 					"library": "@nozbe/microfuzz (all opts)",
-					"mrr": 0.52
+					"mrr": 0.47
 				},
 				{
 					"library": "fuzzy",
-					"mrr": 0.43
+					"mrr": 0.38
 				},
 				{
 					"library": "fuzzy (all opts)",
-					"mrr": 0.43
+					"mrr": 0.38
 				},
 				{
 					"library": "uFuzzy",
-					"mrr": 0.24
+					"mrr": 0.25
 				}
 			]
 		}
@@ -1075,7 +1075,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 318,
+						"count": 128,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -1182,7 +1182,7 @@
 						"rank": 5
 					},
 					"fuse.js (tuned)": {
-						"count": 237,
+						"count": 168,
 						"rank": 5
 					},
 					"fuse.js (all opts)": {
@@ -1519,7 +1519,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 18,
+						"count": 8,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -1638,7 +1638,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 142,
+						"count": 114,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2160,7 +2160,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 291,
+						"count": 230,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -2271,7 +2271,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 362,
+						"count": 181,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2362,7 +2362,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 386,
+						"count": 242,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2457,7 +2457,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 635,
+						"count": 37,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2536,7 +2536,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 41,
+						"count": 10,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -2619,7 +2619,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 18,
+						"count": 8,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2718,7 +2718,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 289,
+						"count": 231,
 						"rank": null
 					},
 					"fuse.js (all opts)": {
@@ -2793,7 +2793,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 51,
+						"count": 33,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -2864,7 +2864,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 44,
+						"count": 9,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -2935,7 +2935,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 21,
+						"count": 11,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -3034,7 +3034,7 @@
 						"rank": null
 					},
 					"fuse.js (tuned)": {
-						"count": 1207,
+						"count": 846,
 						"rank": null
 					},
 					"fuse.js (all opts)": {
@@ -3125,7 +3125,7 @@
 						"rank": 860
 					},
 					"fuse.js (tuned)": {
-						"count": 979,
+						"count": 293,
 						"rank": 51
 					},
 					"fuse.js (all opts)": {
@@ -3309,7 +3309,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 178,
+						"count": 80,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3444,7 +3444,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 292,
+						"count": 133,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3555,7 +3555,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3666,7 +3666,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3769,7 +3769,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 23,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3880,7 +3880,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 95,
+						"count": 88,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -4046,7 +4046,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -4141,7 +4141,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -4236,7 +4236,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -4315,7 +4315,7 @@
 						"rank": null
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 5,
 						"rank": null
 					},
 					"fuse.js (all opts)": {
@@ -4386,7 +4386,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 357,
+						"count": 221,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -4509,7 +4509,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 145,
+						"count": 122,
 						"rank": 5,
 						"tiedRanks": [
 							1,
@@ -4588,7 +4588,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 92,
+						"count": 39,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -4675,7 +4675,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 876,
+						"count": 392,
 						"rank": 4,
 						"tiedRanks": [
 							1,
@@ -4754,7 +4754,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 30,
+						"count": 22,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -4825,7 +4825,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 96,
+						"count": 21,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -4916,8 +4916,8 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 391,
-						"rank": 50,
+						"count": 25,
+						"rank": null,
 						"tiedRanks": [
 							24,
 							193
@@ -4995,7 +4995,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 61,
+						"count": 6,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -5066,7 +5066,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 27,
+						"count": 13,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -5137,7 +5137,7 @@
 						"rank": 1
 					},
 					"fuse.js (tuned)": {
-						"count": 12,
+						"count": 1,
 						"rank": 1
 					},
 					"fuse.js (all opts)": {
@@ -5232,8 +5232,8 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 316,
-						"rank": 278,
+						"count": 26,
+						"rank": null,
 						"tiedRanks": [
 							278,
 							312
@@ -5343,7 +5343,7 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"count": 678,
+						"count": 74,
 						"rank": 2
 					},
 					"fuse.js (all opts)": {
@@ -5437,47 +5437,47 @@
 			{
 				"library": "ekrina",
 				"stepMs": [
-					2.234124999999949,
-					1.3107909999999947,
-					0.5346250000000055
+					2.2586670000000595,
+					1.301332999999886,
+					0.54037500000004
 				],
-				"sessionMs": 4.079540999999949
+				"sessionMs": 4.1003749999999854
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					19.12083400000006,
-					16.46358299999997,
-					15.930333999999903
+					18.987750000000005,
+					20.047792000000072,
+					18.236707999999908
 				],
-				"sessionMs": 51.51475099999993
+				"sessionMs": 57.272249999999985
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					4.948875000000044,
-					2.8964999999998327,
-					1.7901669999996557
+					5.421334000000115,
+					2.9145410000000993,
+					1.7772079999999733
 				],
-				"sessionMs": 9.635541999999532
+				"sessionMs": 10.113083000000188
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					3.8828340000000026,
-					1.9484159999997246,
-					1.992040999999972
+					3.8861249999999927,
+					1.924333999999817,
+					1.980417000000216
 				],
-				"sessionMs": 7.823290999999699
+				"sessionMs": 7.790876000000026
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					82.64320899999984,
-					106.31162499999982,
-					116.3685419999997
+					88.0595830000002,
+					110.76350000000002,
+					121.88366599999972
 				],
-				"sessionMs": 305.32337599999937
+				"sessionMs": 320.70674899999995
 			}
 		]
 	},
@@ -5488,63 +5488,63 @@
 				"junkRate": 0,
 				"presentHits": 8,
 				"presentProbes": 8,
-				"missMs": 0.003999999999990678
+				"missMs": 0.0038329999999859865
 			},
 			{
 				"docChars": 128,
 				"junkRate": 0,
 				"presentHits": 15,
 				"presentProbes": 15,
-				"missMs": 0.004166999999995369
+				"missMs": 0.004166000000054737
 			},
 			{
 				"docChars": 256,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.0050420000000030996
+				"missMs": 0.005083000000013271
 			},
 			{
 				"docChars": 512,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.00695899999999483
+				"missMs": 0.006958999999937987
 			},
 			{
 				"docChars": 1024,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.017790999999988344
+				"missMs": 0.017791999999872132
 			},
 			{
 				"docChars": 2048,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.02987499999994725
+				"missMs": 0.029708000000027823
 			},
 			{
 				"docChars": 4096,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.054333000000042375
+				"missMs": 0.05333300000006602
 			},
 			{
 				"docChars": 8192,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.10533300000008694
+				"missMs": 0.10337499999991451
 			},
 			{
 				"docChars": 16384,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.22383399999989706
+				"missMs": 0.2050840000001699
 			}
 		]
 	},
@@ -5888,26 +5888,26 @@
 			},
 			"fuse.js (tuned)": {
 				"built": {
-					"heapBytes": 7252392,
+					"heapBytes": 7252072,
 					"externalBytes": 40,
-					"totalBytes": 7252432
+					"totalBytes": 7252112
 				},
 				"match": {
-					"heapBytes": 7374832,
+					"heapBytes": 7374128,
 					"externalBytes": 40,
-					"totalBytes": 7374872
+					"totalBytes": 7374168
 				},
 				"miss": {
-					"heapBytes": 7408992,
+					"heapBytes": 7456208,
 					"externalBytes": 40,
-					"totalBytes": 7409032
+					"totalBytes": 7456248
 				},
 				"long": {
-					"heapBytes": 7407616,
+					"heapBytes": 7405384,
 					"externalBytes": 40,
-					"totalBytes": 7407656
+					"totalBytes": 7405424
 				},
-				"residueBytes": 183840,
+				"residueBytes": 181528,
 				"collected": true
 			},
 			"fuse.js (all opts)": {
@@ -6274,26 +6274,26 @@
 			},
 			"fuse.js (tuned)": {
 				"built": {
-					"heapBytes": 7252520,
+					"heapBytes": 7252200,
 					"externalBytes": 40,
-					"totalBytes": 7252560
+					"totalBytes": 7252240
 				},
 				"match": {
-					"heapBytes": 7375728,
+					"heapBytes": 7375144,
 					"externalBytes": 40,
-					"totalBytes": 7375768
+					"totalBytes": 7375184
 				},
 				"miss": {
-					"heapBytes": 7409760,
+					"heapBytes": 7457912,
 					"externalBytes": 40,
-					"totalBytes": 7409800
+					"totalBytes": 7457952
 				},
 				"long": {
-					"heapBytes": 7408928,
+					"heapBytes": 7406336,
 					"externalBytes": 40,
-					"totalBytes": 7408968
+					"totalBytes": 7406376
 				},
-				"residueBytes": 184936,
+				"residueBytes": 182264,
 				"collected": true
 			},
 			"fuse.js (all opts)": {
@@ -6453,13 +6453,13 @@
 						"heapMB": 28.24561309814453
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1976669999999956,
-						"queryMs": 19.842416999999998,
-						"firstMs": 19.842416999999998,
+						"indexMs": 1.156500000000051,
+						"queryMs": 16.47145899999998,
+						"firstMs": 16.47145899999998,
 						"restMs": null,
-						"oneShotMs": 21.040083999999993,
-						"minQueryMs": 19.842416999999998,
-						"heapMB": 32.29798126220703
+						"oneShotMs": 17.627959000000033,
+						"minQueryMs": 16.47145899999998,
+						"heapMB": 31.416336059570312
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.2762500000000045,
@@ -6599,13 +6599,13 @@
 						"heapMB": 48.75836944580078
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.7216669999999965,
-						"queryMs": 148.449667,
-						"firstMs": 148.449667,
+						"indexMs": 5.407208000000082,
+						"queryMs": 138.23020800000006,
+						"firstMs": 138.23020800000006,
 						"restMs": null,
-						"oneShotMs": 154.171334,
-						"minQueryMs": 148.449667,
-						"heapMB": 58.261024475097656
+						"oneShotMs": 143.63741600000014,
+						"minQueryMs": 138.23020800000006,
+						"heapMB": 49.737403869628906
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.3125,
@@ -6747,13 +6747,13 @@
 						"heapMB": 30.281455993652344
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1752909999999872,
-						"queryMs": 19.267916999999997,
-						"firstMs": 19.267916999999997,
+						"indexMs": 1.1407500000000255,
+						"queryMs": 18.527500000000032,
+						"firstMs": 18.527500000000032,
 						"restMs": null,
-						"oneShotMs": 20.443207999999984,
-						"minQueryMs": 19.267916999999997,
-						"heapMB": 34.25
+						"oneShotMs": 19.668250000000057,
+						"minQueryMs": 18.527500000000032,
+						"heapMB": 33.47727966308594
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.4657080000000065,
@@ -6893,13 +6893,13 @@
 						"heapMB": 60.44078063964844
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.167541,
-						"queryMs": 172.19850000000002,
-						"firstMs": 172.19850000000002,
+						"indexMs": 5.414250000000038,
+						"queryMs": 167.26029099999994,
+						"firstMs": 167.26029099999994,
 						"restMs": null,
-						"oneShotMs": 177.36604100000002,
-						"minQueryMs": 172.19850000000002,
-						"heapMB": 50.47240447998047
+						"oneShotMs": 172.67454099999998,
+						"minQueryMs": 167.26029099999994,
+						"heapMB": 44.07111358642578
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.437332999999995,
@@ -7041,13 +7041,13 @@
 						"heapMB": 25.335289001464844
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1908750000000055,
-						"queryMs": 12.682874999999996,
-						"firstMs": 12.682874999999996,
+						"indexMs": 1.2930000000000064,
+						"queryMs": 13.255042000000003,
+						"firstMs": 13.255042000000003,
 						"restMs": null,
-						"oneShotMs": 13.873750000000001,
-						"minQueryMs": 12.682874999999996,
-						"heapMB": 29.59156036376953
+						"oneShotMs": 14.54804200000001,
+						"minQueryMs": 13.255042000000003,
+						"heapMB": 28.984359741210938
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.1914160000000038,
@@ -7187,13 +7187,13 @@
 						"heapMB": 48.238243103027344
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.379542000000001,
-						"queryMs": 107.666125,
-						"firstMs": 107.666125,
+						"indexMs": 5.43587500000001,
+						"queryMs": 103.61129200000005,
+						"firstMs": 103.61129200000005,
 						"restMs": null,
-						"oneShotMs": 113.045667,
-						"minQueryMs": 107.666125,
-						"heapMB": 33.89923858642578
+						"oneShotMs": 109.04716700000006,
+						"minQueryMs": 103.61129200000005,
+						"heapMB": 59.75651550292969
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.27324999999999,
@@ -7335,13 +7335,13 @@
 						"heapMB": 33.94274139404297
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1829999999999927,
-						"queryMs": 24.014332999999993,
-						"firstMs": 24.014332999999993,
+						"indexMs": 1.19399999999996,
+						"queryMs": 22.199333000000024,
+						"firstMs": 22.199333000000024,
 						"restMs": null,
-						"oneShotMs": 25.197332999999986,
-						"minQueryMs": 24.014332999999993,
-						"heapMB": 37.17414855957031
+						"oneShotMs": 23.393332999999984,
+						"minQueryMs": 22.199333000000024,
+						"heapMB": 34.85106658935547
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.1939590000000067,
@@ -7481,13 +7481,13 @@
 						"heapMB": 41.740562438964844
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.358915999999994,
-						"queryMs": 233.06537499999996,
-						"firstMs": 233.06537499999996,
+						"indexMs": 5.306707999999958,
+						"queryMs": 188.90316699999994,
+						"firstMs": 188.90316699999994,
 						"restMs": null,
-						"oneShotMs": 238.42429099999995,
-						"minQueryMs": 233.06537499999996,
-						"heapMB": 41.53562927246094
+						"oneShotMs": 194.2098749999999,
+						"minQueryMs": 188.90316699999994,
+						"heapMB": 52.48199462890625
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 6.147917000000007,
@@ -7629,13 +7629,13 @@
 						"heapMB": 36.66123962402344
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1663330000000087,
-						"queryMs": 10.008417000000009,
-						"firstMs": 10.008417000000009,
+						"indexMs": 1.188291999999933,
+						"queryMs": 9.483791999999994,
+						"firstMs": 9.483791999999994,
 						"restMs": null,
-						"oneShotMs": 11.174750000000017,
-						"minQueryMs": 10.008417000000009,
-						"heapMB": 29.755104064941406
+						"oneShotMs": 10.672083999999927,
+						"minQueryMs": 9.483791999999994,
+						"heapMB": 28.283203125
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.1471250000000026,
@@ -7775,13 +7775,13 @@
 						"heapMB": 44.385215759277344
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.238833,
-						"queryMs": 82.741584,
-						"firstMs": 82.741584,
+						"indexMs": 5.597791999999913,
+						"queryMs": 84.07020799999998,
+						"firstMs": 84.07020799999998,
 						"restMs": null,
-						"oneShotMs": 87.980417,
-						"minQueryMs": 82.741584,
-						"heapMB": 64.83851623535156
+						"oneShotMs": 89.66799999999989,
+						"minQueryMs": 84.07020799999998,
+						"heapMB": 54.39398956298828
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.210957999999991,
@@ -7923,13 +7923,13 @@
 						"heapMB": 25.076644897460938
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.2270419999999973,
-						"queryMs": 12.511250000000004,
-						"firstMs": 12.511250000000004,
+						"indexMs": 1.2189580000000433,
+						"queryMs": 11.322457999999983,
+						"firstMs": 11.322457999999983,
 						"restMs": null,
-						"oneShotMs": 13.738292000000001,
-						"minQueryMs": 12.511250000000004,
-						"heapMB": 29.473480224609375
+						"oneShotMs": 12.541416000000027,
+						"minQueryMs": 11.322457999999983,
+						"heapMB": 28.106719970703125
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.146041000000011,
@@ -8069,13 +8069,13 @@
 						"heapMB": 54.12651062011719
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.369166000000007,
-						"queryMs": 119.963125,
-						"firstMs": 119.963125,
+						"indexMs": 5.388374999999996,
+						"queryMs": 103.48508299999992,
+						"firstMs": 103.48508299999992,
 						"restMs": null,
-						"oneShotMs": 125.33229100000001,
-						"minQueryMs": 119.963125,
-						"heapMB": 34.166847229003906
+						"oneShotMs": 108.87345799999991,
+						"minQueryMs": 103.48508299999992,
+						"heapMB": 45.270355224609375
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.503667000000007,
@@ -8581,38 +8581,38 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.170665999999997,
-						"queryMs": 354.0971679999999,
-						"firstMs": 17.169041000000007,
-						"restMs": 14.03867195833333,
-						"oneShotMs": 18.339707000000004,
-						"minQueryMs": 354.0971679999999,
-						"heapMB": 31.53881072998047,
+						"indexMs": 1.2004579999999123,
+						"queryMs": 331.89045699999974,
+						"firstMs": 16.29883300000006,
+						"restMs": 13.149650999999986,
+						"oneShotMs": 17.49929099999997,
+						"minQueryMs": 331.89045699999974,
+						"heapMB": 26.956634521484375,
 						"perQueryMs": [
-							16.274916999999988,
-							13.449457999999993,
-							16.85695899999999,
-							10.815374999999989,
-							8.911332999999985,
-							27.777208,
-							16.486084000000005,
-							16.23191700000001,
-							16.501165999999955,
-							10.683292000000051,
-							16.385167000000024,
-							9.921167000000025,
-							9.361083999999948,
-							13.290707999999995,
-							8.386874999999975,
-							16.743916000000013,
-							12.940083999999956,
-							10.142833999999993,
-							19.452958000000024,
-							20.550166999999988,
-							19.31729200000001,
-							7.316041999999982,
-							8.461040999999966,
-							10.67108300000001
+							14.049334000000044,
+							14.017000000000053,
+							15.857457999999951,
+							10.251833000000033,
+							8.194124999999985,
+							25.03204100000005,
+							15.473374999999919,
+							15.368875000000003,
+							15.329041999999959,
+							10.253917000000001,
+							15.328958000000057,
+							9.238916999999901,
+							9.16866600000003,
+							12.589042000000063,
+							7.485374999999976,
+							16.840000000000032,
+							13.334790999999996,
+							11.039874999999938,
+							17.435999999999922,
+							18.047457999999892,
+							17.17441699999995,
+							6.949624999999969,
+							7.633040999999935,
+							9.498459000000025
 						]
 					},
 					"fuse.js (all opts)": {
@@ -9143,38 +9143,38 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.826333000000005,
-						"queryMs": 3558.07821,
-						"firstMs": 148.766417,
-						"restMs": 142.05465804166667,
-						"oneShotMs": 154.59275,
-						"minQueryMs": 3558.07821,
-						"heapMB": 38.486083984375,
+						"indexMs": 5.5537910000000466,
+						"queryMs": 3475.820830999999,
+						"firstMs": 139.60791699999993,
+						"restMs": 139.00887141666664,
+						"oneShotMs": 145.16170799999998,
+						"minQueryMs": 3475.820830999999,
+						"heapMB": 66.98738861083984,
 						"perQueryMs": [
-							158.38437499999998,
-							140.483292,
-							173.33133399999997,
-							109.36304099999995,
-							90.68345799999997,
-							277.95399999999995,
-							169.14612499999998,
-							163.77100000000019,
-							168.50587499999983,
-							108.16399999999999,
-							163.79162500000007,
-							98.83737500000007,
-							97.7702919999997,
-							133.3639579999999,
-							85.10683300000028,
-							169.37637499999983,
-							131.63095900000008,
-							100.3498340000001,
-							192.8526670000001,
-							205.91375000000016,
-							195.1183329999999,
-							75.42737499999976,
-							90.15941699999985,
-							109.82650000000012
+							140.92233299999998,
+							130.73424999999997,
+							165.97629199999994,
+							115.55599999999981,
+							93.63729200000012,
+							270.70345799999996,
+							159.5967079999998,
+							162.26241600000003,
+							161.31329100000016,
+							105.79758300000003,
+							163.64712499999996,
+							107.2334579999997,
+							95.85933299999988,
+							139.35620800000015,
+							89.96470899999986,
+							175.11970900000006,
+							130.91154099999994,
+							102.04437499999995,
+							191.38362499999994,
+							198.58116599999994,
+							179.59625000000005,
+							72.70962499999996,
+							79.67079199999989,
+							103.63537499999984
 						]
 					},
 					"fuse.js (all opts)": {
@@ -9345,13 +9345,13 @@
 						"heapMB": 25.148818969726562
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.2154160000000047,
-						"queryMs": 13.12724999999999,
-						"firstMs": 13.12724999999999,
+						"indexMs": 1.2231249999999818,
+						"queryMs": 12.89370800000006,
+						"firstMs": 12.89370800000006,
 						"restMs": null,
-						"oneShotMs": 14.342665999999994,
-						"minQueryMs": 13.12724999999999,
-						"heapMB": 29.3011474609375
+						"oneShotMs": 14.116833000000042,
+						"minQueryMs": 12.89370800000006,
+						"heapMB": 28.57593536376953
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.1874580000000066,
@@ -9491,13 +9491,13 @@
 						"heapMB": 48.81255340576172
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.25979199999999,
-						"queryMs": 107.368875,
-						"firstMs": 107.368875,
+						"indexMs": 5.4613330000000815,
+						"queryMs": 105.57925,
+						"firstMs": 105.57925,
 						"restMs": null,
-						"oneShotMs": 112.628667,
-						"minQueryMs": 107.368875,
-						"heapMB": 62.619049072265625
+						"oneShotMs": 111.04058300000008,
+						"minQueryMs": 105.57925,
+						"heapMB": 55.66294860839844
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.4117920000000055,
@@ -9639,13 +9639,13 @@
 						"heapMB": 36.30409240722656
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1879169999999988,
-						"queryMs": 25.31720900000002,
-						"firstMs": 25.31720900000002,
+						"indexMs": 1.2257919999999558,
+						"queryMs": 21.418542000000002,
+						"firstMs": 21.418542000000002,
 						"restMs": null,
-						"oneShotMs": 26.50512600000002,
-						"minQueryMs": 25.31720900000002,
-						"heapMB": 38.39610290527344
+						"oneShotMs": 22.644333999999958,
+						"minQueryMs": 21.418542000000002,
+						"heapMB": 35.307708740234375
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.2127920000000074,
@@ -9785,13 +9785,13 @@
 						"heapMB": 59.59033966064453
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.501917000000006,
-						"queryMs": 221.85708400000001,
-						"firstMs": 221.85708400000001,
+						"indexMs": 5.172040999999922,
+						"queryMs": 193.96329200000002,
+						"firstMs": 193.96329200000002,
 						"restMs": null,
-						"oneShotMs": 227.35900100000003,
-						"minQueryMs": 221.85708400000001,
-						"heapMB": 55.860572814941406
+						"oneShotMs": 199.13533299999995,
+						"minQueryMs": 193.96329200000002,
+						"heapMB": 61.53040313720703
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.330458000000007,
@@ -9933,13 +9933,13 @@
 						"heapMB": 25.391624450683594
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.2092909999999932,
-						"queryMs": 13.175666000000007,
-						"firstMs": 13.175666000000007,
+						"indexMs": 1.2185409999999592,
+						"queryMs": 13.162417000000005,
+						"firstMs": 13.162417000000005,
 						"restMs": null,
-						"oneShotMs": 14.384957,
-						"minQueryMs": 13.175666000000007,
-						"heapMB": 29.887710571289062
+						"oneShotMs": 14.380957999999964,
+						"minQueryMs": 13.162417000000005,
+						"heapMB": 29.21167755126953
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.2351250000000107,
@@ -10079,13 +10079,13 @@
 						"heapMB": 51.63349914550781
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.282166000000004,
-						"queryMs": 109.80341600000001,
-						"firstMs": 109.80341600000001,
+						"indexMs": 5.463333000000034,
+						"queryMs": 108.81925000000001,
+						"firstMs": 108.81925000000001,
 						"restMs": null,
-						"oneShotMs": 115.08558200000002,
-						"minQueryMs": 109.80341600000001,
-						"heapMB": 37.79277801513672
+						"oneShotMs": 114.28258300000005,
+						"minQueryMs": 108.81925000000001,
+						"heapMB": 60.24388122558594
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.191500000000005,
@@ -10227,13 +10227,13 @@
 						"heapMB": 28.67102813720703
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.1929170000000084,
-						"queryMs": 17.869666999999993,
-						"firstMs": 17.869666999999993,
+						"indexMs": 1.231166999999914,
+						"queryMs": 19.454582999999957,
+						"firstMs": 19.454582999999957,
 						"restMs": null,
-						"oneShotMs": 19.062584,
-						"minQueryMs": 17.869666999999993,
-						"heapMB": 34.091468811035156
+						"oneShotMs": 20.68574999999987,
+						"minQueryMs": 19.454582999999957,
+						"heapMB": 32.044395446777344
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.1841249999999945,
@@ -10373,13 +10373,13 @@
 						"heapMB": 54.227333068847656
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.278625000000005,
-						"queryMs": 157.486417,
-						"firstMs": 157.486417,
+						"indexMs": 5.271375000000035,
+						"queryMs": 147.772833,
+						"firstMs": 147.772833,
 						"restMs": null,
-						"oneShotMs": 162.765042,
-						"minQueryMs": 157.486417,
-						"heapMB": 39.347007751464844
+						"oneShotMs": 153.04420800000003,
+						"minQueryMs": 147.772833,
+						"heapMB": 54.61549377441406
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.387166000000008,
@@ -10521,13 +10521,13 @@
 						"heapMB": 38.80613708496094
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.205083000000002,
-						"queryMs": 11.79991600000001,
-						"firstMs": 11.79991600000001,
+						"indexMs": 1.2235419999999522,
+						"queryMs": 11.547250000000076,
+						"firstMs": 11.547250000000076,
 						"restMs": null,
-						"oneShotMs": 13.004999000000012,
-						"minQueryMs": 11.79991600000001,
-						"heapMB": 28.789566040039062
+						"oneShotMs": 12.770792000000029,
+						"minQueryMs": 11.547250000000076,
+						"heapMB": 26.91796112060547
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.2294160000000005,
@@ -10667,13 +10667,13 @@
 						"heapMB": 66.32801818847656
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.412125000000003,
-						"queryMs": 94.56541700000001,
-						"firstMs": 94.56541700000001,
+						"indexMs": 5.446582999999919,
+						"queryMs": 87.47575000000006,
+						"firstMs": 87.47575000000006,
 						"restMs": null,
-						"oneShotMs": 99.97754200000001,
-						"minQueryMs": 94.56541700000001,
-						"heapMB": 55.94793701171875
+						"oneShotMs": 92.92233299999998,
+						"minQueryMs": 87.47575000000006,
+						"heapMB": 35.854164123535156
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.287499999999994,
@@ -10815,13 +10815,13 @@
 						"heapMB": 25.018531799316406
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.544542000000007,
-						"queryMs": 14.117416999999989,
-						"firstMs": 14.117416999999989,
+						"indexMs": 1.2042079999999942,
+						"queryMs": 11.647291999999993,
+						"firstMs": 11.647291999999993,
 						"restMs": null,
-						"oneShotMs": 15.661958999999996,
-						"minQueryMs": 14.117416999999989,
-						"heapMB": 29.498260498046875
+						"oneShotMs": 12.851499999999987,
+						"minQueryMs": 11.647291999999993,
+						"heapMB": 28.138702392578125
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 1.3518329999999992,
@@ -10961,13 +10961,13 @@
 						"heapMB": 54.55278778076172
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.402500000000003,
-						"queryMs": 121.588959,
-						"firstMs": 121.588959,
+						"indexMs": 5.412792000000081,
+						"queryMs": 100.58716600000002,
+						"firstMs": 100.58716600000002,
 						"restMs": null,
-						"oneShotMs": 126.991459,
-						"minQueryMs": 121.588959,
-						"heapMB": 41.27556610107422
+						"oneShotMs": 105.9999580000001,
+						"minQueryMs": 100.58716600000002,
+						"heapMB": 45.46258544921875
 					},
 					"fuse.js (all opts)": {
 						"indexMs": 5.564250000000001,
@@ -11473,38 +11473,38 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 1.245625000000004,
-						"queryMs": 378.5412909999999,
-						"firstMs": 13.468917000000019,
-						"restMs": 15.21134891666666,
-						"oneShotMs": 14.714542000000023,
-						"minQueryMs": 378.5412909999999,
-						"heapMB": 41.23753356933594,
+						"indexMs": 1.2611249999999927,
+						"queryMs": 335.7825419999998,
+						"firstMs": 12.645582999999988,
+						"restMs": 13.464039958333325,
+						"oneShotMs": 13.90670799999998,
+						"minQueryMs": 335.7825419999998,
+						"heapMB": 26.898757934570312,
 						"perQueryMs": [
-							18.432457999999997,
-							10.827249999999992,
-							21.92695900000001,
-							13.513666999999998,
-							8.55570800000001,
-							35.391875,
-							22.792790999999994,
-							21.767916000000014,
-							22.00833300000005,
-							13.590207999999961,
-							21.379458,
-							10.264499999999998,
-							9.60979199999997,
-							21.090167000000008,
-							8.798541,
-							12.745292000000006,
-							11.251332999999988,
-							8.367666999999983,
-							14.560208999999986,
-							15.530249999999967,
-							14.557500000000005,
-							8.515874999999994,
-							8.600791999999956,
-							10.993832999999995
+							17.139749999999935,
+							10.068875000000048,
+							19.03537499999993,
+							10.637417000000028,
+							7.59054100000003,
+							30.971542,
+							18.964207999999985,
+							18.633959000000004,
+							18.693250000000035,
+							11.21083299999998,
+							18.24762499999997,
+							9.808832999999936,
+							9.098792000000003,
+							18.791334000000006,
+							8.877334000000019,
+							12.066082999999935,
+							9.889875000000075,
+							7.573958999999945,
+							13.037874999999985,
+							14.934124999999995,
+							12.925833000000011,
+							7.535250000000019,
+							7.665333000000032,
+							9.738957999999911
 						]
 					},
 					"fuse.js (all opts)": {
@@ -12035,38 +12035,38 @@
 						]
 					},
 					"fuse.js (tuned)": {
-						"indexMs": 5.269417000000004,
-						"queryMs": 3634.8715860000007,
-						"firstMs": 107.18729199999999,
-						"restMs": 146.98684558333335,
-						"oneShotMs": 112.45670899999999,
-						"minQueryMs": 3634.8715860000007,
-						"heapMB": 43.30027770996094,
+						"indexMs": 5.3403749999999945,
+						"queryMs": 3339.613209,
+						"firstMs": 105.289042,
+						"restMs": 134.76350695833335,
+						"oneShotMs": 110.62941699999999,
+						"minQueryMs": 3339.613209,
+						"heapMB": 57.091949462890625,
 						"perQueryMs": [
-							172.21545799999998,
-							97.751416,
-							208.705042,
-							125.40741700000001,
-							81.00291700000002,
-							342.9306250000001,
-							209.62075000000004,
-							209.25866700000006,
-							209.56729199999995,
-							125.54633399999989,
-							209.9979159999998,
-							100.55899999999974,
-							94.53258400000004,
-							209.94929200000024,
-							89.37675000000036,
-							124.38400000000001,
-							111.68204199999991,
-							82.924125,
-							142.37166700000034,
-							154.9452080000001,
-							144.84799999999996,
-							84.43137500000012,
-							84.71983300000011,
-							110.95658400000002
+							163.815833,
+							97.03866700000003,
+							188.03212499999995,
+							106.19854199999986,
+							74.61237500000016,
+							313.9375,
+							189.35220900000013,
+							186.1064590000001,
+							191.883875,
+							111.88908300000003,
+							189.0304170000004,
+							98.8194999999996,
+							94.9669170000002,
+							189.6509170000004,
+							81.96341699999994,
+							121.60945800000036,
+							100.8612079999998,
+							75.89487499999996,
+							129.95674999999983,
+							148.80208300000004,
+							130.72087499999998,
+							76.25479099999984,
+							75.95783299999994,
+							96.96845799999983
 						]
 					},
 					"fuse.js (all opts)": {
@@ -12114,104 +12114,104 @@
 				"kind": "long-word",
 				"scored": true,
 				"queries": [
-					"schinner",
 					"collinsstad",
 					"carashire",
-					"donnelly",
-					"greenholt",
 					"davenport",
-					"goldner",
 					"schinnerstad",
 					"farrellshire",
-					"bernier"
+					"monserrat",
+					"ulisesview",
+					"clayton",
+					"bartolettichester",
+					"weissnatland"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.93,
-					"@nozbe/microfuzz (all opts)": 0.93,
-					"fuzzy": 0.973,
-					"fuzzy (all opts)": 0.973,
+					"@nozbe/microfuzz": 0.961,
+					"@nozbe/microfuzz (all opts)": 0.961,
+					"fuzzy": 0.961,
+					"fuzzy (all opts)": 0.961,
 					"fuzzysort": 1,
 					"match-sorter": 1,
 					"fast-fuzzy": 1,
 					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.912,
-					"fuse.js (tuned)": 0.912,
-					"fuse.js (all opts)": 0.912
+					"fuse.js": 0.961,
+					"fuse.js (tuned)": 0.961,
+					"fuse.js (all opts)": 0.961
 				},
 				"medianRows": {
-					"ekrina": 17,
-					"ekrina (indexed)": 17,
-					"ekrina (acronym)": 17,
-					"@nozbe/microfuzz": 19,
-					"@nozbe/microfuzz (all opts)": 19,
-					"fuzzy": 19,
-					"fuzzy (all opts)": 19,
-					"fuzzysort": 19,
-					"match-sorter": 19,
-					"fast-fuzzy": 44,
-					"fast-fuzzy (all opts)": 44,
-					"uFuzzy": 17,
-					"uFuzzy (all opts)": 17,
-					"fuse.js": 612,
-					"fuse.js (tuned)": 120,
-					"fuse.js (all opts)": 612
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 1,
+					"@nozbe/microfuzz (all opts)": 1,
+					"fuzzy": 1,
+					"fuzzy (all opts)": 1,
+					"fuzzysort": 1,
+					"match-sorter": 1,
+					"fast-fuzzy": 22,
+					"fast-fuzzy (all opts)": 22,
+					"uFuzzy": 1,
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 485,
+					"fuse.js (tuned)": 29,
+					"fuse.js (all opts)": 486
 				}
 			},
 			{
 				"kind": "short-word",
 				"scored": true,
 				"queries": [
-					"will",
 					"paul",
-					"frisco",
-					"west",
-					"mohr",
 					"alvin",
-					"east",
 					"millie",
-					"torp",
-					"miss"
+					"marie",
+					"ernie",
+					"jordi",
+					"corey",
+					"jeremy",
+					"marge",
+					"morgan"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.859,
-					"@nozbe/microfuzz (all opts)": 0.859,
-					"fuzzy": 0.845,
-					"fuzzy (all opts)": 0.845,
-					"fuzzysort": 0.925,
+					"@nozbe/microfuzz": 0.931,
+					"@nozbe/microfuzz (all opts)": 0.931,
+					"fuzzy": 0.799,
+					"fuzzy (all opts)": 0.799,
+					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 0.853,
-					"fast-fuzzy (all opts)": 0.853,
+					"fast-fuzzy": 1,
+					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.649,
-					"fuse.js (tuned)": 0.649,
-					"fuse.js (all opts)": 0.649
+					"fuse.js": 0.922,
+					"fuse.js (tuned)": 0.922,
+					"fuse.js (all opts)": 0.922
 				},
 				"medianRows": {
-					"ekrina": 47,
-					"ekrina (indexed)": 47,
-					"ekrina (acronym)": 47,
-					"@nozbe/microfuzz": 160,
-					"@nozbe/microfuzz (all opts)": 160,
-					"fuzzy": 160,
-					"fuzzy (all opts)": 160,
-					"fuzzysort": 160,
-					"match-sorter": 160,
-					"fast-fuzzy": 288,
-					"fast-fuzzy (all opts)": 288,
-					"uFuzzy": 29,
-					"uFuzzy (all opts)": 50,
-					"fuse.js": 2156,
-					"fuse.js (tuned)": 875,
-					"fuse.js (all opts)": 2156
+					"ekrina": 32,
+					"ekrina (indexed)": 32,
+					"ekrina (acronym)": 32,
+					"@nozbe/microfuzz": 67,
+					"@nozbe/microfuzz (all opts)": 67,
+					"fuzzy": 67,
+					"fuzzy (all opts)": 67,
+					"fuzzysort": 67,
+					"match-sorter": 67,
+					"fast-fuzzy": 759,
+					"fast-fuzzy (all opts)": 759,
+					"uFuzzy": 4,
+					"uFuzzy (all opts)": 34,
+					"fuse.js": 2039,
+					"fuse.js (tuned)": 331,
+					"fuse.js (all opts)": 2051
 				}
 			},
 			{
@@ -12219,7 +12219,6 @@
 				"scored": true,
 				"queries": [
 					"apex guinea",
-					"tasty bronze",
 					"susieport south",
 					"palm bay",
 					"jennifer douglas",
@@ -12227,7 +12226,8 @@
 					"pittsburg belize",
 					"friedrich treutel",
 					"kate stiedemann",
-					"hagenes blanda"
+					"hagenes blanda",
+					"pacocha howell"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12257,12 +12257,12 @@
 					"fuzzy (all opts)": 1,
 					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 15,
-					"fast-fuzzy (all opts)": 15,
+					"fast-fuzzy": 12,
+					"fast-fuzzy (all opts)": 12,
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 242,
-					"fuse.js (tuned)": 10,
+					"fuse.js": 217,
+					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 157
 				}
 			},
@@ -12272,30 +12272,30 @@
 				"queries": [
 					"equatorial nikolausborough",
 					"ratke blick",
-					"marble soft",
 					"fisher magnus",
 					"rolfson lowe",
 					"mertz mack",
 					"weissnat quinton",
-					"rubber luxurious",
 					"berge montana",
-					"howell pacocha"
+					"howell pacocha",
+					"iceland walkertown",
+					"frederik south"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.7,
-					"@nozbe/microfuzz (all opts)": 0.7,
+					"@nozbe/microfuzz": 0.5,
+					"@nozbe/microfuzz (all opts)": 0.5,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 1,
 					"match-sorter": 0,
-					"fast-fuzzy": 0.014,
-					"fast-fuzzy (all opts)": 0.014,
+					"fast-fuzzy": 0.1,
+					"fast-fuzzy (all opts)": 0.1,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.162,
+					"fuse.js": 0.189,
 					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 1
 				},
@@ -12307,15 +12307,15 @@
 					"@nozbe/microfuzz (all opts)": 1,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
-					"fuzzysort": 2,
+					"fuzzysort": 1,
 					"match-sorter": 0,
-					"fast-fuzzy": 13,
-					"fast-fuzzy (all opts)": 13,
+					"fast-fuzzy": 12,
+					"fast-fuzzy (all opts)": 12,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 238,
-					"fuse.js (tuned)": 9,
-					"fuse.js (all opts)": 217
+					"fuse.js": 216,
+					"fuse.js (tuned)": 2,
+					"fuse.js (all opts)": 148
 				}
 			},
 			{
@@ -12331,7 +12331,7 @@
 					"wal simonis",
 					"boe missouri",
 					"sch barton",
-					"cer luxurious"
+					"sat homer"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12347,7 +12347,7 @@
 					"fast-fuzzy (all opts)": 0.229,
 					"uFuzzy": 0.1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.269,
+					"fuse.js": 0.263,
 					"fuse.js (tuned)": 0.933,
 					"fuse.js (all opts)": 0.933
 				},
@@ -12365,9 +12365,9 @@
 					"fast-fuzzy (all opts)": 25,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 232,
-					"fuse.js (tuned)": 26,
-					"fuse.js (all opts)": 107
+					"fuse.js": 243,
+					"fuse.js (tuned)": 5,
+					"fuse.js (all opts)": 153
 				}
 			},
 			{
@@ -12418,7 +12418,7 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 123,
-					"fuse.js (tuned)": 30,
+					"fuse.js (tuned)": 8,
 					"fuse.js (all opts)": 123
 				}
 			},
@@ -12470,7 +12470,7 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 327,
-					"fuse.js (tuned)": 4,
+					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 98
 				}
 			},
@@ -12479,15 +12479,15 @@
 				"scored": true,
 				"queries": [
 					"clark lyxch",
-					"modern stxel",
 					"dwight wehxer",
 					"arianeview chxna",
 					"carrie wyxan",
 					"langworthworth latxia",
 					"senger baxch",
-					"generic cotxon",
 					"east margarxtafort",
-					"kihn grxup"
+					"kihn grxup",
+					"roosevelt prxce",
+					"krystal reynxlds"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12517,29 +12517,29 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 5,
-					"fast-fuzzy (all opts)": 5,
+					"fast-fuzzy": 4,
+					"fast-fuzzy (all opts)": 4,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 231,
-					"fuse.js (tuned)": 6,
-					"fuse.js (all opts)": 121
+					"fuse.js": 107,
+					"fuse.js (tuned)": 1,
+					"fuse.js (all opts)": 63
 				}
 			},
 			{
 				"kind": "two-words-typo-reversed",
 				"scored": true,
 				"queries": [
-					"marble taxty",
 					"mccullough emmexich",
-					"silk handxade",
 					"dominica tillmanxorough",
 					"zemlak bernxard",
 					"granite pracxical",
 					"rutherford pexgy",
 					"zemlak dapxney",
 					"pouros swxft",
-					"turcotte rosexbaum"
+					"turcotte rosexbaum",
+					"bradtke tabxtha",
+					"predovic koxby"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12551,11 +12551,11 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 0.229,
-					"fast-fuzzy (all opts)": 0.229,
+					"fast-fuzzy": 0.129,
+					"fast-fuzzy (all opts)": 0.129,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.193,
+					"fuse.js": 0.113,
 					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 1
 				},
@@ -12569,12 +12569,12 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 9,
-					"fast-fuzzy (all opts)": 9,
+					"fast-fuzzy": 7,
+					"fast-fuzzy (all opts)": 7,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 110,
-					"fuse.js (tuned)": 2,
+					"fuse.js": 40,
+					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 20
 				}
 			},
@@ -12582,52 +12582,52 @@
 				"kind": "plural-to-singular",
 				"scored": true,
 				"queries": [
-					"considines",
-					"kovaceks",
-					"incredibles",
-					"mcculloughs",
-					"eberts",
-					"kleins",
-					"stiedemanns",
 					"saraburghs",
-					"bespokes",
-					"langoshs"
+					"katrinaports",
+					"russelforts",
+					"camilles",
+					"tuckahoes",
+					"jacobsonstads",
+					"jasmines",
+					"marilyns",
+					"stanleys",
+					"schmidtvilles"
 				],
 				"mrr": {
+					"ekrina": 0.95,
+					"ekrina (indexed)": 0.95,
+					"ekrina (acronym)": 0.95,
+					"@nozbe/microfuzz": 0.4,
+					"@nozbe/microfuzz (all opts)": 0.4,
+					"fuzzy": 0.4,
+					"fuzzy (all opts)": 0.4,
+					"fuzzysort": 0.4,
+					"match-sorter": 0.4,
+					"fast-fuzzy": 0.95,
+					"fast-fuzzy (all opts)": 0.95,
+					"uFuzzy": 0,
+					"uFuzzy (all opts)": 0.95,
+					"fuse.js": 0.933,
+					"fuse.js (tuned)": 0.933,
+					"fuse.js (all opts)": 0.933
+				},
+				"medianRows": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.9,
-					"@nozbe/microfuzz (all opts)": 0.9,
-					"fuzzy": 0.82,
-					"fuzzy (all opts)": 0.82,
-					"fuzzysort": 0.9,
-					"match-sorter": 0.8,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
+					"@nozbe/microfuzz": 1,
+					"@nozbe/microfuzz (all opts)": 1,
+					"fuzzy": 1,
+					"fuzzy (all opts)": 1,
+					"fuzzysort": 1,
+					"match-sorter": 1,
+					"fast-fuzzy": 32,
+					"fast-fuzzy (all opts)": 32,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.975,
-					"fuse.js (tuned)": 0.975,
-					"fuse.js (all opts)": 0.975
-				},
-				"medianRows": {
-					"ekrina": 20,
-					"ekrina (indexed)": 20,
-					"ekrina (acronym)": 20,
-					"@nozbe/microfuzz": 8,
-					"@nozbe/microfuzz (all opts)": 8,
-					"fuzzy": 8,
-					"fuzzy (all opts)": 8,
-					"fuzzysort": 8,
-					"match-sorter": 8,
-					"fast-fuzzy": 42,
-					"fast-fuzzy (all opts)": 42,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 18,
-					"fuse.js": 289,
-					"fuse.js (tuned)": 60,
-					"fuse.js (all opts)": 289
+					"fuse.js": 251,
+					"fuse.js (tuned)": 15,
+					"fuse.js (all opts)": 251
 				}
 			},
 			{
@@ -12635,67 +12635,67 @@
 				"scored": true,
 				"queries": [
 					"huxo",
-					"eaxt",
-					"haxd",
 					"ebxa",
-					"foxt",
-					"rixe",
 					"drxw",
 					"baxy",
 					"kaxl",
-					"wext"
+					"tixa",
+					"chxz",
+					"lixa",
+					"waxe",
+					"gaxl"
 				],
 				"mrr": {
-					"ekrina": 1,
-					"ekrina (indexed)": 1,
-					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.2,
-					"@nozbe/microfuzz (all opts)": 0.2,
-					"fuzzy": 0.2,
-					"fuzzy (all opts)": 0.2,
-					"fuzzysort": 0.2,
-					"match-sorter": 0.15,
-					"fast-fuzzy": 0.862,
-					"fast-fuzzy (all opts)": 0.862,
+					"ekrina": 0.9,
+					"ekrina (indexed)": 0.9,
+					"ekrina (acronym)": 0.9,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 0.727,
+					"fast-fuzzy (all opts)": 0.727,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 0.542,
-					"fuse.js (tuned)": 0.542,
-					"fuse.js (all opts)": 0.542
+					"fuse.js": 0.712,
+					"fuse.js (tuned)": 0.712,
+					"fuse.js (all opts)": 0.712
 				},
 				"medianRows": {
-					"ekrina": 18,
-					"ekrina (indexed)": 18,
-					"ekrina (acronym)": 18,
-					"@nozbe/microfuzz": 1,
-					"@nozbe/microfuzz (all opts)": 1,
-					"fuzzy": 1,
-					"fuzzy (all opts)": 1,
-					"fuzzysort": 1,
-					"match-sorter": 1,
-					"fast-fuzzy": 173,
-					"fast-fuzzy (all opts)": 173,
+					"ekrina": 4,
+					"ekrina (indexed)": 4,
+					"ekrina (acronym)": 4,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 29,
+					"fast-fuzzy (all opts)": 29,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 1776,
-					"fuse.js (tuned)": 447,
-					"fuse.js (all opts)": 1776
+					"fuse.js": 1645,
+					"fuse.js (tuned)": 26,
+					"fuse.js (all opts)": 1647
 				}
 			},
 			{
 				"kind": "prefix",
 				"scored": true,
 				"queries": [
-					"recyc",
-					"sheil",
-					"fanta",
-					"durga",
-					"rueck",
-					"bahri",
-					"kreig",
-					"runol",
-					"sanfo",
-					"kenos"
+					"kenos",
+					"nehas",
+					"miner",
+					"gretc",
+					"dayan",
+					"della",
+					"dolor",
+					"folso",
+					"eugen",
+					"kimbe"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12703,8 +12703,8 @@
 					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 1,
 					"@nozbe/microfuzz (all opts)": 1,
-					"fuzzy": 1,
-					"fuzzy (all opts)": 1,
+					"fuzzy": 0.983,
+					"fuzzy (all opts)": 0.983,
 					"fuzzysort": 1,
 					"match-sorter": 1,
 					"fast-fuzzy": 1,
@@ -12716,38 +12716,38 @@
 					"fuse.js (all opts)": 1
 				},
 				"medianRows": {
-					"ekrina": 26,
-					"ekrina (indexed)": 26,
-					"ekrina (acronym)": 26,
-					"@nozbe/microfuzz": 100,
-					"@nozbe/microfuzz (all opts)": 100,
-					"fuzzy": 100,
-					"fuzzy (all opts)": 100,
-					"fuzzysort": 100,
-					"match-sorter": 100,
-					"fast-fuzzy": 499,
-					"fast-fuzzy (all opts)": 499,
-					"uFuzzy": 21,
-					"uFuzzy (all opts)": 29,
-					"fuse.js": 1720,
-					"fuse.js (tuned)": 328,
-					"fuse.js (all opts)": 1720
+					"ekrina": 15,
+					"ekrina (indexed)": 15,
+					"ekrina (acronym)": 15,
+					"@nozbe/microfuzz": 68,
+					"@nozbe/microfuzz (all opts)": 68,
+					"fuzzy": 67,
+					"fuzzy (all opts)": 67,
+					"fuzzysort": 68,
+					"match-sorter": 68,
+					"fast-fuzzy": 629,
+					"fast-fuzzy (all opts)": 629,
+					"uFuzzy": 1,
+					"uFuzzy (all opts)": 5,
+					"fuse.js": 1751,
+					"fuse.js (tuned)": 299,
+					"fuse.js (all opts)": 1754
 				}
 			},
 			{
 				"kind": "infix",
 				"scored": true,
 				"queries": [
-					"rmell",
-					"credi",
-					"xurio",
 					"rkbur",
-					"actic",
-					"nrued",
 					"llers",
 					"iezer",
-					"ndmad",
-					"nopel"
+					"arksh",
+					"hleyc",
+					"avert",
+					"igitt",
+					"hashi",
+					"phons",
+					"monvi"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -12768,74 +12768,74 @@
 					"fuse.js (all opts)": 1
 				},
 				"medianRows": {
-					"ekrina": 95,
-					"ekrina (indexed)": 95,
-					"ekrina (acronym)": 95,
-					"@nozbe/microfuzz": 97,
-					"@nozbe/microfuzz (all opts)": 97,
-					"fuzzy": 97,
-					"fuzzy (all opts)": 97,
-					"fuzzysort": 97,
-					"match-sorter": 97,
-					"fast-fuzzy": 833,
-					"fast-fuzzy (all opts)": 833,
-					"uFuzzy": 20,
-					"uFuzzy (all opts)": 95,
-					"fuse.js": 1720,
-					"fuse.js (tuned)": 604,
-					"fuse.js (all opts)": 1720
+					"ekrina": 36,
+					"ekrina (indexed)": 36,
+					"ekrina (acronym)": 36,
+					"@nozbe/microfuzz": 32,
+					"@nozbe/microfuzz (all opts)": 32,
+					"fuzzy": 32,
+					"fuzzy (all opts)": 32,
+					"fuzzysort": 32,
+					"match-sorter": 32,
+					"fast-fuzzy": 656,
+					"fast-fuzzy (all opts)": 656,
+					"uFuzzy": 2,
+					"uFuzzy (all opts)": 26,
+					"fuse.js": 1434,
+					"fuse.js (tuned)": 316,
+					"fuse.js (all opts)": 1434
 				}
 			},
 			{
 				"kind": "scatter-light",
 				"scored": true,
 				"queries": [
-					"donnlly",
 					"chesea",
 					"katheen",
 					"juanview",
-					"jasklski",
-					"schimel",
-					"eleant",
-					"electonic",
-					"flaley",
-					"lurine"
+					"lurine",
+					"ceclia",
+					"roosvelt",
+					"centrville",
+					"nelsoburgh",
+					"imoene",
+					"robefurt"
 				],
 				"mrr": {
-					"ekrina": 1,
-					"ekrina (indexed)": 1,
-					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.95,
-					"@nozbe/microfuzz (all opts)": 0.95,
-					"fuzzy": 0.718,
-					"fuzzy (all opts)": 0.718,
-					"fuzzysort": 1,
+					"ekrina": 0.943,
+					"ekrina (indexed)": 0.943,
+					"ekrina (acronym)": 0.943,
+					"@nozbe/microfuzz": 0.929,
+					"@nozbe/microfuzz (all opts)": 0.929,
+					"fuzzy": 0.775,
+					"fuzzy (all opts)": 0.775,
+					"fuzzysort": 0.922,
 					"match-sorter": 1,
-					"fast-fuzzy": 0.787,
-					"fast-fuzzy (all opts)": 0.787,
+					"fast-fuzzy": 0.845,
+					"fast-fuzzy (all opts)": 0.845,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 0.753,
-					"fuse.js": 0.923,
-					"fuse.js (tuned)": 0.923,
-					"fuse.js (all opts)": 0.923
+					"uFuzzy (all opts)": 0.796,
+					"fuse.js": 0.91,
+					"fuse.js (tuned)": 0.91,
+					"fuse.js (all opts)": 0.91
 				},
 				"medianRows": {
-					"ekrina": 20,
-					"ekrina (indexed)": 20,
-					"ekrina (acronym)": 20,
-					"@nozbe/microfuzz": 31,
-					"@nozbe/microfuzz (all opts)": 31,
-					"fuzzy": 31,
-					"fuzzy (all opts)": 31,
-					"fuzzysort": 31,
-					"match-sorter": 31,
-					"fast-fuzzy": 93,
-					"fast-fuzzy (all opts)": 93,
+					"ekrina": 3,
+					"ekrina (indexed)": 3,
+					"ekrina (acronym)": 3,
+					"@nozbe/microfuzz": 14,
+					"@nozbe/microfuzz (all opts)": 14,
+					"fuzzy": 14,
+					"fuzzy (all opts)": 14,
+					"fuzzysort": 14,
+					"match-sorter": 14,
+					"fast-fuzzy": 71,
+					"fast-fuzzy (all opts)": 71,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 19,
-					"fuse.js": 931,
-					"fuse.js (tuned)": 297,
-					"fuse.js (all opts)": 931
+					"uFuzzy (all opts)": 2,
+					"fuse.js": 759,
+					"fuse.js (tuned)": 58,
+					"fuse.js (all opts)": 759
 				}
 			},
 			{
@@ -12843,51 +12843,51 @@
 				"scored": true,
 				"queries": [
 					"macein",
-					"obrbuner",
 					"haeril",
 					"koeyor",
 					"glasnsad",
 					"wessatta",
-					"nizshe",
-					"ruhefod",
-					"luurou",
-					"orenal"
+					"cailebrg",
+					"nihoe",
+					"macoor",
+					"hezochstr",
+					"jaobbeg"
 				],
 				"mrr": {
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"@nozbe/microfuzz": 0.796,
-					"@nozbe/microfuzz (all opts)": 0.796,
-					"fuzzy": 0.621,
-					"fuzzy (all opts)": 0.621,
-					"fuzzysort": 0.9,
-					"match-sorter": 0.95,
-					"fast-fuzzy": 0.138,
-					"fast-fuzzy (all opts)": 0.138,
+					"@nozbe/microfuzz": 0.728,
+					"@nozbe/microfuzz (all opts)": 0.728,
+					"fuzzy": 0.551,
+					"fuzzy (all opts)": 0.551,
+					"fuzzysort": 0.85,
+					"match-sorter": 0.9,
+					"fast-fuzzy": 0.07,
+					"fast-fuzzy (all opts)": 0.07,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 0.382,
-					"fuse.js (tuned)": 0.382,
-					"fuse.js (all opts)": 0.382
+					"fuse.js": 0.32,
+					"fuse.js (tuned)": 0.32,
+					"fuse.js (all opts)": 0.32
 				},
 				"medianRows": {
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"@nozbe/microfuzz": 26,
-					"@nozbe/microfuzz (all opts)": 26,
-					"fuzzy": 26,
-					"fuzzy (all opts)": 26,
-					"fuzzysort": 26,
-					"match-sorter": 26,
-					"fast-fuzzy": 46,
-					"fast-fuzzy (all opts)": 46,
+					"@nozbe/microfuzz": 12,
+					"@nozbe/microfuzz (all opts)": 12,
+					"fuzzy": 12,
+					"fuzzy (all opts)": 12,
+					"fuzzysort": 12,
+					"match-sorter": 12,
+					"fast-fuzzy": 33,
+					"fast-fuzzy (all opts)": 33,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 646,
-					"fuse.js (tuned)": 149,
-					"fuse.js (all opts)": 646
+					"fuse.js": 458,
+					"fuse.js (tuned)": 25,
+					"fuse.js (all opts)": 458
 				}
 			},
 			{
@@ -12896,49 +12896,49 @@
 				"queries": [
 					"srst",
 					"rsmre",
-					"pcca",
-					"itliet",
 					"janmuh",
-					"bsoe",
-					"sils",
-					"wead",
-					"eetoi",
-					"bctlr"
+					"kyaie",
+					"aieo",
+					"cclsie",
+					"fnbruh",
+					"nhsie",
+					"lrta",
+					"ceen"
 				],
 				"mrr": {
-					"ekrina": 0.019,
-					"ekrina (indexed)": 0.019,
-					"ekrina (acronym)": 0.019,
-					"@nozbe/microfuzz": 0.102,
-					"@nozbe/microfuzz (all opts)": 0.102,
-					"fuzzy": 0.158,
-					"fuzzy (all opts)": 0.158,
-					"fuzzysort": 0.281,
-					"match-sorter": 0.671,
+					"ekrina": 0,
+					"ekrina (indexed)": 0,
+					"ekrina (acronym)": 0,
+					"@nozbe/microfuzz": 0.07,
+					"@nozbe/microfuzz (all opts)": 0.07,
+					"fuzzy": 0.116,
+					"fuzzy (all opts)": 0.116,
+					"fuzzysort": 0.303,
+					"match-sorter": 0.695,
 					"fast-fuzzy": 0,
 					"fast-fuzzy (all opts)": 0,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 0.001,
-					"fuse.js (tuned)": 0.001,
-					"fuse.js (all opts)": 0.001
+					"fuse.js": 0,
+					"fuse.js (tuned)": 0,
+					"fuse.js (all opts)": 0
 				},
 				"medianRows": {
-					"ekrina": 2,
-					"ekrina (indexed)": 2,
-					"ekrina (acronym)": 2,
-					"@nozbe/microfuzz": 256,
-					"@nozbe/microfuzz (all opts)": 256,
-					"fuzzy": 256,
-					"fuzzy (all opts)": 256,
-					"fuzzysort": 256,
-					"match-sorter": 256,
-					"fast-fuzzy": 101,
-					"fast-fuzzy (all opts)": 101,
+					"ekrina": 0,
+					"ekrina (indexed)": 0,
+					"ekrina (acronym)": 0,
+					"@nozbe/microfuzz": 122,
+					"@nozbe/microfuzz (all opts)": 122,
+					"fuzzy": 122,
+					"fuzzy (all opts)": 122,
+					"fuzzysort": 122,
+					"match-sorter": 122,
+					"fast-fuzzy": 83,
+					"fast-fuzzy (all opts)": 83,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1659,
-					"fuse.js (tuned)": 400,
+					"fuse.js (tuned)": 73,
 					"fuse.js (all opts)": 1661
 				}
 			},
@@ -12946,68 +12946,68 @@
 				"kind": "transposition",
 				"scored": true,
 				"queries": [
-					"fanatstic",
-					"reccyled",
 					"domniique",
-					"qutizon",
-					"awseome",
-					"recihel",
 					"terrlilside",
 					"ashlecyhester",
-					"mclaguhlin",
-					"centerville"
+					"centerville",
+					"nowralk",
+					"roaslie",
+					"friderich",
+					"hatteisburg",
+					"orifeort",
+					"annbaelle"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.15,
-					"@nozbe/microfuzz (all opts)": 0.15,
-					"fuzzy": 0.2,
-					"fuzzy (all opts)": 0.2,
-					"fuzzysort": 0.2,
-					"match-sorter": 0.2,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.921,
-					"fuse.js (tuned)": 0.921,
-					"fuse.js (all opts)": 0.921
-				},
-				"medianRows": {
-					"ekrina": 24,
-					"ekrina (indexed)": 24,
-					"ekrina (acronym)": 24,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 40,
-					"fast-fuzzy (all opts)": 40,
+					"fast-fuzzy": 1,
+					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 24,
-					"fuse.js": 499,
-					"fuse.js (tuned)": 116,
-					"fuse.js (all opts)": 499
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 0.875,
+					"fuse.js (tuned)": 0.875,
+					"fuse.js (all opts)": 0.875
+				},
+				"medianRows": {
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 18,
+					"fast-fuzzy (all opts)": 18,
+					"uFuzzy": 0,
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 703,
+					"fuse.js (tuned)": 33,
+					"fuse.js (all opts)": 703
 				}
 			},
 			{
 				"kind": "insertion",
 				"scored": true,
 				"queries": [
-					"awessome",
 					"janiehhaven",
 					"malllory",
-					"oberbrrunner",
-					"quittzon",
-					"keebbler",
 					"krystaalfurt",
 					"moniique",
-					"pfefffer",
-					"langwworth"
+					"rempellville",
+					"nelsonnburgh",
+					"earllene",
+					"carrolllton",
+					"garrickkhaven",
+					"wenddell"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13023,45 +13023,63 @@
 					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.817,
-					"fuse.js (tuned)": 0.817,
-					"fuse.js (all opts)": 0.817
+					"fuse.js": 0.975,
+					"fuse.js (tuned)": 0.975,
+					"fuse.js (all opts)": 0.975
 				},
 				"medianRows": {
-					"ekrina": 18,
-					"ekrina (indexed)": 18,
-					"ekrina (acronym)": 18,
+					"ekrina": 2,
+					"ekrina (indexed)": 2,
+					"ekrina (acronym)": 2,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 45,
-					"fast-fuzzy (all opts)": 45,
+					"fast-fuzzy": 13,
+					"fast-fuzzy (all opts)": 13,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 18,
-					"fuse.js": 263,
-					"fuse.js (tuned)": 83,
-					"fuse.js (all opts)": 263
+					"uFuzzy (all opts)": 2,
+					"fuse.js": 190,
+					"fuse.js (tuned)": 15,
+					"fuse.js (all opts)": 190
 				}
 			},
 			{
 				"kind": "substitution",
 				"scored": true,
 				"queries": [
-					"elexant",
-					"oriextal",
-					"electxonic",
-					"simxnis",
 					"ebertxorth",
-					"unbrxnded",
 					"haagxerg",
 					"beerxown",
 					"schaefxrberg",
-					"wilkxnson"
+					"melxssa",
+					"herbextview",
+					"mercedxsfurt",
+					"kimbxrly",
+					"vivixnne",
+					"nicholxsfurt"
 				],
 				"mrr": {
+					"ekrina": 0.983,
+					"ekrina (indexed)": 0.983,
+					"ekrina (acronym)": 0.983,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 0.95,
+					"fast-fuzzy (all opts)": 0.95,
+					"uFuzzy": 0,
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 0.958,
+					"fuse.js (tuned)": 0.958,
+					"fuse.js (all opts)": 0.958
+				},
+				"medianRows": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
@@ -13071,31 +13089,13 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
+					"fast-fuzzy": 6,
+					"fast-fuzzy (all opts)": 6,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.983,
-					"fuse.js (tuned)": 0.983,
-					"fuse.js (all opts)": 0.983
-				},
-				"medianRows": {
-					"ekrina": 27,
-					"ekrina (indexed)": 27,
-					"ekrina (acronym)": 27,
-					"@nozbe/microfuzz": 0,
-					"@nozbe/microfuzz (all opts)": 0,
-					"fuzzy": 0,
-					"fuzzy (all opts)": 0,
-					"fuzzysort": 0,
-					"match-sorter": 0,
-					"fast-fuzzy": 39,
-					"fast-fuzzy (all opts)": 39,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 27,
-					"fuse.js": 495,
-					"fuse.js (tuned)": 91,
-					"fuse.js (all opts)": 495
+					"fuse.js": 185,
+					"fuse.js (tuned)": 14,
+					"fuse.js (all opts)": 185
 				}
 			},
 			{
@@ -13103,26 +13103,26 @@
 				"scored": true,
 				"queries": [
 					"dtaah",
-					"msm",
 					"kuk",
-					"ras",
-					"fcc",
-					"rsb",
-					"ems",
 					"rfar",
 					"crm",
-					"tct"
+					"tct",
+					"grkak",
+					"mmm",
+					"qeo",
+					"igs",
+					"hgk"
 				],
 				"mrr": {
-					"ekrina": 0.299,
-					"ekrina (indexed)": 0.299,
-					"ekrina (acronym)": 0.904,
-					"@nozbe/microfuzz": 0.312,
-					"@nozbe/microfuzz (all opts)": 0.312,
-					"fuzzy": 0.009,
-					"fuzzy (all opts)": 0.009,
-					"fuzzysort": 0.564,
-					"match-sorter": 0.775,
+					"ekrina": 0.349,
+					"ekrina (indexed)": 0.349,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 0.604,
+					"@nozbe/microfuzz (all opts)": 0.604,
+					"fuzzy": 0.033,
+					"fuzzy (all opts)": 0.033,
+					"fuzzysort": 0.772,
+					"match-sorter": 1,
 					"fast-fuzzy": 0,
 					"fast-fuzzy (all opts)": 0,
 					"uFuzzy": 0,
@@ -13132,69 +13132,22 @@
 					"fuse.js (all opts)": 0
 				},
 				"medianRows": {
-					"ekrina": 34,
-					"ekrina (indexed)": 34,
-					"ekrina (acronym)": 39,
-					"@nozbe/microfuzz": 528,
-					"@nozbe/microfuzz (all opts)": 528,
-					"fuzzy": 528,
-					"fuzzy (all opts)": 528,
-					"fuzzysort": 528,
-					"match-sorter": 528,
-					"fast-fuzzy": 932,
-					"fast-fuzzy (all opts)": 932,
+					"ekrina": 7,
+					"ekrina (indexed)": 7,
+					"ekrina (acronym)": 9,
+					"@nozbe/microfuzz": 145,
+					"@nozbe/microfuzz (all opts)": 145,
+					"fuzzy": 145,
+					"fuzzy (all opts)": 145,
+					"fuzzysort": 145,
+					"match-sorter": 145,
+					"fast-fuzzy": 238,
+					"fast-fuzzy (all opts)": 238,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 919,
-					"fuse.js (tuned)": 824,
-					"fuse.js (all opts)": 919
-				}
-			},
-			{
-				"kind": "accent-stripped",
-				"scored": true,
-				"queries": [
-					"barthelemy",
-					"cote",
-					"aland",
-					"reunion",
-					"curacao"
-				],
-				"mrr": {
-					"ekrina": 1,
-					"ekrina (indexed)": 1,
-					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 1,
-					"@nozbe/microfuzz (all opts)": 1,
-					"fuzzy": 0.2,
-					"fuzzy (all opts)": 0.2,
-					"fuzzysort": 1,
-					"match-sorter": 1,
-					"fast-fuzzy": 0.6,
-					"fast-fuzzy (all opts)": 0.6,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.44,
-					"fuse.js (tuned)": 0.629,
-					"fuse.js (all opts)": 0.629
-				},
-				"medianRows": {
-					"ekrina": 16,
-					"ekrina (indexed)": 16,
-					"ekrina (acronym)": 16,
-					"@nozbe/microfuzz": 23,
-					"@nozbe/microfuzz (all opts)": 23,
-					"fuzzy": 17,
-					"fuzzy (all opts)": 17,
-					"fuzzysort": 23,
-					"match-sorter": 23,
-					"fast-fuzzy": 49,
-					"fast-fuzzy (all opts)": 49,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 16,
-					"fuse.js": 1574,
-					"fuse.js (tuned)": 288,
-					"fuse.js (all opts)": 1574
+					"fuse.js": 905,
+					"fuse.js (tuned)": 168,
+					"fuse.js (all opts)": 905
 				}
 			},
 			{
@@ -13263,7 +13216,7 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 174,
-					"fuse.js (tuned)": 4,
+					"fuse.js (tuned)": 3,
 					"fuse.js (all opts)": 31
 				}
 			}
@@ -13273,104 +13226,104 @@
 				"kind": "long-word",
 				"scored": true,
 				"queries": [
-					"blanche",
 					"michelle",
 					"marleneville",
 					"joannieview",
-					"donnelly",
-					"brendan",
 					"tesscester",
-					"gertruda",
-					"maćkowiak",
-					"goodyear"
+					"goodyear",
+					"teodora",
+					"martyna",
+					"valentin",
+					"melinda",
+					"eliezer"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.992,
-					"@nozbe/microfuzz (all opts)": 0.992,
-					"fuzzy": 0.986,
-					"fuzzy (all opts)": 0.986,
-					"fuzzysort": 1,
+					"@nozbe/microfuzz": 0.935,
+					"@nozbe/microfuzz (all opts)": 0.935,
+					"fuzzy": 0.929,
+					"fuzzy (all opts)": 0.929,
+					"fuzzysort": 0.933,
 					"match-sorter": 1,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
+					"fast-fuzzy": 0.929,
+					"fast-fuzzy (all opts)": 0.929,
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.975,
-					"fuse.js (tuned)": 0.975,
-					"fuse.js (all opts)": 0.975
+					"fuse.js": 0.935,
+					"fuse.js (tuned)": 0.935,
+					"fuse.js (all opts)": 0.935
 				},
 				"medianRows": {
-					"ekrina": 5,
-					"ekrina (indexed)": 5,
-					"ekrina (acronym)": 5,
-					"@nozbe/microfuzz": 6,
-					"@nozbe/microfuzz (all opts)": 6,
+					"ekrina": 4,
+					"ekrina (indexed)": 4,
+					"ekrina (acronym)": 4,
+					"@nozbe/microfuzz": 5,
+					"@nozbe/microfuzz (all opts)": 5,
 					"fuzzy": 5,
 					"fuzzy (all opts)": 5,
-					"fuzzysort": 6,
-					"match-sorter": 6,
-					"fast-fuzzy": 27,
-					"fast-fuzzy (all opts)": 27,
-					"uFuzzy": 4,
-					"uFuzzy (all opts)": 4,
-					"fuse.js": 556,
-					"fuse.js (tuned)": 153,
-					"fuse.js (all opts)": 566
+					"fuzzysort": 5,
+					"match-sorter": 5,
+					"fast-fuzzy": 30,
+					"fast-fuzzy (all opts)": 30,
+					"uFuzzy": 2,
+					"uFuzzy (all opts)": 3,
+					"fuse.js": 728,
+					"fuse.js (tuned)": 73,
+					"fuse.js (all opts)": 742
 				}
 			},
 			{
 				"kind": "short-word",
 				"scored": true,
 				"queries": [
-					"rustic",
-					"fresh",
 					"cali",
 					"karson",
-					"east",
-					"kling",
-					"lake",
 					"kyla",
-					"noemi",
-					"mlle"
+					"loyce",
+					"sylvia",
+					"tara",
+					"wendy",
+					"alex",
+					"arthur",
+					"horacy"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.906,
-					"@nozbe/microfuzz (all opts)": 0.906,
-					"fuzzy": 0.865,
-					"fuzzy (all opts)": 0.865,
-					"fuzzysort": 0.983,
+					"@nozbe/microfuzz": 0.813,
+					"@nozbe/microfuzz (all opts)": 0.813,
+					"fuzzy": 0.748,
+					"fuzzy (all opts)": 0.748,
+					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 0.933,
-					"fast-fuzzy (all opts)": 0.933,
+					"fast-fuzzy": 1,
+					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.815,
-					"fuse.js (tuned)": 0.807,
-					"fuse.js (all opts)": 0.807
+					"fuse.js": 0.851,
+					"fuse.js (tuned)": 0.851,
+					"fuse.js (all opts)": 0.851
 				},
 				"medianRows": {
-					"ekrina": 92,
-					"ekrina (indexed)": 92,
-					"ekrina (acronym)": 92,
-					"@nozbe/microfuzz": 145,
-					"@nozbe/microfuzz (all opts)": 145,
-					"fuzzy": 145,
-					"fuzzy (all opts)": 145,
-					"fuzzysort": 145,
-					"match-sorter": 145,
-					"fast-fuzzy": 400,
-					"fast-fuzzy (all opts)": 400,
-					"uFuzzy": 16,
-					"uFuzzy (all opts)": 79,
-					"fuse.js": 1736,
-					"fuse.js (tuned)": 636,
-					"fuse.js (all opts)": 1783
+					"ekrina": 13,
+					"ekrina (indexed)": 13,
+					"ekrina (acronym)": 13,
+					"@nozbe/microfuzz": 32,
+					"@nozbe/microfuzz (all opts)": 32,
+					"fuzzy": 32,
+					"fuzzy (all opts)": 32,
+					"fuzzysort": 32,
+					"match-sorter": 32,
+					"fast-fuzzy": 177,
+					"fast-fuzzy (all opts)": 177,
+					"uFuzzy": 3,
+					"uFuzzy (all opts)": 9,
+					"fuse.js": 1508,
+					"fuse.js (tuned)": 129,
+					"fuse.js (all opts)": 1533
 				}
 			},
 			{
@@ -13378,7 +13331,6 @@
 				"scored": true,
 				"queries": [
 					"darebury sudan",
-					"generic silk",
 					"hershelchester palau",
 					"west chelsietown",
 					"borowski filipiak",
@@ -13386,7 +13338,8 @@
 					"honolulu haiti",
 					"deborah gusikowski",
 					"ellis wyman",
-					"berge hammes"
+					"berge hammes",
+					"feil mertz"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13421,7 +13374,7 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 162,
-					"fuse.js (tuned)": 3,
+					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 57
 				}
 			},
@@ -13431,32 +13384,32 @@
 				"queries": [
 					"bosnia gulgowskiville",
 					"tromp daniel",
-					"concrete oriental",
 					"aufderhar rosemary",
 					"lueilwitz waelchi",
 					"ebert rocky",
-					"silk sleek",
 					"koelpin gus",
 					"mertz feil",
-					"gabriel south"
+					"gabriel south",
+					"ethel south",
+					"macejkovic stamm"
 				],
 				"mrr": {
-					"ekrina": 1,
-					"ekrina (indexed)": 1,
-					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.6,
-					"@nozbe/microfuzz (all opts)": 0.6,
+					"ekrina": 0.975,
+					"ekrina (indexed)": 0.975,
+					"ekrina (acronym)": 0.975,
+					"@nozbe/microfuzz": 0.4,
+					"@nozbe/microfuzz (all opts)": 0.4,
 					"fuzzy": 0.1,
 					"fuzzy (all opts)": 0.1,
-					"fuzzysort": 1,
+					"fuzzysort": 0.95,
 					"match-sorter": 0.1,
-					"fast-fuzzy": 0.123,
-					"fast-fuzzy (all opts)": 0.123,
+					"fast-fuzzy": 0.135,
+					"fast-fuzzy (all opts)": 0.135,
 					"uFuzzy": 0.1,
-					"uFuzzy (all opts)": 1,
+					"uFuzzy (all opts)": 0.95,
 					"fuse.js": 0.069,
-					"fuse.js (tuned)": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (tuned)": 0.95,
+					"fuse.js (all opts)": 0.95
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -13466,14 +13419,14 @@
 					"@nozbe/microfuzz (all opts)": 1,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
-					"fuzzysort": 2,
+					"fuzzysort": 1,
 					"match-sorter": 0,
 					"fast-fuzzy": 15,
 					"fast-fuzzy (all opts)": 15,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 242,
-					"fuse.js (tuned)": 11,
+					"fuse.js": 195,
+					"fuse.js (tuned)": 2,
 					"fuse.js (all opts)": 88
 				}
 			},
@@ -13482,7 +13435,6 @@
 				"scored": true,
 				"queries": [
 					"gaw stępień",
-					"met handmade",
 					"som tucson",
 					"win farrell",
 					"lab kayli",
@@ -13490,7 +13442,8 @@
 					"śli samuel",
 					"saw schmitt",
 					"haj pankracy",
-					"cot soft"
+					"bar boehm",
+					"kas otis"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13502,11 +13455,11 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 1,
 					"match-sorter": 0,
-					"fast-fuzzy": 0.354,
-					"fast-fuzzy (all opts)": 0.354,
+					"fast-fuzzy": 0.279,
+					"fast-fuzzy (all opts)": 0.279,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.419,
+					"fuse.js": 0.398,
 					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 1
 				},
@@ -13520,13 +13473,13 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 3,
 					"match-sorter": 0,
-					"fast-fuzzy": 17,
-					"fast-fuzzy (all opts)": 17,
+					"fast-fuzzy": 11,
+					"fast-fuzzy (all opts)": 11,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 329,
-					"fuse.js (tuned)": 41,
-					"fuse.js (all opts)": 240
+					"fuse.js": 232,
+					"fuse.js (tuned)": 11,
+					"fuse.js (all opts)": 283
 				}
 			},
 			{
@@ -13577,7 +13530,7 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 223,
-					"fuse.js (tuned)": 41,
+					"fuse.js (tuned)": 19,
 					"fuse.js (all opts)": 229
 				}
 			},
@@ -13589,12 +13542,12 @@
 					"gasxon roche",
 					"schowxlter llc",
 					"shellexworth hong",
-					"frxsh silk",
-					"rogxhn and",
 					"matxie dietrich",
 					"koxer rakowski",
 					"indepexdence saint",
-					"karsoxshire gambia"
+					"karsoxshire gambia",
+					"bechxelar heidenreich",
+					"filibextoview anguilla"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13624,13 +13577,13 @@
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 16,
-					"fast-fuzzy (all opts)": 16,
+					"fast-fuzzy": 8,
+					"fast-fuzzy (all opts)": 8,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 219,
-					"fuse.js (tuned)": 12,
-					"fuse.js (all opts)": 117
+					"fuse.js": 159,
+					"fuse.js (tuned)": 2,
+					"fuse.js (all opts)": 98
 				}
 			},
 			{
@@ -13638,7 +13591,6 @@
 				"scored": true,
 				"queries": [
 					"leopold berxier",
-					"frozen bamxoo",
 					"dwayne wiexand",
 					"cuyahoga faxls",
 					"kacey greenxelder",
@@ -13646,7 +13598,8 @@
 					"shanahan macgxver",
 					"haag spoxer",
 					"oliver johnxton",
-					"klein koxey"
+					"klein koxey",
+					"lake marxot"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13681,24 +13634,24 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 152,
-					"fuse.js (tuned)": 4,
-					"fuse.js (all opts)": 39
+					"fuse.js (tuned)": 2,
+					"fuse.js (all opts)": 54
 				}
 			},
 			{
 				"kind": "two-words-typo-reversed",
 				"scored": true,
 				"queries": [
-					"plastic rusxic",
 					"abshire texry",
-					"silk pracxical",
 					"belarus nellixworth",
 					"metal refxned",
 					"boyer juxia",
 					"reichel botsxord",
 					"zemlak blxck",
 					"nowak stanxsław",
-					"lefevre clarxnce"
+					"lefevre clarxnce",
+					"cronin turcxtte",
+					"mathieu aldxic"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13714,7 +13667,7 @@
 					"fast-fuzzy (all opts)": 0,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.142,
+					"fuse.js": 0.114,
 					"fuse.js (tuned)": 1,
 					"fuse.js (all opts)": 1
 				},
@@ -13732,77 +13685,77 @@
 					"fast-fuzzy (all opts)": 2,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 101,
-					"fuse.js (tuned)": 3,
-					"fuse.js (all opts)": 57
+					"fuse.js": 94,
+					"fuse.js (tuned)": 2,
+					"fuse.js (all opts)": 54
 				}
 			},
 			{
 				"kind": "plural-to-singular",
 				"scored": true,
 				"queries": [
-					"hillls",
 					"tomalas",
-					"herzogs",
-					"kutchs",
-					"heaneys",
-					"wymans",
 					"alvinaburys",
-					"salads",
-					"grants",
-					"johnnys"
+					"johnnys",
+					"cameronlands",
+					"paczkowskis",
+					"félicies",
+					"issacs",
+					"auertowns",
+					"beulahs",
+					"wilmamouths"
 				],
 				"mrr": {
-					"ekrina": 0.97,
-					"ekrina (indexed)": 0.97,
-					"ekrina (acronym)": 0.97,
-					"@nozbe/microfuzz": 0.7,
-					"@nozbe/microfuzz (all opts)": 0.7,
-					"fuzzy": 0.685,
-					"fuzzy (all opts)": 0.685,
-					"fuzzysort": 0.7,
-					"match-sorter": 0.583,
-					"fast-fuzzy": 0.942,
-					"fast-fuzzy (all opts)": 0.942,
+					"ekrina": 0.975,
+					"ekrina (indexed)": 0.975,
+					"ekrina (acronym)": 0.975,
+					"@nozbe/microfuzz": 0.4,
+					"@nozbe/microfuzz (all opts)": 0.4,
+					"fuzzy": 0.375,
+					"fuzzy (all opts)": 0.375,
+					"fuzzysort": 0.4,
+					"match-sorter": 0.3,
+					"fast-fuzzy": 0.933,
+					"fast-fuzzy (all opts)": 0.933,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.82,
-					"fuse.js (tuned)": 0.786,
-					"fuse.js (all opts)": 0.786
+					"uFuzzy (all opts)": 0.933,
+					"fuse.js": 0.95,
+					"fuse.js (tuned)": 0.95,
+					"fuse.js (all opts)": 0.95
 				},
 				"medianRows": {
-					"ekrina": 15,
-					"ekrina (indexed)": 15,
-					"ekrina (acronym)": 15,
-					"@nozbe/microfuzz": 14,
-					"@nozbe/microfuzz (all opts)": 14,
-					"fuzzy": 14,
-					"fuzzy (all opts)": 14,
-					"fuzzysort": 14,
-					"match-sorter": 14,
-					"fast-fuzzy": 31,
-					"fast-fuzzy (all opts)": 31,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 2,
+					"@nozbe/microfuzz (all opts)": 2,
+					"fuzzy": 2,
+					"fuzzy (all opts)": 2,
+					"fuzzysort": 2,
+					"match-sorter": 2,
+					"fast-fuzzy": 18,
+					"fast-fuzzy (all opts)": 18,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 14,
-					"fuse.js": 695,
-					"fuse.js (tuned)": 161,
-					"fuse.js (all opts)": 703
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 386,
+					"fuse.js (tuned)": 33,
+					"fuse.js (all opts)": 418
 				}
 			},
 			{
 				"kind": "short-word-typo",
 				"scored": true,
 				"queries": [
-					"krxs",
 					"gixa",
-					"wixl",
-					"poxt",
-					"soxt",
-					"maxc",
-					"laxg",
 					"kaxa",
-					"ryxn",
-					"coxe"
+					"haxs",
+					"edxa",
+					"irxa",
+					"svxn",
+					"arxo",
+					"doxa",
+					"jexa",
+					"gaxl"
 				],
 				"mrr": {
 					"ekrina": 0.861,
@@ -13818,43 +13771,43 @@
 					"fast-fuzzy (all opts)": 0.95,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 0.216,
-					"fuse.js (tuned)": 0.215,
-					"fuse.js (all opts)": 0.215
+					"fuse.js": 0.449,
+					"fuse.js (tuned)": 0.435,
+					"fuse.js (all opts)": 0.435
 				},
 				"medianRows": {
-					"ekrina": 44,
-					"ekrina (indexed)": 44,
-					"ekrina (acronym)": 44,
+					"ekrina": 9,
+					"ekrina (indexed)": 9,
+					"ekrina (acronym)": 9,
 					"@nozbe/microfuzz": 1,
 					"@nozbe/microfuzz (all opts)": 1,
 					"fuzzy": 1,
 					"fuzzy (all opts)": 1,
 					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 77,
-					"fast-fuzzy (all opts)": 77,
+					"fast-fuzzy": 45,
+					"fast-fuzzy (all opts)": 45,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 1518,
-					"fuse.js (tuned)": 440,
-					"fuse.js (all opts)": 1551
+					"fuse.js": 1715,
+					"fuse.js (tuned)": 40,
+					"fuse.js (all opts)": 1759
 				}
 			},
 			{
 				"kind": "prefix",
 				"scored": true,
 				"queries": [
-					"handm",
-					"gerar",
-					"runol",
 					"evere",
-					"veron",
-					"alten",
-					"waelc",
-					"cummi",
-					"lebsa",
-					"skile"
+					"bingh",
+					"galve",
+					"alvas",
+					"daphn",
+					"joanv",
+					"darne",
+					"annab",
+					"edhav",
+					"richi"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13875,38 +13828,38 @@
 					"fuse.js (all opts)": 1
 				},
 				"medianRows": {
-					"ekrina": 31,
-					"ekrina (indexed)": 31,
-					"ekrina (acronym)": 31,
-					"@nozbe/microfuzz": 84,
-					"@nozbe/microfuzz (all opts)": 84,
-					"fuzzy": 80,
-					"fuzzy (all opts)": 80,
-					"fuzzysort": 81,
-					"match-sorter": 84,
-					"fast-fuzzy": 1050,
-					"fast-fuzzy (all opts)": 1050,
-					"uFuzzy": 19,
-					"uFuzzy (all opts)": 36,
-					"fuse.js": 2273,
-					"fuse.js (tuned)": 781,
-					"fuse.js (all opts)": 2292
+					"ekrina": 22,
+					"ekrina (indexed)": 22,
+					"ekrina (acronym)": 22,
+					"@nozbe/microfuzz": 45,
+					"@nozbe/microfuzz (all opts)": 45,
+					"fuzzy": 45,
+					"fuzzy (all opts)": 45,
+					"fuzzysort": 45,
+					"match-sorter": 45,
+					"fast-fuzzy": 641,
+					"fast-fuzzy (all opts)": 641,
+					"uFuzzy": 2,
+					"uFuzzy (all opts)": 18,
+					"fuse.js": 1734,
+					"fuse.js (tuned)": 307,
+					"fuse.js (all opts)": 1775
 				}
 			},
 			{
 				"kind": "infix",
 				"scored": true,
 				"queries": [
-					"cense",
-					"dkiew",
-					"ntast",
-					"laugh",
-					"embla",
 					"tusia",
 					"tersv",
 					"rmain",
-					"mague",
-					"ndras"
+					"ndras",
+					"lipem",
+					"aldsh",
+					"njasi",
+					"hnert",
+					"nnarp",
+					"sprzy"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -13927,74 +13880,74 @@
 					"fuse.js (all opts)": 1
 				},
 				"medianRows": {
-					"ekrina": 21,
-					"ekrina (indexed)": 21,
-					"ekrina (acronym)": 21,
-					"@nozbe/microfuzz": 119,
-					"@nozbe/microfuzz (all opts)": 119,
-					"fuzzy": 119,
-					"fuzzy (all opts)": 119,
-					"fuzzysort": 119,
-					"match-sorter": 119,
-					"fast-fuzzy": 857,
-					"fast-fuzzy (all opts)": 857,
-					"uFuzzy": 15,
-					"uFuzzy (all opts)": 35,
-					"fuse.js": 1920,
-					"fuse.js (tuned)": 471,
-					"fuse.js (all opts)": 1939
+					"ekrina": 20,
+					"ekrina (indexed)": 20,
+					"ekrina (acronym)": 20,
+					"@nozbe/microfuzz": 57,
+					"@nozbe/microfuzz (all opts)": 57,
+					"fuzzy": 56,
+					"fuzzy (all opts)": 56,
+					"fuzzysort": 56,
+					"match-sorter": 57,
+					"fast-fuzzy": 637,
+					"fast-fuzzy (all opts)": 637,
+					"uFuzzy": 1,
+					"uFuzzy (all opts)": 17,
+					"fuse.js": 1296,
+					"fuse.js (tuned)": 251,
+					"fuse.js (all opts)": 1300
 				}
 			},
 			{
 				"kind": "scatter-light",
 				"scored": true,
 				"queries": [
-					"donnlly",
-					"pracical",
-					"preton",
-					"bahrnger",
 					"delona",
-					"strcke",
-					"hilert",
-					"unbrnded",
-					"aweome",
-					"sewryn"
+					"sewryn",
+					"listte",
+					"univesity",
+					"lothire",
+					"nieiec",
+					"joceyne",
+					"kenoro",
+					"natlie",
+					"javieberg"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.99,
-					"@nozbe/microfuzz (all opts)": 0.99,
-					"fuzzy": 0.988,
-					"fuzzy (all opts)": 0.988,
+					"@nozbe/microfuzz": 0.949,
+					"@nozbe/microfuzz (all opts)": 0.949,
+					"fuzzy": 0.899,
+					"fuzzy (all opts)": 0.899,
 					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
+					"fast-fuzzy": 0.9,
+					"fast-fuzzy (all opts)": 0.9,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.95,
-					"fuse.js (tuned)": 0.95,
-					"fuse.js (all opts)": 0.95
+					"uFuzzy (all opts)": 0.85,
+					"fuse.js": 0.875,
+					"fuse.js (tuned)": 0.875,
+					"fuse.js (all opts)": 0.875
 				},
 				"medianRows": {
-					"ekrina": 22,
-					"ekrina (indexed)": 22,
-					"ekrina (acronym)": 22,
-					"@nozbe/microfuzz": 35,
-					"@nozbe/microfuzz (all opts)": 35,
-					"fuzzy": 35,
-					"fuzzy (all opts)": 35,
-					"fuzzysort": 35,
-					"match-sorter": 35,
-					"fast-fuzzy": 98,
-					"fast-fuzzy (all opts)": 98,
+					"ekrina": 2,
+					"ekrina (indexed)": 2,
+					"ekrina (acronym)": 2,
+					"@nozbe/microfuzz": 22,
+					"@nozbe/microfuzz (all opts)": 22,
+					"fuzzy": 22,
+					"fuzzy (all opts)": 22,
+					"fuzzysort": 22,
+					"match-sorter": 22,
+					"fast-fuzzy": 38,
+					"fast-fuzzy (all opts)": 38,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 22,
-					"fuse.js": 711,
-					"fuse.js (tuned)": 215,
-					"fuse.js (all opts)": 728
+					"uFuzzy (all opts)": 2,
+					"fuse.js": 1052,
+					"fuse.js (tuned)": 60,
+					"fuse.js (all opts)": 1065
 				}
 			},
 			{
@@ -14002,51 +13955,51 @@
 				"scored": true,
 				"queries": [
 					"amroe",
-					"sciler",
 					"laelnd",
-					"kooplsi",
 					"glvestad",
 					"laceeser",
 					"vitoiaied",
-					"gelah",
 					"heritt",
-					"maejovc"
+					"kęzira",
+					"maaya",
+					"macikosk",
+					"alssnda"
 				],
 				"mrr": {
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"@nozbe/microfuzz": 0.661,
-					"@nozbe/microfuzz (all opts)": 0.661,
-					"fuzzy": 0.518,
-					"fuzzy (all opts)": 0.518,
-					"fuzzysort": 0.9,
+					"@nozbe/microfuzz": 0.669,
+					"@nozbe/microfuzz (all opts)": 0.669,
+					"fuzzy": 0.559,
+					"fuzzy (all opts)": 0.559,
+					"fuzzysort": 0.95,
 					"match-sorter": 0.925,
-					"fast-fuzzy": 0.013,
-					"fast-fuzzy (all opts)": 0.013,
+					"fast-fuzzy": 0.082,
+					"fast-fuzzy (all opts)": 0.082,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 0.355,
-					"fuse.js (tuned)": 0.403,
-					"fuse.js (all opts)": 0.355
+					"fuse.js": 0.288,
+					"fuse.js (tuned)": 0.352,
+					"fuse.js (all opts)": 0.288
 				},
 				"medianRows": {
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"@nozbe/microfuzz": 41,
-					"@nozbe/microfuzz (all opts)": 41,
-					"fuzzy": 41,
-					"fuzzy (all opts)": 41,
-					"fuzzysort": 41,
-					"match-sorter": 41,
+					"@nozbe/microfuzz": 21,
+					"@nozbe/microfuzz (all opts)": 21,
+					"fuzzy": 20,
+					"fuzzy (all opts)": 20,
+					"fuzzysort": 21,
+					"match-sorter": 21,
 					"fast-fuzzy": 140,
 					"fast-fuzzy (all opts)": 140,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 1217,
-					"fuse.js (tuned)": 247,
-					"fuse.js (all opts)": 1225
+					"fuse.js": 1064,
+					"fuse.js (tuned)": 97,
+					"fuse.js (all opts)": 1065
 				}
 			},
 			{
@@ -14054,26 +14007,26 @@
 				"scored": true,
 				"queries": [
 					"eihln",
-					"hdiwc",
 					"piclaiw",
-					"bsoe",
 					"hsetw",
-					"ksuk",
-					"frel",
-					"bazzk",
 					"rlihuy",
-					"grro"
+					"rbnad",
+					"jcln",
+					"ahle",
+					"llsie",
+					"kdir",
+					"bnhmo"
 				],
 				"mrr": {
-					"ekrina": 0.053,
-					"ekrina (indexed)": 0.053,
-					"ekrina (acronym)": 0.053,
-					"@nozbe/microfuzz": 0.298,
-					"@nozbe/microfuzz (all opts)": 0.298,
-					"fuzzy": 0.349,
-					"fuzzy (all opts)": 0.349,
-					"fuzzysort": 0.587,
-					"match-sorter": 0.85,
+					"ekrina": 0,
+					"ekrina (indexed)": 0,
+					"ekrina (acronym)": 0,
+					"@nozbe/microfuzz": 0.233,
+					"@nozbe/microfuzz (all opts)": 0.233,
+					"fuzzy": 0.242,
+					"fuzzy (all opts)": 0.242,
+					"fuzzysort": 0.52,
+					"match-sorter": 0.642,
 					"fast-fuzzy": 0.011,
 					"fast-fuzzy (all opts)": 0.011,
 					"uFuzzy": 0,
@@ -14086,19 +14039,19 @@
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"@nozbe/microfuzz": 45,
-					"@nozbe/microfuzz (all opts)": 45,
-					"fuzzy": 45,
-					"fuzzy (all opts)": 45,
-					"fuzzysort": 45,
-					"match-sorter": 45,
+					"@nozbe/microfuzz": 79,
+					"@nozbe/microfuzz (all opts)": 79,
+					"fuzzy": 79,
+					"fuzzy (all opts)": 79,
+					"fuzzysort": 79,
+					"match-sorter": 79,
 					"fast-fuzzy": 121,
 					"fast-fuzzy (all opts)": 121,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
-					"fuse.js": 740,
-					"fuse.js (tuned)": 126,
-					"fuse.js (all opts)": 746
+					"fuse.js": 1164,
+					"fuse.js (tuned)": 28,
+					"fuse.js (all opts)": 1166
 				}
 			},
 			{
@@ -14106,50 +14059,50 @@
 				"scored": true,
 				"queries": [
 					"boscvoille",
-					"kołodizejski",
-					"intelilgent",
-					"pratcical",
 					"maśalnka",
-					"incrdeible",
-					"hemrann",
 					"bililngs",
 					"camlilien",
-					"orinetal"
+					"hinztfort",
+					"deboarhview",
+					"ewalsdhire",
+					"dickneston",
+					"univresity",
+					"fraknlin"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.35,
-					"@nozbe/microfuzz (all opts)": 0.35,
-					"fuzzy": 0.35,
-					"fuzzy (all opts)": 0.35,
-					"fuzzysort": 0.35,
-					"match-sorter": 0.311,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
-					"uFuzzy": 0,
-					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.933,
-					"fuse.js (tuned)": 0.857,
-					"fuse.js (all opts)": 0.857
-				},
-				"medianRows": {
-					"ekrina": 13,
-					"ekrina (indexed)": 13,
-					"ekrina (acronym)": 13,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 80,
-					"fast-fuzzy (all opts)": 80,
+					"fast-fuzzy": 1,
+					"fast-fuzzy (all opts)": 1,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 13,
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 0.95,
+					"fuse.js (tuned)": 0.883,
+					"fuse.js (all opts)": 0.874
+				},
+				"medianRows": {
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 12,
+					"fast-fuzzy (all opts)": 12,
+					"uFuzzy": 0,
+					"uFuzzy (all opts)": 1,
 					"fuse.js": 412,
-					"fuse.js (tuned)": 90,
+					"fuse.js (tuned)": 22,
 					"fuse.js (all opts)": 414
 				}
 			},
@@ -14157,68 +14110,68 @@
 				"kind": "insertion",
 				"scored": true,
 				"queries": [
-					"practtical",
-					"clareence",
 					"etheelyn",
-					"gutkoowski",
-					"cormmier",
-					"fantaastic",
 					"adegrrine",
 					"klemenntyna",
-					"refiined",
-					"handmmade"
+					"alexaander",
+					"zareemba",
+					"marioccester",
+					"szczeppaniak",
+					"creolaaview",
+					"katieeton",
+					"walenntyn"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 0.2,
-					"@nozbe/microfuzz (all opts)": 0.2,
-					"fuzzy": 0.2,
-					"fuzzy (all opts)": 0.2,
-					"fuzzysort": 0.2,
-					"match-sorter": 0.2,
-					"fast-fuzzy": 1,
-					"fast-fuzzy (all opts)": 1,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 0.975,
+					"fast-fuzzy (all opts)": 0.975,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 1,
-					"fuse.js (tuned)": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js": 0.928,
+					"fuse.js (tuned)": 0.928,
+					"fuse.js (all opts)": 0.928
 				},
 				"medianRows": {
-					"ekrina": 15,
-					"ekrina (indexed)": 15,
-					"ekrina (acronym)": 15,
-					"@nozbe/microfuzz": 1,
-					"@nozbe/microfuzz (all opts)": 1,
-					"fuzzy": 1,
-					"fuzzy (all opts)": 1,
-					"fuzzysort": 1,
-					"match-sorter": 1,
-					"fast-fuzzy": 80,
-					"fast-fuzzy (all opts)": 80,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
+					"@nozbe/microfuzz": 0,
+					"@nozbe/microfuzz (all opts)": 0,
+					"fuzzy": 0,
+					"fuzzy (all opts)": 0,
+					"fuzzysort": 0,
+					"match-sorter": 0,
+					"fast-fuzzy": 13,
+					"fast-fuzzy (all opts)": 13,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 15,
-					"fuse.js": 644,
-					"fuse.js (tuned)": 145,
-					"fuse.js (all opts)": 647
+					"uFuzzy (all opts)": 1,
+					"fuse.js": 333,
+					"fuse.js (tuned)": 25,
+					"fuse.js (all opts)": 343
 				}
 			},
 			{
 				"kind": "substitution",
 				"scored": true,
 				"queries": [
-					"ergoxomic",
 					"joaxnie",
-					"luxuqious",
 					"chryxole",
 					"daniexhaven",
-					"gorgxous",
 					"mauxice",
 					"pouroxfield",
 					"conxord",
-					"lucxlle"
+					"lucxlle",
+					"kenxedy",
+					"helxise",
+					"malxolm"
 				],
 				"mrr": {
 					"ekrina": 1,
@@ -14239,22 +14192,22 @@
 					"fuse.js (all opts)": 0.983
 				},
 				"medianRows": {
-					"ekrina": 4,
-					"ekrina (indexed)": 4,
-					"ekrina (acronym)": 4,
+					"ekrina": 2,
+					"ekrina (indexed)": 2,
+					"ekrina (acronym)": 2,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
 					"fuzzy (all opts)": 0,
 					"fuzzysort": 0,
 					"match-sorter": 0,
-					"fast-fuzzy": 20,
-					"fast-fuzzy (all opts)": 20,
+					"fast-fuzzy": 12,
+					"fast-fuzzy (all opts)": 12,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 4,
-					"fuse.js": 551,
-					"fuse.js (tuned)": 81,
-					"fuse.js (all opts)": 554
+					"uFuzzy (all opts)": 2,
+					"fuse.js": 650,
+					"fuse.js (tuned)": 88,
+					"fuse.js (all opts)": 655
 				}
 			},
 			{
@@ -14265,23 +14218,23 @@
 					"fbf",
 					"luk",
 					"ekaho",
-					"lsc",
 					"ipm",
 					"mati",
-					"scp",
 					"pcv",
-					"npsa"
+					"npsa",
+					"tjhd",
+					"elt"
 				],
 				"mrr": {
-					"ekrina": 0.343,
-					"ekrina (indexed)": 0.343,
-					"ekrina (acronym)": 0.912,
-					"@nozbe/microfuzz": 0.423,
-					"@nozbe/microfuzz (all opts)": 0.423,
-					"fuzzy": 0.07,
-					"fuzzy (all opts)": 0.07,
-					"fuzzysort": 0.622,
-					"match-sorter": 0.9,
+					"ekrina": 0.444,
+					"ekrina (indexed)": 0.444,
+					"ekrina (acronym)": 0.863,
+					"@nozbe/microfuzz": 0.523,
+					"@nozbe/microfuzz (all opts)": 0.523,
+					"fuzzy": 0.123,
+					"fuzzy (all opts)": 0.123,
+					"fuzzysort": 0.713,
+					"match-sorter": 0.811,
 					"fast-fuzzy": 0,
 					"fast-fuzzy (all opts)": 0,
 					"uFuzzy": 0,
@@ -14291,21 +14244,21 @@
 					"fuse.js (all opts)": 0
 				},
 				"medianRows": {
-					"ekrina": 4,
-					"ekrina (indexed)": 4,
-					"ekrina (acronym)": 4,
-					"@nozbe/microfuzz": 148,
-					"@nozbe/microfuzz (all opts)": 148,
-					"fuzzy": 148,
-					"fuzzy (all opts)": 148,
-					"fuzzysort": 148,
-					"match-sorter": 148,
-					"fast-fuzzy": 298,
-					"fast-fuzzy (all opts)": 298,
+					"ekrina": 3,
+					"ekrina (indexed)": 3,
+					"ekrina (acronym)": 3,
+					"@nozbe/microfuzz": 145,
+					"@nozbe/microfuzz (all opts)": 145,
+					"fuzzy": 145,
+					"fuzzy (all opts)": 145,
+					"fuzzysort": 145,
+					"match-sorter": 145,
+					"fast-fuzzy": 207,
+					"fast-fuzzy (all opts)": 207,
 					"uFuzzy": 0,
-					"uFuzzy (all opts)": 0,
+					"uFuzzy (all opts)": 1,
 					"fuse.js": 908,
-					"fuse.js (tuned)": 676,
+					"fuse.js (tuned)": 191,
 					"fuse.js (all opts)": 934
 				}
 			},
@@ -14315,50 +14268,50 @@
 				"queries": [
 					"zagorski",
 					"cecile",
-					"jozefina",
 					"kulinski",
 					"kwiecinski",
 					"avigaelle",
 					"raczynski",
 					"kazmierczak",
 					"wasik",
-					"bienkowski"
+					"bienkowski",
+					"edith"
 				],
 				"mrr": {
 					"ekrina": 1,
 					"ekrina (indexed)": 1,
 					"ekrina (acronym)": 1,
-					"@nozbe/microfuzz": 1,
-					"@nozbe/microfuzz (all opts)": 1,
-					"fuzzy": 0.107,
-					"fuzzy (all opts)": 0.107,
+					"@nozbe/microfuzz": 0.975,
+					"@nozbe/microfuzz (all opts)": 0.975,
+					"fuzzy": 0.182,
+					"fuzzy (all opts)": 0.182,
 					"fuzzysort": 1,
 					"match-sorter": 1,
-					"fast-fuzzy": 0.781,
-					"fast-fuzzy (all opts)": 0.781,
-					"uFuzzy": 0,
+					"fast-fuzzy": 0.764,
+					"fast-fuzzy (all opts)": 0.764,
+					"uFuzzy": 0.1,
 					"uFuzzy (all opts)": 1,
-					"fuse.js": 0.785,
-					"fuse.js (tuned)": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js": 0.727,
+					"fuse.js (tuned)": 0.975,
+					"fuse.js (all opts)": 0.975
 				},
 				"medianRows": {
 					"ekrina": 4,
 					"ekrina (indexed)": 4,
 					"ekrina (acronym)": 4,
-					"@nozbe/microfuzz": 5,
-					"@nozbe/microfuzz (all opts)": 5,
+					"@nozbe/microfuzz": 6,
+					"@nozbe/microfuzz (all opts)": 6,
 					"fuzzy": 1,
 					"fuzzy (all opts)": 1,
-					"fuzzysort": 5,
-					"match-sorter": 5,
-					"fast-fuzzy": 91,
-					"fast-fuzzy (all opts)": 91,
+					"fuzzysort": 6,
+					"match-sorter": 6,
+					"fast-fuzzy": 120,
+					"fast-fuzzy (all opts)": 120,
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 4,
-					"fuse.js": 470,
-					"fuse.js (tuned)": 144,
-					"fuse.js (all opts)": 520
+					"fuse.js": 531,
+					"fuse.js (tuned)": 64,
+					"fuse.js (all opts)": 560
 				}
 			},
 			{
@@ -14427,7 +14380,7 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 97,
-					"fuse.js (tuned)": 3,
+					"fuse.js (tuned)": 2,
 					"fuse.js (all opts)": 36
 				}
 			}

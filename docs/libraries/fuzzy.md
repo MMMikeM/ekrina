@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuzzy-scorecard-mixed -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.43 |     0.03 |    1.92 |    45.22 |        1.80 |
-| fuzzy (all opts) | 0.43 |     0.03 |    2.02 |    47.79 |        1.90 |
+| **fuzzy**        | 0.38 |     0.03 |    1.92 |    45.22 |        1.80 |
+| fuzzy (all opts) | 0.38 |     0.03 |    2.02 |    47.79 |        1.90 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuzzy-scorecard-ascii -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.42 |     0.03 |    1.73 |    34.64 |        1.37 |
-| fuzzy (all opts) | 0.42 |     0.03 |    1.86 |    36.12 |        1.43 |
+| **fuzzy**        | 0.39 |     0.03 |    1.73 |    34.64 |        1.37 |
+| fuzzy (all opts) | 0.39 |     0.03 |    1.86 |    36.12 |        1.43 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -61,8 +61,8 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 <!-- bench:library-fuzzy-families-mixed -->
 | Family                     | fuzzy | fuzzy (all opts) |
 |----------------------------|------:|-----------------:|
-| long-word                  |  0.99 |             0.99 |
-| short-word                 |  0.86 |             0.86 |
+| long-word                  |  0.93 |             0.93 |
+| short-word                 |  0.75 |             0.75 |
 | two-words                  |  0.90 |             0.90 |
 | two-words-reversed         |  0.10 |             0.10 |
 | two-words-partial-reversed |  0.00 |             0.00 |
@@ -70,18 +70,18 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | two-words-typo             |  0.00 |             0.00 |
 | two-words-typo-second      |  0.00 |             0.00 |
 | two-words-typo-reversed    |  0.00 |             0.00 |
-| plural-to-singular         |  0.69 |             0.69 |
+| plural-to-singular         |  0.38 |             0.38 |
 | short-word-typo            |  0.00 |             0.00 |
 | prefix                     |  0.97 |             0.97 |
 | infix                      |  1.00 |             1.00 |
-| scatter-light              |  0.99 |             0.99 |
-| scatter-medium             |  0.52 |             0.52 |
-| scatter-heavy              |  0.35 |             0.35 |
-| transposition              |  0.35 |             0.35 |
-| insertion                  |  0.20 |             0.20 |
+| scatter-light              |  0.90 |             0.90 |
+| scatter-medium             |  0.56 |             0.56 |
+| scatter-heavy              |  0.24 |             0.24 |
+| transposition              |  0.00 |             0.00 |
+| insertion                  |  0.00 |             0.00 |
 | substitution               |  0.00 |             0.00 |
-| acronym                    |  0.07 |             0.07 |
-| accent-stripped            |  0.11 |             0.11 |
+| acronym                    |  0.12 |             0.12 |
+| accent-stripped            |  0.18 |             0.18 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -89,8 +89,8 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 <!-- bench:library-fuzzy-families-ascii -->
 | Family                     | fuzzy | fuzzy (all opts) |
 |----------------------------|------:|-----------------:|
-| long-word                  |  0.97 |             0.97 |
-| short-word                 |  0.84 |             0.84 |
+| long-word                  |  0.96 |             0.96 |
+| short-word                 |  0.80 |             0.80 |
 | two-words                  |  1.00 |             1.00 |
 | two-words-reversed         |  0.00 |             0.00 |
 | two-words-partial-reversed |  0.07 |             0.07 |
@@ -98,16 +98,15 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | two-words-typo             |  0.00 |             0.00 |
 | two-words-typo-second      |  0.00 |             0.00 |
 | two-words-typo-reversed    |  0.00 |             0.00 |
-| plural-to-singular         |  0.82 |             0.82 |
-| short-word-typo            |  0.20 |             0.20 |
-| prefix                     |  1.00 |             1.00 |
+| plural-to-singular         |  0.40 |             0.40 |
+| short-word-typo            |  0.00 |             0.00 |
+| prefix                     |  0.98 |             0.98 |
 | infix                      |  1.00 |             1.00 |
-| scatter-light              |  0.72 |             0.72 |
-| scatter-medium             |  0.62 |             0.62 |
-| scatter-heavy              |  0.16 |             0.16 |
-| transposition              |  0.20 |             0.20 |
+| scatter-light              |  0.78 |             0.78 |
+| scatter-medium             |  0.55 |             0.55 |
+| scatter-heavy              |  0.12 |             0.12 |
+| transposition              |  0.00 |             0.00 |
 | insertion                  |  0.10 |             0.10 |
 | substitution               |  0.00 |             0.00 |
-| acronym                    |  0.01 |             0.01 |
-| accent-stripped            |  0.20 |             0.20 |
+| acronym                    |  0.03 |             0.03 |
 <!-- bench:end -->

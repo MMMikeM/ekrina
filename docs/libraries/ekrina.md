@@ -16,7 +16,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ekrina-scorecard-mixed -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym) | 0.90 |     0.13 |    3.93 |    18.73 |        0.67 |
+| Ekrina (acronym) | 0.89 |     0.13 |    3.93 |    18.73 |        0.67 |
 | Ekrina           | 0.87 |     0.13 |    3.71 |    18.49 |        0.67 |
 | Ekrina (indexed) | 0.87 |     2.10 |    1.34 |    13.54 |        0.52 |
 <!-- bench:end -->
@@ -26,9 +26,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ekrina-scorecard-ascii -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym) | 0.90 |     0.12 |    3.42 |    19.03 |        0.71 |
-| Ekrina           | 0.87 |     0.12 |    3.33 |    18.68 |        0.71 |
-| Ekrina (indexed) | 0.87 |     2.08 |    1.43 |    15.35 |        0.59 |
+| Ekrina (acronym) | 0.89 |     0.12 |    3.42 |    19.03 |        0.71 |
+| Ekrina           | 0.86 |     0.12 |    3.33 |    18.68 |        0.71 |
+| Ekrina (indexed) | 0.86 |     2.08 |    1.43 |    15.35 |        0.59 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -83,7 +83,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | long-word                  |   1.00 |             1.00 |             1.00 |
 | short-word                 |   1.00 |             1.00 |             1.00 |
 | two-words                  |   1.00 |             1.00 |             1.00 |
-| two-words-reversed         |   1.00 |             1.00 |             1.00 |
+| two-words-reversed         |   0.97 |             0.97 |             0.97 |
 | two-words-partial-reversed |   1.00 |             1.00 |             1.00 |
 | two-words-joined           |   1.00 |             1.00 |             1.00 |
 | two-words-typo             |   1.00 |             1.00 |             1.00 |
@@ -95,11 +95,11 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | infix                      |   1.00 |             1.00 |             1.00 |
 | scatter-light              |   1.00 |             1.00 |             1.00 |
 | scatter-medium             |   0.00 |             0.00 |             0.00 |
-| scatter-heavy              |   0.05 |             0.05 |             0.05 |
+| scatter-heavy              |   0.00 |             0.00 |             0.00 |
 | transposition              |   1.00 |             1.00 |             1.00 |
 | insertion                  |   1.00 |             1.00 |             1.00 |
 | substitution               |   1.00 |             1.00 |             1.00 |
-| acronym                    |   0.34 |             0.91 |             0.34 |
+| acronym                    |   0.44 |             0.86 |             0.44 |
 | accent-stripped            |   1.00 |             1.00 |             1.00 |
 <!-- bench:end -->
 
@@ -117,16 +117,15 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | two-words-typo             |   1.00 |             1.00 |             1.00 |
 | two-words-typo-second      |   1.00 |             1.00 |             1.00 |
 | two-words-typo-reversed    |   1.00 |             1.00 |             1.00 |
-| plural-to-singular         |   1.00 |             1.00 |             1.00 |
-| short-word-typo            |   1.00 |             1.00 |             1.00 |
+| plural-to-singular         |   0.95 |             0.95 |             0.95 |
+| short-word-typo            |   0.90 |             0.90 |             0.90 |
 | prefix                     |   1.00 |             1.00 |             1.00 |
 | infix                      |   1.00 |             1.00 |             1.00 |
-| scatter-light              |   1.00 |             1.00 |             1.00 |
+| scatter-light              |   0.94 |             0.94 |             0.94 |
 | scatter-medium             |   0.00 |             0.00 |             0.00 |
-| scatter-heavy              |   0.02 |             0.02 |             0.02 |
+| scatter-heavy              |   0.00 |             0.00 |             0.00 |
 | transposition              |   1.00 |             1.00 |             1.00 |
 | insertion                  |   1.00 |             1.00 |             1.00 |
-| substitution               |   1.00 |             1.00 |             1.00 |
-| acronym                    |   0.30 |             0.90 |             0.30 |
-| accent-stripped            |   1.00 |             1.00 |             1.00 |
+| substitution               |   0.98 |             0.98 |             0.98 |
+| acronym                    |   0.35 |             1.00 |             0.35 |
 <!-- bench:end -->

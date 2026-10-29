@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fast-fuzzy-scorecard-mixed -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.72 |    27.04 |   14.94 |   170.83 |        6.40 |
-| fast-fuzzy (all opts) | 0.72 |    26.39 |   16.66 |   151.85 |        5.60 |
+| **fast-fuzzy**        | 0.71 |    27.04 |   14.94 |   170.83 |        6.40 |
+| fast-fuzzy (all opts) | 0.71 |    26.39 |   16.66 |   151.85 |        5.60 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -61,27 +61,27 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 <!-- bench:library-fast-fuzzy-families-mixed -->
 | Family                     | fast-fuzzy | fast-fuzzy (all opts) |
 |----------------------------|-----------:|----------------------:|
-| long-word                  |       1.00 |                  1.00 |
-| short-word                 |       0.93 |                  0.93 |
+| long-word                  |       0.93 |                  0.93 |
+| short-word                 |       1.00 |                  1.00 |
 | two-words                  |       1.00 |                  1.00 |
-| two-words-reversed         |       0.12 |                  0.12 |
-| two-words-partial-reversed |       0.35 |                  0.35 |
+| two-words-reversed         |       0.14 |                  0.14 |
+| two-words-partial-reversed |       0.28 |                  0.28 |
 | two-words-joined           |       1.00 |                  1.00 |
 | two-words-typo             |       1.00 |                  1.00 |
 | two-words-typo-second      |       1.00 |                  1.00 |
 | two-words-typo-reversed    |       0.00 |                  0.00 |
-| plural-to-singular         |       0.94 |                  0.94 |
+| plural-to-singular         |       0.93 |                  0.93 |
 | short-word-typo            |       0.95 |                  0.95 |
 | prefix                     |       1.00 |                  1.00 |
 | infix                      |       1.00 |                  1.00 |
-| scatter-light              |       1.00 |                  1.00 |
-| scatter-medium             |       0.01 |                  0.01 |
+| scatter-light              |       0.90 |                  0.90 |
+| scatter-medium             |       0.08 |                  0.08 |
 | scatter-heavy              |       0.01 |                  0.01 |
 | transposition              |       1.00 |                  1.00 |
-| insertion                  |       1.00 |                  1.00 |
+| insertion                  |       0.97 |                  0.97 |
 | substitution               |       1.00 |                  1.00 |
 | acronym                    |       0.00 |                  0.00 |
-| accent-stripped            |       0.78 |                  0.78 |
+| accent-stripped            |       0.76 |                  0.76 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -90,24 +90,23 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | Family                     | fast-fuzzy | fast-fuzzy (all opts) |
 |----------------------------|-----------:|----------------------:|
 | long-word                  |       1.00 |                  1.00 |
-| short-word                 |       0.85 |                  0.85 |
+| short-word                 |       1.00 |                  1.00 |
 | two-words                  |       1.00 |                  1.00 |
-| two-words-reversed         |       0.01 |                  0.01 |
+| two-words-reversed         |       0.10 |                  0.10 |
 | two-words-partial-reversed |       0.23 |                  0.23 |
 | two-words-joined           |       1.00 |                  1.00 |
 | two-words-typo             |       1.00 |                  1.00 |
 | two-words-typo-second      |       1.00 |                  1.00 |
-| two-words-typo-reversed    |       0.23 |                  0.23 |
-| plural-to-singular         |       1.00 |                  1.00 |
-| short-word-typo            |       0.86 |                  0.86 |
+| two-words-typo-reversed    |       0.13 |                  0.13 |
+| plural-to-singular         |       0.95 |                  0.95 |
+| short-word-typo            |       0.73 |                  0.73 |
 | prefix                     |       1.00 |                  1.00 |
 | infix                      |       1.00 |                  1.00 |
-| scatter-light              |       0.79 |                  0.79 |
-| scatter-medium             |       0.14 |                  0.14 |
+| scatter-light              |       0.84 |                  0.84 |
+| scatter-medium             |       0.07 |                  0.07 |
 | scatter-heavy              |       0.00 |                  0.00 |
 | transposition              |       1.00 |                  1.00 |
 | insertion                  |       1.00 |                  1.00 |
-| substitution               |       1.00 |                  1.00 |
+| substitution               |       0.95 |                  0.95 |
 | acronym                    |       0.00 |                  0.00 |
-| accent-stripped            |       0.60 |                  0.60 |
 <!-- bench:end -->
