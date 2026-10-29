@@ -5,7 +5,8 @@
  * axis, which is how a row comes to be timed but never scored.
  *
  * Base rows are library defaults, so a base cell is what `npm install` gives
- * you. "(all opts)" rows are the base plus every optional matching feature.
+ * you. "(all opts)" rows are the base plus every optional matching feature,
+ * and a "(tuned)" row is an "(all opts)" row with its knobs set by a sweep.
  */
 import uFuzzy from "@leeoniya/ufuzzy";
 import microfuzzModule from "@nozbe/microfuzz";
@@ -49,6 +50,8 @@ const FUSE_ALL: IFuseOptions<string> = {
 	// and only reaches these semantics at `tokenMatch: "all"`.
 	useExtendedSearch: true,
 };
+
+const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.5 };
 
 // SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
 const UFUZZY_ALL: uFuzzy.Options = {
@@ -297,6 +300,19 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => fuse.search(q).length,
 				probe: (q) => rankedOnly(fuse.search(q).map((r) => r.item)),
 				index: () => consume(new Fuse(list)),
+			};
+		},
+	},
+	{
+		name: "fuse.js (tuned)",
+		make: () => {
+			// Swept over 0.2–0.6 with and without ignoreLocation: 0.5 ties the best
+			// MRR with a quarter of the default's rows (docs/libraries/fuse.md).
+			const fuseTuned = new Fuse(list, FUSE_TUNED);
+			return {
+				count: (q) => fuseTuned.search(q).length,
+				probe: (q) => rankedOnly(fuseTuned.search(q).map((r) => r.item)),
+				index: () => consume(new Fuse(list, FUSE_TUNED)),
 			};
 		},
 	},

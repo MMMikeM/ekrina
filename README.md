@@ -162,7 +162,7 @@ So for a short query, a list can show fewer corrections than `fuzzyMatch` return
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
 - **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 4.7× by its last letter even over 100k items.
   Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
-- **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; an exact long word returns a median of 5 rows where Fuse.js returns 566.
+- **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; an exact long word returns a median of 5 rows where Fuse.js returns 153.
 - **Backend one-shot lookups**: constructor + first answer takes ~3.9 ms in a cold process over 10k items, so indexing per request is fine.
 - **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.20 ms, and the density floor, the minimum share of its span a fuzzy chain must cover, keeps absent words at exactly 0 false matches.
 
@@ -270,7 +270,7 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 | Library                     |    Gzip | Deps |  MRR | ms/query | Tiers | Ranges | Typos    |
 | --------------------------- | ------: | ---: | ---: | -------: | :---: | :----: | -------- |
 | **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.90 | **0.77** |  🟢   |   🟢   | one edit |
-| Fuse.js (all opts)          | ~9.3 kB |    0 | 0.81 |    21.12 |  🔴   |   🟡   | full     |
+| Fuse.js (tuned)             | ~9.3 kB |    0 | 0.81 |    15.40 |  🔴   |   🟡   | full     |
 | uFuzzy (all opts)           | ~4.1 kB |    0 | 0.76 |     1.29 |  🔴   |   🟢   | one edit |
 | fast-fuzzy                  |  ~11 kB |    1 | 0.72 |     6.50 |  🔴   |   🟡   | full     |
 | fuzzysort                   | ~3.7 kB |    0 | 0.64 |     0.54 |  🔴   |   🟢   | 🔴       |
@@ -288,7 +288,7 @@ Accuracy against one whole cold search (index + one query) is the least flatteri
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot time (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.87 at ~3.5 ms one-shot and Ekrina (acronym) 0.90 at ~4.2 ms, and everything else, including Fuse.js (all opts) at 0.81 and ~21 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot time (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.87 at ~3.5 ms one-shot and Ekrina (acronym) 0.90 at ~4.2 ms, and everything else, including Fuse.js (tuned) at 0.81 and ~17 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
 Ekrina is the only library that by default:
@@ -307,7 +307,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 - **Match quality**: Ekrina scores 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), and 1.00 on the plain words and single-edit typos, which no other library matches across the board.
   A transposition, an insertion and a substitution each break the subsequence property, so the subsequence engines score 0.35 or less there; Ekrina's one-edit tiers correct them, and inside a phrase the words that do occur pin the field so only the failing word is rescued.
   Ekrina refuses sparse chains on purpose, so it scores 0.00–0.05 on the scatter families against 0.59–0.93 for the chain engines, and long-text junk stays at 0%; two or more edits in one query remain the edit-distance engines' edge.
-- **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 22 ms at 10k and 73 ms at 100k, faster than any other library above 0.7 MRR, and ~3–60× under every typo-tolerant or tiered alternative, ~0.8–2.8 ms per query after the first.
+- **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 22 ms at 10k and 73 ms at 100k, faster than any other library above 0.7 MRR, and ~3–50× under every typo-tolerant or tiered alternative, ~0.8–2.8 ms per query after the first.
   Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
   A first answer averages ~3.8 ms at 10k and 13–26 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
   Of the other libraries, bare uFuzzy runs the 10k session faster at 0.24 MRR, and fuzzysort ties it there at 0.64 ([uFuzzy's configurations](./docs/libraries/ufuzzy.md)).
@@ -324,7 +324,7 @@ Fuse.js and fast-fuzzy are 1.7–2× larger.
 The exception:
 
 - **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake from five characters up, and a swap or substitution at a word start from four when nothing else matches, but two or more edits in one query need real edit distance.
-  Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle and ~6–21 ms queries.
+  Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle and ~6–15 ms queries.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 

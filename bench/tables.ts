@@ -39,12 +39,14 @@ const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length
 
 /** The library a configuration belongs to: its name without the option suffix. */
 export const libraryOf = (config: string): string =>
-	config.replace(/ \((all opts|acronym|indexed)\)$/, "");
+	config.replace(/ \((all opts|acronym|indexed|tuned)\)$/, "");
 
+// Unrounded, from the families: the scorecard's two decimals tie configurations
+// that the families tell apart.
 const mrrOf = (a: Artifact, config: string): number =>
 	mean(
-		Object.values(a.scorecard.corpora).map(
-			(rows) => rows.find((row) => row.library === config)?.mrr ?? 0,
+		Object.values(a.families ?? {}).map((families) =>
+			mean(families.filter((f) => f.scored).map((f) => f.mrr[config] ?? 0)),
 		),
 	);
 

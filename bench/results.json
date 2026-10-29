@@ -855,6 +855,10 @@
 					"mrr": 0.79
 				},
 				{
+					"library": "fuse.js (tuned)",
+					"mrr": 0.79
+				},
+				{
 					"library": "uFuzzy (all opts)",
 					"mrr": 0.75
 				},
@@ -914,6 +918,10 @@
 				},
 				{
 					"library": "fuse.js (all opts)",
+					"mrr": 0.81
+				},
+				{
+					"library": "fuse.js (tuned)",
 					"mrr": 0.81
 				},
 				{
@@ -1073,6 +1081,14 @@
 							1,
 							102
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 318,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							102
+						]
 					}
 				}
 			},
@@ -1176,6 +1192,10 @@
 							11,
 							12
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 237,
+						"rank": 5
 					}
 				}
 			},
@@ -1291,6 +1311,14 @@
 							1,
 							8
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
 					}
 				}
 			},
@@ -1398,6 +1426,14 @@
 							1,
 							8
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
 					}
 				}
 			},
@@ -1492,6 +1528,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 81,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 18,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -1608,6 +1652,14 @@
 							1,
 							8
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 142,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
 					}
 				}
 			},
@@ -1674,6 +1726,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 4,
+						"rank": null
+					},
+					"fuse.js (tuned)": {
+						"count": 0,
 						"rank": null
 					}
 				}
@@ -1765,6 +1821,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 44,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -1865,6 +1929,14 @@
 							1,
 							8
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
 					}
 				}
 			},
@@ -1952,6 +2024,14 @@
 							1,
 							8
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							8
+						]
 					}
 				}
 			},
@@ -2019,6 +2099,10 @@
 					"fuse.js (all opts)": {
 						"count": 39,
 						"rank": null
+					},
+					"fuse.js (tuned)": {
+						"count": 8,
+						"rank": null
 					}
 				}
 			},
@@ -2085,6 +2169,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 1461,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 291,
 						"rank": 1
 					}
 				}
@@ -2197,6 +2285,14 @@
 							1,
 							5
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 362,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
 					}
 				}
 			},
@@ -2275,6 +2371,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 1765,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							2
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 386,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2367,6 +2471,14 @@
 							1,
 							6
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 635,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							6
+						]
 					}
 				}
 			},
@@ -2433,6 +2545,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 515,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 41,
 						"rank": 1
 					}
 				}
@@ -2512,6 +2628,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 190,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							4
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 18,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -2608,6 +2732,10 @@
 							316,
 							655
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 289,
+						"rank": null
 					}
 				}
 			},
@@ -2674,6 +2802,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 458,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 51,
 						"rank": 1
 					}
 				}
@@ -2742,6 +2874,10 @@
 					"fuse.js (all opts)": {
 						"count": 112,
 						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 44,
+						"rank": 1
 					}
 				}
 			},
@@ -2808,6 +2944,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 432,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 21,
 						"rank": 1
 					}
 				}
@@ -2904,6 +3044,10 @@
 					"fuse.js (all opts)": {
 						"count": 1462,
 						"rank": null
+					},
+					"fuse.js (tuned)": {
+						"count": 1207,
+						"rank": null
 					}
 				}
 			},
@@ -2999,6 +3143,10 @@
 							21,
 							34
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 979,
+						"rank": 51
 					}
 				}
 			},
@@ -3064,6 +3212,10 @@
 						"rank": null
 					},
 					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null
+					},
+					"fuse.js (tuned)": {
 						"count": 0,
 						"rank": null
 					}
@@ -3174,6 +3326,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 743,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							76
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 178,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3306,6 +3466,14 @@
 							1,
 							3
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 292,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							3
+						]
 					}
 				}
 			},
@@ -3404,6 +3572,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 32,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3512,6 +3688,14 @@
 							1,
 							5
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
 					}
 				}
 			},
@@ -3602,6 +3786,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 52,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 23,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3710,6 +3902,14 @@
 							1,
 							5
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 95,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
 					}
 				}
 			},
@@ -3775,6 +3975,10 @@
 						"rank": null
 					},
 					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null
+					},
+					"fuse.js (tuned)": {
 						"count": 0,
 						"rank": null
 					}
@@ -3859,6 +4063,14 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 19,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
 						"rank": 1,
 						"tiedRanks": [
 							1,
@@ -3951,6 +4163,14 @@
 							1,
 							5
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
 					}
 				}
 			},
@@ -4038,6 +4258,14 @@
 							1,
 							5
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
+						"rank": 1,
+						"tiedRanks": [
+							1,
+							5
+						]
 					}
 				}
 			},
@@ -4105,6 +4333,10 @@
 					"fuse.js (all opts)": {
 						"count": 19,
 						"rank": null
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
+						"rank": null
 					}
 				}
 			},
@@ -4171,6 +4403,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 1481,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 357,
 						"rank": 1
 					}
 				}
@@ -4295,6 +4531,14 @@
 							1,
 							76
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 145,
+						"rank": 5,
+						"tiedRanks": [
+							1,
+							76
+						]
 					}
 				}
 			},
@@ -4361,6 +4605,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 379,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 92,
 						"rank": 1
 					}
 				}
@@ -4449,6 +4697,14 @@
 							1,
 							18
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 876,
+						"rank": 4,
+						"tiedRanks": [
+							1,
+							18
+						]
 					}
 				}
 			},
@@ -4515,6 +4771,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 271,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 30,
 						"rank": 1
 					}
 				}
@@ -4591,6 +4851,10 @@
 							1,
 							10
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 96,
+						"rank": 1
 					}
 				}
 			},
@@ -4682,6 +4946,14 @@
 							30,
 							199
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 391,
+						"rank": 50,
+						"tiedRanks": [
+							24,
+							193
+						]
 					}
 				}
 			},
@@ -4748,6 +5020,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 233,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 61,
 						"rank": 1
 					}
 				}
@@ -4816,6 +5092,10 @@
 					"fuse.js (all opts)": {
 						"count": 198,
 						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 27,
+						"rank": 1
 					}
 				}
 			},
@@ -4882,6 +5162,10 @@
 					},
 					"fuse.js (all opts)": {
 						"count": 65,
+						"rank": 1
+					},
+					"fuse.js (tuned)": {
+						"count": 12,
 						"rank": 1
 					}
 				}
@@ -4977,6 +5261,14 @@
 						"tiedRanks": [
 							1322,
 							1356
+						]
+					},
+					"fuse.js (tuned)": {
+						"count": 316,
+						"rank": 278,
+						"tiedRanks": [
+							278,
+							312
 						]
 					}
 				}
@@ -5081,6 +5373,10 @@
 							1,
 							3
 						]
+					},
+					"fuse.js (tuned)": {
+						"count": 678,
+						"rank": 2
 					}
 				}
 			},
@@ -5146,6 +5442,10 @@
 						"rank": null
 					},
 					"fuse.js (all opts)": {
+						"count": 0,
+						"rank": null
+					},
+					"fuse.js (tuned)": {
 						"count": 0,
 						"rank": null
 					}
@@ -5637,6 +5937,30 @@
 				},
 				"residueBytes": 181672,
 				"collected": true
+			},
+			"fuse.js (tuned)": {
+				"built": {
+					"heapBytes": 7252392,
+					"externalBytes": 40,
+					"totalBytes": 7252432
+				},
+				"match": {
+					"heapBytes": 7374832,
+					"externalBytes": 40,
+					"totalBytes": 7374872
+				},
+				"miss": {
+					"heapBytes": 7398792,
+					"externalBytes": 40,
+					"totalBytes": 7398832
+				},
+				"long": {
+					"heapBytes": 7408352,
+					"externalBytes": 40,
+					"totalBytes": 7408392
+				},
+				"residueBytes": 183632,
+				"collected": true
 			}
 		},
 		"mixed": {
@@ -5999,6 +6323,30 @@
 				},
 				"residueBytes": 182512,
 				"collected": true
+			},
+			"fuse.js (tuned)": {
+				"built": {
+					"heapBytes": 7252520,
+					"externalBytes": 40,
+					"totalBytes": 7252560
+				},
+				"match": {
+					"heapBytes": 7375752,
+					"externalBytes": 40,
+					"totalBytes": 7375792
+				},
+				"miss": {
+					"heapBytes": 7409784,
+					"externalBytes": 40,
+					"totalBytes": 7409824
+				},
+				"long": {
+					"heapBytes": 7408520,
+					"externalBytes": 40,
+					"totalBytes": 7408560
+				},
+				"residueBytes": 184528,
+				"collected": true
 			}
 		}
 	},
@@ -6140,6 +6488,15 @@
 						"oneShotMs": 26.752500999999995,
 						"minQueryMs": 25.160708999999997,
 						"heapMB": 37.245216369628906
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.1471250000000026,
+						"queryMs": 17.279250000000005,
+						"firstMs": 17.279250000000005,
+						"restMs": null,
+						"oneShotMs": 18.426375000000007,
+						"minQueryMs": 17.279250000000005,
+						"heapMB": 32.339149475097656
 					}
 				},
 				"100000": {
@@ -6277,6 +6634,15 @@
 						"oneShotMs": 186.124875,
 						"minQueryMs": 180.11920899999998,
 						"heapMB": 47.96038055419922
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.278375000000011,
+						"queryMs": 140.791042,
+						"firstMs": 140.791042,
+						"restMs": null,
+						"oneShotMs": 146.06941700000002,
+						"minQueryMs": 140.791042,
+						"heapMB": 58.34318542480469
 					}
 				}
 			},
@@ -6416,6 +6782,15 @@
 						"oneShotMs": 25.872250000000008,
 						"minQueryMs": 24.61850000000001,
 						"heapMB": 39.684722900390625
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.4374170000000106,
+						"queryMs": 21.31929199999999,
+						"firstMs": 21.31929199999999,
+						"restMs": null,
+						"oneShotMs": 22.756709,
+						"minQueryMs": 21.31929199999999,
+						"heapMB": 34.312889099121094
 					}
 				},
 				"100000": {
@@ -6553,6 +6928,15 @@
 						"oneShotMs": 232.895042,
 						"minQueryMs": 227.31629199999998,
 						"heapMB": 42.40540313720703
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.257084000000006,
+						"queryMs": 173.546917,
+						"firstMs": 173.546917,
+						"restMs": null,
+						"oneShotMs": 178.80400100000003,
+						"minQueryMs": 173.546917,
+						"heapMB": 50.482818603515625
 					}
 				}
 			},
@@ -6692,6 +7076,15 @@
 						"oneShotMs": 16.257415999999992,
 						"minQueryMs": 15.073999999999984,
 						"heapMB": 35.52349090576172
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.162040999999988,
+						"queryMs": 13.114709000000005,
+						"firstMs": 13.114709000000005,
+						"restMs": null,
+						"oneShotMs": 14.276749999999993,
+						"minQueryMs": 13.114709000000005,
+						"heapMB": 29.694351196289062
 					}
 				},
 				"100000": {
@@ -6829,6 +7222,15 @@
 						"oneShotMs": 137.16149900000002,
 						"minQueryMs": 131.819208,
 						"heapMB": 66.12329864501953
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.4659580000000005,
+						"queryMs": 107.133042,
+						"firstMs": 107.133042,
+						"restMs": null,
+						"oneShotMs": 112.599,
+						"minQueryMs": 107.133042,
+						"heapMB": 33.90436553955078
 					}
 				}
 			},
@@ -6968,6 +7370,15 @@
 						"oneShotMs": 34.59966600000001,
 						"minQueryMs": 33.094375000000014,
 						"heapMB": 26.36548614501953
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.1822909999999922,
+						"queryMs": 23.787666,
+						"firstMs": 23.787666,
+						"restMs": null,
+						"oneShotMs": 24.969956999999994,
+						"minQueryMs": 23.787666,
+						"heapMB": 36.88764190673828
 					}
 				},
 				"100000": {
@@ -7105,6 +7516,15 @@
 						"oneShotMs": 278.293042,
 						"minQueryMs": 272.351917,
 						"heapMB": 56.41675567626953
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.168750000000003,
+						"queryMs": 207.33154100000002,
+						"firstMs": 207.33154100000002,
+						"restMs": null,
+						"oneShotMs": 212.500291,
+						"minQueryMs": 207.33154100000002,
+						"heapMB": 41.53236389160156
 					}
 				}
 			},
@@ -7244,6 +7664,15 @@
 						"oneShotMs": 14.115833000000038,
 						"minQueryMs": 12.613333000000011,
 						"heapMB": 30.283950805664062
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.158292000000003,
+						"queryMs": 9.945667000000014,
+						"firstMs": 9.945667000000014,
+						"restMs": null,
+						"oneShotMs": 11.103959000000017,
+						"minQueryMs": 9.945667000000014,
+						"heapMB": 29.883934020996094
 					}
 				},
 				"100000": {
@@ -7381,6 +7810,15 @@
 						"oneShotMs": 136.79408299999997,
 						"minQueryMs": 129.781458,
 						"heapMB": 43.30595397949219
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.095832999999999,
+						"queryMs": 82.194916,
+						"firstMs": 82.194916,
+						"restMs": null,
+						"oneShotMs": 87.290749,
+						"minQueryMs": 82.194916,
+						"heapMB": 64.8318099975586
 					}
 				}
 			},
@@ -7520,6 +7958,15 @@
 						"oneShotMs": 15.319125000000014,
 						"minQueryMs": 14.095500000000015,
 						"heapMB": 30.5474853515625
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.176708000000005,
+						"queryMs": 12.618417000000008,
+						"firstMs": 12.618417000000008,
+						"restMs": null,
+						"oneShotMs": 13.795125000000013,
+						"minQueryMs": 12.618417000000008,
+						"heapMB": 29.43573760986328
 					}
 				},
 				"100000": {
@@ -7657,6 +8104,15 @@
 						"oneShotMs": 154.178583,
 						"minQueryMs": 147.882458,
 						"heapMB": 46.487388610839844
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.507582999999997,
+						"queryMs": 117.80616699999999,
+						"firstMs": 117.80616699999999,
+						"restMs": null,
+						"oneShotMs": 123.31374999999998,
+						"minQueryMs": 117.80616699999999,
+						"heapMB": 34.07501220703125
 					}
 				}
 			},
@@ -8186,6 +8642,41 @@
 							11.500374999999963,
 							12.43999999999994
 						]
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.1637079999999997,
+						"queryMs": 360.14083700000015,
+						"firstMs": 17.058791999999997,
+						"restMs": 14.29508520833334,
+						"oneShotMs": 18.222499999999997,
+						"minQueryMs": 360.14083700000015,
+						"heapMB": 31.4498291015625,
+						"perQueryMs": [
+							16.125207999999986,
+							13.543167000000011,
+							16.981000000000023,
+							10.661459000000008,
+							8.991332999999997,
+							27.115624999999994,
+							16.79641700000002,
+							16.792917000000017,
+							16.433084000000008,
+							10.597375000000056,
+							16.51275000000004,
+							9.800457999999992,
+							9.708416999999997,
+							14.427042000000029,
+							9.394083999999964,
+							17.329084000000023,
+							13.509041999999965,
+							10.556249999999977,
+							20.77083399999998,
+							20.777333,
+							19.430791,
+							7.4066250000000196,
+							8.651207999999997,
+							10.770542000000034
+						]
 					}
 				},
 				"100000": {
@@ -8713,6 +9204,41 @@
 							110.7195840000004,
 							123.30887499999972
 						]
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.2059169999999995,
+						"queryMs": 3489.0976689999993,
+						"firstMs": 139.91637500000002,
+						"restMs": 139.5492205833333,
+						"oneShotMs": 145.12229200000002,
+						"minQueryMs": 3489.0976689999993,
+						"heapMB": 60.205482482910156,
+						"perQueryMs": [
+							157.530459,
+							134.29008299999998,
+							165.834834,
+							105.37179199999991,
+							87.88675,
+							272.457125,
+							163.767875,
+							160.46383300000002,
+							163.347583,
+							105.67575000000011,
+							160.7761250000001,
+							96.52104200000008,
+							96.97899999999981,
+							132.79883399999972,
+							83.25654200000008,
+							178.87779199999977,
+							130.07845799999996,
+							98.37562500000013,
+							191.95008300000018,
+							203.95524999999998,
+							192.10275000000001,
+							72.3494169999999,
+							88.48462500000005,
+							106.04966699999977
+						]
 					}
 				}
 			}
@@ -8854,6 +9380,15 @@
 						"oneShotMs": 17.288041000000007,
 						"minQueryMs": 16.01483300000001,
 						"heapMB": 33.90174102783203
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.2040829999999971,
+						"queryMs": 13.632250000000013,
+						"firstMs": 13.632250000000013,
+						"restMs": null,
+						"oneShotMs": 14.83633300000001,
+						"minQueryMs": 13.632250000000013,
+						"heapMB": 29.389244079589844
 					}
 				},
 				"100000": {
@@ -8991,6 +9526,15 @@
 						"oneShotMs": 139.596041,
 						"minQueryMs": 134.05908300000002,
 						"heapMB": 45.46520233154297
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.346875000000011,
+						"queryMs": 111.35741600000001,
+						"firstMs": 111.35741600000001,
+						"restMs": null,
+						"oneShotMs": 116.70429100000003,
+						"minQueryMs": 111.35741600000001,
+						"heapMB": 62.770118713378906
 					}
 				}
 			},
@@ -9130,6 +9674,15 @@
 						"oneShotMs": 30.637833999999998,
 						"minQueryMs": 29.400458999999998,
 						"heapMB": 26.99871826171875
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.1914160000000038,
+						"queryMs": 25.31133300000002,
+						"firstMs": 25.31133300000002,
+						"restMs": null,
+						"oneShotMs": 26.502749000000023,
+						"minQueryMs": 25.31133300000002,
+						"heapMB": 38.191444396972656
 					}
 				},
 				"100000": {
@@ -9267,6 +9820,15 @@
 						"oneShotMs": 270.375917,
 						"minQueryMs": 264.810792,
 						"heapMB": 32.18409729003906
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 6.809416999999996,
+						"queryMs": 235.33945799999998,
+						"firstMs": 235.33945799999998,
+						"restMs": null,
+						"oneShotMs": 242.14887499999998,
+						"minQueryMs": 235.33945799999998,
+						"heapMB": 39.81169128417969
 					}
 				}
 			},
@@ -9406,6 +9968,15 @@
 						"oneShotMs": 16.855957999999987,
 						"minQueryMs": 15.631832999999986,
 						"heapMB": 35.57977294921875
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.2175420000000088,
+						"queryMs": 13.091915999999998,
+						"firstMs": 13.091915999999998,
+						"restMs": null,
+						"oneShotMs": 14.309458000000006,
+						"minQueryMs": 13.091915999999998,
+						"heapMB": 29.895294189453125
 					}
 				},
 				"100000": {
@@ -9543,6 +10114,15 @@
 						"oneShotMs": 139.10099999999997,
 						"minQueryMs": 133.67816599999998,
 						"heapMB": 66.86882781982422
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.174124999999989,
+						"queryMs": 110.003292,
+						"firstMs": 110.003292,
+						"restMs": null,
+						"oneShotMs": 115.17741699999999,
+						"minQueryMs": 110.003292,
+						"heapMB": 37.79969024658203
 					}
 				}
 			},
@@ -9682,6 +10262,15 @@
 						"oneShotMs": 21.104084000000014,
 						"minQueryMs": 19.873250000000013,
 						"heapMB": 34.95243835449219
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.182541999999998,
+						"queryMs": 17.67504199999999,
+						"firstMs": 17.67504199999999,
+						"restMs": null,
+						"oneShotMs": 18.85758399999999,
+						"minQueryMs": 17.67504199999999,
+						"heapMB": 33.90465545654297
 					}
 				},
 				"100000": {
@@ -9819,6 +10408,15 @@
 						"oneShotMs": 180.994459,
 						"minQueryMs": 175.32575,
 						"heapMB": 54.170753479003906
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.338834000000006,
+						"queryMs": 156.37875000000003,
+						"firstMs": 156.37875000000003,
+						"restMs": null,
+						"oneShotMs": 161.71758400000004,
+						"minQueryMs": 156.37875000000003,
+						"heapMB": 39.37005615234375
 					}
 				}
 			},
@@ -9958,6 +10556,15 @@
 						"oneShotMs": 22.412791999999996,
 						"minQueryMs": 20.993083,
 						"heapMB": 35.044342041015625
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.2191249999999911,
+						"queryMs": 11.624499999999998,
+						"firstMs": 11.624499999999998,
+						"restMs": null,
+						"oneShotMs": 12.843624999999989,
+						"minQueryMs": 11.624499999999998,
+						"heapMB": 28.762489318847656
 					}
 				},
 				"100000": {
@@ -10095,6 +10702,15 @@
 						"oneShotMs": 123.775708,
 						"minQueryMs": 118.27370799999998,
 						"heapMB": 54.60469055175781
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.354709,
+						"queryMs": 95.48508299999999,
+						"firstMs": 95.48508299999999,
+						"restMs": null,
+						"oneShotMs": 100.83979199999999,
+						"minQueryMs": 95.48508299999999,
+						"heapMB": 55.97319030761719
 					}
 				}
 			},
@@ -10234,6 +10850,15 @@
 						"oneShotMs": 15.77445800000001,
 						"minQueryMs": 14.550333000000009,
 						"heapMB": 30.44304656982422
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.1897909999999996,
+						"queryMs": 12.818875000000006,
+						"firstMs": 12.818875000000006,
+						"restMs": null,
+						"oneShotMs": 14.008666000000005,
+						"minQueryMs": 12.818875000000006,
+						"heapMB": 29.46233367919922
 					}
 				},
 				"100000": {
@@ -10371,6 +10996,15 @@
 						"oneShotMs": 138.83050000000003,
 						"minQueryMs": 133.479125,
 						"heapMB": 50.638450622558594
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.289791999999991,
+						"queryMs": 122.83345800000001,
+						"firstMs": 122.83345800000001,
+						"restMs": null,
+						"oneShotMs": 128.12324999999998,
+						"minQueryMs": 122.83345800000001,
+						"heapMB": 39.31175994873047
 					}
 				}
 			},
@@ -10900,6 +11534,41 @@
 							11.031125000000088,
 							13.536374999999907
 						]
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 1.2212080000000043,
+						"queryMs": 383.1606239999998,
+						"firstMs": 13.630125000000007,
+						"restMs": 15.397104124999991,
+						"oneShotMs": 14.851333000000011,
+						"minQueryMs": 383.1606239999998,
+						"heapMB": 41.39599609375,
+						"perQueryMs": [
+							18.666791999999987,
+							10.659290999999996,
+							21.64308299999999,
+							12.74562499999999,
+							8.187959000000006,
+							34.213167,
+							21.117332999999974,
+							20.817125000000033,
+							21.705624999999998,
+							13.033999999999992,
+							21.714958999999965,
+							10.679665999999997,
+							9.96674999999999,
+							22.076166999999998,
+							9.447415999999976,
+							13.391291999999964,
+							11.757875000000013,
+							9.035165999999947,
+							15.832957999999962,
+							16.592499999999973,
+							15.593833000000018,
+							9.061082999999996,
+							9.276666999999975,
+							12.314167000000054
+						]
 					}
 				},
 				"100000": {
@@ -11427,6 +12096,41 @@
 							106.62687499999993,
 							125.15008299999954
 						]
+					},
+					"fuse.js (tuned)": {
+						"indexMs": 5.255291999999997,
+						"queryMs": 3628.709707,
+						"firstMs": 108.48474999999999,
+						"restMs": 146.676039875,
+						"oneShotMs": 113.74004199999999,
+						"minQueryMs": 3628.709707,
+						"heapMB": 68.55448150634766,
+						"perQueryMs": [
+							175.878125,
+							98.15775000000002,
+							208.79187499999995,
+							122.73512499999993,
+							79.458125,
+							341.6161249999999,
+							222.26041600000008,
+							207.68658299999993,
+							211.38787500000012,
+							123.51075000000014,
+							205.4445830000002,
+							99.90149999999994,
+							92.64558299999999,
+							207.38720899999998,
+							87.23524999999972,
+							123.40833299999986,
+							111.5146249999998,
+							82.11983400000008,
+							142.55320800000027,
+							153.69404099999974,
+							144.78674999999976,
+							83.95675000000028,
+							84.12062500000002,
+							109.97391700000026
+						]
 					}
 				}
 			}
@@ -11464,7 +12168,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.912,
-					"fuse.js (all opts)": 0.912
+					"fuse.js (all opts)": 0.912,
+					"fuse.js (tuned)": 0.912
 				},
 				"medianRows": {
 					"ekrina": 17,
@@ -11481,7 +12186,8 @@
 					"uFuzzy": 17,
 					"uFuzzy (all opts)": 17,
 					"fuse.js": 612,
-					"fuse.js (all opts)": 612
+					"fuse.js (all opts)": 612,
+					"fuse.js (tuned)": 120
 				}
 			},
 			{
@@ -11514,7 +12220,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.649,
-					"fuse.js (all opts)": 0.649
+					"fuse.js (all opts)": 0.649,
+					"fuse.js (tuned)": 0.649
 				},
 				"medianRows": {
 					"ekrina": 47,
@@ -11531,7 +12238,8 @@
 					"uFuzzy": 29,
 					"uFuzzy (all opts)": 50,
 					"fuse.js": 2156,
-					"fuse.js (all opts)": 2156
+					"fuse.js (all opts)": 2156,
+					"fuse.js (tuned)": 875
 				}
 			},
 			{
@@ -11564,7 +12272,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11581,7 +12290,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 242,
-					"fuse.js (all opts)": 157
+					"fuse.js (all opts)": 157,
+					"fuse.js (tuned)": 10
 				}
 			},
 			{
@@ -11614,7 +12324,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.162,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11631,7 +12342,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 238,
-					"fuse.js (all opts)": 217
+					"fuse.js (all opts)": 217,
+					"fuse.js (tuned)": 9
 				}
 			},
 			{
@@ -11664,7 +12376,8 @@
 					"uFuzzy": 0.1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.269,
-					"fuse.js (all opts)": 0.933
+					"fuse.js (all opts)": 0.933,
+					"fuse.js (tuned)": 0.933
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11681,7 +12394,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 232,
-					"fuse.js (all opts)": 107
+					"fuse.js (all opts)": 107,
+					"fuse.js (tuned)": 26
 				}
 			},
 			{
@@ -11714,7 +12428,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11731,7 +12446,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 123,
-					"fuse.js (all opts)": 123
+					"fuse.js (all opts)": 123,
+					"fuse.js (tuned)": 30
 				}
 			},
 			{
@@ -11764,7 +12480,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.975,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11781,7 +12498,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 327,
-					"fuse.js (all opts)": 98
+					"fuse.js (all opts)": 98,
+					"fuse.js (tuned)": 4
 				}
 			},
 			{
@@ -11814,7 +12532,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11831,7 +12550,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 231,
-					"fuse.js (all opts)": 121
+					"fuse.js (all opts)": 121,
+					"fuse.js (tuned)": 6
 				}
 			},
 			{
@@ -11864,7 +12584,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.193,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -11881,7 +12602,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 110,
-					"fuse.js (all opts)": 20
+					"fuse.js (all opts)": 20,
+					"fuse.js (tuned)": 2
 				}
 			},
 			{
@@ -11914,7 +12636,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.975,
-					"fuse.js (all opts)": 0.975
+					"fuse.js (all opts)": 0.975,
+					"fuse.js (tuned)": 0.975
 				},
 				"medianRows": {
 					"ekrina": 20,
@@ -11931,7 +12654,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 18,
 					"fuse.js": 289,
-					"fuse.js (all opts)": 289
+					"fuse.js (all opts)": 289,
+					"fuse.js (tuned)": 60
 				}
 			},
 			{
@@ -11964,7 +12688,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0.542,
-					"fuse.js (all opts)": 0.542
+					"fuse.js (all opts)": 0.542,
+					"fuse.js (tuned)": 0.542
 				},
 				"medianRows": {
 					"ekrina": 18,
@@ -11981,7 +12706,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1776,
-					"fuse.js (all opts)": 1776
+					"fuse.js (all opts)": 1776,
+					"fuse.js (tuned)": 447
 				}
 			},
 			{
@@ -12014,7 +12740,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 26,
@@ -12031,7 +12758,8 @@
 					"uFuzzy": 21,
 					"uFuzzy (all opts)": 29,
 					"fuse.js": 1720,
-					"fuse.js (all opts)": 1720
+					"fuse.js (all opts)": 1720,
+					"fuse.js (tuned)": 328
 				}
 			},
 			{
@@ -12064,7 +12792,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 95,
@@ -12081,7 +12810,8 @@
 					"uFuzzy": 20,
 					"uFuzzy (all opts)": 95,
 					"fuse.js": 1720,
-					"fuse.js (all opts)": 1720
+					"fuse.js (all opts)": 1720,
+					"fuse.js (tuned)": 604
 				}
 			},
 			{
@@ -12114,7 +12844,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0.753,
 					"fuse.js": 0.923,
-					"fuse.js (all opts)": 0.923
+					"fuse.js (all opts)": 0.923,
+					"fuse.js (tuned)": 0.923
 				},
 				"medianRows": {
 					"ekrina": 20,
@@ -12131,7 +12862,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 19,
 					"fuse.js": 931,
-					"fuse.js (all opts)": 931
+					"fuse.js (all opts)": 931,
+					"fuse.js (tuned)": 297
 				}
 			},
 			{
@@ -12164,7 +12896,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0.382,
-					"fuse.js (all opts)": 0.382
+					"fuse.js (all opts)": 0.382,
+					"fuse.js (tuned)": 0.382
 				},
 				"medianRows": {
 					"ekrina": 0,
@@ -12181,7 +12914,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 646,
-					"fuse.js (all opts)": 646
+					"fuse.js (all opts)": 646,
+					"fuse.js (tuned)": 149
 				}
 			},
 			{
@@ -12214,7 +12948,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0.001,
-					"fuse.js (all opts)": 0.001
+					"fuse.js (all opts)": 0.001,
+					"fuse.js (tuned)": 0.001
 				},
 				"medianRows": {
 					"ekrina": 2,
@@ -12231,7 +12966,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1659,
-					"fuse.js (all opts)": 1661
+					"fuse.js (all opts)": 1661,
+					"fuse.js (tuned)": 400
 				}
 			},
 			{
@@ -12264,7 +13000,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.921,
-					"fuse.js (all opts)": 0.921
+					"fuse.js (all opts)": 0.921,
+					"fuse.js (tuned)": 0.921
 				},
 				"medianRows": {
 					"ekrina": 24,
@@ -12281,7 +13018,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 24,
 					"fuse.js": 499,
-					"fuse.js (all opts)": 499
+					"fuse.js (all opts)": 499,
+					"fuse.js (tuned)": 116
 				}
 			},
 			{
@@ -12314,7 +13052,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.817,
-					"fuse.js (all opts)": 0.817
+					"fuse.js (all opts)": 0.817,
+					"fuse.js (tuned)": 0.817
 				},
 				"medianRows": {
 					"ekrina": 18,
@@ -12331,7 +13070,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 18,
 					"fuse.js": 263,
-					"fuse.js (all opts)": 263
+					"fuse.js (all opts)": 263,
+					"fuse.js (tuned)": 83
 				}
 			},
 			{
@@ -12364,7 +13104,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.983,
-					"fuse.js (all opts)": 0.983
+					"fuse.js (all opts)": 0.983,
+					"fuse.js (tuned)": 0.983
 				},
 				"medianRows": {
 					"ekrina": 27,
@@ -12381,7 +13122,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 27,
 					"fuse.js": 495,
-					"fuse.js (all opts)": 495
+					"fuse.js (all opts)": 495,
+					"fuse.js (tuned)": 91
 				}
 			},
 			{
@@ -12414,7 +13156,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0,
-					"fuse.js (all opts)": 0
+					"fuse.js (all opts)": 0,
+					"fuse.js (tuned)": 0
 				},
 				"medianRows": {
 					"ekrina": 34,
@@ -12431,7 +13174,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 919,
-					"fuse.js (all opts)": 919
+					"fuse.js (all opts)": 919,
+					"fuse.js (tuned)": 824
 				}
 			},
 			{
@@ -12459,7 +13203,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.44,
-					"fuse.js (all opts)": 0.629
+					"fuse.js (all opts)": 0.629,
+					"fuse.js (tuned)": 0.629
 				},
 				"medianRows": {
 					"ekrina": 16,
@@ -12476,7 +13221,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 16,
 					"fuse.js": 1574,
-					"fuse.js (all opts)": 1574
+					"fuse.js (all opts)": 1574,
+					"fuse.js (tuned)": 288
 				}
 			},
 			{
@@ -12510,7 +13256,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 33,
-					"fuse.js (all opts)": 8
+					"fuse.js (all opts)": 8,
+					"fuse.js (tuned)": 0
 				}
 			},
 			{
@@ -12544,7 +13291,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 174,
-					"fuse.js (all opts)": 31
+					"fuse.js (all opts)": 31,
+					"fuse.js (tuned)": 4
 				}
 			}
 		],
@@ -12579,7 +13327,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.975,
-					"fuse.js (all opts)": 0.975
+					"fuse.js (all opts)": 0.975,
+					"fuse.js (tuned)": 0.975
 				},
 				"medianRows": {
 					"ekrina": 5,
@@ -12596,7 +13345,8 @@
 					"uFuzzy": 4,
 					"uFuzzy (all opts)": 4,
 					"fuse.js": 556,
-					"fuse.js (all opts)": 566
+					"fuse.js (all opts)": 566,
+					"fuse.js (tuned)": 153
 				}
 			},
 			{
@@ -12629,7 +13379,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.815,
-					"fuse.js (all opts)": 0.807
+					"fuse.js (all opts)": 0.807,
+					"fuse.js (tuned)": 0.807
 				},
 				"medianRows": {
 					"ekrina": 92,
@@ -12646,7 +13397,8 @@
 					"uFuzzy": 16,
 					"uFuzzy (all opts)": 79,
 					"fuse.js": 1736,
-					"fuse.js (all opts)": 1783
+					"fuse.js (all opts)": 1783,
+					"fuse.js (tuned)": 636
 				}
 			},
 			{
@@ -12679,7 +13431,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12696,7 +13449,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 162,
-					"fuse.js (all opts)": 57
+					"fuse.js (all opts)": 57,
+					"fuse.js (tuned)": 3
 				}
 			},
 			{
@@ -12729,7 +13483,8 @@
 					"uFuzzy": 0.1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.069,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12746,7 +13501,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 242,
-					"fuse.js (all opts)": 88
+					"fuse.js (all opts)": 88,
+					"fuse.js (tuned)": 11
 				}
 			},
 			{
@@ -12779,7 +13535,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.419,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12796,7 +13553,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 329,
-					"fuse.js (all opts)": 240
+					"fuse.js (all opts)": 240,
+					"fuse.js (tuned)": 41
 				}
 			},
 			{
@@ -12829,7 +13587,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12846,7 +13605,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 223,
-					"fuse.js (all opts)": 229
+					"fuse.js (all opts)": 229,
+					"fuse.js (tuned)": 41
 				}
 			},
 			{
@@ -12879,7 +13639,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12896,7 +13657,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 219,
-					"fuse.js (all opts)": 117
+					"fuse.js (all opts)": 117,
+					"fuse.js (tuned)": 12
 				}
 			},
 			{
@@ -12929,7 +13691,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12946,7 +13709,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 152,
-					"fuse.js (all opts)": 39
+					"fuse.js (all opts)": 39,
+					"fuse.js (tuned)": 4
 				}
 			},
 			{
@@ -12979,7 +13743,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.142,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 1,
@@ -12996,7 +13761,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 101,
-					"fuse.js (all opts)": 57
+					"fuse.js (all opts)": 57,
+					"fuse.js (tuned)": 3
 				}
 			},
 			{
@@ -13029,7 +13795,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.82,
-					"fuse.js (all opts)": 0.786
+					"fuse.js (all opts)": 0.786,
+					"fuse.js (tuned)": 0.786
 				},
 				"medianRows": {
 					"ekrina": 15,
@@ -13046,7 +13813,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 14,
 					"fuse.js": 695,
-					"fuse.js (all opts)": 703
+					"fuse.js (all opts)": 703,
+					"fuse.js (tuned)": 161
 				}
 			},
 			{
@@ -13079,7 +13847,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0.216,
-					"fuse.js (all opts)": 0.215
+					"fuse.js (all opts)": 0.215,
+					"fuse.js (tuned)": 0.215
 				},
 				"medianRows": {
 					"ekrina": 44,
@@ -13096,7 +13865,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1518,
-					"fuse.js (all opts)": 1551
+					"fuse.js (all opts)": 1551,
+					"fuse.js (tuned)": 440
 				}
 			},
 			{
@@ -13129,7 +13899,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 31,
@@ -13146,7 +13917,8 @@
 					"uFuzzy": 19,
 					"uFuzzy (all opts)": 36,
 					"fuse.js": 2273,
-					"fuse.js (all opts)": 2292
+					"fuse.js (all opts)": 2292,
+					"fuse.js (tuned)": 781
 				}
 			},
 			{
@@ -13179,7 +13951,8 @@
 					"uFuzzy": 1,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 21,
@@ -13196,7 +13969,8 @@
 					"uFuzzy": 15,
 					"uFuzzy (all opts)": 35,
 					"fuse.js": 1920,
-					"fuse.js (all opts)": 1939
+					"fuse.js (all opts)": 1939,
+					"fuse.js (tuned)": 471
 				}
 			},
 			{
@@ -13229,7 +14003,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.95,
-					"fuse.js (all opts)": 0.95
+					"fuse.js (all opts)": 0.95,
+					"fuse.js (tuned)": 0.95
 				},
 				"medianRows": {
 					"ekrina": 22,
@@ -13246,7 +14021,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 22,
 					"fuse.js": 711,
-					"fuse.js (all opts)": 728
+					"fuse.js (all opts)": 728,
+					"fuse.js (tuned)": 215
 				}
 			},
 			{
@@ -13279,7 +14055,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0.355,
-					"fuse.js (all opts)": 0.355
+					"fuse.js (all opts)": 0.355,
+					"fuse.js (tuned)": 0.403
 				},
 				"medianRows": {
 					"ekrina": 0,
@@ -13296,7 +14073,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 1217,
-					"fuse.js (all opts)": 1225
+					"fuse.js (all opts)": 1225,
+					"fuse.js (tuned)": 247
 				}
 			},
 			{
@@ -13329,7 +14107,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0,
-					"fuse.js (all opts)": 0
+					"fuse.js (all opts)": 0,
+					"fuse.js (tuned)": 0
 				},
 				"medianRows": {
 					"ekrina": 0,
@@ -13346,7 +14125,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 740,
-					"fuse.js (all opts)": 746
+					"fuse.js (all opts)": 746,
+					"fuse.js (tuned)": 126
 				}
 			},
 			{
@@ -13379,7 +14159,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.933,
-					"fuse.js (all opts)": 0.857
+					"fuse.js (all opts)": 0.857,
+					"fuse.js (tuned)": 0.857
 				},
 				"medianRows": {
 					"ekrina": 13,
@@ -13396,7 +14177,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 13,
 					"fuse.js": 412,
-					"fuse.js (all opts)": 414
+					"fuse.js (all opts)": 414,
+					"fuse.js (tuned)": 90
 				}
 			},
 			{
@@ -13429,7 +14211,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 1,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 15,
@@ -13446,7 +14229,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 15,
 					"fuse.js": 644,
-					"fuse.js (all opts)": 647
+					"fuse.js (all opts)": 647,
+					"fuse.js (tuned)": 145
 				}
 			},
 			{
@@ -13479,7 +14263,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.983,
-					"fuse.js (all opts)": 0.983
+					"fuse.js (all opts)": 0.983,
+					"fuse.js (tuned)": 0.983
 				},
 				"medianRows": {
 					"ekrina": 4,
@@ -13496,7 +14281,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 4,
 					"fuse.js": 551,
-					"fuse.js (all opts)": 554
+					"fuse.js (all opts)": 554,
+					"fuse.js (tuned)": 81
 				}
 			},
 			{
@@ -13529,7 +14315,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 0,
-					"fuse.js (all opts)": 0
+					"fuse.js (all opts)": 0,
+					"fuse.js (tuned)": 0
 				},
 				"medianRows": {
 					"ekrina": 4,
@@ -13546,7 +14333,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 908,
-					"fuse.js (all opts)": 934
+					"fuse.js (all opts)": 934,
+					"fuse.js (tuned)": 676
 				}
 			},
 			{
@@ -13579,7 +14367,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 0.785,
-					"fuse.js (all opts)": 1
+					"fuse.js (all opts)": 1,
+					"fuse.js (tuned)": 1
 				},
 				"medianRows": {
 					"ekrina": 4,
@@ -13596,7 +14385,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 4,
 					"fuse.js": 470,
-					"fuse.js (all opts)": 520
+					"fuse.js (all opts)": 520,
+					"fuse.js (tuned)": 144
 				}
 			},
 			{
@@ -13630,7 +14420,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 0,
 					"fuse.js": 71,
-					"fuse.js (all opts)": 7
+					"fuse.js (all opts)": 7,
+					"fuse.js (tuned)": 0
 				}
 			},
 			{
@@ -13664,7 +14455,8 @@
 					"uFuzzy": 0,
 					"uFuzzy (all opts)": 1,
 					"fuse.js": 97,
-					"fuse.js (all opts)": 36
+					"fuse.js (all opts)": 36,
+					"fuse.js (tuned)": 3
 				}
 			}
 		]
