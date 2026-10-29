@@ -158,27 +158,31 @@ describe("bench validity: per-library match counts and source rank", () => {
 				).toBeGreaterThan(0);
 			}
 
-			const ekrina = configByName(all, "ekrina");
-			for (const { query, kind, source } of specs) {
-				const { count, rank } = outcome(ekrina.probe(query), source);
-				if (kind === "miss") {
-					expect(count, `ekrina matched garbage "${query}"`).toBe(0);
-				} else if (kind === "two-words-double-typo") {
-					// Two edits in one phrase: the one-edit rescue must refuse
-					// rather than guess. The edit-distance engines may match it;
-					// ekrina returning anything here means the multi-word rescue
-					// invented a correction.
-					expect(count, `ekrina guessed at the double typo "${query}"`).toBe(0);
-				} else if (kind === "two-words-extra") {
-					// Every query word must match; an OR engine may return the item.
-					expect(count, `ekrina matched a phrase missing "${query}"`).toBe(0);
-				} else if (kind !== "short-word-typo" && !kind.startsWith("scatter")) {
-					// ekrina must surface the item each query was derived from.
-					// (The scatter kinds are exempt — those probe where chunk
-					// assembly legitimately gives up, and that limit is the
-					// measurement. Every typo kind, phrases included, is held to
-					// the same bar as everything else.)
-					expect(rank, `ekrina lost source of "${query}" (${kind})`).not.toBeNull();
+			// `--only=` narrows the set, and a check against an absent row would assert nothing.
+			const present = new Set(all.map((c) => c.name));
+			if (present.has("ekrina")) {
+				const ekrina = configByName(all, "ekrina");
+				for (const { query, kind, source } of specs) {
+					const { count, rank } = outcome(ekrina.probe(query), source);
+					if (kind === "miss") {
+						expect(count, `ekrina matched garbage "${query}"`).toBe(0);
+					} else if (kind === "two-words-double-typo") {
+						// Two edits in one phrase: the one-edit rescue must refuse
+						// rather than guess. The edit-distance engines may match it;
+						// ekrina returning anything here means the multi-word rescue
+						// invented a correction.
+						expect(count, `ekrina guessed at the double typo "${query}"`).toBe(0);
+					} else if (kind === "two-words-extra") {
+						// Every query word must match; an OR engine may return the item.
+						expect(count, `ekrina matched a phrase missing "${query}"`).toBe(0);
+					} else if (kind !== "short-word-typo" && !kind.startsWith("scatter")) {
+						// ekrina must surface the item each query was derived from.
+						// (The scatter kinds are exempt — those probe where chunk
+						// assembly legitimately gives up, and that limit is the
+						// measurement. Every typo kind, phrases included, is held to
+						// the same bar as everything else.)
+						expect(rank, `ekrina lost source of "${query}" (${kind})`).not.toBeNull();
+					}
 				}
 			}
 
@@ -187,10 +191,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 			const accentProbe = specs.find((s) => s.kind === "accent-stripped");
 			if (accentProbe) {
 				const { query, source } = accentProbe;
-				expect(countFor("ekrina", query, source)).toBeGreaterThan(0);
-				// Cross-library pairs only exist on a full run; `--only=` narrows the
-				// set, and a comparison against an absent row would assert nothing.
-				const present = new Set(all.map((c) => c.name));
+				if (present.has("ekrina")) expect(countFor("ekrina", query, source)).toBeGreaterThan(0);
 				for (const lib of ["uFuzzy", "fuse.js"]) {
 					if (!present.has(lib) || !present.has(`${lib} (all opts)`)) continue;
 					expect(

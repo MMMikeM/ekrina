@@ -18,7 +18,7 @@ export const inject = (doc: string, tables: Record<string, string>): Injected =>
 	const next = doc.replace(MARKER, (match, id: string) => {
 		const table = tables[id];
 		if (table == null)
-			throw new Error(`docs/benchmarks.md marks region '${id}', which nothing generates`);
+			throw new Error(`a doc marks region '${id}', which nothing generates`);
 		seen.add(id);
 		const replacement = `<!-- bench:${id} -->\n${table}\n<!-- bench:end -->`;
 		if (replacement !== match) stale.push(id);

@@ -1,5 +1,5 @@
 import { execFileSync, execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { renderPareto } from "../docs/pareto.ts";
 import {
@@ -20,6 +20,7 @@ import { omittedFrom, regions } from "./tables.ts";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
 const DOC = new URL("../docs/benchmarks.md", import.meta.url);
+const LIBRARY_DIR = new URL("../docs/libraries/", import.meta.url);
 
 const flags = new Set(process.argv.slice(2).filter((a) => !a.includes("=")));
 const options = new Map(
@@ -254,20 +255,32 @@ const tables = regions(artifact);
 
 if (stages.cold || stages.quality || stages.memory) save(artifact);
 
-const { doc, stale, unmarked } = inject(readFileSync(DOC, "utf8"), tables);
+// docs/benchmarks.md carries the headline tables, each library page its own.
+const docs = [
+	DOC,
+	...readdirSync(LIBRARY_DIR)
+		.filter((file) => file.endsWith(".md"))
+		.map((file) => new URL(file, LIBRARY_DIR)),
+];
+const injected = docs.map((url) => ({ url, ...inject(readFileSync(url, "utf8"), tables) }));
+const stale = injected.flatMap(({ url, stale }) =>
+	stale.map((id) => `${fileURLToPath(url).split("/docs/")[1]}:${id}`),
+);
+const unmarked = Object.keys(tables).filter((id) =>
+	injected.every(({ unmarked }) => unmarked.includes(id)),
+);
 
-if (unmarked.length)
-	console.error(`generated but not marked in docs/benchmarks.md: ${unmarked.join(", ")}`);
+if (unmarked.length) console.error(`generated but marked in no doc: ${unmarked.join(", ")}`);
 
 if (CHECK) {
 	if (stale.length) {
-		console.error(`stale regions in docs/benchmarks.md: ${stale.join(", ")}`);
+		console.error(`stale regions: ${stale.join(", ")}`);
 		console.error("run `pnpm bench --docs` to bring them up to date.");
 	}
 	if (stale.length || unmarked.length) process.exit(1);
-	console.error("docs/benchmarks.md agrees with bench/results.json.");
+	console.error("the docs agree with bench/results.json.");
 } else {
-	writeFileSync(DOC, doc);
+	for (const { url, doc } of injected) writeFileSync(url, doc);
 	renderPareto(artifact);
 	console.error(
 		stale.length

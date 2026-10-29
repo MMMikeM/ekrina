@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-total-title pareto-total-desc">
   <title id="pareto-total-title">Fuzzy search libraries: MRR vs cold one-shot time</title>
-  <desc id="pareto-total-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 21 query families. The Pareto frontier runs fuzzy (0.43 MRR at 2.18 ms) to Ekrina (indexed) (0.87 MRR at 3.63 ms) to Ekrina (acronym) (0.90 MRR at 4.17 ms). The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
+  <desc id="pareto-total-desc">Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 21 query families. The Pareto frontier runs fuzzy (0.43 MRR at 2.18 ms) to Ekrina (indexed) (0.87 MRR at 3.63 ms) to Ekrina (acronym) (0.90 MRR at 4.17 ms). The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
@@ -65,32 +65,22 @@
     <circle cx="497.1" cy="148.8" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="361.8" cy="161.2" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="660" cy="177.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="653.7" cy="177.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="484.5" cy="202.5" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="329.8" cy="210.8" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="319.5" cy="243.9" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="335.2" cy="260.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="330.2" cy="260.4" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="183.7" cy="297.6" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="194.3" cy="297.6" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="316.8" cy="376.1" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
   </g>
   <g>
-    <text x="295.5" y="95.3" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (acronym)</text>
-    <text x="247.3" y="120.7" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (indexed)</text>
-    <text x="286.3" y="131.7" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina</text>
-    <text x="348.3" y="165.2" text-anchor="end" fill="#898781" font-size="12.5">uFuzzy (all opts)</text>
-    <text x="497.1" y="168.8" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
-    <text x="646.5" y="181.7" text-anchor="end" fill="#898781" font-size="12.5">fast-fuzzy</text>
-    <text x="667.2" y="181.7" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy (all opts)</text>
-    <text x="484.5" y="187.5" text-anchor="middle" fill="#898781" font-size="12.5">Fuse.js</text>
+    <text x="295.5" y="107.3" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (acronym)</text>
+    <text x="286.3" y="133.7" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina</text>
+    <text x="247.3" y="119.7" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (indexed)</text>
+    <text x="197.2" y="301.6" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">fuzzy</text>
+    <text x="510.6" y="152.8" text-anchor="start" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
+    <text x="361.8" y="149.2" text-anchor="middle" fill="#898781" font-size="12.5">uFuzzy (all opts)</text>
+    <text x="673.5" y="181.7" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy</text>
     <text x="343.3" y="214.8" text-anchor="start" fill="#898781" font-size="12.5">fuzzysort</text>
-    <text x="333" y="259.9" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
-    <text x="321.7" y="264.4" text-anchor="end" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
-    <text x="343.7" y="264.4" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz (all opts)</text>
-    <text x="197.2" y="287.6" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">fuzzy</text>
-    <text x="207.8" y="301.6" text-anchor="start" fill="#898781" font-size="12.5">fuzzy (all opts)</text>
-    <text x="330.3" y="380.1" text-anchor="start" fill="#898781" font-size="12.5">uFuzzy</text>
+    <text x="333" y="247.9" text-anchor="start" fill="#898781" font-size="12.5">match-sorter</text>
+    <text x="348.7" y="264.4" text-anchor="start" fill="#898781" font-size="12.5">@nozbe/microfuzz</text>
   </g>
   <g>
     <line x1="66" y1="508" x2="92" y2="508" stroke="#1baf7a" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>

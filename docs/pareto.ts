@@ -6,31 +6,38 @@
 import { writeFileSync } from "node:fs";
 import type { Artifact } from "../bench/artifact.ts";
 import { displayName } from "../bench/libraries.ts";
+import { headlineConfigs } from "../bench/tables.ts";
 
 type Anchor = "start" | "middle" | "end";
-type Placement = { a: Anchor; dy: number; dx: number };
+type Placement = { a: Anchor; dy: number };
 type Metric = "query" | "total";
 
-const lab = (a: Anchor, dy: number, dx = 0): Placement => ({ a, dy, dx });
+const lab = (a: Anchor, dy: number): Placement => ({ a, dy });
 
-// Hand-tuned so labels don't collide; positions differ per metric because the
-// points move. Numbers come from the artifact, never from here.
-const PLACEMENT: Record<string, Record<Metric, Placement>> = {
-	"ekrina (acronym)": { query: lab("start", -8), total: lab("start", -8) },
-	ekrina: { query: lab("start", 16), total: lab("start", 16) },
-	"ekrina (indexed)": { query: lab("end", 24, -8), total: lab("end", 5, -12) },
-	"fuse.js": { query: lab("middle", -15), total: lab("middle", -15) },
-	"fuse.js (all opts)": { query: lab("end", 20, -10), total: lab("middle", 20) },
-	"@nozbe/microfuzz": { query: lab("start", 4), total: lab("end", 4) },
-	"fast-fuzzy": { query: lab("start", 4), total: lab("end", 4) },
-	fuzzysort: { query: lab("start", 4), total: lab("start", 4) },
-	fuzzy: { query: lab("start", -10), total: lab("start", -10) },
-	"uFuzzy (all opts)": { query: lab("start", -8), total: lab("end", 4, -10) },
-	"match-sorter": { query: lab("start", 16), total: lab("start", 16) },
-	uFuzzy: { query: lab("start", 10), total: lab("start", 4) },
-};
+// Tried around each dot in order: beside it, then above and below, then the
+// diagonals. The first that clears every dot, every placed label and the plot
+// edge wins, so labels follow the points when a rerun moves them.
+const CANDIDATES: Placement[] = [
+	lab("start", 4),
+	lab("end", 4),
+	lab("middle", -12),
+	lab("middle", 22),
+	lab("start", -10),
+	lab("start", 18),
+	lab("end", -10),
+	lab("end", 18),
+];
 
-const FALLBACK: Placement = lab("start", 4);
+type Box = { x0: number; y0: number; x1: number; y1: number };
+
+const overlapArea = (a: Box, b: Box): number =>
+	Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) *
+	Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+
+const LABEL_SIZE = 12.5;
+// system-ui averages about 0.55em per character at this size, a little more in bold.
+const labelWidth = (text: string, bold: boolean): number =>
+	text.length * LABEL_SIZE * (bold ? 0.6 : 0.55);
 
 type Point = { name: string; mrr: number; query: number; total: number };
 
@@ -50,8 +57,8 @@ const METRICS: Record<
 > = {
 	query: {
 		file: "pareto-query",
-		X0: 0.15,
-		X1: 40,
+		X0: 0.2,
+		X1: 30,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. per-query session time",
 		subtitle: (families, queries) =>
@@ -142,7 +149,6 @@ const render = (
 		ms: d[metric],
 		x: f(X(d[metric])),
 		y: f(Y(d.mrr)),
-		l: PLACEMENT[d.name]?.[metric] ?? FALLBACK,
 		isEkrina: d.name.startsWith("ekrina"),
 	}));
 	const front = frontierOf(pts);
@@ -152,7 +158,7 @@ const render = (
 	const emphasized = (p: (typeof pts)[number]): boolean => p.isEkrina || onFrontier.has(p.n);
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
 	const desc =
-		`Scatter plot of ${data.length} configurations of eight JavaScript fuzzy search libraries comparing MRR ` +
+		`Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR ` +
 		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
 		`on a log scale, on the mixed 10k corpus over ${families} query families. ` +
 		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
@@ -187,18 +193,43 @@ const render = (
 				`<circle cx="${p.x}" cy="${p.y}" r="${DOT_R}" fill="${color(p)}" fill-opacity="0.9" stroke="${C.surface}" stroke-width="1.5"/>`,
 		)
 		.join("\n    ");
+	const plot: Box = { x0: ML, y0: MT, x1: ML + plotW, y1: MT + plotH };
+	const taken: Box[] = [
+		{ x0: ML + 12, y0: MT + 8, x1: ML + 202, y1: MT + 32 },
+		...pts.map((p) => ({ x0: p.x - DOT_R, y0: p.y - DOT_R, x1: p.x + DOT_R, y1: p.y + DOT_R })),
+		// The frontier line, sampled every few pixels, so no label sits across it.
+		...front.slice(1).flatMap((to, i) => {
+			const from = front[i];
+			const steps = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 4);
+			return Array.from({ length: steps + 1 }, (_, k) => {
+				const x = from.x + ((to.x - from.x) * k) / steps;
+				const y = from.y + ((to.y - from.y) * k) / steps;
+				return { x0: x - 2, y0: y - 2, x1: x + 2, y1: y + 2 };
+			});
+		}),
+	];
+	const textAt = (p: (typeof pts)[number], at: Placement): { x: number; y: number; box: Box } => {
+		const x = at.a === "middle" ? p.x : at.a === "end" ? p.x - DOT_R - 7 : p.x + DOT_R + 7;
+		const y = p.y + at.dy;
+		const w = labelWidth(p.n, emphasized(p));
+		const x0 = at.a === "middle" ? x - w / 2 : at.a === "end" ? x - w : x;
+		return { x, y, box: { x0, y0: y - 10, x1: x0 + w, y1: y + 3 } };
+	};
+	const clash = (box: Box): number =>
+		taken.reduce((sum, other) => sum + overlapArea(box, other), 0) +
+		(box.x1 - box.x0) * (box.y1 - box.y0) -
+		overlapArea(box, plot);
 	const labels = [...pts]
-		.sort((a, b) => a.y + a.l.dy - (b.y + b.l.dy))
+		.sort((a, b) => Number(emphasized(b)) - Number(emphasized(a)) || b.mrr - a.mrr)
 		.map((p) => {
-			const tx =
-				p.l.a === "middle"
-					? f(p.x + p.l.dx)
-					: p.l.a === "end"
-						? f(p.x - DOT_R - 7)
-						: f(p.x + DOT_R + 7);
+			const tries = CANDIDATES.map((at) => ({ at, ...textAt(p, at) }));
+			const best =
+				tries.find((t) => clash(t.box) === 0) ??
+				tries.reduce((x, y) => (clash(y.box) < clash(x.box) ? y : x));
+			taken.push(best.box);
 			const ink = emphasized(p) ? C.ink : C.muted;
 			const weight = emphasized(p) ? ' font-weight="600"' : "";
-			return `<text x="${tx}" y="${f(p.y + p.l.dy)}" text-anchor="${p.l.a}" fill="${ink}" font-size="12.5"${weight}>${p.n}</text>`;
+			return `<text x="${f(best.x)}" y="${f(best.y)}" text-anchor="${best.at.a}" fill="${ink}" font-size="${LABEL_SIZE}"${weight}>${p.n}</text>`;
 		})
 		.join("\n    ");
 
@@ -261,7 +292,8 @@ export const renderPareto = (artifact: Artifact): void => {
 	const scorecard = artifact.scorecard.corpora.mixed;
 	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");
 	const kinds = Object.keys(artifact.coldMatrix.mixed ?? {}).filter((k) => k !== "batch");
-	const data: Point[] = scorecard.map((r) => {
+	const headline = headlineConfigs(artifact);
+	const data: Point[] = scorecard.filter((r) => headline.has(r.library)).map((r) => {
 		const batch = artifact.coldMatrix.mixed?.batch?.["10000"]?.[r.library];
 		if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
 		const oneShots = kinds.map((k) => artifact.coldMatrix.mixed[k]["10000"][r.library].oneShotMs);

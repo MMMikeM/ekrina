@@ -37,6 +37,52 @@ const geomean = (xs: number[]): number =>
 
 const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
 
+/** The library a configuration belongs to: its name without the option suffix. */
+export const libraryOf = (config: string): string =>
+	config.replace(/ \((all opts|acronym|indexed)\)$/, "");
+
+const mrrOf = (a: Artifact, config: string): number =>
+	mean(
+		Object.values(a.scorecard.corpora).map(
+			(rows) => rows.find((row) => row.library === config)?.mrr ?? 0,
+		),
+	);
+
+/**
+ * The configurations the main pages show: each library at its best-scoring
+ * configuration across both corpora, its defaults on a tie, plus every Ekrina
+ * row. The others are on each library's page in docs/libraries/.
+ */
+export const headlineConfigs = (a: Artifact): Set<string> => {
+	const configs = Object.values(a.scorecard.corpora)[0]?.map((row) => row.library) ?? [];
+	const best = new Map<string, string>();
+	for (const config of configs) {
+		const library = libraryOf(config);
+		if (library === "ekrina") {
+			best.set(config, config);
+			continue;
+		}
+		const incumbent = best.get(library);
+		const better =
+			incumbent === undefined ||
+			mrrOf(a, config) > mrrOf(a, incumbent) ||
+			(mrrOf(a, config) === mrrOf(a, incumbent) && config === library);
+		if (better) best.set(library, config);
+	}
+	return new Set(best.values());
+};
+
+/** Every configuration of one library, defaults first. */
+const configsOf = (a: Artifact, library: string): string[] =>
+	(Object.values(a.scorecard.corpora)[0] ?? [])
+		.map((row) => row.library)
+		.filter((config) => libraryOf(config) === library)
+		.sort((x, y) => Number(x !== library) - Number(y !== library) || (x < y ? -1 : 1));
+
+/** The page slug of a library with more than one configuration. */
+export const librarySlug = (library: string): string =>
+	library.replace(/^@nozbe\//, "").replace(/\.js$/, "").toLowerCase();
+
 /** Corpus the per-probe tables are drawn from; the docs say so in prose. */
 const PROBE_CORPUS = "mixed";
 const PROBE_SIZE = "10000";
@@ -114,14 +160,17 @@ const librariesTable = (): string =>
 		["left", "left", "left", "left"],
 	);
 
+const speedRowsOf = (a: Artifact, corpus: string, configs: Set<string>): string[] =>
+	variantsOf(a, corpus)
+		.filter((name) => foldsFor(corpus, name) && configs.has(name))
+		.sort(speedOrder);
+
 // The 100k tables: every cell process-cold. The scale table is the one-shot
 // measurement (constructor, mean first answer, and their measured sum); the
 // batch table is the session (warmup match + 24 probes, one process).
-const scaleTable = (a: Artifact, corpus: string): string => {
+const scaleTable = (a: Artifact, corpus: string, configs: Set<string>, aggregate = true): string => {
 	const size = String(PUBLISHED_SIZE);
-	const shown = variantsOf(a, corpus)
-		.filter((name) => foldsFor(corpus, name))
-		.sort(speedOrder);
+	const shown = speedRowsOf(a, corpus, configs);
 	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
 	if (!ekrinaBatch)
 		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
@@ -150,7 +199,7 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 	};
 	// geomean-of-ratios is the ratio-of-geomeans, so the rel cell is equally
 	// the geomean of the rel column and field-geomean ÷ ekrina.
-	rows.push([
+	if (aggregate) rows.push([
 		"_all libraries (geomean)_",
 		`${ms(agg.index)} ms`,
 		`${ms(agg.cold)} ms`,
@@ -167,11 +216,9 @@ const scaleTable = (a: Artifact, corpus: string): string => {
 	]);
 };
 
-const batchTable = (a: Artifact, corpus: string): string => {
+const batchTable = (a: Artifact, corpus: string, configs: Set<string>, aggregate = true): string => {
 	const size = String(PUBLISHED_SIZE);
-	const shown = variantsOf(a, corpus)
-		.filter((name) => foldsFor(corpus, name))
-		.sort(speedOrder);
+	const shown = speedRowsOf(a, corpus, configs);
 	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
 	if (!ekrinaBatch)
 		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
@@ -196,7 +243,7 @@ const batchTable = (a: Artifact, corpus: string): string => {
 		),
 		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
 	};
-	rows.push([
+	if (aggregate) rows.push([
 		"_all libraries (geomean)_",
 		`${ms(agg.rest)} ms`,
 		`${ms(agg.batch)} ms`,
@@ -214,16 +261,22 @@ const batchTable = (a: Artifact, corpus: string): string => {
 export const omittedFrom = (a: Artifact, corpus: string): string[] =>
 	variantsOf(a, corpus).filter((name) => !foldsFor(corpus, name));
 
-const scorecardTable = (a: Artifact, corpus: string): string => {
+const scorecardTable = (
+	a: Artifact,
+	corpus: string,
+	shown: Set<string>,
+	emphasised: Set<string> = new Set(),
+): string => {
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
 		["Library", "MRR", "index ms", "cold ms", "batch ms", "batch/query"],
-		rows.map((r) => {
+		rows.filter((r) => shown.has(r.library)).map((r) => {
 			const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
 			const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
+			const name = displayName(r.library);
 			return [
-				displayName(r.library),
+				emphasised.has(r.library) ? `**${name}**` : name,
 				r.mrr.toFixed(2),
 				batch ? ms(batch.indexMs) : "—",
 				cold == null ? "—" : ms(cold),
@@ -235,62 +288,29 @@ const scorecardTable = (a: Artifact, corpus: string): string => {
 	);
 };
 
-// The subset the docs show, each library at its defaults. match-sorter and
-// fuzzy track the microfuzz row closely enough that including them only hurts
-// readability; the artifact keeps their cells.
-const PROBE_LIBRARIES: Array<{ base: string; opts?: string }> = [
-	{ base: "ekrina", opts: "ekrina (acronym)" },
-	{ base: "@nozbe/microfuzz", opts: "@nozbe/microfuzz (all opts)" },
-	{ base: "fast-fuzzy", opts: "fast-fuzzy (all opts)" },
-	{ base: "fuse.js", opts: "fuse.js (all opts)" },
-	{ base: "fuzzysort" },
-	{ base: "uFuzzy", opts: "uFuzzy (all opts)" },
-];
+// Ekrina's base and acronym rows first, then each other library at its
+// headline configuration, best MRR first. Ekrina (indexed) ranks exactly as
+// base Ekrina, so it would only repeat a column.
+const familyColumns = (a: Artifact): string[] =>
+	[...headlineConfigs(a)]
+		.filter((config) => config !== "ekrina (indexed)")
+		.sort(
+			(x, y) =>
+				Number(libraryOf(y) === "ekrina") - Number(libraryOf(x) === "ekrina") ||
+				mrrOf(a, y) - mrrOf(a, x),
+		);
 
-// The scorecard's MRR@10 contribution: what a picker showing ten results sees.
-// Rank 142 and rank 145 are both "not found", and the difference between them
-// is not a row.
-const reciprocalRank = (cell: ProbeTable["cells"][string]): number =>
-	cell.rank && cell.rank <= 10 ? 1 / cell.rank : 0;
-
-/**
- * Rows for one probe: every library at its base configuration, joined by its
- * opt-in configuration only where the opt-ins moved the source's rank within
- * the top ten. A widened table therefore always means the opt-ins changed
- * whether, or where, a picker would show the item.
- */
-const probeRows = (probe: ProbeTable): string[] =>
-	PROBE_LIBRARIES.flatMap(({ base, opts }) =>
-		opts && reciprocalRank(probe.cells[base]) !== reciprocalRank(probe.cells[opts])
-			? [base, opts]
-			: [base],
-	);
-
-// Each library at its best-scoring configuration, with base Ekrina beside its
-// acronym row; the artifact keeps every configuration's cells.
-const FAMILY_LIBRARIES = [
-	"ekrina",
-	"ekrina (acronym)",
-	"fuse.js (all opts)",
-	"uFuzzy (all opts)",
-	"fast-fuzzy",
-	"fuzzysort",
-	"match-sorter",
-	"@nozbe/microfuzz",
-	"fuzzy",
-];
-
-const familyTable = (a: Artifact, corpus: string, scored: boolean): string => {
+const familyTable = (a: Artifact, corpus: string, scored: boolean, columns: string[]): string => {
 	const families = (a.families?.[corpus] ?? []).filter((family) => family.scored === scored);
 	return mdTable(
-		["Family", ...FAMILY_LIBRARIES.map(displayName)],
+		["Family", ...columns.map(displayName)],
 		families.map((family) => [
 			family.kind,
-			...FAMILY_LIBRARIES.map((lib) =>
+			...columns.map((lib) =>
 				scored ? (family.mrr[lib] ?? 0).toFixed(2) : String(family.medianRows[lib] ?? "—"),
 			),
 		]),
-		["left", ...FAMILY_LIBRARIES.map((): Align => "right")],
+		["left", ...columns.map((): Align => "right")],
 	);
 };
 
@@ -305,7 +325,9 @@ const missTable = (a: Artifact, probes: ProbeTable[]): string => {
 	if (!miss || !reference) throw new Error("probe set is missing the miss or short-word query");
 	return mdTable(
 		["Library", "matches", "cold ms", `vs \`${reference.query}\``],
-		probeRows(miss).map((lib) => {
+		familyColumns(a)
+			.filter((lib) => lib !== "ekrina (acronym)")
+			.map((lib) => {
 			const missCold = cellOf(a, PROBE_CORPUS, "miss", PROBE_SIZE, lib);
 			const refCold = cellOf(a, PROBE_CORPUS, "short-word", PROBE_SIZE, lib);
 			return [
@@ -359,9 +381,11 @@ const memoryTable = (a: Artifact): string => {
 		const query = a.probes[PROBE_CORPUS]?.find((p) => p.kind === kind)?.query;
 		return query ? `+ \`${query}\`` : `+ ${kind}`;
 	};
+	const headline = headlineConfigs(a);
 	return mdTable(
 		["Library", "built MB", ...MEMORY_STEPS.map(([, kind]) => stepLabel(kind)), "dropped MB"],
 		Object.keys(cells)
+			.filter((lib) => headline.has(lib))
 			.sort(speedOrder)
 			.map((lib) => {
 				const cell = cells[lib];
@@ -381,17 +405,40 @@ export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
 	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
 	out.libraries = librariesTable();
+	const headline = headlineConfigs(a);
 	for (const corpus of Object.keys(a.coldMatrix)) {
-		out[`speed-${corpus}`] = scaleTable(a, corpus);
-		out[`batch-${corpus}`] = batchTable(a, corpus);
+		out[`speed-${corpus}`] = scaleTable(a, corpus, headline);
+		out[`batch-${corpus}`] = batchTable(a, corpus, headline);
 	}
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
-		out[`scorecard-${corpus}`] = scorecardTable(a, corpus);
+		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline);
 	}
 
 	for (const corpus of Object.keys(a.families ?? {})) {
-		out[`families-${corpus}`] = familyTable(a, corpus, true);
-		out[`refusals-${corpus}`] = familyTable(a, corpus, false);
+		out[`families-${corpus}`] = familyTable(a, corpus, true, familyColumns(a));
+		out[`refusals-${corpus}`] = familyTable(a, corpus, false, familyColumns(a));
+	}
+
+	// One page per library with more than one configuration (docs/libraries/).
+	const libraries = new Set((Object.values(a.scorecard.corpora)[0] ?? []).map((r) => libraryOf(r.library)));
+	for (const library of libraries) {
+		const configs = configsOf(a, library);
+		if (configs.length < 2) continue;
+		const slug = librarySlug(library);
+		for (const corpus of Object.keys(a.scorecard.corpora)) {
+			const marked = library === "ekrina" ? new Set<string>() : headline;
+			out[`library-${slug}-scorecard-${corpus}`] = scorecardTable(a, corpus, new Set(configs), marked);
+		}
+		for (const corpus of Object.keys(a.families ?? {})) {
+			out[`library-${slug}-families-${corpus}`] = familyTable(a, corpus, true, configs);
+		}
+		// Ekrina's base row is the 100% every rel cell is measured against.
+		const timed = new Set([...configs, "ekrina"]);
+		for (const corpus of Object.keys(a.coldMatrix)) {
+			if (speedRowsOf(a, corpus, new Set(configs)).length < 2) continue;
+			out[`library-${slug}-speed-${corpus}`] = scaleTable(a, corpus, timed, false);
+			out[`library-${slug}-batch-${corpus}`] = batchTable(a, corpus, timed, false);
+		}
 	}
 	const probes = a.probes[PROBE_CORPUS] ?? [];
 	if (probes.some((probe) => probe.kind === "miss")) out["probe-miss"] = missTable(a, probes);

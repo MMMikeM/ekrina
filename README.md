@@ -264,7 +264,8 @@ Ekrina is ~5.5 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to mic
 Ekrina answers in a few milliseconds at any realistic size: a 24-query session over 100,000 items averages ~2.8 ms per query after the first (~0.8 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.21 ms.
 Between the libraries, the differences are _match quality_ and _what you get back_.
 
-Each library at its best-scoring configuration, mixed corpus at 10k items, measured October 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)):
+Each library at its best-scoring configuration, mixed corpus at 10k items, measured October 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)).
+That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on, Ekrina included; uFuzzy's base row scores 0.24 and Fuse.js's 0.66 ([how each was configured](./docs/benchmarks.md#libraries)):
 
 | Library                     |    Gzip | Deps |  MRR | ms/query | Tiers | Ranges | Typos    |
 | --------------------------- | ------: | ---: | ---: | -------: | :---: | :----: | -------- |
@@ -309,7 +310,7 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 - **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 22 ms at 10k and 73 ms at 100k, faster than any other library above 0.7 MRR, and ~3–70× under every typo-tolerant or tiered alternative, ~0.8–2.8 ms per query after the first.
   Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
   A first answer averages ~3.8 ms at 10k and 13–26 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
-  Of the other libraries, bare uFuzzy runs the 10k session faster at 0.24 MRR, and fuzzysort ties it there at 0.64.
+  Of the other libraries, bare uFuzzy runs the 10k session faster at 0.24 MRR, and fuzzysort ties it there at 0.64 ([uFuzzy's configurations](./docs/libraries/ufuzzy.md)).
   A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
   These speeds are for Latin text.
   Results are identical in any script, but the mask index cannot tell non-Latin letters apart, so it admits every item and each query scans the whole list (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
