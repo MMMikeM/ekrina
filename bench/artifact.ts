@@ -4,9 +4,9 @@ import { type LibraryMeta, META } from "./libraries.ts";
 /**
  * One process-cold cell from bench/run.ts: medians across fresh node
  * processes. `queryMs` is the whole test's first-answer total (for the batch
- * test: a short-word warmup match plus all twenty probes once);
+ * test: a short-word warmup match plus all 24 probes once);
  * `firstMs` is the warmup — the process's first answer — and `restMs` the
- * mean of the twenty probes after it; `oneShotMs` is constructor + first answer summed inside
+ * mean of the 24 probes after it; `oneShotMs` is constructor + first answer summed inside
  * each child's consecutive windows. `minQueryMs` is the noise-free floor, kept
  * but never the headline; `heapMB` is the child's heapUsed at exit, a rough
  * memory signal.

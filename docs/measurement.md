@@ -119,6 +119,6 @@ The vitest-bench era ended on a simple observation: its calibration probe ran ev
 Ekrina's 18.5 ms mask build at 100k, fuzzysort's prepare-all, microfuzz's first-search slice: none of them could ever reach a timed sample, so the "total" column published index + one warm query as if it were a cold start.
 Worse, the warm loops themselves sampled hundreds of repeats of a single query, tiering the JIT far past anything a real session reaches.
 
-The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus, twenty distinct probes through one process, as the only warm-ish number.
+The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus, every distinct probe through one process, as the only warm-ish number.
 Five to ten processes per cell suffice because every number under this model is milliseconds-scale; the hundreds-of-samples machinery existed only to resolve steady-state microseconds that no user ever observes.
 Honesty guards moved with it: result counts asserted identical across a cell's processes, variant order rotated per repetition, the ekrina-vs-acronym physical invariant now fatal to the run, and a drift canary bracketing the whole matrix.

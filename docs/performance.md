@@ -150,6 +150,14 @@ Neither build changed a single result, rank or tier on those probes.
 Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex cost of that test is the whole slowdown.
 So the matcher holds the searcher's floor instead — five characters for a single word, one five-character word for a phrase, inside which the mistyped word may still be four (`sfot golden` is corrected).
 
+The floor's quality cost was measured too, with the searcher's floor dropped to four over the 24 probes at 10k (base Ekrina, five → four):
+
+- the four-character typo probe goes from no match to rank 4 of 402 on mixed (`anxe`) and rank 2 of 38 on ascii (`daxe`);
+- `rsaw` falls from rank 2 of 7 to 23rd of 34, `kepa` returns 74 items instead of 7, and `hget` 25 junk rows instead of none;
+- `bench/longtext.test.ts` fails its zero-junk assertion.
+
+MRR moves 0.82 → 0.81 on mixed and 0.77 → 0.79 on ascii, inside the ±0.02 tie band, so the floor stays at five.
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.

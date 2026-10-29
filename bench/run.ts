@@ -7,7 +7,7 @@
  * A child times two things and nothing else:
  *   index — the constructor call (whatever the configuration's make() does).
  *   query — the first answer to each query, in order. The batch test runs all
- *           twenty probes once each: warmth earned by distinct real queries,
+ *           24 probes once each: warmth earned by distinct real queries,
  *           never repetition.
  *
  *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
@@ -72,7 +72,7 @@ const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length
 type Test = { id: string; corpus: string; queries: string[] };
 
 // The batch opens with the short-word probe as a warmup: a guaranteed literal
-// match that absorbs JIT and first-scan costs, so the twenty probes after it
+// match that absorbs JIT and first-scan costs, so the 24 probes after it
 // are the session's steady tail. It is timed (it is the first answer — the
 // one-shot column is index + this), published as the batch's `first`.
 const tests: Test[] = CORPORA.flatMap((c) => {

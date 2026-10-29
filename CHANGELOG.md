@@ -36,11 +36,12 @@ Design decisions worth recording, with the measurements that made them:
 - **No correction below five characters, in `fuzzyMatch` and the searcher alike.**
   A single word needs five characters and a phrase one five-character word, inside which the mistyped word may be four.
   Giving the searcher four-character corrections made short-query probes 2.9–3.8× slower at 100k and changed no result on them (docs/performance.md, "No correction below five characters").
+  The floor costs the four-character typo probe, 0.05 MRR on each corpus: Ekrina returns nothing for `anxe` where fast-fuzzy ranks the source 2nd, and correcting it would sink `rsaw` from 2nd to 23rd and break the long-text zero-junk guarantee.
 - **The fuzzy tier retries its first chunk from up to four admissible placements** and keeps the cheapest assembly, so a query whose first character also opens an earlier word ("towls" hitting the T of "Tasty Silk Towels") is not stranded: 307 → 0 missed assemblies over the ascii bench corpus.
   Later chunks stay leftmost-greedy, reconsidering those is what starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never pays it.
-  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.4 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.2 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
 - **`buildIndex()` pays the whole-corpus pass up front, on request.**
-  Every query that doesn't extend its predecessor then filters on the masks instead of scanning the raw strings: over mixed 100k the mean first answer falls from 13.4 to 2.6 ms and the twenty-query batch from 55 to 32 ms, for a 12.4 ms constructor and 0.8 MB more held from the start (docs/benchmarks.md, the `Ekrina (indexed)` rows).
-  It stays opt-in because a searcher asked one question loses: constructor plus first answer is 14.8 ms against 13.6 ms lazy.
+  Every query that doesn't extend its predecessor then filters on the masks instead of scanning the raw strings: over mixed 100k the mean first answer falls from 13.3 to 2.4 ms and the 24-query batch from 57 to 32 ms, for a 12.2 ms constructor and 0.8 MB more held from the start (docs/benchmarks.md, the `Ekrina (indexed)` rows).
+  It stays opt-in because a searcher asked one question loses: constructor plus first answer is 14.4 ms against 13.5 ms lazy.

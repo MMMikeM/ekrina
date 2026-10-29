@@ -81,7 +81,10 @@ describe("bench validity: per-library match counts and source rank", () => {
 					// ekrina returning anything here means the multi-word rescue
 					// invented a correction.
 					expect(count, `ekrina guessed at the double typo "${query}"`).toBe(0);
-				} else if (!kind.startsWith("scatter")) {
+				} else if (kind === "two-words-extra") {
+					// Every query word must match; an OR engine may return the item.
+					expect(count, `ekrina matched a phrase missing "${query}"`).toBe(0);
+				} else if (kind !== "short-word-typo" && !kind.startsWith("scatter")) {
 					// ekrina must surface the item each query was derived from.
 					// (The scatter kinds are exempt — those probe where chunk
 					// assembly legitimately gives up, and that limit is the

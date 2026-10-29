@@ -34,8 +34,12 @@ export type QuerySpec = {
 	kind:
 		| "long-word"
 		| "short-word"
+		| "short-word-typo"
 		| "two-words"
 		| "two-words-reversed"
+		| "two-words-partial-reversed"
+		| "two-words-joined"
+		| "two-words-extra"
 		| "two-words-typo"
 		| "two-words-typo-second"
 		| "two-words-typo-reversed"
@@ -98,6 +102,28 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			query: wordsOf(sample[8]).slice(0, 2).reverse().join(" ").toLowerCase(),
 			kind: "two-words-reversed",
 			source: sample[8],
+		},
+		// Mid-keystroke on the second word, reversed so no engine passes it as a
+		// prefix of the source.
+		{
+			query: [(wordsOf(sample[8])[1] ?? "chair").slice(0, 3), wordsOf(sample[8])[0] ?? "steel"]
+				.join(" ")
+				.toLowerCase(),
+			kind: "two-words-partial-reversed",
+			source: sample[8],
+		},
+		// The space forgotten: a subsequence of the source, but not a phrase.
+		{
+			query: wordsOf(sample[8]).slice(0, 2).join("").toLowerCase(),
+			kind: "two-words-joined",
+			source: sample[8],
+		},
+		// No source: one word the item lacks splits AND engines from OR engines,
+		// and neither answer is wrong.
+		{
+			query: [...wordsOf(sample[8]).slice(0, 2), wordAt(4)].join(" ").toLowerCase(),
+			kind: "two-words-extra",
+			source: null,
 		},
 		// Phrase typos take a different route entirely (presence gate + per-word
 		// rescue): typo in the first word, the second, reversed order, and both
@@ -173,6 +199,18 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 				specs.push({ query: `${word}s`, kind: "plural-to-singular", source: sample[i] });
 				break outer;
 			}
+		}
+	}
+	// Below ekrina's five-character typo floor on purpose: what the floor costs.
+	for (let i = 1300; i < sample.length; i++) {
+		const shortWord = wordsOf(sample[i])[0] ?? "";
+		if (/^\p{L}{4}$/u.test(shortWord) && isNearUnique(shortWord)) {
+			specs.push({
+				query: substitute(shortWord).toLowerCase(),
+				kind: "short-word-typo",
+				source: sample[i],
+			});
+			break;
 		}
 	}
 	for (let i = 1300; i < sample.length; i++) {
