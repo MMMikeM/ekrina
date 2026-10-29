@@ -1,11 +1,11 @@
 /**
- * Query-cost attribution: how many items reach each stage, and what each stage
+ * Per-stage attribution: how many items reach each stage, and what each stage
  * owns of a `search()` call. funnel.test.ts counts what the gates reject; this
- * one prices it, and covers the paths funnel.test.ts predates — the raw gate
+ * one times it, and covers the paths funnel.test.ts predates — the raw gate
  * that runs before any index exists, and the mask scan only the rescue forces.
  *
  * Reconstructs each stage by hand against `../src` internals, so a stage can be
- * run in isolation and priced by difference.
+ * run in isolation and timed by difference.
  */
 import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
@@ -25,7 +25,7 @@ const time = (fn: () => void): number => {
 	return (performance.now() - t) / REPS;
 };
 
-it("prices every stage of the query path", { timeout: 600_000 }, () => {
+it("times every stage of the query path", { timeout: 600_000 }, () => {
 	for (const { name, build, queries } of CORPORA) {
 		const list = build(100_000);
 		const raw = list.map((s) => s.trim());
@@ -75,7 +75,7 @@ it("prices every stage of the query path", { timeout: 600_000 }, () => {
 				}
 			});
 
-			// What the rescue costs when a query needs it: the whole-corpus mask
+			// What the rescue takes when a query needs it: the whole-corpus mask
 			// build, then a relaxed scan admitting one missing character class.
 			const relax = isRescuableQuery(nq, q.queryWords);
 			const search = createFuzzySearch(list);

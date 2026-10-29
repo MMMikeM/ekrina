@@ -4,7 +4,7 @@ export default defineConfig({
 	test: {
 		// Every file here holds two 100k corpora plus their indexes; eight forks
 		// of that is enough to take one of them out with an unexplained worker
-		// exit. The suite is memory-bound, not CPU-bound, so parallelism buys
+		// exit. The suite is memory-bound, not CPU-bound, so parallelism gains
 		// nothing anyway.
 		fileParallelism: false,
 	},

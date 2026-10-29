@@ -29,7 +29,7 @@ All the slow work happens per surviving candidate, and only 53% of candidates th
 | change              |                  ascii |                  mixed | what it does                                               |
 | ------------------- | ---------------------: | ---------------------: | ---------------------------------------------------------- |
 | Anchored front gate |             −12% query |              −8% query | Gate at a placement the chunk assembler would actually try |
-| Rescue budget       |           −10.5% query |            −9.2% query | Stop attempting corrections once ten literal hits exist    |
+| Rescue cutoff       |           −10.5% query |            −9.2% query | Stop attempting corrections once ten literal hits exist    |
 | Lazy fields         | −34% query, −69% build | −54% query, −61% build | Materialise a field's text only when its mask survives     |
 
 ### Anchored front gate
@@ -40,7 +40,7 @@ Requiring the anchor cut fields reaching the ladder by 32% (ascii) and 39% (mixe
 
 It is also monotone under query extension, which the survivor cache depends on: extending a query lengthens the subsequence and never changes its first three characters, so both branches only ever admit fewer fields.
 
-### Rescue budget
+### Rescue cutoff
 
 `TYPO_PENALTY` is 2.1, so the best possible correction scores 2.1, strictly worse than any `exact`, `prefix`, `boundary` or `contains` match, all of which score at or below `SCORES.CONTAINS` (2).
 Once ten literal-tier hits exist, no correction can enter the top ten, so computing them is work no caller can observe through the ranking.

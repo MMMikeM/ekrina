@@ -460,7 +460,7 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a 24-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Ekrina (indexed), Ekrina (acronym): Ekrina (acronym) tops MRR at 0.90 at 0.77 ms per query, Ekrina (indexed) reaches 0.87 at 0.55 ms, and everything else above 0.5 MRR, base Ekrina and Fuse.js (all opts, 0.79 at ~15 ms) included, is dominated." src="./pareto-query-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. per-query time across a 24-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Ekrina (indexed), Ekrina (acronym): Ekrina (acronym) tops MRR at 0.90 at 0.77 ms per query, Ekrina (indexed) reaches 0.87 at 0.55 ms, and everything else above 0.5 MRR, base Ekrina and Fuse.js (all opts, 0.79 at ~15 ms) included, is dominated." src="./pareto-query-light.svg">
 </picture>
 
 Its x-axis is the batch's per-query time, how long a query takes once the searcher has answered twenty-three real ones, and its frontier runs uFuzzy → fuzzysort → Ekrina (indexed) → Ekrina (acronym).

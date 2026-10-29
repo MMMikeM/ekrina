@@ -1,6 +1,6 @@
 // Pareto-frontier charts: accuracy (MRR) vs time, one chart per workload.
 // - pareto-query-*.svg — query ms with the index prebuilt (frontend workload:
-//   the index is built eagerly at load, keystrokes pay query only).
+//   the index is built eagerly at load, keystrokes run the query only).
 // - pareto-total-*.svg — total ms = index + first (cold) query (backend one-shot workload).
 // All styling is inlined because GitHub strips <style> blocks from SVGs.
 import { writeFileSync } from "node:fs";
@@ -53,23 +53,23 @@ const METRICS: Record<
 		X0: 0.15,
 		X1: 40,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
-		heading: "Ranking quality vs. per-query session cost",
+		heading: "Ranking quality vs. per-query session time",
 		subtitle: (probes) =>
 			`MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
-		axis: "Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better",
-		title: "Fuzzy search libraries: MRR vs per-query cost across a 20-query session",
-		tail: "Ekrina owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
+		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
+		tail: "Ekrina owns the accurate end of the frontier; the faster points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
 		X0: 1,
 		X1: 120,
 		ticks: [1, 2, 5, 10, 20, 50, 100],
-		heading: "Ranking quality vs. cold search cost",
+		heading: "Ranking quality vs. cold search time",
 		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
-		title: "Fuzzy search libraries: MRR vs cold one-shot cost",
-		tail: "The no-index engines own the cheapest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out cheaper than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		title: "Fuzzy search libraries: MRR vs cold one-shot time",
+		tail: "The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 
@@ -113,7 +113,7 @@ const DOT_R = 6.5;
 const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
 const tnum = 'font-variant-numeric="tabular-nums"';
 
-// Non-dominated set: sweep by cost ascending, keep strict MRR improvements.
+// Non-dominated set: sweep by time ascending, keep strict MRR improvements.
 const frontierOf = <T extends { mrr: number; ms: number }>(pts: T[]): T[] => {
 	const sorted = [...pts].sort((a, b) => a.ms - b.ms || b.mrr - a.mrr);
 	const out: T[] = [];
@@ -250,7 +250,7 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 `;
 };
 
-/** Both charts draw mixed 10k: MRR from the scorecard, costs from the cold matrix. */
+/** Both charts draw mixed 10k: MRR from the scorecard, times from the cold matrix. */
 export const renderPareto = (artifact: Artifact): void => {
 	const scorecard = artifact.scorecard.corpora.mixed;
 	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");

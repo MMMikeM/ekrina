@@ -31,7 +31,7 @@ export const SCORES = {
  *
  * Rescued scores therefore land at 2.1 and up, overlapping the fuzzy band
  * numerically; the `tier` field is what tells them apart. One penalty for
- * every kind of edit: they are the same edit distance, and pricing them
+ * every kind of edit: they are the same edit distance, and scoring them
  * differently would rank a swapped keystroke above a dropped one on no
  * evidence.
  */

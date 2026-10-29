@@ -36,7 +36,7 @@ export type Config = {
 	/** Result count only — the shape the runner times. */
 	count: (query: string) => number;
 	probe: (query: string) => Probe;
-	/** Constructor cost alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
+	/** Constructor time alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
 	index: (() => number) | null;
 	/** Carries cross-query state, so timing loops must bust it between samples. */
 	stateful?: boolean;
@@ -45,7 +45,7 @@ export type Config = {
 // Two departures from Fuse's defaults, both because the defaults measure worse
 // on every axis this suite publishes. `ignoreLocation` off decays the score
 // with distance from index 0, a positional handicap rather than a matching one;
-// `threshold` at its default 0.6 costs ascii MRR (0.61 -> 0.58), runs 49%
+// `threshold` at its default 0.6 lowers ascii MRR (0.61 -> 0.58), runs 49%
 // slower, and returns 6951 of 10000 items for the 5-char `prefix` probe.
 export const FUSE_BASE: IFuseOptions<string> = { ignoreLocation: true, threshold: 0.4 };
 const FUSE_ALL: IFuseOptions<string> = {
@@ -70,8 +70,8 @@ const UFUZZY_ALL: uFuzzy.Options = {
 
 // uFuzzy permutes at most this many terms before giving up on out-of-order
 // matching. Below the term count it returns the pre-filtered indices UNRANKED,
-// so a value under the longest query's term count silently costs the
-// configuration every rank it would have earned.
+// so a value under the longest query's term count silently loses the
+// configuration every rank it would otherwise have.
 const OUT_OF_ORDER = 5;
 
 // `pnpm bench --only=ekrina` narrows a run to the configurations whose name
@@ -147,7 +147,7 @@ const definitions = (list: string[]): Definition[] => [
 	// if a query needs the one-edit rescue, and a field's text only once it
 	// survives a filter. The index cell is the constructor alone; everything the
 	// construction deferred lands in the COLD query cell, where a fresh searcher
-	// pays it — the same split every lazy preparer gets.
+	// runs it — the same split every lazy preparer gets.
 	{
 		name: "ekrina",
 		make: () => {
@@ -237,7 +237,7 @@ const definitions = (list: string[]): Definition[] => [
 			count: (q) => fuzzysort.go(q, list).length,
 			probe: (q) => rankedOnly(fuzzysort.go(q, list).map((r) => r.target)),
 			// No constructor at all: the prepare-all pass its first go() runs
-			// lazily is process-wide state, priced where it is paid — the first
+			// lazily is process-wide state, timed where it runs — the first
 			// query of a fresh process (bench/run.ts).
 			index: null,
 		}),

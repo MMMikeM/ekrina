@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-query-title pareto-query-desc">
-  <title id="pareto-query-title">Fuzzy search libraries: MRR vs per-query cost across a 20-query session</title>
-  <desc id="pareto-query-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs uFuzzy (0.24 MRR at 0.24 ms) to fuzzysort (0.64 MRR at 0.54 ms) to Ekrina (indexed) (0.87 MRR at 0.55 ms) to Ekrina (acronym) (0.90 MRR at 0.77 ms). Ekrina owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.</desc>
+  <title id="pareto-query-title">Fuzzy search libraries: MRR vs per-query time across a 24-query session</title>
+  <desc id="pareto-query-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs uFuzzy (0.24 MRR at 0.24 ms) to fuzzysort (0.64 MRR at 0.54 ms) to Ekrina (indexed) (0.87 MRR at 0.55 ms) to Ekrina (acronym) (0.90 MRR at 0.77 ms). Ekrina owns the accurate end of the frontier; the faster points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
     </marker>
   </defs>
   <rect x="0" y="0" width="820" height="524" fill="#fcfcfb"/>
-  <text x="66" y="28" fill="#0b0b0b" font-size="18" font-weight="600">Ranking quality vs. per-query session cost</text>
+  <text x="66" y="28" fill="#0b0b0b" font-size="18" font-weight="600">Ranking quality vs. per-query session time</text>
   <text x="66" y="47" fill="#52514e" font-size="13">MRR over 24 probes · mixed 10k corpus · one searcher, all probes once (batch)</text>
   <g>
     <line x1="103.3" y1="62" x2="103.3" y2="434" stroke="#e1e0d9"/>
@@ -49,7 +49,7 @@
     <text x="54" y="120.4" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.8</text>
     <text x="54" y="75.1" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.9</text>
   </g>
-  <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better</text>
+  <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#52514e" font-size="13">Rank of queried item: 1st = 1.0, 10th = 0.1</text>
   <path d="M128.7 370.5 L233 189 L235 84.7 L277.2 71.1" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">

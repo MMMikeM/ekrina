@@ -96,7 +96,7 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			kind: "two-words",
 			source: sample[8],
 		},
-		// Substring engines pass the in-order phrase for free; only genuinely
+		// Substring engines pass the in-order phrase without trying; only genuinely
 		// tokenised matching survives the reversal.
 		{
 			query: wordsOf(sample[8]).slice(0, 2).reverse().join(" ").toLowerCase(),
@@ -201,7 +201,7 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 			}
 		}
 	}
-	// Below ekrina's five-character typo floor on purpose: what the floor costs.
+	// Below ekrina's five-character typo floor on purpose: what the floor loses.
 	for (let i = 1300; i < sample.length; i++) {
 		const shortWord = wordsOf(sample[i])[0] ?? "";
 		if (/^\p{L}{4}$/u.test(shortWord) && isNearUnique(shortWord)) {

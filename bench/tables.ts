@@ -52,7 +52,7 @@ const cellOf = (
 const probeKinds = (a: Artifact, corpus: string): string[] =>
 	Object.keys(a.coldMatrix[corpus] ?? {}).filter((k) => k !== "batch");
 
-/** Mean first-answer cost across every probe kind — the average cold query. */
+/** Mean first-answer time across every timed kind — the average cold query. */
 const meanColdOf = (a: Artifact, corpus: string, size: string, lib: string): number | null => {
 	const cells = probeKinds(a, corpus)
 		.map((k) => cellOf(a, corpus, k, size, lib)?.queryMs)
@@ -80,7 +80,7 @@ const BUILD_COLUMNS: Array<[library: string, label: string]> = [
 	["uFuzzy (all opts)", "uFuzzy (all opts)"],
 ];
 
-// Constructor cost alone, from the batch cells (the constructor is timed in
+// Constructor time alone, from the batch cells (the constructor is timed in
 // every child; the batch cell's median is as good as any). fuzzysort has no
 // constructor at all — its prepare-all pass lands in its cold query.
 const buildTable = (a: Artifact): string => {
@@ -236,7 +236,7 @@ const scorecardTable = (a: Artifact, corpus: string): string => {
 };
 
 // The subset the docs show, each library at its defaults. match-sorter and
-// fuzzy track the microfuzz row closely enough that including them only costs
+// fuzzy track the microfuzz row closely enough that including them only hurts
 // readability; the artifact keeps their cells.
 const PROBE_LIBRARIES: Array<{ base: string; opts?: string }> = [
 	{ base: "ekrina", opts: "ekrina (acronym)" },
@@ -295,9 +295,9 @@ const familyTable = (a: Artifact, corpus: string, scored: boolean): string => {
 };
 
 /**
- * The guaranteed-miss probe has no rank to report, so its table prices the
- * refusal instead: each library's cold cost for a hopeless query against its
- * own cold cost for one that matches.
+ * The guaranteed-miss probe has no rank to report, so its table times the
+ * refusal instead: each library's cold time for a hopeless query against its
+ * own cold time for one that matches.
  */
 const missTable = (a: Artifact, probes: ProbeTable[]): string => {
 	const miss = probes.find((p) => p.kind === "miss");

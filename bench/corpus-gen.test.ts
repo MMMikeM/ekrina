@@ -1,6 +1,6 @@
 /**
  * One-shot generator for the committed corpus-*.json snapshots. The corpora are
- * frozen as JSON so bench processes don't pay faker generation each run, and so
+ * frozen as JSON so bench processes don't run faker generation each run, and so
  * the data cannot drift when faker changes generator internals between versions.
  * Every rank/MRR table in docs/benchmarks.md derives from these sequences —
  * regenerating rewrites history for all of them, so it's gated:

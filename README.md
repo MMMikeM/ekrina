@@ -81,6 +81,7 @@ search("ma", { limit: 10 }); // the same ten results as search("ma").slice(0, 10
 ```
 
 Once `limit` items match the query as typed, the fuzzy and corrected matches that could not outrank them are never computed, which matters most for one- and two-character queries over a large list.
+With or without `limit`, corrections are only tried while fewer than ten items match the query as typed: past that, the extra rows are one-edit guesses ranked below every literal match.
 
 To build the mask index ahead of time instead, once the list has loaded or during idle time, call `buildIndex()`:
 
@@ -286,7 +287,7 @@ Accuracy against one whole cold search (index + one query) is the least flatteri
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.87 at ~3.5 ms one-shot and Ekrina (acronym) 0.90 at ~4.2 ms, and everything else, including Fuse.js (all opts) at 0.79 and ~18 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot time (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.87 at ~3.5 ms one-shot and Ekrina (acronym) 0.90 at ~4.2 ms, and everything else, including Fuse.js (all opts) at 0.79 and ~18 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
 Ekrina is the only library that by default:

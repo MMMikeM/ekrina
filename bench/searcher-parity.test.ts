@@ -1,6 +1,6 @@
 /**
  * The searcher must return exactly the items per-item fuzzyMatch accepts —
- * modulo the rescue budget, which legitimately suppresses corrected-tier hits
+ * modulo the rescue cutoff, which legitimately suppresses corrected-tier hits
  * once ten literal hits exist, and a short query's corrections, which it
  * suppresses once anything matches as typed. Any other diff is a searcher gate
  * false-rejecting (the union masks, the survivor cache, or the rescue bigram
@@ -10,7 +10,7 @@
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
 import { createFuzzySearch, fuzzyMatch, normaliseText, splitWords } from "../src/index";
-import { isShortRescue } from "../src/rescue";
+import { isShortQuery } from "../src/rescue";
 import { CORPORA } from "./corpus";
 
 it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 600_000 }, () => {
@@ -38,7 +38,7 @@ it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 6
 				const nonRescueMissing = missing.filter((m) => !m.startsWith("corrected:"));
 				expect(nonRescueMissing, `[${name}-${size}] "${query}"`).toEqual([]);
 				const normalisedQuery = normaliseText(query);
-				const short = isShortRescue(normalisedQuery, splitWords(normalisedQuery));
+				const short = isShortQuery(normalisedQuery, splitWords(normalisedQuery));
 				if (short ? asTyped === 0 : literal < 10) {
 					expect(missing, `[${name}-${size}] "${query}" (budget not exhausted)`).toEqual([]);
 				}

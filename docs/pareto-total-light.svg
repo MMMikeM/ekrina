@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-total-title pareto-total-desc">
-  <title id="pareto-total-title">Fuzzy search libraries: MRR vs cold one-shot cost</title>
-  <desc id="pareto-total-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs fuzzy (0.43 MRR at 2.18 ms) to Ekrina (indexed) (0.87 MRR at 3.63 ms) to Ekrina (acronym) (0.90 MRR at 4.17 ms). The no-index engines own the cheapest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out cheaper than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
+  <title id="pareto-total-title">Fuzzy search libraries: MRR vs cold one-shot time</title>
+  <desc id="pareto-total-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against total milliseconds for one cold search (index build plus the first, cold query), on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs fuzzy (0.43 MRR at 2.18 ms) to Ekrina (indexed) (0.87 MRR at 3.63 ms) to Ekrina (acronym) (0.90 MRR at 4.17 ms). The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
     </marker>
   </defs>
   <rect x="0" y="0" width="820" height="524" fill="#fcfcfb"/>
-  <text x="66" y="28" fill="#0b0b0b" font-size="18" font-weight="600">Ranking quality vs. cold search cost</text>
+  <text x="66" y="28" fill="#0b0b0b" font-size="18" font-weight="600">Ranking quality vs. cold search time</text>
   <text x="66" y="47" fill="#52514e" font-size="13">MRR over 24 probes · mixed 10k corpus · fresh process per search</text>
   <g>
     <line x1="66" y1="62" x2="66" y2="434" stroke="#e1e0d9"/>

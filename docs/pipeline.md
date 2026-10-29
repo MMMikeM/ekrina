@@ -3,7 +3,7 @@
 What `createFuzzySearch` builds, what a `search(query)` call does, how many of your records reach each stage, and how long each stage takes.
 Companion to [optimisation.md](./optimisation.md) (what moved the numbers) and [measurement.md](./measurement.md) (how the harness came to be wrong).
 
-Counts and timings come from `pnpm --filter=ekrina-bench exec vitest run cost.test.ts`, over the fourteen single-word probes at 100k, both corpora.
+Counts and timings come from `pnpm --filter=ekrina-bench exec vitest run stages.test.ts`, over the fourteen single-word probes at 100k, both corpora.
 Stage times are measured by difference, so they overlap slightly.
 
 ## Build

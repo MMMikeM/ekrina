@@ -36,7 +36,7 @@ export type RescueState = {
 const MIN_RESCUE_QUERY_LENGTH = 4;
 
 // Chance corrections are a multiple-comparisons problem scaling with the
-// field's window count, while a high floor is paid by the short queries that
+// field's window count, while a high floor hurts the short queries that
 // dominate label search (@see docs/benchmarks.md).
 const minTypoQueryLength = (fieldLength: number): number =>
 	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
@@ -63,9 +63,9 @@ export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]):
 
 // A short query's correction stands in for a missing match and never competes
 // with one: finding it means testing every item that holds the query's
-// letters, which the searcher pays only when nothing matched as typed
+// letters, which the searcher does only when nothing matched as typed
 // (@see docs/performance.md).
-export const isShortRescue = (normalisedQuery: string, queryWords: string[]): boolean =>
+export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	!reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
 
 const SCORE_EPSILON = 1e-9;
@@ -73,7 +73,7 @@ const SCORE_EPSILON = 1e-9;
 // Ties keep the incumbent unless it is a fuzzy chain: the one-edit reading
 // names the character the user got wrong, where a chain only says the letters
 // appear in order.
-export const preferCheaper = (
+export const preferBetter = (
 	incumbent: MatchResult | null,
 	challenger: MatchResult | null,
 ): MatchResult | null => {
@@ -173,7 +173,7 @@ const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
 		? result.score < SCORES.CONTAINS && result.tier !== "acronym"
 		: result.score <= SCORES.CONTAINS;
 
-const hitsRescueFloor = (best: MatchResult | null): best is MatchResult =>
+const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
 
 // Swaps and drops never collide — they differ in length. A *missing* character
@@ -362,7 +362,7 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 		),
 });
 
-const priceEnumeratedVariants = (
+const scoreEnumeratedVariants = (
 	rescue: RescueContext,
 	subject: CorrectionSubject,
 	fieldFloor: number,
@@ -376,13 +376,13 @@ const priceEnumeratedVariants = (
 		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
-		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant), short));
-		if (hitsRescueFloor(best)) return best;
+		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant), short));
+		if (isUnbeatableCorrection(best)) return best;
 	}
 	return best;
 };
 
-const priceSubstitutedWindows = (
+const scoreSubstitutedWindows = (
 	rescue: RescueContext,
 	subject: CorrectionSubject,
 	incumbent: MatchResult | null,
@@ -390,8 +390,8 @@ const priceSubstitutedWindows = (
 ): MatchResult | null => {
 	let best = incumbent;
 	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text, short)) {
-		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
-		if (hitsRescueFloor(best)) return best;
+		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
+		if (isUnbeatableCorrection(best)) return best;
 	}
 	return best;
 };
@@ -405,11 +405,11 @@ const priceSubstitutedWindows = (
 const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
 	const fieldLength = rescue.normalisedField.length;
 	const short = subject.text.length < MIN_TYPO_QUERY_LENGTH;
-	const best = priceEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
-	if (hitsRescueFloor(best) || subject.text.length < minSubstitutionLength(fieldLength)) {
+	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
+	if (isUnbeatableCorrection(best) || subject.text.length < minSubstitutionLength(fieldLength)) {
 		return best;
 	}
-	return priceSubstitutedWindows(rescue, subject, best, short);
+	return scoreSubstitutedWindows(rescue, subject, best, short);
 };
 
 // The index of the one query word missing from the field, or null when every

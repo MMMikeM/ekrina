@@ -35,8 +35,10 @@ Design decisions worth recording, with the measurements that made them:
 - **The rescue stops once ten literal hits exist.**
   No correction (≥ 2.1) can reach a top ten already filled at or below `SCORES.CONTAINS` (2), so the rescue becomes provably invisible work and is skipped.
   The count covers the whole corpus before any correction is tried, so a result never depends on list order or on earlier searches (`test/search-history.test.ts`).
+  The cutoff holds without a `limit` too: trying corrections anyway on uncapped searches changed no top ten, added hundreds of rows per affected query at 100k (`rmain` +1,031, mostly `rman` and `rain` inside unrelated words) and took 10–27% longer.
 - **Below five characters, a correction is a fallback.**
   A four-character query is corrected only at a word start, never by dropping a character, and in the searcher only when no item matches it as typed.
+  Inside a phrase whose other words reach five characters, a four-character word is corrected at a word start alongside matches as typed, because the other words pin the field: over 400 sampled phrases the right item ranked first 397 times, with no irrelevant rows.
   Correcting four characters everywhere sank `rsaw` from 2nd to 23rd, broke the long-text zero-junk guarantee and made short-query probes 2.9–3.8× slower at 100k.
   As a fallback it takes the four-character typo family from 0 to 0.59 on mixed and 0.79 on ascii, lifting MRR 0.82 → 0.84 and 0.80 → 0.84 with no other family moving, and makes a four-character miss take as long as a five-character one already did (docs/performance.md, "Short corrections are a fallback").
   `fuzzyMatch` sees one string, so it corrects whenever that string has no match as typed; a list can show fewer corrections than `fuzzyMatch` returns per item.
