@@ -297,6 +297,57 @@ Two families have no right answer, so they are reported rather than scored: the 
 | two-words-double-typo |      0 |                0 |                  2 |                 1 |         12 |         0 |            0 |                0 |     0 |
 <!-- bench:end -->
 
+### Family by family
+
+Each entry names the family's representative query, the mixed-corpus one the speed tables time; the ten scored queries per family are in [`bench/results.json`](../bench/results.json).
+MRR reads mixed / ascii, and rows are each library's median rows returned on mixed.
+
+**Single words**
+
+- **long-word** (`ergonomic`): every library finds a right answer first (0.93–1.00), so the spread is in rows: Ekrina returns 5, Fuse.js (all opts) 29 and fast-fuzzy 27.
+- **short-word** (`grady`): a whole word ranks ahead of the longer words it starts, so Ekrina, uFuzzy (all opts) and match-sorter score 1.00 on both corpora, where Fuse.js (all opts) scores 0.81 / 0.70.
+  Ekrina returns 92 rows to the typo engines' ~400.
+- **prefix** (`auxen`, a word's first five letters): 0.97–1.00 everywhere; Ekrina returns 31 rows, Fuse.js and fast-fuzzy ~1,050.
+- **infix** (`gonom`, five letters from inside a word): 1.00 everywhere; 21 rows from Ekrina, 119 from the chain engines, ~855 from the typo engines.
+
+**Phrases**
+
+- **two-words** (`handcrafted wooden`): in corpus order any engine can pass, 0.90–1.00.
+- **two-words-reversed** (`wooden handcrafted`): the order-independent engines (Ekrina, Fuse.js (all opts), uFuzzy (all opts), fuzzysort) keep 1.00; microfuzz scores 0.60 / 0.70, and fast-fuzzy, match-sorter and fuzzy 0.12 or less.
+- **two-words-partial-reversed** (`woo handcrafted`): the reversed phrase mid-keystroke.
+  Ekrina's multi-word tier asks only that each query word start a word, so it keeps 1.00, as do uFuzzy (all opts) and fuzzysort; microfuzz, match-sorter and fuzzy score 0.10 or less.
+- **two-words-joined** (`handcraftedwooden`): the space forgotten.
+  A subsequence engine passes it for free (0.97–1.00), and uFuzzy (all opts) scores 0, since it allows no gap inside a term.
+- **two-words-typo**, **-typo-second**, **-typo-reversed** (`handcxafted wooden`, `handcrafted wooxen`, `wooden handcxafted`): Ekrina, uFuzzy (all opts) and Fuse.js (all opts) score 0.97–1.00 on all three; fast-fuzzy takes the in-order two but scores 0.00 / 0.23 reversed, and the subsequence engines score 0 on all three.
+  Ekrina corrects only the failing word, the words that do occur pinning the field, and returns a median of 1 row.
+
+**Single-word typos**
+
+- **plural-to-singular** (`romanowskis`): a trailing `-s` the corpus lacks.
+  Ekrina scores 0.97 / 1.00, uFuzzy (all opts) 1.00.
+  The subsequence engines reach 0.58–0.90 only by borrowing the `s` from a later word: fuzzysort finds `herzogs` as **Herzog**, **S**chultz and Nader.
+  Ekrina's one mixed loss is `hillls`, one edit from both "Hilll" and "Hills".
+- **short-word-typo** (`anxe`): a four-character typo, which Ekrina corrects only when nothing matches it as typed: 0.86 / 1.00, against fast-fuzzy's 0.95 / 0.86 from 77 rows and 0.31 or less for everything else.
+  The mixed losses are `maxc`, where weak fuzzy chains such as "Fort **Max**ineside, **C**ape Verde" block the correction, and `kaxa`, one substitution from both "Kara" and "Kawa".
+- **transposition**, **insertion**, **substitution** (`hugeutte`, `hugueette`, `huguxtte`): the three edits that break the subsequence property.
+  Ekrina, uFuzzy (all opts) and fast-fuzzy score 1.00, Fuse.js (all opts) 0.85–1.00, the chain engines 0.35 or less; Ekrina returns 4–15 rows, the typo engines 20–81.
+
+**Scatter**
+
+- **scatter-light** (`hugutte`, one middle letter dropped): still a subsequence, so 0.72–1.00 everywhere and 1.00 for Ekrina.
+- **scatter-medium** and **scatter-heavy** (`huuete`, `hget`): the chain engines lead, match-sorter at 0.93 and 0.85 on mixed and fuzzysort at 0.90 and 0.59, from a median 41–45 rows.
+  Ekrina returns nothing: its chunk rules and density floor refuse a chain this sparse, the same rule that holds long-text junk at 0% ("Matching inside long text").
+
+**Initials and accents**
+
+- **acronym** (`rsaw`): base Ekrina scores 0.34 / 0.30 and the acronym tier 0.91 / 0.90, from a median 4 rows. match-sorter (0.90 / 0.78) and fuzzysort (0.62 / 0.56) reach the initials as subsequence chains among 148 rows; Fuse.js and fast-fuzzy score 0.
+- **accent-stripped** (`kepa`): the folding engines score 1.00 on mixed. fast-fuzzy scores 0.78 / 0.60 through edit distance rather than folding, fuzzy 0.11 / 0.20 with no folding at all, and Fuse.js (all opts) 0.65 on ascii.
+
+**Refusals** (unscored; 0 rows is correct)
+
+- **two-words-extra** (`handcrafted wooden ergonomic`): only fast-fuzzy returns anything, a median of 1 row on mixed and 2 on ascii.
+- **two-words-double-typo** (`handcxafted wooxen`): Ekrina and the subsequence engines return nothing; fast-fuzzy returns a median of 5 rows on mixed and 12 on ascii, Fuse.js (all opts) 2.
+
 ### garbage: `qxzwkv`
 
 <!-- bench:probe-miss -->
