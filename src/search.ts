@@ -262,8 +262,10 @@ export function createFuzzySearch<T>(
 					if (result.score < bestScore) bestEndsWord = endsWord;
 					else if (result.score === bestScore) bestEndsWord ||= endsWord;
 					bestScore = Math.min(bestScore, result.score);
+					// The literal is cheaper than new Array().fill(), and runs once per result.
+					if (specCount === 1) fields = [result];
 					// oxlint-disable-next-line unicorn/no-new-array
-					(fields ??= new Array(specCount).fill(null))[f] = result;
+					else (fields ??= new Array(specCount).fill(null))[f] = result;
 				}
 			}
 
