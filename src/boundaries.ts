@@ -1,7 +1,7 @@
 /**
  * One boundary definition, everywhere: a word boundary is any non-word
  * character. `splitWords`, the boundary tiers, the acronym tier, and fuzzy
- * chunk admission/pricing all agree by construction.
+ * chunk admission and scoring all agree by construction.
  */
 
 // The single source of truth for what counts as a word character (a regex

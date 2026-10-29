@@ -3,7 +3,8 @@ import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, isExactMask } from "./gates";
 import {
 	isRescuableQuery,
-	preferCheaper,
+	isShortQuery,
+	preferBetter,
 	missingCharRescue,
 	type RescueContext,
 	rescueField,
@@ -58,16 +59,10 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
 
-const wholeWordOccurrence = (haystack: string, needle: string): number => {
+const wordStartOccurrence = (haystack: string, needle: string): number => {
 	let at = haystack.indexOf(needle);
 	while (at > -1) {
-		const end = at + needle.length;
-		if (
-			(at === 0 || !wordChar.test(haystack[at - 1])) &&
-			(end === haystack.length || !wordChar.test(haystack[end]))
-		) {
-			return at;
-		}
+		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
 		at = haystack.indexOf(needle, at + 1);
 	}
 	return -1;
@@ -96,7 +91,7 @@ const boundaryTier = (
 const multiWordTier = (normalisedField: string, queryWords: string[]): MatchResult | null => {
 	const ranges: Range[] = [];
 	for (const word of queryWords) {
-		const at = wholeWordOccurrence(normalisedField, word);
+		const at = wordStartOccurrence(normalisedField, word);
 		if (at === -1) return null;
 		ranges.push([at, at + word.length - 1]);
 	}
@@ -145,11 +140,11 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
 	if (fuzzy) {
 		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
-		if (!rescuable) return chain;
+		if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
-		// literally contain the corrected word, so both rescues are still priced.
+		// literally contain the corrected word, so both rescues are still scored.
 		const dropped = missingCharRescue(rescue, fuzzy.ranges);
-		return preferCheaper(preferCheaper(dropped, rescueField(rescue)), chain);
+		return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
 	}
 	// The chain can refuse past the gate via its density floor.
 	return rescuable ? rescueField(rescue) : null;
@@ -207,6 +202,7 @@ export const matchField = (
 	acronym: boolean,
 	mayRescue: boolean = true,
 	preGated: boolean = false,
+	literalOnly: boolean = false,
 ): MatchResult | null => {
 	const { normalisedQuery, queryWords } = prepared;
 
@@ -236,8 +232,12 @@ export const matchField = (
 		return rescuable ? rescueField(rescueContext()) : null;
 	}
 
-	return (
-		literalTiers(field, normalisedField, prepared, acronym) ??
-		fuzzyOrRescue(rescueContext(), rescuable)
-	);
+	const literal = literalTiers(field, normalisedField, prepared, acronym);
+	// One character anywhere matches most of any list and ranks none of it, so it
+	// counts only where it starts a word.
+	if (normalisedQuery.length === 1) {
+		return literal !== null && literal.score <= SCORES.BOUNDARY ? literal : null;
+	}
+	if (literal !== null || literalOnly) return literal;
+	return fuzzyOrRescue(rescueContext(), rescuable);
 };

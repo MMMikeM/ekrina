@@ -6,10 +6,10 @@ It is written for whoever next changes `bench/`, so they do not repeat it.
 ## The symptom
 
 The publish ritual kept tripping its own contamination guard.
-That guard asserts a physical invariant: `ekrina (acronym)` runs strictly more code per query than base `ekrina`, so base measuring slower means the run absorbed GC or thermal debt.
+That guard asserts a physical invariant: `ekrina (acronym)` runs strictly more code per query than base `ekrina`, so base measuring slower means garbage collection or thermal throttling disturbed the run.
 It fired repeatedly, sometimes fatally, and the numbers behind it were incoherent, base and acronym would sit 38% apart in one run and 0.5% apart in the next, in either direction.
 
-Individual cells looked like this at 100k:
+Individual cells looked like this:
 
 | cell             | samples |   median | spread (max/min) |   rme |
 | ---------------- | ------: | -------: | ---------------: | ----: |
@@ -32,7 +32,7 @@ At that occupancy V8 never leaves incremental marking, and `setup: collectDebt`,
 Marking work then lands inside the timed windows.
 The same pressure produced an outright `Worker exited unexpectedly` crash earlier in the same session, which was written off as a flake.
 
-Four smaller faults compounded it, each individually survivable:
+Smaller faults compounded it, each individually survivable:
 
 - **`warmupIterations: 1`**, plus one calibration probe, is two executions before timing.
   V8 has not tiered up by then, so early samples measure unoptimised code.
@@ -49,11 +49,20 @@ Four smaller faults compounded it, each individually survivable:
 The bug was in the harness the whole time.
 Every intermediate explanation was wrong, and each was plausible enough to act on:
 
-1. **"The run absorbed GC debt, rerun it."** We reran it twice and got the same inversion each time. Persistence should have ruled out chance immediately.
-2. **"The guard should escalate to fatal on magnitude."** A paired measurement showed base and acronym sit within ±8% with the sign flipping between runs, because the acronym tier almost never fires on these corpora. The guard compares two configurations that are measurably identical; making it stricter would have blocked every future run on noise.
-3. **"Interleave the query timing across configurations."** The index cells are interleaved for good reason and reusing the helper looked obvious, but consecutive samples then hit different libraries and every one runs cache-cold: fuzzysort inflated 0.178 → 0.646 ms and uFuzzy 0.183 → 0.453 ms. It reorders the table. A 1–40 ms index build swamps cache warm-up; a 0.18 ms query is dominated by it.
-4. **"The machine is contended by other processes."** Load was decay from our own runs, with nothing above 3% CPU.
-5. **"Keep all libraries in one process so comparisons stay paired."** Inside a group the libraries are not paired in any useful sense; they run sequentially in separate windows, each one's measurement degraded by its neighbours' heap, caches and inline caches.
+1. **"Garbage collection or thermal throttling disturbed the run, rerun it."**
+   We reran it twice and got the same inversion each time.
+   Persistence should have ruled out chance immediately.
+2. **"The guard should escalate to fatal on magnitude."**
+   A paired measurement showed base and acronym sit within ±8% with the sign flipping between runs, because the acronym tier almost never fires on these corpora.
+   The guard compares two configurations that are measurably identical; making it stricter would have blocked every future run on noise.
+3. **"Interleave the query timing across configurations."**
+   The index cells are interleaved for good reason and reusing the helper looked obvious, but consecutive samples then hit different libraries and every one runs cache-cold: fuzzysort inflated 0.178 → 0.646 ms and uFuzzy 0.183 → 0.453 ms.
+   It reorders the table.
+   Cache warm-up is lost inside a 1–40 ms index build and dominates a 0.18 ms query.
+4. **"The machine is contended by other processes."**
+   Load was decay from our own runs, with nothing above 3% CPU.
+5. **"Keep all libraries in one process so comparisons stay paired."**
+   Inside a group the libraries are not paired in any useful sense; they run sequentially in separate windows, each one's measurement degraded by its neighbours' heap, caches and inline caches.
 
 ## What actually found it
 
@@ -93,18 +102,23 @@ A reader choosing on the steady-state table alone would be misled about the expe
 ## What we now hold to
 
 - **Run one library per process.**
-  A shared process shares its pathologies: heap pressure, garbage collection, cache residency and inline-cache state all leak between libraries that are supposed to be measured independently.
+  In a shared process, heap pressure, garbage collection, cache residency and inline-cache state all leak between libraries that are supposed to be measured independently.
   Cells run sequentially; running them concurrently reintroduces the contention that isolation removes.
 - **A cold measurement is only possible in a process that has not run that library before.**
-  This is the argument for isolation that has nothing to do with noise. By the seventh configuration in a shared process, "cold" is unmeasurable.
+  This is the argument for isolation that has nothing to do with noise.
+  By the seventh configuration in a shared process, "cold" is unmeasurable.
 - **Publish both cold and warm.**
   They answer different questions, the first keystroke and the one-shot backend versus the second keystroke and the long-lived server, and they disagree by an order of magnitude.
 - **Record the error bar, always.**
-  A cell now carries its median, min, max, mean, sd, p75, p99, relative margin of error and sample count. Without the spread there is no way to tell a result from noise, and for two years there was none.
+  A cell now carries its median, min, max, mean, sd, p75, p99, relative margin of error and sample count.
+  Without the spread there is no way to tell a result from noise, and for two years there was none.
 - **Keep `min` next to the median rather than choosing.**
-  The gap between them is a signal. fuzzysort's min is stable at ~0.205 ms while its median runs 0.23–0.25 ms with 122–170% spread, because its process-wide `prepare()` cache triggers collections mid-query. Publishing only the min would hide a real property of its design.
+  The gap between them is a signal.
+  fuzzysort's min is stable at ~0.205 ms while its median runs 0.23–0.25 ms with 122–170% spread, because its process-wide `prepare()` cache triggers collections mid-query.
+  Publishing only the min would hide a real property of its design.
 - **When a guard false-fires, fix the measurement.**
-  The contamination guard was right to complain, but the reason for it was wrong. Loosening it would have silenced the one thing pointing at a genuine defect.
+  The contamination guard was right to complain, but the reason for it was wrong.
+  Loosening it would have silenced the one thing pointing at a genuine defect.
 - **Warm up properly, and collect once, outside the sampling loop.**
   Two iterations leaves the code untiered, and a collection between samples puts its own marking work inside the timed region.
 
@@ -115,10 +129,10 @@ The quality results are unaffected: `hits.test.ts` builds one corpus at 10k per 
 
 ## The calibration blind spot, and the move to processes
 
-The vitest-bench era ended on a simple observation: its calibration probe ran every query once, untimed, to size the sample loop, and that untimed pass silently ran every lazy first call in the suite.
+The vitest-bench era ended when we noticed that its calibration probe ran every query once, untimed, to size the sample loop, and that this untimed pass silently ran every lazy first call in the suite.
 Ekrina's 18.5 ms mask build at 100k, fuzzysort's prepare-all, microfuzz's first-search slice: none of them could ever reach a timed sample, so the "total" column published index + one warm query as if it were a cold start.
 Worse, the warm loops themselves sampled hundreds of repeats of a single query, tiering the JIT far past anything a real session reaches.
 
-The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus, twenty distinct probes through one process, as the only warm-ish number.
+The replacement (bench/run.ts) measures nothing but first calls: a fresh node process per sample, constructor and first answer timed in consecutive windows, and one batch test per corpus, every distinct probe through one process, as the only warm-ish number.
 Five to ten processes per cell suffice because every number under this model is milliseconds-scale; the hundreds-of-samples machinery existed only to resolve steady-state microseconds that no user ever observes.
 Honesty guards moved with it: result counts asserted identical across a cell's processes, variant order rotated per repetition, the ekrina-vs-acronym physical invariant now fatal to the run, and a drift canary bracketing the whole matrix.

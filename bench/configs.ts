@@ -5,9 +5,8 @@
  * axis, which is how a row comes to be timed but never scored.
  *
  * Base rows are library defaults, so a base cell is what `npm install` gives
- * you. Fuse is the exception, on both of its recall knobs, because its defaults
- * are not its strongest configuration — see FUSE_BASE. "(all opts)" rows are
- * the base plus every optional matching feature.
+ * you. "(all opts)" rows are the base plus every optional matching feature,
+ * and a "(tuned)" row is an "(all opts)" row with its knobs set by a sweep.
  */
 import uFuzzy from "@leeoniya/ufuzzy";
 import microfuzzModule from "@nozbe/microfuzz";
@@ -36,20 +35,13 @@ export type Config = {
 	/** Result count only — the shape the runner times. */
 	count: (query: string) => number;
 	probe: (query: string) => Probe;
-	/** Constructor cost alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
+	/** Constructor time alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
 	index: (() => number) | null;
 	/** Carries cross-query state, so timing loops must bust it between samples. */
 	stateful?: boolean;
 };
 
-// Two departures from Fuse's defaults, both because the defaults measure worse
-// on every axis this suite publishes. `ignoreLocation` off decays the score
-// with distance from index 0, a positional handicap rather than a matching one;
-// `threshold` at its default 0.6 costs ascii MRR (0.61 -> 0.58), runs 49%
-// slower, and returns 6951 of 10000 items for the 5-char `prefix` probe.
-export const FUSE_BASE: IFuseOptions<string> = { ignoreLocation: true, threshold: 0.4 };
 const FUSE_ALL: IFuseOptions<string> = {
-	...FUSE_BASE,
 	ignoreDiacritics: true,
 	includeMatches: true,
 	// Space-separated terms become an AND of fuzzy patterns matched in any
@@ -58,6 +50,8 @@ const FUSE_ALL: IFuseOptions<string> = {
 	// and only reaches these semantics at `tokenMatch: "all"`.
 	useExtendedSearch: true,
 };
+
+const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.45 };
 
 // SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
 const UFUZZY_ALL: uFuzzy.Options = {
@@ -70,8 +64,8 @@ const UFUZZY_ALL: uFuzzy.Options = {
 
 // uFuzzy permutes at most this many terms before giving up on out-of-order
 // matching. Below the term count it returns the pre-filtered indices UNRANKED,
-// so a value under the longest query's term count silently costs the
-// configuration every rank it would have earned.
+// so a value under the longest query's term count silently loses the
+// configuration every rank it would otherwise have.
 const OUT_OF_ORDER = 5;
 
 // `pnpm bench --only=ekrina` narrows a run to the configurations whose name
@@ -147,7 +141,7 @@ const definitions = (list: string[]): Definition[] => [
 	// if a query needs the one-edit rescue, and a field's text only once it
 	// survives a filter. The index cell is the constructor alone; everything the
 	// construction deferred lands in the COLD query cell, where a fresh searcher
-	// pays it — the same split every lazy preparer gets.
+	// runs it — the same split every lazy preparer gets.
 	{
 		name: "ekrina",
 		make: () => {
@@ -237,7 +231,7 @@ const definitions = (list: string[]): Definition[] => [
 			count: (q) => fuzzysort.go(q, list).length,
 			probe: (q) => rankedOnly(fuzzysort.go(q, list).map((r) => r.target)),
 			// No constructor at all: the prepare-all pass its first go() runs
-			// lazily is process-wide state, priced where it is paid — the first
+			// lazily is process-wide state, timed where it runs — the first
 			// query of a fresh process (bench/run.ts).
 			index: null,
 		}),
@@ -301,11 +295,24 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js",
 		make: () => {
-			const fuse = new Fuse(list, FUSE_BASE);
+			const fuse = new Fuse(list);
 			return {
 				count: (q) => fuse.search(q).length,
 				probe: (q) => rankedOnly(fuse.search(q).map((r) => r.item)),
-				index: () => consume(new Fuse(list, FUSE_BASE)),
+				index: () => consume(new Fuse(list)),
+			};
+		},
+	},
+	{
+		name: "fuse.js (tuned)",
+		make: () => {
+			// Swept over 0.2–0.6 with and without ignoreLocation: 0.45 scores the best
+			// MRR, from a median 33 rows against the default's 560 (docs/libraries/fuse.md).
+			const fuseTuned = new Fuse(list, FUSE_TUNED);
+			return {
+				count: (q) => fuseTuned.search(q).length,
+				probe: (q) => rankedOnly(fuseTuned.search(q).map((r) => r.item)),
+				index: () => consume(new Fuse(list, FUSE_TUNED)),
 			};
 		},
 	},

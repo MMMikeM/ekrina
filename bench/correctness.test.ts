@@ -1,7 +1,7 @@
 /**
  * Correctness edges: cases ekrina handles by design that uFuzzy (default config)
  * does not. Not a speed comparison — this documents what ekrina's extra per-query
- * work buys, and pins the behaviours the front-of-ladder pre-filter must preserve
+ * work gains, and pins the behaviours the front-of-ladder pre-filter must preserve
  * (the reason it's an order-independent presence gate, not a subsequence gate,
  * for multi-word queries).
  */

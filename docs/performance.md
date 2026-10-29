@@ -2,36 +2,37 @@
 
 Why Ekrina is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
 Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
-The numbers quoted here are decision evidence: each comes from the run that settled its decision, the relative ordering is the claim, and none of it is regenerated.
+The numbers quoted here are decision evidence, each taken from the run that settled its decision.
+The relative ordering is the claim, and none of it is regenerated.
 
 ## No corpus index
 
-The question that started this document: should `createFuzzySearch` index its corpus?
-The answer is no, and the reasoning is worth keeping because the pressure to index recurs whenever a trie-based library benchmarks well.
+This document started from one question, whether `createFuzzySearch` should index its corpus.
+It doesn't, and the reasoning is recorded because the pressure to index recurs whenever a trie-based library benchmarks well.
 
 ### Why fast-fuzzy looked fast
 
 On an early combinatorial corpus (`ADJ × NOUN × SUFFIX`), fast-fuzzy benchmarked ~4× faster than Ekrina while doing typo-tolerant edit-distance matching.
-The trick is structural, not algorithmic: it inserts every candidate into a trie, walks it with a threshold-pruned DFS, and extends two DP rows along trie edges, so shared prefixes are stored and scored once and most candidates are never scored at all.
+The speed comes from the data structure.
+It inserts every candidate into a trie, walks it with a threshold-pruned DFS, and extends two DP rows along trie edges, so shared prefixes are stored and scored once and most candidates are never scored at all.
 That speed is entirely corpus-dependent, because the pruning only skips subtrees when candidates share prefixes.
 On seeded natural-language faker data (product, company, person and place names) the same library fell to among the slowest in the set.
-"Typo-tolerant" says nothing about speed; the data structure and the corpus do.
 
 ### Why a prefix trie fits Ekrina badly
 
-A trie accelerates prefix and exact lookups, which are already Ekrina's cheapest tiers (`startsWith`, `===`).
-The expensive tiers match mid-string and out of order: `boundary` and `contains` sit anywhere in the field, `multi-word` accepts any word order, and `fuzzy` is a subsequence chain scattered across the field.
+A trie accelerates prefix and exact lookups, which are already Ekrina's fastest tiers (`startsWith`, `===`).
+The slow tiers match mid-string and out of order: `boundary` and `contains` sit anywhere in the field, `multi-word` accepts any word order, and `fuzzy` is a subsequence chain scattered across the field.
 A prefix trie helps none of them.
 Worse, threshold pruning needs a single scalar cutoff, and Ekrina has none: the tier ladder returns every item that matches at any tier, ranked, so there is no "score below X, skip it" to prune on.
 
 ### What an index would have to be
 
 If scale far beyond the target were ever a goal, the right structures are an inverted token index (turns the multi-word and boundary tiers into posting-list intersections), a trigram index (gates the fuzzy and contains tiers without visiting every item), or a suffix automaton for arbitrary-substring search (powerful but likely overkill).
-They stay unbuilt for four reasons:
+They stay unbuilt:
 
 - **Bundle size.** Ekrina is ~5.5 kB gzip; a real index could double that, directly against the "tiny" pitch.
 - **The API model.** `fuzzyMatch` must stay stateless; that is the point of the primitive-first design, so any index is confined to `createFuzzySearch`.
-- **Build and memory.** Index construction and posting-list storage grow with the corpus, and only pay off when N is large.
+- **Build and memory.** Index construction and posting-list storage grow with the corpus, and only make sense when N is large.
 - **Scope.** The scan-level design below carries the target use (command palettes, pickers, autocomplete over lists you already hold) and the published sizes without any of it; [benchmarks.md](./benchmarks.md) holds the standings.
 
 Revisit only if Ekrina deliberately expands to corpora well past 100k.
@@ -52,24 +53,25 @@ Stage 0 is a 32-bit character-class mask per item (`charMask`); one integer AND 
 Bucketed classes (digits, non-ASCII) can only merge bits, so a collision weakens the filter, never inverts it.
 Stage 1 is one native regex chosen by query type.
 Multi-word queries get an order-independent presence gate, because the multi-word tier matches words in any order and a subsequence gate would falsely reject `"foo bar"` against `"bar … foo"` (pinned by `bench/correctness.test.ts`).
-Single-word queries get a subsequence gate: with one word there is no ordering concern, and one in-order pass is both stricter and cheaper than the presence gate's k lookaheads.
+Single-word queries get a subsequence gate: with one word there is no ordering concern, and one in-order pass is both stricter and faster than the presence gate's k lookaheads.
 For pure a–z queries the mask is already an exact distinct-character presence check, so the presence regex is skipped as redundant (`presenceGateRedundant`).
 
-The substitution rescue needs the mask relaxed by one character class, and that relaxation is the expensive move: it widens the survivor set the whole speed story depends on rejecting.
-A bigram gate re-tightens it using two facts that pin the edit down: a field missing exactly one class is only reachable by an edit at the query's sole character of that class, and every rescue-eligible tier is a contiguous occurrence, so every query bigram away from that position must appear in the field.
-Bigram hashes collide by merging bits: false-pass again.
+The substitution rescue needs the mask relaxed by one character class, and that relaxation is slow because it widens the survivor set, which the scan's speed depends on keeping small.
+A bigram gate re-tightens it.
+A field missing exactly one class is only reachable by an edit at the query's sole character of that class, and every rescue-eligible tier is a contiguous occurrence, so every query bigram away from that position must appear in the field.
+Bigram hashes collide by merging bits, so a collision can only false-pass.
 
 ### Preparation is lazy
 
 `createFuzzySearch` only allocates; a field is trimmed, normalised and masked the first time it survives a gate (`materialise` in `src/search.ts`), so the caches warm to the working set rather than the corpus.
 Single-word gating runs on the caller's raw strings (`buildRawGate`), and `bench/raw-mask.test.ts` sweeps both bench corpora to pin that the raw scan never drops a mask bit against the eager equivalent.
-The one structure that costs a whole-corpus pass (the union masks and bigram sets) is built by the first query that needs it: a multi-word query, one with a character the raw scan cannot fold, or one that reaches the relaxed scan; a session of single words that all match literally never pays it.
-The cost lands where a user pays it: construction is allocation, the first query that needs the masks carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
+The one structure that needs a whole-corpus pass (the union masks and bigram sets) is built by the first query that needs it: a multi-word query, one with a character the raw scan cannot fold, or one that reaches the relaxed scan; a session of single words that all match literally never builds it.
+Construction is allocation, the first query that needs the masks carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.
 
 ### Survivors carry across keystrokes
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
-This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"the quick brown fox"` matches `fox brown` via the multi-word tier and fails `fox brow`), so caching matches would be wrong.
+This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borw` as a corrected `brow` and fails `bor`, which is too short to correct), so caching matches would be wrong.
 Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
@@ -79,26 +81,26 @@ Every correction scores at least `TYPO_PENALTY` (2.1), above `SCORES.CONTAINS` (
 The rescue is then skipped as provably invisible work.
 The count is taken over the whole corpus before any correction is attempted, so whether an item is corrected cannot depend on its position in the list or on what the searcher was asked before; `test/search-history.test.ts` replays typing, backspacing and dead-end sessions against fresh searchers.
 
-### Word membership scans instead of hashing
+### Word membership is an `indexOf` scan
 
-`wholeWordOccurrence` finds a boundary-bounded occurrence with an `indexOf` walk, yielding membership and position in one pass, with no per-field `Set` living on the heap.
-The stated trade: for document-length fields (`strategy: "off"` body text) membership is O(field length) per query word where a Set was O(1).
+`wordStartOccurrence` finds an occurrence that starts a word with an `indexOf` walk, yielding membership and position in one pass, with no per-field `Set` living on the heap.
+The stated trade is that for document-length fields (`strategy: "off"` body text) membership is O(field length) per query word where a Set was O(1).
 It is bounded in practice (the mask rejects most items first, the scan stops at the first absent word, and the tier only runs for multi-word queries that missed every earlier tier) and unmeasured by the short-string bench corpora.
 Revisit trigger: a long-field corpus probe showing the multi-word tier dominating query time; the fix is an opt-in per-field word index for long fields, not a return of the always-on Set.
 
 ## Decision evidence
 
 The tables here justify constants and behaviour that look arbitrary in the source.
-Each is quoted from the run that settled the decision; harnesses have changed since, so read relative ordering, not current standings.
+Each is quoted from the run that settled the decision; harnesses have changed since, so only the relative ordering carries over.
 
 ### Bounded chunk-start retries
 
 `MAX_CHUNK_STARTS = 4` in `src/fuzzy.ts` is a correctness bound, not a speed knob.
 Leftmost-greedy placement stranded chains whose first character also opens an earlier word: 307 missed assemblies and 131 suboptimal ones over the ascii corpus at chain level.
 Retrying the first chunk from other admissible placements fixes that, but retrying from every placement broke the long-text guard, taking the junk rate from 0 to 45% at 16k characters.
-The finding worth keeping: the density floor is not scale-free.
+The density floor is not scale-free.
 It is a ratio, so a compact junk assembly clears it at any field length; what actually kept junk out of long text was the single greedy attempt stretching junk chains into sparse spans.
-Junk matching is a multiple-comparisons problem: every additional assembly attempted is another draw at a dense coincidence, so an unbounded search leaks more as fields grow.
+Junk matching is a multiple-comparisons problem, where every additional assembly attempted is another draw at a dense coincidence, so an unbounded search leaks more as fields grow.
 
 | first-chunk attempts | missed | suboptimal | long-text junk hits |
 | -------------------- | ------ | ---------- | ------------------- |
@@ -108,13 +110,13 @@ Junk matching is a multiple-comparisons problem: every additional assembly attem
 | 8                    | 0      | 30         | 4                   |
 | ∞                    | 0      | 30         | 43                  |
 
-Four attempts buy everything an unbounded search does while staying clear of the leak; the residual 30 need full backtracking, which is exponential and is the thing that leaks.
-The implication for any future fuzziness work: widening what reaches the chain reopens the hazard, and the density floor will not catch it alone.
+Four attempts do as well as an unbounded search while staying clear of the leak; the residual 30 need full backtracking, which is exponential and is the thing that leaks.
+Any future fuzziness work that widens what reaches the chain reopens the hazard, and the density floor will not catch it alone.
 Re-run `bench/longtext.test.ts`, not just the unit tests.
 
-### Corrections price above `CONTAINS`
+### Corrections score above `CONTAINS`
 
-Rank, not recall, is the metric: match-set size barely matters next to where the queried item lands.
+The metric is rank, because match-set size barely matters next to where the queried item lands.
 MRR of the intended item over the ascii corpus, before and after the one-edit rescues:
 
 | probe         | before | after | note                           |
@@ -127,16 +129,16 @@ MRR of the intended item over the ascii corpus, before and after the one-edit re
 | transposition | 1.000  | 1.000 |                                |
 | substitution  | 0.000  | 0.996 |                                |
 
-The first version priced corrections at the inherited 0.9 penalty, above literal matches, and infix sank to 0.906: other items' guesses displacing the item the user's text literally appears in.
+The first version scored corrections at the inherited 0.9 penalty, above literal matches, and infix sank to 0.906, because other items' guesses displaced the item the user's text literally appears in.
 Raising the penalty past `CONTAINS` fixed it with no loss anywhere.
 A correction must never outrank a literal hit; `test/tier-constants.test.ts` pins the constants.
 
 ### Typo thresholds scale with the field
 
 A constant minimum query length for the rescues has to pick one workload to fail: at a floor of 7 the long-text junk rate was 0 but short queries lost their insertion and substitution ranking (MRR 0.547 and 0.000); at 5 the ranking held (0.952 and 0.923) but long text junked 30 probes.
-`minTypoQueryLength(fieldLength)` gets both, and it is the same lesson as the retry cap: junk risk grows with the field, so the guard has to grow with it.
+`minTypoQueryLength(fieldLength)` gets both by raising the floor as the field grows, for the same reason as the retry cap, since junk risk grows with field length.
 
-### No correction below five characters
+### Short corrections are a fallback
 
 `fuzzyMatch` used to correct four-character queries (a swap, `sfot`; a drop, `soth`) and phrases of short words (`bg oak`), but the searcher only ran its rescue pass from five characters, so it returned those corrections on a fresh searcher's first multi-word query and never again.
 Teaching the searcher the four-character rescue was measured both ways it can be built, each interleaved against the searcher without it over the full Ekrina matrix, five rounds (base Ekrina, cold query, without → with):
@@ -147,14 +149,45 @@ Teaching the searcher the four-character rescue was measured both ways it can be
 | raw-text swap gate, no index     |   5.63 → 16.16 ms   |      4.88 → 14.17 ms      |       2.08 → 5.15 ms       |
 
 Neither build changed a single result, rank or tier on those probes.
-Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex cost of that test is the whole slowdown.
-So the matcher holds the searcher's floor instead — five characters for a single word, one five-character word for a phrase, inside which the mistyped word may still be four (`sfot golden` is corrected).
+Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex time of that test is the whole slowdown.
+So the matcher held to the searcher's floor instead, which is five characters for a single word and one five-character word for a phrase.
+
+The 24 probes measured the effect of that floor by allowing every edit from four characters over 10k items (base Ekrina, five → four):
+
+- the four-character typo probe goes from no match to rank 4 of 402 on mixed (`anxe`) and rank 2 of 38 on ascii (`daxe`);
+- `rsaw` falls from rank 2 of 7 to 23rd of 34, `kepa` returns 74 items instead of 7, and `hget` 25 junk rows instead of none;
+- `bench/longtext.test.ts` fails its zero-junk assertion.
+
+Sorting the added corrections by edit showed where the damage came from.
+A drop leaves three characters that most fields contain: `saw` and `raw` are 23 of `rsaw`'s 27 new rows.
+A substitution in the middle of a word does the rest: `colt` corrected to the `cola` in "Nicolas" is the long-text failure.
+The corrections that find `anxe` and `daxe` are substitutions at a word start.
+
+So below five characters a correction is a fallback:
+
+- it must start a word, at a tier from `exact` to `boundary`, or `multi-word` inside a phrase;
+- it never drops a character;
+- the searcher offers it only when no item matches the query as typed, so `rsaw` and `kepa`, which do, are never corrected.
+
+MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` keep their ranks and sets, and the long-text test passes.
+Rescored over the sampled query families that replaced single probes ([benchmarks.md](./benchmarks.md#match-quality-by-query-family)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
+Only four-character queries that match nothing get slower (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
+
+| Query                 | Cold             | After `buildIndex()` |
+| --------------------- | ---------------: | -------------------: |
+| `anxe`, mixed @10k    |  2.19 → 8.18 ms  |      0.67 → 4.49 ms  |
+| `zzzz`, mixed @100k   |  4.43 → 24.04 ms |      4.99 → 9.58 ms  |
+| `zzzzz`, mixed @100k  | 20.96 → 21.35 ms |      7.56 → 8.23 ms  |
+| `rsaw`, mixed @100k   |  5.92 → 5.98 ms  |      3.96 → 4.08 ms  |
+
+A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
+`fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
 
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.
 
-- **The corpus drives the table.** The fast-fuzzy flip above is the proof: fastest-ish on a shared-prefix word grid, among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
+- **The corpus drives the table.** The fast-fuzzy flip above showed it, fastest-ish on a shared-prefix word grid and among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
 - **Verify the matching, then time it.** A speed table over unverified matchers compares different jobs. `bench/hits.test.ts` records every library's match count and the queried item's rank per query; it caught uFuzzy silently returning nothing on accent-stripped queries without `latinize`.
-- **Design the corpus property you mean to test.** The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed, not assumed.
-- **Amortisation is a claim, not a given.** Lazy and cached designs move cost rather than remove it; only process-cold measurement (fresh process per sample, benchmarks.md "One measurement model") shows who actually pays and when.
+- **Design the corpus property you mean to test.** The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed.
+- **Amortisation has to be measured.** Lazy and cached designs move work rather than remove it; only process-cold measurement (fresh process per sample, benchmarks.md "One measurement model") shows which call actually takes the time.

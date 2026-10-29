@@ -1,4 +1,4 @@
-import { wordChar } from "./boundaries";
+import { isBoundaryChar, wordChar } from "./boundaries";
 import { charMask, escapeRegex } from "./gates";
 import { matchField, type PreparedQuery, prepareQuery } from "./match";
 import { SCORES, TYPO_PENALTY } from "./scores";
@@ -28,7 +28,7 @@ export type RescueVariant = {
 export type RescueState = {
 	variants: RescueVariant[];
 	variantGate: RegExp | null;
-	gate: RegExp;
+	gate: RegExp | null;
 };
 
 // Below this a correction describes the field rather than the query: almost
@@ -36,14 +36,18 @@ export type RescueState = {
 const MIN_RESCUE_QUERY_LENGTH = 4;
 
 // Chance corrections are a multiple-comparisons problem scaling with the
-// field's window count, while a high floor is paid by the short queries that
+// field's window count, while a high floor hurts the short queries that
 // dominate label search (@see docs/benchmarks.md).
 const minTypoQueryLength = (fieldLength: number): number =>
 	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
 
-// The floor for drops and substituted windows. Must equal minTypoQueryLength's
-// smallest rung: the rescue gate uses it as the lowest value the field-scaled
-// floor can take, and a larger constant would make that gate false-reject.
+// A substitution keeps the subject's length where a drop shortens it to three
+// characters, so on a label it is trusted one character sooner.
+const minSubstitutionLength = (fieldLength: number): number =>
+	fieldLength <= 64 ? MIN_RESCUE_QUERY_LENGTH : minTypoQueryLength(fieldLength);
+
+// Below this a subject is short: it is corrected only at a word start, and only
+// when nothing matches the query as typed. Drops wait for it too.
 const MIN_TYPO_QUERY_LENGTH = minTypoQueryLength(0);
 
 const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: number): boolean =>
@@ -52,19 +56,24 @@ const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: numb
 		: queryWords.some((word) => word.length >= floor);
 
 // Whether any rescue may run, and so whether the mask gate may relax to one
-// missing class. Held at the typo floor because below it the searcher cannot
-// find swap candidates without scanning the whole corpus (@see docs/performance.md).
-// matchField and the searcher's survivor scan must ask this same question, or
-// one corrects what the other cannot.
+// missing class. matchField and the searcher's survivor scan must ask this same
+// question, or one corrects what the other cannot.
 export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
+	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH);
+
+// A short query's correction stands in for a missing match and never competes
+// with one: finding it means testing every item that holds the query's
+// letters, which the searcher does only when nothing matched as typed
+// (@see docs/performance.md).
+export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
+	!reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
 
 const SCORE_EPSILON = 1e-9;
 
 // Ties keep the incumbent unless it is a fuzzy chain: the one-edit reading
 // names the character the user got wrong, where a chain only says the letters
 // appear in order.
-export const preferCheaper = (
+export const preferBetter = (
 	incumbent: MatchResult | null,
 	challenger: MatchResult | null,
 ): MatchResult | null => {
@@ -137,6 +146,7 @@ const prepareCorrection = (
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
+	short = false,
 ): MatchResult | null => {
 	const result = matchField(
 		rescue.field,
@@ -146,7 +156,7 @@ const scoreCorrectedQuery = (
 		rescue.acronym,
 		false,
 	);
-	return result && result.score <= SCORES.CONTAINS
+	return result && acceptsCorrection(result, short)
 		? {
 				score: result.score + TYPO_PENALTY,
 				tier: "corrected",
@@ -156,7 +166,14 @@ const scoreCorrectedQuery = (
 		: null;
 };
 
-const hitsRescueFloor = (best: MatchResult | null): best is MatchResult =>
+// A short correction must start a word: mid-word, most fields hold a window
+// one edit from four characters ("colt" in "Nicolas").
+const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
+	short
+		? result.score < SCORES.CONTAINS && result.tier !== "acronym"
+		: result.score <= SCORES.CONTAINS;
+
+const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
 
 // Swaps and drops never collide — they differ in length. A *missing* character
@@ -192,6 +209,10 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 // only false-pass, so it leaves the field-scaled floor to the window phase.
 const buildRescueGates = (prepared: PreparedQuery): RescueState => {
 	const variants = buildRescueVariants(prepared.query, prepared.normalisedQuery);
+	// A short query's halves are two characters, which nearly every field holds.
+	if (prepared.normalisedQuery.length < MIN_TYPO_QUERY_LENGTH) {
+		return (prepared.rescueState = { variants, variantGate: null, gate: null });
+	}
 	const literals = variants.map((variant) => escapeRegex(variant.normalised));
 	const variantGate = literals.length ? new RegExp(literals.join("|")) : null;
 	const splitAt = prepared.normalisedQuery.length >> 1;
@@ -205,7 +226,11 @@ const buildRescueGates = (prepared: PreparedQuery): RescueState => {
 // By the pigeonhole principle a single substitution leaves at least one half of
 // the subject intact, so those halves' occurrences are the only windows worth
 // testing. Position must not rank the corrections — the rerun rescans the field.
-const substitutedWindows = (normalisedField: string, subjectText: string): string[] => {
+const substitutedWindows = (
+	normalisedField: string,
+	subjectText: string,
+	atWordStart: boolean,
+): string[] => {
 	const subjectLength = subjectText.length;
 	const splitAt = subjectLength >> 1;
 	const halves: [offset: number, half: string][] = [
@@ -221,12 +246,19 @@ const substitutedWindows = (normalisedField: string, subjectText: string): strin
 		) {
 			const windowStart = halfAt - offset;
 			if (windowStart < 0 || windowStart + subjectLength > normalisedField.length) continue;
-			let mismatches = 0;
-			for (let i = 0; i < subjectLength; i++) {
-				if (normalisedField[windowStart + i] !== subjectText[i] && ++mismatches > 1) break;
+			if (atWordStart && windowStart > 0 && !isBoundaryChar(normalisedField[windowStart - 1])) {
+				continue;
 			}
-			// Exactly one: zero would mean the contains tier already owns it.
-			if (mismatches !== 1) continue;
+			let mismatches = 0;
+			let mismatchAt = -1;
+			for (let i = 0; i < subjectLength; i++) {
+				if (normalisedField[windowStart + i] === subjectText[i]) continue;
+				mismatchAt = i;
+				if (++mismatches > 1) break;
+			}
+			// Exactly one: zero would mean the contains tier already owns it. A
+			// separator in its place splits the word rather than correcting it.
+			if (mismatches !== 1 || isBoundaryChar(normalisedField[windowStart + mismatchAt])) continue;
 			const corrected = normalisedField.slice(windowStart, windowStart + subjectLength);
 			if (!windows.includes(corrected)) windows.push(corrected);
 		}
@@ -330,10 +362,11 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 		),
 });
 
-const priceEnumeratedVariants = (
+const scoreEnumeratedVariants = (
 	rescue: RescueContext,
 	subject: CorrectionSubject,
 	fieldFloor: number,
+	short: boolean,
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
 	for (const variant of subject.variants) {
@@ -343,21 +376,22 @@ const priceEnumeratedVariants = (
 		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
-		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant)));
-		if (hitsRescueFloor(best)) return best;
+		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant), short));
+		if (isUnbeatableCorrection(best)) return best;
 	}
 	return best;
 };
 
-const priceSubstitutedWindows = (
+const scoreSubstitutedWindows = (
 	rescue: RescueContext,
 	subject: CorrectionSubject,
 	incumbent: MatchResult | null,
+	short: boolean,
 ): MatchResult | null => {
 	let best = incumbent;
-	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text)) {
-		best = preferCheaper(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected)));
-		if (hitsRescueFloor(best)) return best;
+	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text, short)) {
+		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
+		if (isUnbeatableCorrection(best)) return best;
 	}
 	return best;
 };
@@ -369,10 +403,13 @@ const priceSubstitutedWindows = (
 // stopping after the enumerated family would let the worse one win by default.
 // A corrected exact hit is unbeatable and exits early.
 const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
-	const fieldFloor = minTypoQueryLength(rescue.normalisedField.length);
-	const best = priceEnumeratedVariants(rescue, subject, fieldFloor);
-	if (hitsRescueFloor(best) || subject.text.length < fieldFloor) return best;
-	return priceSubstitutedWindows(rescue, subject, best);
+	const fieldLength = rescue.normalisedField.length;
+	const short = subject.text.length < MIN_TYPO_QUERY_LENGTH;
+	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
+	if (isUnbeatableCorrection(best) || subject.text.length < minSubstitutionLength(fieldLength)) {
+		return best;
+	}
+	return scoreSubstitutedWindows(rescue, subject, best, short);
 };
 
 // The index of the one query word missing from the field, or null when every
@@ -400,8 +437,9 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
 	const gates = prepared.rescueState ?? buildRescueGates(prepared);
-	if (!gates.gate.test(normalisedField)) return null;
-	const variants = gates.variantGate?.test(normalisedField) ? gates.variants : [];
+	if (gates.gate !== null && !gates.gate.test(normalisedField)) return null;
+	const variants =
+		gates.variantGate === null || gates.variantGate.test(normalisedField) ? gates.variants : [];
 	return correctSubject(rescue, wholeQuerySubject(prepared, variants));
 };
 

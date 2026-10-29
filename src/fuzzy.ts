@@ -5,7 +5,7 @@ import type { HighlightRanges, Range } from "./types";
 // run of matched characters.
 type Chunk = Range;
 
-// A priced chain: the fuzzy tier's score plus the chunks that earned it.
+// A scored chain: the fuzzy tier's score plus the chunks that produced it.
 export type ChainScore = { score: number; ranges: HighlightRanges };
 
 // BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
@@ -34,7 +34,7 @@ const scoreChunks = (chunks: Chunk[], normalisedField: string): ChainScore | nul
 	let score = CHUNK_SCORES.BASE;
 	for (const [start, end] of chunks) {
 		// Same boundary definition admitsChunk used — a chunk admitted because a
-		// hyphen is a boundary must not then be priced as if it weren't.
+		// hyphen is a boundary must not then be scored as if it weren't.
 		const opensWord = start === 0 || isBoundaryChar(normalisedField[start - 1]);
 		const closesWord =
 			end === normalisedField.length - 1 || isBoundaryChar(normalisedField[end + 1]);
@@ -103,12 +103,12 @@ const chainFrom = (
 // A correctness guard, not a speed knob: the density floor is a ratio, so every
 // extra first-chunk attempt is another chance for junk to assemble a dense
 // coincidence, and an unbounded search makes the junk rate climb with field
-// length. 4 buys everything an unbounded search does while staying clear of the
+// length. 4 does as well as an unbounded search while staying clear of the
 // leak — measured table in docs/performance.md "Bounded chunk-start retries".
 const MAX_CHUNK_STARTS = 4;
 
 // Retry the assembly from the first few admissible placements of the first
-// chunk and keep the cheapest: leftmost-only strands the chain whenever the
+// chunk and keep the lowest-scoring: leftmost-only strands the chain whenever the
 // query's first character also opens an earlier word ("towls" over "Tasty Silk
 // Towels" hits the T of "Tasty"). Later chunks stay leftmost-greedy —
 // reconsidering those too is what starts leaking junk.

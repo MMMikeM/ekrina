@@ -143,7 +143,7 @@ export const META: Record<string, LibraryMeta> = {
 	},
 };
 
-// "ekrina (acronym)" and "<lib> (all opts)" are configurations of a base library
+// "ekrina (acronym)", "<lib> (all opts)" and "<lib> (tuned)" are configurations of a base library
 // and share its size, deps and type.
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
@@ -170,5 +170,5 @@ export const bySize = (a: string, b: string): number =>
 export const foldsFor = (corpus: string, name: string): boolean => {
 	if (corpus !== "mixed") return true;
 	const diacritics = metaFor(name)?.features.diacritics;
-	return diacritics === "yes" || (diacritics === "opt-in" && name.endsWith(" (all opts)"));
+	return diacritics === "yes" || (diacritics === "opt-in" && / \((all opts|tuned)\)$/.test(name));
 };

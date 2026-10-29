@@ -1,14 +1,16 @@
 /**
  * The searcher must return exactly the items per-item fuzzyMatch accepts —
- * modulo the rescue budget, which legitimately suppresses corrected-tier hits
- * once ten literal hits exist. Any other diff is a searcher gate
+ * modulo the rescue cutoff, which legitimately suppresses corrected-tier hits
+ * once ten literal hits exist, and a short query's corrections, which it
+ * suppresses once anything matches as typed. Any other diff is a searcher gate
  * false-rejecting (the union masks, the survivor cache, or the rescue bigram
  * gate — none of which fuzzyMatch runs). Imports ../src on purpose: the guard
  * covers the source the gates live in.
  */
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createFuzzySearch, fuzzyMatch, normaliseText, splitWords } from "../src/index";
+import { isShortQuery } from "../src/rescue";
 import { CORPORA } from "./corpus";
 
 it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 600_000 }, () => {
@@ -22,18 +24,22 @@ it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 6
 					got.set(r.item, (got.get(r.item) ?? 0) + 1);
 				}
 				let literal = 0;
+				let asTyped = 0;
 				const missing: string[] = [];
 				for (const item of list) {
 					const m = fuzzyMatch(item, query);
 					if (!m) continue;
 					if (m.score <= SCORES.CONTAINS) literal++;
+					if (m.tier !== "corrected") asTyped++;
 					const n = got.get(item) ?? 0;
 					if (n > 0) got.set(item, n - 1);
 					else missing.push(`${m.tier}:${item}`);
 				}
 				const nonRescueMissing = missing.filter((m) => !m.startsWith("corrected:"));
 				expect(nonRescueMissing, `[${name}-${size}] "${query}"`).toEqual([]);
-				if (literal < 10) {
+				const normalisedQuery = normaliseText(query);
+				const short = isShortQuery(normalisedQuery, splitWords(normalisedQuery));
+				if (short ? asTyped === 0 : literal < 10) {
 					expect(missing, `[${name}-${size}] "${query}" (budget not exhausted)`).toEqual([]);
 				}
 			}

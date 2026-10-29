@@ -21,7 +21,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `range`                    | inclusive `[start, end]` span for highlighting                                                                                                      | `Range`, `HighlightRanges`                   |
 | `chunk`                    | a consecutive matched run inside the fuzzy tier (same type as `Range`, different meaning)                                                          | `Chunk` alias                                |
 | `chain`                    | an assembled sequence of chunks covering the whole query                                                                                            | `fuzzyChainMatch`, `ChainScore`              |
-| `gate`                     | a cheap per-query pre-filter that can only false-pass, never false-reject                                                                           | `gates.ts`                                   |
+| `gate`                     | a fast per-query pre-filter that can only false-pass, never false-reject                                                                            | `gates.ts`                                   |
 | `mask`                     | the 32-bit char-class summary used by the O(1) gate; every stored mask is scope-qualified (`queryMask`, `fieldMasks`, `unionMasks`, `requiredMask`) | `charMask`                                   |
 | `class`                    | unqualified: a charMask bucket (`bigramClass`, `missingClasses`, `classBit`); regex character classes always say "char class"                       | `charMask`, `escapeCharClass`                |
 | `bigram`                   | an adjacent pair of char classes, hashed into a 64-bit presence set for the rescue gate                                                             | `FieldBigrams`, `RescueBigramGate`           |
@@ -32,6 +32,10 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `subject`                  | what a rescue corrects, the whole query, or a phrase's one absent word                                                                             | `CorrectionSubject`                          |
 | `window`                   | a field slice exactly one substitution away from the subject                                                                                        | `substitutedWindows`                         |
 | `correction` / `corrected` | the fixed query a rescue scores; `MatchResult.corrected` carries it in the caller's casing                                                          | `prepareCorrection`, tier `"corrected"`      |
+| `short`                    | a query with no word of five characters or more; inside `correctSubject`, a corrected word under five characters                                    | `isShortQuery`, `MIN_TYPO_QUERY_LENGTH`      |
+| `fallback`                 | a short query's correction, offered only when nothing matches the query as typed                                                                    | `isShortQuery` in `search.ts`                |
+| `cutoff`                   | the literal-hit count (ten, or `limit` if lower) at which the searcher stops trying corrections, with or without a limit                            | `RESCUE_CUTOFF`                              |
+| `limit`                    | the caller's cap on returned results; the capped results equal slicing the uncapped ones                                                            | `SearchOptions.limit`                        |
 | `fold`                     | the per-code-point, length-preserving case/diacritic mapping                                                                                        | `normalise.ts`                               |
 | `unfold`                   | the fold's inverse, folded char → every source code point, for gating un-normalised text                                                           | `unfold.ts`                                  |
 | `boundary`                 | any non-word character; one definition everywhere                                                                                                   | `boundaries.ts`                              |
@@ -47,13 +51,13 @@ Schemes the code follows deliberately; new code joins them.
 - **Bigram halves** carry the `Lo`/`Hi` suffix; field-side sets are `bigrams*`, query-side requirements are `required*`; the per-field accumulator keeps bare `{ lo, hi }` (`FieldBigrams`).
 - **Tier probes** in match.ts are `<name>Tier(…): MatchResult | null`; `fuzzyMatch` (public) and `fuzzyChainMatch` (a chain scorer, not a rung probe) are the deliberate exceptions.
 - **Ends are exclusive** in bare locals (`end`, `chunkEnd`, `wordEnd`, the JS slice idiom); inclusive ends exist only inside `Range` tuples and are always destructured `[start, end]`.
-- **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`), a domain verb (`admitsChunk`), or `hits*` for a threshold test (`hitsRescueFloor`).
-- **`*Occurrence`** returns an index or -1 (`boundaryOccurrence`, `wholeWordOccurrence`).
+- **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`, `isShortQuery`, `isUnbeatableCorrection`) or a domain verb (`admitsChunk`).
+- **`*Occurrence`** returns an index or -1 (`boundaryOccurrence`, `wordStartOccurrence`).
 - **`build*` constructs fresh** per-query state (`buildFuzzyGate`, `buildRescueVariants`); **`prepare*` constructs caller-cached state** (`prepareQuery`, `prepareCorrection`); noun and `*Of` accessors may memoise transparently (`unfoldTable`, `wordStartsOf`).
-- **`prefer*`** names an asymmetric selection and its parameters carry the policy: `preferCheaper(incumbent, challenger)` keeps the incumbent on ties unless it is fuzzy.
+- **`prefer*`** names an asymmetric selection and its parameters carry the policy: `preferBetter(incumbent, challenger)` keeps the incumbent on ties unless it is fuzzy.
 - **Raw/normalised pairs** always travel in `(raw, normalised)` order and take `raw*`/`normalised*` names when both are in scope.
 - **Single letters** are for loop counters (`i`, `f`, `k`, `b`) and two-line comparators (`a`, `b`); everything else gets a word.
-- **`SCREAMING_CASE`** for tuning constants (`SCORES`, `CHUNK_SCORES`, `DENSITY_FLOOR`, `TYPO_PENALTY`, `RESCUE_BUDGET`).
+- **`SCREAMING_CASE`** for tuning constants (`SCORES`, `CHUNK_SCORES`, `DENSITY_FLOOR`, `TYPO_PENALTY`, `RESCUE_CUTOFF`).
 - **EU spelling** in identifiers and prose alike (`normaliseText`, `NORMALISED_EXACT`); only platform builtins keep theirs (`String.prototype.normalize`).
 
 ## File map
@@ -64,7 +68,7 @@ One concern per file.
 | ------------- | -------------------------------------------------------------------- |
 | index.ts      | the public surface                                                   |
 | types.ts      | the public types                                                     |
-| scores.ts     | the tier ladder's constants and the typo surcharge                   |
+| scores.ts     | the tier ladder's constants and the typo penalty                     |
 | boundaries.ts | word semantics: the char class, tokenisation, the boundary predicate |
 | normalise.ts  | the 1:1 fold, and the fused raw-field scan built on it               |
 | unfold.ts     | the fold's inverse table for the raw gate                            |

@@ -1,22 +1,31 @@
-import { buildRawGate, buildRescueBigramGate, charMask } from "./gates";
+import { isBoundaryChar } from "./boundaries";
+import { buildRawGate, buildRescueBigramGate, buildWordStartRawGate, charMask } from "./gates";
 import { matchField, prepareQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
-import { isRescuableQuery } from "./rescue";
+import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
-import type { FieldSpec, FuzzyResult, FuzzySearcher, MatchOptions, MatchResult } from "./types";
+import type {
+	FieldSpec,
+	FuzzyResult,
+	FuzzySearcher,
+	MatchOptions,
+	MatchResult,
+	SearchOptions,
+} from "./types";
 
 const { MAX_SAFE_INTEGER } = Number;
 
 // Ten because that is the slice a picker shows, and the cutoff the published
 // MRR uses; a correction that cannot reach the top ten is work no caller can
 // observe through the ranking (@see docs/benchmarks.md).
-const RESCUE_BUDGET = 10;
-
-// One character cannot narrow a collection: at 100k items "e" admits 85,781 of
-// them and allocates ~27 MB of results no caller can use.
-const MIN_QUERY_LENGTH = 2;
+const RESCUE_CUTOFF = 10;
 
 const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score - b.score;
+
+const endsOnWordBoundary = (normalisedField: string, ranges: [number, number][]): boolean => {
+	const after = (ranges.at(-1)?.[1] ?? -1) + 1;
+	return after >= normalisedField.length || isBoundaryChar(normalisedField[after]);
+};
 
 // matchField returns fresh Range tuples per call, so mutating in place is safe.
 const shiftRanges = (ranges: [number, number][], lead: number): void => {
@@ -28,6 +37,9 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 
 /**
  * Score one string against a query. Returns { score, tier, ranges } or null.
+ *
+ * Judges the string on its own: a searcher over a list can return fewer
+ * corrections than this does per item (see createFuzzySearch).
  */
 export const fuzzyMatch = (
 	text: string,
@@ -73,8 +85,12 @@ const resolveFieldSpecs = <T>(
 /**
  * Creates a fuzzy search function for a collection.
  *
- * Queries shorter than two characters return no results — one character matches
- * most of any real collection and ranks none of it.
+ * Results are sorted best first; within a score, a match that ends on a word
+ * boundary comes first, then list order.
+ * A one-character query matches only where it starts a word: anywhere, it
+ * matches most of any real collection and ranks none of it.
+ * A query under five characters is corrected only when no item matches it as
+ * typed, and no correction is tried once ten items match literally.
  * An empty spec array is honoured as written: the searcher has no searchable
  * fields and every query returns no results.
  *
@@ -121,7 +137,7 @@ export function createFuzzySearch<T>(
 	let leads: Int32Array | null = null;
 
 	// The one structure that knows something about every item, so the one that
-	// costs a whole-list pass. Single-word literal gating runs against the
+	// needs a whole-list pass. Single-word literal gating runs against the
 	// caller's own strings instead, so unless the caller asks for it up front, it
 	// is built by the first multi-word query or rescue, and never for a session
 	// of single words that all match literally.
@@ -172,9 +188,9 @@ export function createFuzzySearch<T>(
 	// previous survivors need rescanning. Sound because every filter is monotone
 	// under query extension — an item the shorter query rejected stays rejected —
 	// and the cached set is always a GATE-passing set of the same gate kind; the
-	// match set itself is not monotone (a field can match "fox brown" via the
-	// multi-word tier while failing "fox brow"). The two lists double-buffer so
-	// the query path stays allocation-free.
+	// match set itself is not monotone (a field can match "borw" as a corrected
+	// "brow" while failing "bor", which is too short to correct). The two lists
+	// double-buffer so the query path stays allocation-free.
 	const survivorCache = {
 		query: "",
 		multiWord: false,
@@ -183,9 +199,14 @@ export function createFuzzySearch<T>(
 		count: 0,
 	};
 
-	const search = (query: string): FuzzyResult<T>[] => {
+	const search = (query: string, options: SearchOptions = {}): FuzzyResult<T>[] => {
+		const { limit } = options;
+		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
+			throw new RangeError(`limit must be a positive integer, got ${limit}`);
+		}
 		const normalisedQuery = normaliseText(query);
-		if (normalisedQuery.length < MIN_QUERY_LENGTH) return [];
+		if (normalisedQuery.length === 0) return [];
+		const singleChar = normalisedQuery.length === 1;
 
 		const prepared = prepareQuery(query, normalisedQuery);
 		const { queryMask } = prepared;
@@ -195,17 +216,27 @@ export function createFuzzySearch<T>(
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
 		let survivorCount = 0;
-		let results: FuzzyResult<T>[] = [];
-		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_BUDGET
+		// Within a score, a match that ends on a word boundary ranks first: "will"
+		// means "Will Smith" before "Willa". Kept as two lists joined ahead of the
+		// stable sort, so ordering adds no work per comparison.
+		let boundaryEndMatches: FuzzyResult<T>[] = [];
+		let midWordMatches: FuzzyResult<T>[] = [];
+		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_CUTOFF
 		// literal hits sit at or below SCORES.CONTAINS (2) no correction can reach
 		// the page — the rescue becomes provably invisible work. Fuzzy hits score
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
 
-		const scoreItem = (i: number, mayRescue: boolean, preGated = false): void => {
+		const scoreItem = (
+			i: number,
+			mayRescue: boolean,
+			preGated: boolean,
+			literalOnly: boolean,
+		): void => {
 			materialise(i);
 			const base = i * specCount;
 			let bestScore = MAX_SAFE_INTEGER;
+			let bestEndsWord = false;
 			let fields: (MatchResult | null)[] | null = null;
 
 			for (let f = 0; f < specCount; f++) {
@@ -218,23 +249,29 @@ export function createFuzzySearch<T>(
 					spec.acronym,
 					mayRescue,
 					preGated,
+					literalOnly,
 				);
 				if (result) {
+					const endsWord = endsOnWordBoundary(normalisedFields[base + f] as string, result.ranges);
 					// Fresh object per matchField call, so the atBest shift can mutate.
 					result.score += spec.atBest;
 					if (leads !== null) {
 						const lead = leads[base + f];
 						if (lead) shiftRanges(result.ranges, lead);
 					}
+					if (result.score < bestScore) bestEndsWord = endsWord;
+					else if (result.score === bestScore) bestEndsWord ||= endsWord;
 					bestScore = Math.min(bestScore, result.score);
+					// The literal is faster than new Array().fill(), and runs once per result.
+					if (specCount === 1) fields = [result];
 					// oxlint-disable-next-line unicorn/no-new-array
-					(fields ??= new Array(specCount).fill(null))[f] = result;
+					else (fields ??= new Array(specCount).fill(null))[f] = result;
 				}
 			}
 
 			if (fields) {
 				if (bestScore <= SCORES.CONTAINS) literalHits++;
-				results.push({ item: list[i], score: bestScore, fields });
+				(bestEndsWord ? boundaryEndMatches : midWordMatches).push({ item: list[i], score: bestScore, fields });
 			}
 		};
 
@@ -245,7 +282,7 @@ export function createFuzzySearch<T>(
 
 		// Every field the ladder can match outright, none of the near-misses only
 		// a correction reaches.
-		const literalPass = (): void => {
+		const literalPass = (literalOnly: boolean): void => {
 			if (narrowed) {
 				// The gate runs out here because its verdict is what shrinks the
 				// cached set for the next keystroke; `preGated` stops matchField
@@ -261,13 +298,17 @@ export function createFuzzySearch<T>(
 					}
 					if (!admitted) continue;
 					survivors[survivorCount++] = i;
-					scoreItem(i, false, specCount === 1);
+					scoreItem(i, false, specCount === 1, literalOnly);
 				}
 				return;
 			}
 			// The presence gate has no raw-text form yet, so multi-word queries
 			// take the mask path.
-			const gate = unionIndex === null && !multiWord ? buildRawGate(normalisedQuery) : null;
+			const gate = singleChar
+				? buildWordStartRawGate(normalisedQuery)
+				: unionIndex === null && !multiWord
+					? buildRawGate(normalisedQuery)
+					: null;
 			if (gate === null) {
 				// A superset of what the gate admits, so caching these survivors
 				// keeps the narrowing sound.
@@ -275,7 +316,7 @@ export function createFuzzySearch<T>(
 				for (let i = 0; i < count; i++) {
 					if ((queryMask & ~masks[i]) !== 0) continue;
 					survivors[survivorCount++] = i;
-					scoreItem(i, false);
+					scoreItem(i, false, false, literalOnly);
 				}
 				return;
 			}
@@ -287,7 +328,7 @@ export function createFuzzySearch<T>(
 				}
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
-				scoreItem(i, false);
+				scoreItem(i, false, false, literalOnly);
 			}
 		};
 
@@ -296,7 +337,8 @@ export function createFuzzySearch<T>(
 		const relaxedPass = (): void => {
 			const { masks, bigramsLo, bigramsHi } = (unionIndex ??= buildUnionIndex());
 			const bigramGate = buildRescueBigramGate(normalisedQuery);
-			results = [];
+			boundaryEndMatches = [];
+			midWordMatches = [];
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
 				if (missingClasses & (missingClasses - 1)) continue;
@@ -312,7 +354,7 @@ export function createFuzzySearch<T>(
 						continue;
 					}
 				}
-				scoreItem(i, true);
+				scoreItem(i, true, false, false);
 			}
 		};
 
@@ -328,16 +370,32 @@ export function createFuzzySearch<T>(
 			}
 		};
 
-		literalPass();
+		// Fuzzy and corrected matches score above SCORES.CONTAINS, so once `limit`
+		// items match literally none of them can reach the page.
+		literalPass(limit !== undefined);
+		if (limit !== undefined && literalHits < limit) {
+			boundaryEndMatches = [];
+			midWordMatches = [];
+			literalHits = 0;
+			for (let k = 0; k < survivorCount; k++) scoreItem(survivors[k], false, false, false);
+		}
 		// A correction can only matter while fewer than a page of literal hits
-		// exist; below that the near-misses have to be looked at.
-		const rescuing = rescuable && literalHits < RESCUE_BUDGET;
+		// exist; below that the near-misses have to be looked at. A short query's
+		// correction only stands in for a missing match (see isShortQuery).
+		const rescuing =
+			rescuable &&
+			(isShortQuery(normalisedQuery, prepared.queryWords)
+				? boundaryEndMatches.length + midWordMatches.length === 0
+				: literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF));
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
-		// the next query starts from a full pass.
+		// the next query starts from a full pass. Nor can a single character's
+		// word-start set: the next keystroke may match mid-word.
 		if (rescuing) relaxedPass();
-		commitSurvivorCache(!rescuing);
+		commitSurvivorCache(!rescuing && !singleChar);
 
-		return results.sort(sortByScore);
+		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
+		if (limit !== undefined && results.length > limit) results.length = limit;
+		return results;
 	};
 
 	const buildIndex = (): void => {

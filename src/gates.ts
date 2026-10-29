@@ -79,6 +79,17 @@ export const buildRawGate = (normalisedQuery: string): RegExp | null => {
 };
 
 /**
+ * `buildRawGate` for a one-character query, which matches only where it starts
+ * a word. Null when the unfold table doesn't cover the character.
+ */
+export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null => {
+	const sources = unfoldTable()[normalisedQuery];
+	return sources === undefined
+		? null
+		: new RegExp(`(?<![${WORD_CHARS}])[${escapeCharClass(sources)}]`, "u");
+};
+
+/**
  * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for
  * a–z, bits 26–29 for digits (bucketed), bits 30–31 for non-ASCII (bucketed);
  * separators are skipped so they are never required of the field. Query and

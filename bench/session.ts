@@ -1,7 +1,7 @@
 /**
  * The workload we actually optimise for: construct, one cold query, two hot
  * ones. Reported as a total, because that is what the caller waits for — a
- * build that pays for itself in four queries never pays for itself here.
+ * build that four queries make worthwhile is never worthwhile here.
  *
  * One library per process, one observation each, median over repetitions: cold
  * happens once per process and cannot be sampled any other way.
@@ -27,8 +27,8 @@ const LIBRARIES = ["ekrina", "uFuzzy"];
 
 // Same words in both corpora so the cells compare: `marble` and `cotton` each
 // occur ~1,500 times in either. A repeated query is not a wasted cell — it is
-// what a caller re-rendering the same term pays, and it isolates the hot path
-// from the narrowing the typed sequence gets for free.
+// what a caller re-rendering the same term waits for, and it isolates the hot path
+// from the narrowing the typed sequence gets.
 const SEQUENCES: [string, string[]][] = [
 	["3ch of a 6ch word", ["mar", "mar", "mar"]],
 	["the 6ch word", ["marble", "marble", "marble"]],
