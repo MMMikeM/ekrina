@@ -5,9 +5,7 @@
  * axis, which is how a row comes to be timed but never scored.
  *
  * Base rows are library defaults, so a base cell is what `npm install` gives
- * you. Fuse is the exception, on both of its recall knobs, because its defaults
- * are not its strongest configuration — see FUSE_BASE. "(all opts)" rows are
- * the base plus every optional matching feature.
+ * you. "(all opts)" rows are the base plus every optional matching feature.
  */
 import uFuzzy from "@leeoniya/ufuzzy";
 import microfuzzModule from "@nozbe/microfuzz";
@@ -42,14 +40,7 @@ export type Config = {
 	stateful?: boolean;
 };
 
-// Two departures from Fuse's defaults, both because the defaults measure worse
-// on every axis this suite publishes. `ignoreLocation` off decays the score
-// with distance from index 0, a positional handicap rather than a matching one;
-// `threshold` at its default 0.6 lowers ascii MRR (0.61 -> 0.58), runs 49%
-// slower, and returns 6951 of 10000 items for the 5-char `prefix` probe.
-export const FUSE_BASE: IFuseOptions<string> = { ignoreLocation: true, threshold: 0.4 };
 const FUSE_ALL: IFuseOptions<string> = {
-	...FUSE_BASE,
 	ignoreDiacritics: true,
 	includeMatches: true,
 	// Space-separated terms become an AND of fuzzy patterns matched in any
@@ -301,11 +292,11 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js",
 		make: () => {
-			const fuse = new Fuse(list, FUSE_BASE);
+			const fuse = new Fuse(list);
 			return {
 				count: (q) => fuse.search(q).length,
 				probe: (q) => rankedOnly(fuse.search(q).map((r) => r.item)),
-				index: () => consume(new Fuse(list, FUSE_BASE)),
+				index: () => consume(new Fuse(list)),
 			};
 		},
 	},
