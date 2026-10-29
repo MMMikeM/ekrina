@@ -25,7 +25,7 @@ flowchart TD
 
 Every published cell is reproducible from the artifact, and the artifact is committed, so a number that moves is a reviewable diff.
 
-## Inside the cold stage: process-cold by construction
+## Inside the cold stage
 
 ```mermaid
 flowchart TD
@@ -51,7 +51,7 @@ flowchart TD
 ```
 
 Nothing warm-loops.
-The JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty because the process is new, no cache busting, no subtraction, no calibration blind spots.
+The JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty because the process is new, so the stage needs no cache busting or subtraction and has no calibration blind spot.
 
 ## What each cell means
 
@@ -59,7 +59,7 @@ The JIT, every per-searcher cache, and every process-wide cache (fuzzysort's pre
 flowchart LR
     subgraph oneshot ["one child's timeline"]
         direction LR
-        A["parse<br/>(untimed)"] --> B["index<br/>constructor"] --> C["first answer<br/>(batch: warmup match)"] --> D["probes 1 … 20<br/>(batch test only)"]
+        A["parse<br/>(untimed)"] --> B["index<br/>constructor"] --> C["first answer<br/>(batch: warmup match)"] --> D["24 queries<br/>(batch test only)"]
     end
 
     B -->|"index ms"| I[("index")]
@@ -68,10 +68,11 @@ flowchart LR
     C & D -->|"total · first · rest-mean"| BA[("batch")]
 ```
 
-- **index**, what the constructor builds: fast-fuzzy's trie is expensive here, ekrina allocates buffers, fuzzysort has no constructor at all.
-- **cold query**, the first answer, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per probe kind.
-- **one-shot**, index + first answer summed inside one child's consecutive windows: the whole price of "given a list, get an answer".
-- **batch**, a short-word warmup match, then the 24 distinct probes once each through one process: the realistic session, and the only warmth anywhere (earned by real queries, never repetition). The warmup absorbs JIT and first-scan cost; each probe's own post-warmup time feeds the per-probe tables' `batch ms` column.
+- **index**, what the constructor builds: fast-fuzzy's trie is slow to build here, ekrina allocates buffers, fuzzysort has no constructor at all.
+- **cold query**, the first answer, before any lazy slice has run: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per timed query.
+- **one-shot**, index + first answer summed inside one child's consecutive windows, the whole time "given a list, get an answer" takes.
+- **batch**, a short-word warmup match, then the 24 distinct probes once each through one process: the realistic session, and the only warmth anywhere.
+  The warmup absorbs JIT and first-scan time; each probe's own post-warmup time feeds the per-probe tables' `batch ms` column.
 
 ## Where each published table draws from
 

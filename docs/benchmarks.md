@@ -1,4 +1,4 @@
-# Benchmarks: match quality and speed
+# Match quality and speed benchmarks
 
 Full data behind the README's summary: what each library calls a match, where it ranks the right answer, and how long a query takes.
 Every measured table below is generated, and `pnpm bench` regenerates all of them: it measures, writes [`bench/results.json`](../bench/results.json), rewrites each table in place, and redraws the Pareto charts.
@@ -7,7 +7,8 @@ No measured cell in this document is typed by hand.
 - `pnpm bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
 - `pnpm bench --check` exits nonzero if any table here disagrees with `results.json`.
 - `pnpm bench --speed`, `pnpm bench --quality` and `pnpm bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 1).
-- `pnpm bench --scope=mixed-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable). A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor this document is touched.
+- `pnpm bench --scope=mixed-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable).
+  A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor this document is touched.
 
 The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; run it with `pnpm --filter=ekrina-bench test`.
 Improvements to the benchmarks are welcome.
@@ -34,7 +35,7 @@ Feature coverage first; each cell is verified against the library's current sour
 
 🔴 not supported
 
-Size and type, by bundle size ascending.
+Size and type, Ekrina first, then by bundle size ascending.
 
 <!-- bench:libraries -->
 | Library          | Gzip    | Deps | Type                 |
@@ -50,12 +51,13 @@ Size and type, by bundle size ascending.
 <!-- bench:end -->
 
 An "(all opts)" row in the corpus tables shares its base library's size, deps, and type.
-Ekrina's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only matching opt-in, so the honest name is the specific one.
+Ekrina's opt-in row is labelled **(acronym)** instead: `acronym: true` is its only matching opt-in, so the row is named after it.
 The specific opt-ins the "(all opts)" rows switch on, and where output formats differ:
 
 - `Ekrina`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier, a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
 - `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Ekrina's one-edit rescue
-- `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order, the same result set Ekrina's multi-word tier returns. Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
+- `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order, the same result set Ekrina's multi-word tier returns.
+  Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
 - `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalisation doesn't strip accents
 - `fuzzy`: its "ranges" are a pre-wrapped string, not numeric indices
 
@@ -66,16 +68,17 @@ A base row is the library's own defaults, with two departures, both for Fuse, an
 
 ## How to read these numbers
 
-The methodology lives here, once; the result sections point back to it instead of re-explaining.
+### One measurement model
 
-### One measurement model: process-cold
-
-Every time cell in this document comes from [`bench/run.ts`](../bench/run.ts): a **fresh node process per sample**, so the JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty by construction, nothing is reconstructed by arithmetic, and no harness state can leak between cells.
+Every time cell in this document comes from [`bench/run.ts`](../bench/run.ts): a _fresh node process per sample_, so the JIT, every per-searcher cache, and every process-wide cache (fuzzysort's prepare pool) start empty by construction, nothing is reconstructed by arithmetic, and no harness state can leak between cells.
 Each child times:
 
-- **index** = the constructor call, whatever the configuration builds there (uFuzzy (all opts) latinizing the haystack included; fuzzysort has no constructor at all, so its prepare-all pass lands in its first query, which is where a real user meets it).
-- **cold query** = the first answer to one representative query, every lazy slice unpaid: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all. Six families are timed this way (short word, phrase, substitution, prefix, acronym, garbage), one path through a matcher each.
-- **batch** = one process answering a short-word warmup match (like `grady`: guaranteed literal hit, absorbs the JIT and the first full scan) and then every family's representative query, once each: the realistic session. Warmth here is earned only by answering distinct real queries, no query is ever repeated, anywhere in the harness. The batch reports its total, the warmup (`first`), the mean of the 24 queries after it (`batch/query`), and each query's own post-warmup time, kept in `results.json`.
+- **index** = the constructor call, whatever the configuration builds there (uFuzzy (all opts) running `latinize()` over the haystack included; fuzzysort has no constructor at all, so its prepare-all pass lands in its first query, which is where a real user meets it).
+- **cold query** = the first answer to one representative query, before any lazy work has run: Ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all.
+  Six families are timed this way (short word, phrase, substitution, prefix, acronym, garbage), one path through a matcher each.
+- **batch** = one process answering a short-word warmup match (like `grady`: guaranteed literal hit, absorbs the JIT and the first full scan) and then every family's representative query, once each: the realistic session.
+  The process warms up only by answering distinct real queries, no query is ever repeated, anywhere in the harness.
+  The batch reports its total, the warmup (`first`), the mean of the 24 queries after it (`batch/query`), and each query's own post-warmup time, kept in `results.json`.
 - **one-shot** = constructor + first answer, summed inside one child's consecutive windows: the whole of "given a list, get an answer".
 
 The JIT is included deliberately.
@@ -86,25 +89,25 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 
 ### Timing method
 
-**Medians across fresh processes, published; minimums kept.**
 Timing noise is one-sided (GC, scheduler, and thermal interruptions only ever _add_ time), so the median across processes rejects spikes; the per-cell minimum, the noise-free floor, stays in [`bench/results.json`](../bench/results.json) but is never the headline, because best-of-N flatters.
-One process per cell is the default (`pnpm bench --runs=N` raises it): every number is milliseconds-scale under this model, and the small timed set keeps a whole run near four minutes, which is what makes rerunning on a quiet machine cheap.
+One process per cell is the default (`pnpm bench --runs=N` raises it): every number is milliseconds-scale under this model, and the small timed set keeps a whole run near four minutes, which is what makes rerunning on a quiet machine quick.
 A single cell is ~15% noisy at one process; the guards below look at sums for that reason.
 
-Four guards keep a run honest:
-result counts must be identical across a cell's processes (a variant whose answer drifts is not timing comparable work);
-variant order rotates per repetition so thermal and load drift land evenly instead of on whichever library ran last;
-base Ekrina measuring more than 10% slower than its strictly-more-code acronym configuration, summed over every cell, fails the run outright (more code cannot be faster, a violated invariant means absorbed load, and the artifact is not written);
-and the first cell is re-timed after the last as a drift canary.
+The guards:
+
+- Result counts must be identical across a cell's processes (a variant whose answer drifts is not timing comparable work).
+- Variant order rotates per repetition so thermal and load drift land evenly instead of on whichever library ran last.
+- Base Ekrina measuring more than 10% slower than its strictly-more-code acronym configuration, summed over every cell, fails the run outright (more code cannot be faster, a violated invariant means absorbed load, and the artifact is not written).
+- The first cell is re-timed after the last as a drift canary.
 
 Numbers are expected to vary per machine: swapping between a Mac ARM host and an AMD x64 showed subtly different relative results.
 
 ### The corpus and the query families
 
 Two seeded [Faker](https://github.com/faker-js/faker) corpora, benched separately: **ascii** (en locale, effectively no diacritics) and **mixed** (mostly en with every 7th item from fr/pl generators, ~5% of items carry a diacritic, a realistic international dataset; items are ~97% unique at 10k, faker repeats a few names).
-Both are frozen JSON snapshots (`bench/corpus-*.json`), so runs do no generation work and the data can't drift when faker changes between versions; regenerating them is a deliberate act ([`bench/corpus-gen.test.ts`](../bench/corpus-gen.test.ts)) that rewrites history for every rank table here.
+Both are frozen JSON snapshots (`bench/corpus-*.json`), so runs do no generation work and the data can't drift when faker changes between versions; regenerating them is a deliberate act ([`bench/corpus-gen.test.ts`](../bench/corpus-gen.test.ts)) that changes every rank table here.
 
-Each query runs against the same 10,000 items in every library, and each library is scored on three things:
+Each query runs against the same 10,000 items in every library, and for each library the bench records:
 
 - **Where it ranks a right answer.**
   A query's right answers are every item it could have meant ("Match quality, by query family" says how they are decided), and the score is the rank of the first one.
@@ -112,24 +115,27 @@ Each query runs against the same 10,000 items in every library, and each library
   Scoring uses the mean reciprocal rank (average of `1/rank`), **MRR** from here on, a bounded score ranging from 0 to 1.
   A rank 1 match gets a score of 1, rank 2 gets 0.5, rank 5 gets 0.2 and rank 10 gets 0.1; a rank outside the top 10, like a miss, gets 0.
 - **How many items it returns.**
-  This is reported as a _diagnostic_, not a score. If 50% of the corpus is returned as a potential match, it's easy to guarantee that the true match exists.
-  However this is not a meaningful quality axis: any ranked list can be sliced to the top N, many of these libraries even provide a limit or threshold option. Junk results do no harm if they're never considered.
+  This is reported as a _diagnostic_, not a score.
+  If 50% of the corpus is returned as a potential match, it's easy to guarantee that the true match exists.
+  However this is not a meaningful quality axis: any ranked list can be sliced to the top N, many of these libraries even provide a limit or threshold option.
+  Junk results aren't able to do any harm if they're never considered.
 - **The duration taken to run the query.**
   Times spread three orders of magnitude on the same query (0.02 ms to ~40 ms at 10k), and search-as-you-type multiplies the spread: one query per keystroke, where 0.02 ms is invisible and 40 ms blows the frame budget.
 
-Three rules picked the query set; none of them is "ekrina looks good here".
+The rules that picked the query set:
 
 - **Every query is derived from the corpus.**
   A family is a fixed rule for turning an item into a query: its first word, its first two words reversed, its first word with one character substituted, its initials, and so on ([`bench/corpus.ts`](../bench/corpus.ts)).
   Each family samples ten items from a fixed shuffle of the whole list, so sources come from every position rather than the head, where a list-order tie-break would favour them.
-  A corrupted query that is itself a corpus word is skipped: it would be a correct query, not a typo.
+  A corrupted query that is itself a corpus word is skipped, since it would be a correct query.
   Change the corpus snapshot and every query changes with it.
-- **One family per matching behaviour, including the ones ekrina loses.**
+- **One family per matching behaviour, including the ones Ekrina loses.**
   The table below names each family and what it isolates.
 - **Graded degradation instead of a pass/fail cliff.**
   The three scatter families mutilate a source word in steps (drop one middle char, drop every third, keep every other) because a single scattered query only says who passes it; the gradient locates each engine's _effective fuzzy limit_, which is the actual design difference between the chain matchers, the typo engines, and uFuzzy's no-gaps default.
-  The heavy step is deliberately past any sane threshold: an engine that still "matches" there is reporting noise tolerance, not typo tolerance.
-  Three further families degrade a source word along a different axis: a **transposition** (two adjacent chars swapped), an **insertion** (a doubled keystroke), and a **substitution** (one wrong character, chosen to be absent from the source so it also removes a character class). All three keep the query close to the source but break the subsequence property, so no subsequence chain can represent them: they separate the engines that model edits from the engines that model subsequences.
+  The heavy step is deliberately past any sane threshold: an engine that still "matches" there is matching noise.
+  Three further families degrade a source word along a different axis: a **transposition** (two adjacent chars swapped), an **insertion** (a doubled keystroke), and a **substitution** (one wrong character, chosen to be absent from the source so it also removes a character class).
+  All three keep the query close to the source but break the subsequence property, so no subsequence chain can represent them: they separate the engines that model edits from the engines that model subsequences.
   The scatter-light family is the fourth single-character edit, a **deletion**, which does stay a subsequence and so is reachable without any rescue.
 
 The families, each with the representative query the speed tables time and the batch answers (from the mixed corpus):
@@ -138,15 +144,15 @@ The families, each with the representative query the speed tables time and the b
 | ----- | ----------------------------- | ------------------------------ | ----------------------------------------------------- |
 | 1     | long single word              | `ergonomic`                    | baseline agreement; rank on a common word             |
 | 2     | short single word             | `grady`                        | low-signal input, fewer chars for gates and chunking  |
-| 3     | two-word phrase               | `handcrafted wooden`           | tokenization (in corpus order: any engine can pass)   |
+| 3     | two-word phrase               | `handcrafted wooden`           | tokenisation (in corpus order: any engine can pass)   |
 | 4     | two words, reversed           | `wooden handcrafted`           | true order-independence, substring engines get 0      |
 | 5     | reversed, second half-typed   | `woo handcrafted`              | a phrase mid-keystroke: word starts, not whole words  |
 | 6     | two words, space forgotten    | `handcraftedwooden`            | a phrase typed as one word                            |
 | 7     | two words plus one absent     | `handcrafted wooden ergonomic` | AND vs OR over query words (unscored)                 |
 | 8     | two words, first mistyped     | `handcxafted wooden`           | a typo inside a phrase; word-level rescue             |
-| 9     | two words, second mistyped    | `handcrafted wooxen`           | the rescue must find the failing word, not assume it  |
+| 9     | two words, second mistyped    | `handcrafted wooxen`           | the rescue must find the failing word                 |
 | 10    | reversed phrase, one mistyped | `wooden handcxafted`           | the correction must survive order-independence        |
-| 11    | two words, both mistyped      | `handcxafted wooxen`           | two edits: refusal beats guessing (unscored)          |
+| 11    | two words, both mistyped      | `handcxafted wooxen`           | two edits: 0 rows is correct (unscored)               |
 | 12    | plural typed, singular stored | `romanowskis`                  | a trailing `-s` the corpus lacks, one deletion        |
 | 13    | four-character typo           | `anxe`                         | corrected only when nothing matches as typed          |
 | 14    | prefix / partial word         | `auxen`                        | a word not yet finished                               |
@@ -172,13 +178,15 @@ MRR averages the 21 scored families, ten queries each, so it rests on 210 querie
 <!-- bench:end -->
 
 Measured on the mixed corpus (process-cold constructor timings; build time barely differs between corpora).
-Fuse.js's minimal build is the flip side of its slow queries: its "index" is trivial and the work is deferred to query time.
-fast-fuzzy's trie is the opposite trade: the heaviest build in the set is what its subtree pruning needs.
+Fuse.js's build is minimal because its "index" is trivial, and the work it defers to query time is why its queries are slow.
+fast-fuzzy's trie is the heaviest build in the set, and its subtree pruning needs it.
 fuzzysort has no constructor at all, so it has no column here, its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually meets it.
-uFuzzy's ~4 ms base construction is a process-cold discovery of its own: `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction takes 0.03 ms), so "keeps no index" is true per item but not per process, the base cell is near-identical at 10k and 100k, which is the proof it never touches the list; the (all opts) column shown here also latinizes the haystack, which is why it grows with the corpus (4.5 → 8.2 ms).
-microfuzz's column is its whole index: the constructor normalises every item and builds its word sets up front, so nothing is left for the first search to pay (the memory table below gains 0.05 MB on its first query, and its 10k cold query, 1.64 ms, sits close to its 1.12 ms batch/query).
+uFuzzy's ~4 ms base construction only shows up process-cold, because `new uFuzzy()` compiles the engine's regex machinery on first construction (a second construction takes 0.03 ms).
+So "keeps no index" is true per item but not per process, and the base cell is near-identical at 10k and 100k, which is the proof it never touches the list.
+The (all opts) column shown here also runs `latinize()` over the haystack, which is why it grows with the corpus (5.2 → 9.3 ms).
+microfuzz's column is its whole index: the constructor normalises every item and builds its word sets up front, so nothing is left for the first search to do (the memory table below gains 0.05 MB on its first query, and its 10k cold query, 1.56 ms, sits close to its 1.41 ms batch/query).
 Ekrina's constructor only allocates - field text is trimmed, normalised and masked the first time an item survives a gate - so a 100k list swap takes about a millisecond, and the first query then carries what construction deferred (its cold cells).
-Ekrina (indexed), the same searcher with its mask index built up front, moves the larger of those deferred costs into its constructor: 2.01 ms at 10k and 12.16 ms at 100k.
+Ekrina (indexed), the same searcher with its mask index built up front, moves the larger part of that deferred work into its constructor: 2.01 ms at 10k and 12.16 ms at 100k.
 
 ## Memory
 
@@ -206,7 +214,7 @@ What each configuration retains at 100k on the mixed corpus: `heapUsed + externa
 Each row is one fresh process ([`bench/memory.ts`](../bench/memory.ts)): the searcher is built, then answers `grady`, `qxzwkv` and `ergonomic` warm in that order, so each column includes every query before it.
 **dropped MB** is what is still retained once the searcher is unreachable and collected.
 Ekrina allocates its per-item caches empty at construction; `grady` prepares the items it matches (~0.5 MB), and `qxzwkv`, the first query to reach the one-edit rescue, adds the mask index's bigram arrays (~0.8 MB).
-Ekrina (indexed) pays for that index at construction instead (2.71 MB built), so `qxzwkv` adds only 0.02 MB.
+Ekrina (indexed) builds that index at construction instead (2.71 MB built), so `qxzwkv` adds only 0.02 MB.
 fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, which is process-wide and unevicted, so its **dropped** column equals its footprint until you call `cleanup()`.
 Every other library gives its index back, leaving under 0.2 MB.
 The ascii cells, in [`bench/results.json`](../bench/results.json), tell the same story.
@@ -316,8 +324,8 @@ MRR reads mixed / ascii, and rows are each library's median rows returned on mix
 - **two-words-reversed** (`wooden handcrafted`): the order-independent engines (Ekrina, Fuse.js (all opts), uFuzzy (all opts), fuzzysort) keep 1.00; microfuzz scores 0.60 / 0.70, and fast-fuzzy, match-sorter and fuzzy 0.12 or less.
 - **two-words-partial-reversed** (`woo handcrafted`): the reversed phrase mid-keystroke.
   Ekrina's multi-word tier asks only that each query word start a word, so it keeps 1.00, as do uFuzzy (all opts) and fuzzysort; microfuzz, match-sorter and fuzzy score 0.10 or less.
-- **two-words-joined** (`handcraftedwooden`): the space forgotten.
-  A subsequence engine passes it for free (0.97–1.00), and uFuzzy (all opts) scores 0, since it allows no gap inside a term.
+- **two-words-joined** (`handcraftedwooden`): a phrase typed without its space.
+  Dropping the space leaves both words in order, so the subsequence engines pass it (0.97–1.00), and uFuzzy (all opts) scores 0, since it allows no gap inside a term.
 - **two-words-typo**, **-typo-second**, **-typo-reversed** (`handcxafted wooden`, `handcrafted wooxen`, `wooden handcxafted`): Ekrina, uFuzzy (all opts) and Fuse.js (all opts) score 0.97–1.00 on all three; fast-fuzzy takes the in-order two but scores 0.00 / 0.23 reversed, and the subsequence engines score 0 on all three.
   Ekrina corrects only the failing word, the words that do occur pinning the field, and returns a median of 1 row.
 
@@ -325,7 +333,7 @@ MRR reads mixed / ascii, and rows are each library's median rows returned on mix
 
 - **plural-to-singular** (`romanowskis`): a trailing `-s` the corpus lacks.
   Ekrina scores 0.97 / 1.00, uFuzzy (all opts) 1.00.
-  The subsequence engines reach 0.58–0.90 only by borrowing the `s` from a later word: fuzzysort finds `herzogs` as **Herzog**, **S**chultz and Nader.
+  The subsequence engines reach 0.58–0.90 only by matching the `s` in a later word: fuzzysort finds `herzogs` as **Herzog**, **S**chultz and Nader.
   Ekrina's one mixed loss is `hillls`, one edit from both "Hilll" and "Hills".
 - **short-word-typo** (`anxe`): a four-character typo, which Ekrina corrects only when nothing matches it as typed: 0.86 / 1.00, against fast-fuzzy's 0.95 / 0.86 from 77 rows and 0.31 or less for everything else.
   The mixed losses are `maxc`, where weak fuzzy chains such as "Fort **Max**ineside, **C**ape Verde" block the correction, and `kaxa`, one substitution from both "Kara" and "Kawa".
@@ -340,15 +348,17 @@ MRR reads mixed / ascii, and rows are each library's median rows returned on mix
 
 **Initials and accents**
 
-- **acronym** (`rsaw`): base Ekrina scores 0.34 / 0.30 and the acronym tier 0.91 / 0.90, from a median 4 rows. match-sorter (0.90 / 0.78) and fuzzysort (0.62 / 0.56) reach the initials as subsequence chains among 148 rows; Fuse.js and fast-fuzzy score 0.
-- **accent-stripped** (`kepa`): the folding engines score 1.00 on mixed. fast-fuzzy scores 0.78 / 0.60 through edit distance rather than folding, fuzzy 0.11 / 0.20 with no folding at all, and Fuse.js (all opts) 0.65 on ascii.
+- **acronym** (`rsaw`): base Ekrina scores 0.34 / 0.30 and the acronym tier 0.91 / 0.90, from a median 4 rows.
+  match-sorter (0.90 / 0.78) and fuzzysort (0.62 / 0.56) reach the initials as subsequence chains among 148 rows; Fuse.js and fast-fuzzy score 0.
+- **accent-stripped** (`kepa`): the folding engines score 1.00 on mixed.
+  fast-fuzzy scores 0.78 / 0.60 through edit distance rather than folding, fuzzy 0.11 / 0.20 with no folding at all, and Fuse.js (all opts) 0.65 on ascii.
 
 **Refusals** (unscored; 0 rows is correct)
 
 - **two-words-extra** (`handcrafted wooden ergonomic`): only fast-fuzzy returns anything, a median of 1 row on mixed and 2 on ascii.
 - **two-words-double-typo** (`handcxafted wooxen`): Ekrina and the subsequence engines return nothing; fast-fuzzy returns a median of 5 rows on mixed and 12 on ascii, Fuse.js (all opts) 2.
 
-### garbage: `qxzwkv`
+### garbage (`qxzwkv`)
 
 <!-- bench:probe-miss -->
 | Library          | matches | cold ms | vs `grady` |
@@ -361,12 +371,12 @@ MRR reads mixed / ascii, and rows are each library's median rows returned on mix
 | uFuzzy           |       0 |   0.808 |        73% |
 <!-- bench:end -->
 
-No rank column: every library correctly returns nothing, which is the only right answer.
+No rank column: every library correctly returns nothing.
 What separates them is how long that answer takes, shown against each library's own time for the short-word query `grady` (one that does match), so the column reads as "what fraction of a real query does a hopeless one take".
-Process-cold, this query inverts: Ekrina's miss takes _more_ time than its hit, and the reason is diligence, not waste.
-A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query, the same second pass that scores 0.96–0.99 on the single-edit typo families above.
-The engines with fast misses are fast because they never tried; uFuzzy's refusal and Ekrina's bring different amounts of certainty that nothing was there.
-The work also happens once per searcher, not per miss: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first thin query does it and the other twenty-three reuse it.
+Process-cold, Ekrina's miss takes _more_ time than its hit.
+A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query, the same second pass that scores 1.00 on the single-edit typo families above.
+The engines with the fastest misses are never trying to start with; bare uFuzzy's empty result covers only the query as typed, while Ekrina's also covers every one-edit correction of it.
+The work also happens once per searcher: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first query that needs the masks builds them and the other twenty-three reuse them.
 (The old warm harness showed the opposite ratio, 3%, because the masks were already built; both numbers are true, and the cold one is what a fresh searcher feels.)
 
 ## Scorecard
@@ -376,7 +386,7 @@ One line per configuration: MRR from [`bench/hits.test.ts`](../bench/hits.test.t
 **index ms** = the constructor call (from the batch cell's fresh processes).
 **cold ms** = the mean first-answer time across the six timed queries, each in its own fresh process.
 **batch ms** = one fresh process answering a short-word warmup match and then every family's representative query once, the realistic session, whole.
-**batch/query** = the mean of the 24 post-warmup queries: how long a query takes once the searcher has genuinely worked.
+**batch/query** = the mean of the 24 post-warmup queries: how long a query takes once the searcher has answered real queries.
 Which column matters depends on workload: search-as-you-type → **batch/query**; backend one-shot → index + cold ("One measurement model"'s one-shot); a first-keystroke budget → **cold**.
 
 **mixed corpus** (the query set above):
@@ -426,20 +436,23 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 Result-set size is _not_ a scorecard column: in a ranked UI any result list slices to the top N, so a large return does not hurt a picker (see "The corpus and the query families").
 Each family's median rows per library stay in [`bench/results.json`](../bench/results.json) for the places size does matter: filter-style UIs that show every match, and telling whether an MRR came from a selective matcher or from ranking a huge candidate set.
 
-_Ekrina (acronym) tops both corpora outright_ (0.90 mixed / 0.90 ascii), with base Ekrina and Ekrina (indexed) (0.87 / 0.87, identical ranks) next; the nearest non-Ekrina rows are Fuse.js (all opts) at 0.79 / 0.79 and uFuzzy (all opts) at 0.76 / 0.75.
+_Ekrina (acronym) tops both corpora_ (0.90 mixed / 0.90 ascii), with base Ekrina and Ekrina (indexed) (0.87 / 0.87, identical ranks) next; the nearest non-Ekrina rows are Fuse.js (all opts) at 0.79 / 0.79 and uFuzzy (all opts) at 0.76 / 0.75.
 The two Ekrina rows differ by one family: acronym, 0.34 base against 0.91 with the tier on, which is the whole of the gap.
-Read across the family tables, the lead comes from scoring near 1 on every family at once:
+Read across the family tables, the lead comes from scoring near 1 on every phrase, word and typo family at once:
 
 - **Phrases in any order, half-typed or mistyped**: Ekrina scores 1.00 on all six phrase families, as do Fuse.js (all opts) and uFuzzy (all opts) on five of them; the subsequence engines score 0 on every phrase typo, and fast-fuzzy 0.12 or less on the reversed ones.
-- **Words and single-edit typos**: Ekrina scores 1.00 on the plain-word families and on transposition, insertion and substitution, the edit-distance engines 0.85–1.00 on the typos, the chain engines 0.35 or less. Within a score a match that ends on a word boundary ranks first, so `will` finds "Will Smith" before "Willa Corkery", and a correction that completes a word before one that stops inside it.
+- **Words and single-edit typos**: Ekrina scores 1.00 on the plain-word families and on transposition, insertion and substitution, the edit-distance engines 0.85–1.00 on the typos, the chain engines 0.35 or less.
+  Within a score a match that ends on a word boundary ranks first, so `will` finds "Will Smith" before "Willa Corkery", and a correction that completes a word before one that stops inside it.
 - **Refusal**: Ekrina returns nothing on both unscored families, where fast-fuzzy's median double typo returns 5 rows on mixed and 12 on ascii.
 
-Two families go against Ekrina, and the family tables show by how much:
+The families where Ekrina trails:
 
-- **Scatter** (medium and heavy): 0.00–0.05, where match-sorter scores 0.67–0.95 and fuzzysort 0.28–0.90. Ekrina refuses a chain that sparse on purpose, since the density floor that does it is what holds long-text junk at 0% ("Matching inside long text").
-- **Four-character typos on mixed**: 0.86 against fast-fuzzy's 0.95 (1.00 against 0.86 on ascii). Ekrina corrects a four-character query only when nothing matches it as typed, so a stray literal or fuzzy hit blocks the correction.
+- **Scatter** (medium and heavy): 0.00–0.05, where match-sorter scores 0.67–0.95 and fuzzysort 0.28–0.90.
+  Ekrina refuses a chain that sparse on purpose, since the density floor that does it is what holds long-text junk at 0% ("Matching inside long text").
+- **Four-character typos on mixed**: 0.86 against fast-fuzzy's 0.95 (1.00 against 0.86 on ascii).
+  Ekrina corrects a four-character query only when nothing matches it as typed, so a stray literal or fuzzy hit blocks the correction.
 
-uFuzzy's typo configuration is the largest configuration spread in the table (0.76 mixed / 0.75 ascii against 0.24 / 0.24 for its defaults), so most of what separates uFuzzy from the field comes down to configuration rather than capability.
+uFuzzy's typo configuration is the largest configuration spread in the table (0.76 mixed / 0.75 ascii against 0.24 / 0.24 for its defaults), so most of what separates uFuzzy from the field comes down to which options are switched on.
 
 The scorecard's timing columns are exactly what the Pareto charts draw, one per workload; both draw the mixed 10k scorecard.
 
@@ -451,23 +464,22 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 </picture>
 
 Its x-axis is the batch's per-query time, how long a query takes once the searcher has answered twenty-three real ones, and its frontier runs uFuzzy → fuzzysort → Ekrina (indexed) → Ekrina (acronym).
-Base Ekrina sits off it because its batch pays for the mask build partway through, on the first query that needs the rescue, work its indexed twin did at construction, so the same 0.87 MRR costs it 0.80 ms per query against 0.55.
-The fast end belongs to the bare-output engines, uFuzzy at 0.24 MRR and fuzzysort at 0.64; uFuzzy (all opts), at 0.76 the closest non-Ekrina row on quality, takes 1.29 ms per query against Ekrina (indexed)'s 0.55, and Fuse.js and fast-fuzzy are 11–35× slower.
+Base Ekrina sits off it because its batch builds the mask index partway through, on the first query that needs the rescue, work its indexed twin did at construction, so at the same 0.87 MRR it takes 0.80 ms per query against 0.55.
+The fast end belongs to the bare-output engines, uFuzzy at 0.24 MRR and fuzzysort at 0.64; uFuzzy (all opts), at 0.76 the next row on quality after Fuse.js (all opts), takes 1.29 ms per query against Ekrina (indexed)'s 0.55, and Fuse.js and fast-fuzzy are 11–35× slower.
 
 **Backend one-shot workload** (a fresh process runs constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
 Its frontier runs `fuzzy` → Ekrina (indexed) → Ekrina (acronym): a no-index substring scan at 0.43 MRR owns the fast end, and every other configuration - uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised - is dominated.
-Base Ekrina is dominated too, by its indexed twin and only by a margin inside the tie band: 2.06 + 1.48 ms against 0.15 + 3.78 ms at the same 0.87 MRR, so building the mask index up front costs about what the first answer then saves.
-This is where base Ekrina's lazy preparation shows up, in two parts against a 0.11 ms constructor.
+Base Ekrina is dominated too, by its indexed twin and only by a margin inside the tie band ("Size, speed & search type"): 2.06 + 1.48 ms against 0.15 + 3.78 ms at the same 0.87 MRR, so building the mask index up front takes about as long as it then saves on the first answer.
+This is where base Ekrina's lazy preparation shows up, in two parts against a 0.15 ms constructor.
 A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings (~2 ms at 10k).
 The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the one-edit rescue, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
-That is why a cold `two-words` answer costs more at 10k than `short-word`, and why `prefix`, a single word with too few literal matches to rule out a typo, costs more again (the per-query cells are in [`bench/results.json`](../bench/results.json)).
+That is why a cold `two-words` answer takes longer at 10k than `short-word`, and why `prefix`, a single word with too few literal matches to rule out a typo, takes longer again (the per-query cells are in [`bench/results.json`](../bench/results.json)).
 The batch's literal warmup never needs it, so its `first` column carries only the first part; the build lands on the third query, the first multi-word one.
 
 _Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
 
 ## Size, speed & search type
 
-These tables position each library rather than rank them; the method is uniform throughout.
 **Gzip** = esbuild `--bundle --minify` + gzip, tree-shaken to each lib's primary API (the size table is in [Libraries](#libraries)).
 Every cell is process-cold ("One measurement model"), and each corpus gets two tables.
 The scale table measures the one-shot workload: **index** = the constructor, **cold query** = mean first answer across the six timed queries (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each query's own child, **total rel** = that total relative to Ekrina (100% = same, lower = faster).
@@ -477,9 +489,10 @@ These tables publish the 100k size; the 10k matrix and the scorecard carry the f
 The two corpora are described in "The corpus and the query families"; they're benched separately.
 The mixed table only lists configurations that fold diacritics, i.e. actually do that corpus's task (cross-checked per query by [`bench/hits.test.ts`](../bench/hits.test.ts)); a fast non-folding row would be fast at a different, easier job, so those are omitted and named below the table.
 The **_all libraries_** row is the corpus-wide view: the geometric mean of every shown configuration at that size.
-**(all opts)** rows switch on every opt-in the library has: diacritic folding, multi-word, highlight/ranges output, and typo modes; base rows are stock defaults, and [Libraries](#libraries) itemizes which opt-in is which.
+**(all opts)** rows switch on every opt-in the library has: diacritic folding, multi-word, highlight/ranges output, and typo modes; base rows are stock defaults, and [Libraries](#libraries) itemises which opt-in is which.
 Typo modes are included because Ekrina's one-edit matching is always on and cannot be disabled, so holding another engine's typo mode off would time two engines doing different jobs.
-Only uFuzzy is affected in practice. Fuse.js (Bitap) and fast-fuzzy (edit distance) are typo-tolerant in every configuration here.
+Only uFuzzy is affected in practice.
+Fuse.js (Bitap) and fast-fuzzy (edit distance) are typo-tolerant in every configuration here.
 Every child consumes its result counts, the runner asserts they are identical across a cell's processes, and [`bench/hits.test.ts`](../bench/hits.test.ts) records per-library match counts for every query, so the timings above are known to be timing comparable work.
 Per-cell minimums and heap footprints are in [`bench/results.json`](../bench/results.json).
 Ekrina leads its own table; the rest are alphabetical, so each library's base and (all opts) rows sit together and nothing is ordered by how well it did.
@@ -564,31 +577,32 @@ Ekrina leads its own table; the rest are alphabetical, so each library's base an
 | _all libraries (geomean)_   |     7.89 ms |   216.05 ms |      297% |
 <!-- bench:end -->
 
-The acronym configuration runs strictly _more_ code per query (an extra tier, plus the one-edit rescues on candidates that reach it); its 100–102% cells are that extra work plus load swing.
+The acronym configuration runs strictly _more_ code per query (an extra tier, plus the one-edit rescues on candidates that reach it); its 97–111% cells are that extra work plus load swing.
 Read sub-15% differences as statistical ties, the tie band from here on, and larger ones as real.
-Folding uFuzzy sits at the edge of the tie band on this corpus: its batch is 115% of Ekrina's, 2.61 ms per query to Ekrina's 2.16.
+Folding uFuzzy sits inside the tie band on this corpus: its batch is 110% of Ekrina's, 3.16 ms per query to Ekrina's 2.78.
 
-Configurations that can't fold diacritics are omitted rather than flagged. A non-folding row on this corpus is timing a different, easier task (it silently misses accented matches), and we already _know_ it fails: on the accent family's representative query `kepa` (from "Kępa…") at 10k, base uFuzzy finds _0_ matches where its folding (all opts) config finds 4 and Ekrina 7 ([`bench/hits.test.ts`](../bench/hits.test.ts)).
+Configurations that can't fold diacritics are omitted rather than flagged.
+A non-folding row on this corpus is timing a different, easier task (it silently misses accented matches), and we already _know_ it fails: on the accent family's representative query `kepa` (from "Kępa…") at 10k, base uFuzzy finds _0_ matches where its folding (all opts) config finds 4 and Ekrina 7 ([`bench/hits.test.ts`](../bench/hits.test.ts)).
 Omitted: uFuzzy and fuse.js base configs (their (all opts) rows fold and stay), and fast-fuzzy and fuzzy entirely; they have no folding option at all.
 
 ### Reading the speed numbers
 
-Every cell is process-cold, so read the columns as three different workloads, not three qualities of one number.
-The **batch** column is the honest headline: one process, 24 distinct queries, and the amortisation each design promises either shows up or doesn't.
+Every cell is process-cold, so read the columns as three different workloads.
+The **batch** column is the headline: one process, 24 distinct queries, so it shows whether the amortisation each design promises actually happens.
 Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts 90–100% of items before any ladder work, and the lazy preparation happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
-_uFuzzy wins the raw batch at 100k on ascii_ (66% of Ekrina bare, where Ekrina (indexed) takes 74%) and its bare `batch/query` is the fastest in the set; folding, it ties base Ekrina on ascii (92%) but trails Ekrina (indexed), on mixed it trails base Ekrina at the edge of the tie band (115%) and takes 2.1× Ekrina (indexed)'s batch, and its MRR (0.24 bare, 0.75–0.76 folding) is what that speed leaves you with.
-Ekrina's batch beats everything else - ~5× its parent microfuzz, 2× fuzzysort, ~9× match-sorter, ~16× fast-fuzzy (ascii; it can't fold), ~57× Fuse.js on mixed - while topping both scorecards outright.
-The **cold query** column is where Ekrina's laziness shows up: ~13 ms mean at 100k, most of it the rescue's union-and-bigram mask build (Ekrina (indexed), which builds it in its 11–12 ms constructor, answers first in 2.4–3.2 ms), done once per searcher and visible per query in the 10k cells of [`bench/results.json`](../bench/results.json) (it lands on multi-word queries and on single words of five or more characters with fewer than ten literal matches, the substitution and prefix queries among the timed ones; the short word carries only the raw-gate scan).
-An eager-index engine inverts this: fast-fuzzy's first answer is quick only because its constructor already ran for ~260 ms.
+_Ekrina (indexed) takes the raw batch at 100k on ascii_ (73% of Ekrina bare), and bare uFuzzy ties base Ekrina there (96%); folding, uFuzzy trails base Ekrina on ascii (129%), on mixed it sits inside the tie band (110%) and takes 1.8× Ekrina (indexed)'s batch, and its MRR is 0.24 bare and 0.75–0.76 folding.
+Ekrina's batch beats every other library except bare uFuzzy, which ties it on ascii - ~5.5× its parent microfuzz, 2× fuzzysort, ~8× match-sorter, ~29× fast-fuzzy (ascii; it can't fold), ~49× Fuse.js (all opts) on mixed - while topping both scorecards.
+The **cold query** column is where Ekrina's laziness shows up: 13–26 ms mean at 100k (ascii, mixed), most of it the rescue's union-and-bigram mask build (Ekrina (indexed), which builds it in its 12–23 ms constructor, answers first in 2.9–4.3 ms), done once per searcher and visible per query in the 10k cells of [`bench/results.json`](../bench/results.json) (it lands on multi-word queries and on single words of five or more characters with fewer than ten literal matches, the substitution and prefix queries among the timed ones; the short word carries only the raw-gate scan).
+An eager-index engine inverts this: fast-fuzzy's first answer is quick only because its constructor already ran for ~390 ms.
 The **index** column plus the first answer is the one-shot measurement, and there `fuzzy`'s bare substring scan is the only thing faster than Ekrina at any quality level.
 Cross-_type_ speed isn't apples-to-apples: **typo-tolerant** libs (Fuse.js, fast-fuzzy) do far more work per query, and non-folding configurations are omitted from the mixed table entirely (they would be timing a different task).
-**fast-fuzzy is corpus-sensitive**: its trie rewards shared-prefix data but this natural-language corpus prunes less, dropping it among the slowest (on a combinatorial word-grid it measured far better; the corpus moves these numbers a lot).
+fast-fuzzy is corpus-sensitive: its trie rewards shared-prefix data but this natural-language corpus prunes less, dropping it among the slowest (on a combinatorial word-grid it measured far better; the corpus moves these numbers a lot).
 
-## A frontend session: typing `grady` at 100k
+## Typing `grady` at 100k
 
 Typing is a _sequence_: each query extends the last.
 Ekrina's prefix-narrowing cache rescans only the previous query's mask-gate survivors, so successive keystrokes get faster; every other library runs a full scan per keystroke.
-The probe types the doc's surname query `grady` from the 3-character UI gate onward (real UIs gate search behind 2–3 characters, because a 1–2 char query matches a huge fraction of the corpus and every rich-result library has to materialize it).
+The probe types the doc's surname query `grady` from the 3-character UI gate onward (real UIs gate search behind 2–3 characters, because a 1–2 char query matches a huge fraction of the corpus and every rich-result library has to materialise it).
 Each step is timed at its correct cache state (the untimed reset replays the previous prefix before every sample), on the 100k mixed corpus.
 
 <!-- bench:session -->
@@ -601,10 +615,10 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 | Fuse.js (all opts) | 82.74 |  79.24 |  105.69 |  267.67 |
 <!-- bench:end -->
 
-Ekrina's per-keystroke time falls _3.7×_ across the word (2.16 → 1.37 → 0.59) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
-Ekrina takes every step of the session, the wide opener included (2.16 vs uFuzzy's 3.73), and the session total by 1.8× (4.12 vs 7.51), while returning tiers and ranges against uFuzzy's bare index array, at 0.76 MRR to Ekrina's 0.87.
-microfuzz stays at ~15–17 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
-Unlike the scorecard, this table is a single process rather than a median of five, so read its cells with the tie band in mind.
+Ekrina's per-keystroke time falls _4.7×_ across the word (2.65 → 1.39 → 0.56) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
+Ekrina takes every step of the session, the wide opener included (2.65 vs uFuzzy's 3.97), and the session total by 1.8× (4.60 vs 8.23), while returning tiers and ranges against uFuzzy's bare index array, at 0.76 MRR to Ekrina's 0.87.
+microfuzz stays at ~21–24 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
+This table is a single process, like every cold cell here, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time work (Ekrina's mask build, fuzzysort's lazy target prep) happens at load, not on keystroke one; the cold cells above measure it.
 Measured by [`bench/session.test.ts`](../bench/session.test.ts).
 
@@ -638,24 +652,26 @@ Literal-only matching, for callers that want no fuzzy assemblies at all, is a on
 
 ## The recommendation
 
-Everything above condenses to one recommendation: _pick Ekrina for list matching_, with two carve-outs the data supports.
-Three things carry the claim, each measured in its own section:
+The recommendation is to _pick Ekrina for list matching_, with two carve-outs the data supports.
 
-- **Quality**: Ekrina (acronym) tops the scorecard on both corpora outright (0.90 mixed / 0.90 ascii), and base Ekrina (0.87) is still clear of every other library; the lead comes from scoring near 1 on every phrase and single-edit typo family at once, which no other library does.
-- **Speed, measured cold**: the fastest 24-query session of anything above 0.5 MRR at both sizes (batch 14.8 ms at mixed 10k, ~0.5 ms per query after the first, and 10.0 ms / ~0.4 ms for Ekrina (indexed); ~4–57× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages ~3.4 ms at 10k and ~13 ms at 100k across the timed queries, or ~1.3 ms and ~2.4 ms once Ekrina (indexed) has spent ~2 ms and ~12 ms building the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
+- **Quality**: Ekrina (acronym) tops the scorecard on both corpora (0.90 mixed / 0.90 ascii), and base Ekrina (0.87) is still clear of every other library; the lead comes from scoring near 1 on every phrase and single-edit typo family at once, which no other library does.
+- **Speed, measured cold**: the fastest 24-query session of anything above 0.7 MRR at both sizes (batch 21.7 ms at mixed 10k, ~0.8 ms per query after the first, and 14.5 ms / ~0.55 ms for Ekrina (indexed); ~3–70× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps.
+  The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages ~3.8 ms at 10k and 13–26 ms at 100k across the timed queries, or ~1.5 ms and 3–4 ms once Ekrina (indexed) has spent ~2 ms and 12–23 ms building the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length, phrase probes included, so the same engine covers documents, not just labels.
 
 The carve-outs:
 
-- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo from five characters up (transposition, insertion, deletion and substitution), scoring 1.00 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed. _Two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter and the double-typo phrase.
+- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo from five characters up (transposition, insertion, deletion and substitution), scoring 1.00 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed.
+  _Two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter and the double-typo phrase.
   If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool for the typos, and match-sorter or fuzzysort for the scatter (0.67–0.95 on the scatter families against Ekrina's 0.00–0.05); the scorecard measures what each gains and loses: 0.79 and 0.72 MRR on mixed for Fuse.js (all opts) and fast-fuzzy, at ~15 ms per cold query.
-- **Raw throughput when a bare index array is enough.** uFuzzy wins the 100k ascii batch outright (66% of Ekrina bare, ahead of Ekrina (indexed)'s 74%; with folding it drops to 92%, a tie with base Ekrina, and on mixed its folding config trails base Ekrina at 115%) and owns the fastest bare per-query and miss cells at every size.
-  Bare, it gives up most of the match quality to get there (0.24 MRR against Ekrina's 0.87); folded it scores 0.75–0.76, losing the joined-phrase and four-character typo families outright, and it has no ranges, tiers, or per-field config. A real trade, measured in full above.
+- **Raw throughput when a bare index array is enough.** Bare uFuzzy ties base Ekrina on the 100k ascii batch (96%, behind Ekrina (indexed)'s 73%; with folding it falls to 129%, and on mixed its folding config sits at 110%), and owns the fastest per-query time at 10k and the fastest miss.
+  Bare, it gives up most of the match quality to get there (0.24 MRR against Ekrina's 0.87); folded it scores 0.75–0.76, losing the joined-phrase and four-character typo families outright, and it has no ranges, tiers, or per-field config.
 
 The rest of the field is dominated on these benchmarks:
 
-- **@nozbe/microfuzz**: Ekrina's parent; same subsequence approach, ~4–5× the batch at 100k, 2–17× larger result sets, no tier output. Its 0.52 mixed MRR sits 32 points under base Ekrina: it scores 0 on the substitution and phrase-typo families and 0.20 on insertion.
+- **@nozbe/microfuzz**: Ekrina's parent; same subsequence approach, ~4–5× the batch at 100k, 2–17× larger result sets, no tier output.
+  Its 0.52 mixed MRR sits 35 points under base Ekrina: it scores 0 on the substitution and phrase-typo families and 0.20 on insertion.
 - **fuzzysort**: the fastest per-query time after uFuzzy, but its prepare-all pass lands a ~6 ms first call (57 ms at 100k) that stock usage absorbs inside the first `go()`, and it scores 0 on every phrase-typo and substitution family (0.64 MRR on mixed).
 - **match-sorter**: tiered ranking but no ranges and no multi-word; it leads the scatter families and scores 0 on every phrase typo, 0.56 MRR at mid-pack speed.
 - **fuzzy**: substring-only and order-sensitive; 0.10 on reversed phrases, 0.11 on the accent family, no ranges (0.43 MRR).
-- **fast-fuzzy**: the heaviest build (~290 ms at 100k) and slowest queries on these corpora, and 0.12 or less on reversed phrases (0.72 MRR); its trie rewards shared-prefix data, which natural-language corpora don't provide.
+- **fast-fuzzy**: the heaviest build (~390 ms at 100k) and slowest queries on these corpora, and 0.12 or less on reversed phrases (0.72 MRR); its trie rewards shared-prefix data, which natural-language corpora don't provide.

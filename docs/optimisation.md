@@ -1,10 +1,10 @@
-# Optimisation: where the time goes, and what moved it
+# Optimisation
 
 Companion to [measurement.md](./measurement.md), which covers how the benchmark harness came to be wrong and how it was fixed.
 This one covers what the corrected harness then found.
 
 Everything here is measured on the ascii and mixed corpora at 100k, one library per process.
-Every change listed as landed produced **identical ranks and MRR** across all thirty probes, these are optimisations, so any output change is a bug, not a trade.
+Every change listed as landed produced _identical ranks and MRR_ across all thirty probes, these are optimisations, so any output change is a bug.
 
 ## Where the time actually goes
 
@@ -20,9 +20,9 @@ Counted per query on the ascii corpus at 100k:
    390 results
 ```
 
-The finding that matters: **the pre-filter was never the problem.**
-Ekrina's entire gate, a per-item `Int32Array` mask read plus a native regex on survivors, costs less than uFuzzy's _whole_ query, which has no index at all.
-Everything expensive happens per surviving candidate, and only 53% of candidates that reach the ladder produce a result.
+The pre-filter was never the problem.
+Ekrina's entire gate, a per-item `Int32Array` mask read plus a native regex on survivors, takes less time than uFuzzy's _whole_ query, which has no index at all.
+All the slow work happens per surviving candidate, and only 53% of candidates that reach the ladder produce a result.
 
 ## What landed
 
@@ -47,18 +47,18 @@ Once ten literal-tier hits exist, no correction can enter the top ten, so comput
 
 Before the budget, the rescue ran 17,616 times per query to produce about five corrected results, roughly 3,500 attempts per correction.
 
-The load-bearing detail is counting _literal-tier_ hits rather than all results: `fuzzy` starts at CONTAINS and rises past 2.1, so fuzzy hits must not be allowed to crowd out a correction.
+The budget counts _literal-tier_ hits rather than all results, because `fuzzy` starts at CONTAINS and rises past 2.1, so fuzzy hits must not be allowed to crowd out a correction.
 
 ### Lazy fields
 
 The largest single win, and the one that reframed the rest.
 
-The mask rejects ~94% of a corpus, yet the index was building a trimmed copy, a normalised copy and a `PreparedField` object for **every** item, so ~94% of 27 MB and ~40 ms of build was constructed for items no query reads.
+The mask rejects ~94% of a corpus, yet the index was building a trimmed copy, a normalised copy and a `PreparedField` object for _every_ item, so ~94% of 27 MB and ~40 ms of build was constructed for items no query reads.
 
 Now the build loop produces masks and nothing else, folding characters straight out of the raw string with no allocation, and a field's text is materialised on first mask survival and cached.
 The first query materialises ~5,400 fields; the second materialises none.
 
-This went through three passes, each removing work that did not need to be in the loop:
+Each pass below removed work that did not need to be in the build loop:
 
 | build, ascii 100k                                    |             |
 | ---------------------------------------------------- | ----------: |
@@ -69,7 +69,8 @@ This went through three passes, each removing work that did not need to be in th
 The second pass still normalised every item and allocated 100k objects before discarding them.
 The third replaced `for (const ch of raw)` - which allocates a one-character string per code point, about 3M over a 100k corpus - with a `charCodeAt` loop that only folds for code points above 127.
 
-Deferred work has to land somewhere, and it lands on the first query: cold is flat on ascii and ~6% worse on mixed.
+The deferred work lands on the first query instead.
+Cold is flat on ascii and ~6% worse on mixed.
 The one-shot total, build plus first query, is 3.1× better on ascii and 3.7× on mixed.
 
 ## What was rejected
@@ -78,24 +79,24 @@ The negative results are the more useful half, because each was a confident hypo
 
 | hypothesis                                      | verdict                                                                                                                                                                                       |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Bigram presence mask**                        | Slower queries **and** +38% build. Four integer ANDs per variant plus a closure lost to _one_ call into V8's Irregexp, which is compiled machine code with fast literal-alternation dispatch. |
+| **Bigram presence mask**                        | Slower queries _and_ +38% build. Four integer ANDs per variant plus a closure lost to _one_ call into V8's Irregexp, which is compiled machine code with fast literal-alternation dispatch. |
 | **Flattening the index into a string arena**    | The scan it would optimise is 3.4% of query time. The `Int32Array` mask scan was already doing its job.                                                                                       |
 | **Interleaving query samples across libraries** | Inflated fuzzysort 0.178 → 0.646 ms and uFuzzy 0.183 → 0.453 by making every sample run cache-cold. Correct for 1–40 ms index builds, wrong for sub-millisecond queries.                      |
 | **Larger V8 semi-space**                        | ekrina held at 4.78 / 5.16 / 4.96 / 5.17 ms across default/16/64/128 MB. Young-generation sizing was not the variance.                                                                         |
-| **`limit` option, as a sort saving**            | The sort is ~3.4k comparisons on 392 results, under 0.1 ms. `limit` shipped later for the fuzzy work it lets the searcher skip, not the sort (CHANGELOG).                                    |
-| **ASCII lookup tables in `rawFieldScan`**      | Two 128-entry typed arrays for the mask bit and bigram class, replacing the branch chain: `buildIndex()` at 100k measured 109% (ascii) and 121% (mixed) of the branches. Same lesson as the factored shapes its comment lists. |
-| **Gate regexes without the `u` flag**           | An explicit Latin word-character class in the lookbehind lets the raw gate drop `u` and stay false-pass only, but scanning 100k raw strings measured 94–100% of the `u` version: inside the noise, not claimable. |
-| **Lazy bigram sets**                            | Masks alone cost 4 of the scan's 9.6 ms at 100k, so building bigrams per item on demand halved `buildIndex()` (11.8 → 5.5 ms) and a fresh searcher's first phrase (12.3 → 5.8 ms). A short miss then computed them one item at a time for most of the list (`zzzz` 5.6 → 15.9 ms), and building them all on the first rescue only moves the cost. |
+| **`limit` option, as a sort saving**            | The sort is ~3.4k comparisons on 392 results, under 0.1 ms. `limit` shipped later for the fuzzy work it lets the searcher skip (CHANGELOG).                                    |
+| **ASCII lookup tables in `rawFieldScan`**      | Two 128-entry typed arrays for the mask bit and bigram class, replacing the branch chain: `buildIndex()` at 100k measured 109% (ascii) and 121% (mixed) of the branches. Its comment records the same result for four factored versions. |
+| **Gate regexes without the `u` flag**           | An explicit Latin word-character class in the lookbehind lets the raw gate drop `u` and stay false-pass only, but scanning 100k raw strings measured 94–100% of the `u` version, which is within the noise. |
+| **Lazy bigram sets**                            | Masks alone take 4 of the scan's 9.6 ms at 100k, so building bigrams per item on demand halved `buildIndex()` (11.8 → 5.5 ms) and a fresh searcher's first phrase (12.3 → 5.8 ms). A short miss then computed them one item at a time for most of the list (`zzzz` 5.6 → 15.9 ms), and building them all on the first rescue only moves that time onto the first typo. |
 | **Lazy ranges**                                 | 1.08–1.67 range entries per result, and the fuzzy tier's ranges fall out of the chain walk that produces the score. Nothing to defer.                                                         |
-| **`missingClasses` dispatch**                   | Sound and free, but its effect sits below the harness's ±3% noise floor, so it cannot be claimed.                                                                                             |
+| **`missingClasses` dispatch**                   | Sound and adds no work, but its effect sits below the harness's ±3% noise floor, so it cannot be claimed.                                                                                             |
 
-Two patterns run through the rejections.
+Every attempt to beat a native regex lost.
+The anchored gate won because it makes Irregexp reject _earlier_; the bigram mask lost because it tried to replace Irregexp with a JS loop.
 
-**Every bet against a native regex lost.** The anchored gate won because it makes Irregexp reject _earlier_; the bigram mask lost because it tried to replace Irregexp with a JS loop.
+Every win came from moving work off the 100,000 path, onto the ~6,200 or ~741 paths.
+Every rejected idea added per-item work to speed up a path that was already fast.
 
-**Every win came from moving work off the 100,000 path**, onto the ~6,200 or ~741 paths. Every rejected idea added per-item work to speed up a path that was already cheap.
-
-## Allocation is the hidden axis
+## Allocation per query
 
 Churn per query, measured at ascii 100k:
 
@@ -111,7 +112,7 @@ Churn per query, measured at ascii 100k:
 Churn tracks measurement variance almost exactly: uFuzzy at 4–6 kB is stable to ±5%, Ekrina at 33 kB swings ±20%, fuzzysort at 95 kB spreads 122–170%.
 That is why Ekrina was the library the old shared-process harness distorted most.
 
-`Ekrina (acronym)` allocating 3× base for **identical** output is an unexplored defect: same 392 results, three times the garbage.
+`Ekrina (acronym)` allocating 3× base for _identical_ output, the same 392 results, is an unexplored defect.
 
 ## Open
 

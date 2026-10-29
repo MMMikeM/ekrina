@@ -21,7 +21,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `range`                    | inclusive `[start, end]` span for highlighting                                                                                                      | `Range`, `HighlightRanges`                   |
 | `chunk`                    | a consecutive matched run inside the fuzzy tier (same type as `Range`, different meaning)                                                          | `Chunk` alias                                |
 | `chain`                    | an assembled sequence of chunks covering the whole query                                                                                            | `fuzzyChainMatch`, `ChainScore`              |
-| `gate`                     | a cheap per-query pre-filter that can only false-pass, never false-reject                                                                           | `gates.ts`                                   |
+| `gate`                     | a fast per-query pre-filter that can only false-pass, never false-reject                                                                            | `gates.ts`                                   |
 | `mask`                     | the 32-bit char-class summary used by the O(1) gate; every stored mask is scope-qualified (`queryMask`, `fieldMasks`, `unionMasks`, `requiredMask`) | `charMask`                                   |
 | `class`                    | unqualified: a charMask bucket (`bigramClass`, `missingClasses`, `classBit`); regex character classes always say "char class"                       | `charMask`, `escapeCharClass`                |
 | `bigram`                   | an adjacent pair of char classes, hashed into a 64-bit presence set for the rescue gate                                                             | `FieldBigrams`, `RescueBigramGate`           |
@@ -64,7 +64,7 @@ One concern per file.
 | ------------- | -------------------------------------------------------------------- |
 | index.ts      | the public surface                                                   |
 | types.ts      | the public types                                                     |
-| scores.ts     | the tier ladder's constants and the typo surcharge                   |
+| scores.ts     | the tier ladder's constants and the typo penalty                     |
 | boundaries.ts | word semantics: the char class, tokenisation, the boundary predicate |
 | normalise.ts  | the 1:1 fold, and the fused raw-field scan built on it               |
 | unfold.ts     | the fold's inverse table for the raw gate                            |
