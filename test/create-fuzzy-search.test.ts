@@ -37,17 +37,40 @@ describe("empty and whitespace queries", () => {
 describe("one-character queries", () => {
 	const search = createFuzzySearch(["apple", "apricot", "banana"]);
 
-	it("a single character matches nothing, however exactly it fits", () => {
-		expect(search("a")).toEqual([]);
-		expect(createFuzzySearch(["a"])("a")).toEqual([]);
+	it("a single character matches where it starts a word", () => {
+		expect(search("a").map((r) => r.item)).toEqual(["apple", "apricot"]);
+		expect(createFuzzySearch(["a"])("a")[0]?.fields[0]?.tier).toBe("exact");
 	});
 
-	it("two characters is the shortest query that searches", () => {
-		expect(search("ap").map((r) => r.item)).toEqual(["apple", "apricot"]);
-	});
-
-	it("the primitive has nothing to narrow, so it keeps matching one character", () => {
+	it("a single character never matches inside a word", () => {
+		expect(search("n")).toEqual([]);
+		expect(fuzzyMatch("banana", "n")).toBeNull();
 		expect(fuzzyMatch("apple", "a")?.tier).toBe("prefix");
+	});
+
+	it("two characters match anywhere again", () => {
+		expect(search("an").map((r) => r.item)).toEqual(["banana"]);
+	});
+});
+
+describe("limit", () => {
+	const words = ["alpha", "alpine", "palace", "salad", "plaza", "lapel", "atlas", "apple", "pal"];
+	const search = createFuzzySearch(words);
+
+	it("returns what slicing the full results returns", () => {
+		for (const query of ["al", "pal", "apl", "lpa", "alpah", "a", "zz"]) {
+			for (const limit of [1, 2, 3, 50]) {
+				expect(search(query, { limit }), `${query} limit ${limit}`).toEqual(
+					createFuzzySearch(words)(query).slice(0, limit),
+				);
+			}
+		}
+	});
+
+	it("must be a positive integer", () => {
+		for (const limit of [0, -1, 1.5, Number.NaN]) {
+			expect(() => search("al", { limit })).toThrow(RangeError);
+		}
 	});
 });
 
@@ -138,12 +161,12 @@ describe("prefix-narrowing cache", () => {
 	});
 
 	it("a correction appears once the query is long enough to correct", () => {
-		// "borw" is below the typo floor and no item holds it as a subsequence, so
-		// nothing survives it; "borwn" is one swap from "brown", and the narrowed
+		// "bor" is too short to correct and no item holds it as a subsequence, so
+		// nothing survives it; "borw" is one swap from "brow", and the narrowed
 		// rescan must not lose it.
 		const search = createFuzzySearch(collection);
-		expect(search("borw").map((r) => r.item)).toEqual([]);
-		expect(search("borwn").map((r) => r.item)).toEqual(["brown bread", "the quick brown fox"]);
+		expect(search("bor").map((r) => r.item)).toEqual([]);
+		expect(search("borw").map((r) => r.item)).toEqual(["brown bread", "the quick brown fox"]);
 	});
 
 	it("non-extension queries (backspace, replacement) fall back to a full scan", () => {

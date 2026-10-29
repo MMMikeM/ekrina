@@ -64,6 +64,17 @@ byField("ban");
 
 Results are sorted best-first (stable), and preprocessing is cached: each item is prepared the first time a query matches it, and the whole-list mask index the first time a query needs it.
 
+A one-character query matches only where it starts a word (`"o"` finds "Open File", not "Folder"), since one character anywhere matches most of any list.
+Queries under five characters are corrected only when nothing matches them as typed.
+
+When only the top of the list is shown, pass `limit`:
+
+```typescript
+search("ma", { limit: 10 }); // the same ten results as search("ma").slice(0, 10)
+```
+
+Once `limit` items match the query as typed, the fuzzy and corrected matches that could not outrank them are never computed, which matters most for one- and two-character queries over a large list.
+
 To build the mask index ahead of time instead, once the list has loaded or during idle time, call `buildIndex()`:
 
 ```typescript
@@ -134,11 +145,15 @@ fuzzyMatch("cherry", "xyz"); // null
 Options: `fuzzyMatch(text, query, { acronym? })`.
 `acronym: true` adds the initials tier (`rsaw` finds "Rath, Streich and Witting" at rank 1) for under a millisecond more per query.
 
+`fuzzyMatch` judges one string on its own, and a searcher adds two rules across its list.
+It skips corrections once ten items match literally, since none could reach the top ten, and it corrects a query under five characters only when no item matches it as typed.
+So for a short query, a list can show fewer corrections than `fuzzyMatch` returns for each item.
+
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
 - **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.7× by its last letter even over 100k items.
-  Starting a second word, or typing five or more characters that match fewer than ten items literally (a possible typo), rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
+  Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; a structured query returns a median of 7 rows where Fuse.js ships ~90.
 - **Backend one-shot lookups**: constructor + first answer takes ~3.5 ms in a genuinely cold process over 10k items, so indexing per request is fine.
 - **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.20 ms, and the density floor keeps absent words at exactly 0 false matches.
@@ -326,6 +341,10 @@ type FuzzyResult<T> = {
 	item: T;
 	score: number; // min effective score across fields
 	fields: (MatchResult | null)[]; // one per field spec
+};
+
+type SearchOptions = {
+	limit?: number; // a positive integer; at most this many results, best first
 };
 ```
 

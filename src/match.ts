@@ -3,6 +3,7 @@ import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, isExactMask } from "./gates";
 import {
 	isRescuableQuery,
+	isShortRescue,
 	preferCheaper,
 	missingCharRescue,
 	type RescueContext,
@@ -139,7 +140,7 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
 	if (fuzzy) {
 		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
-		if (!rescuable) return chain;
+		if (!rescuable || isShortRescue(prepared.normalisedQuery, prepared.queryWords)) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
 		// literally contain the corrected word, so both rescues are still priced.
 		const dropped = missingCharRescue(rescue, fuzzy.ranges);
@@ -201,6 +202,7 @@ export const matchField = (
 	acronym: boolean,
 	mayRescue: boolean = true,
 	preGated: boolean = false,
+	literalOnly: boolean = false,
 ): MatchResult | null => {
 	const { normalisedQuery, queryWords } = prepared;
 
@@ -230,8 +232,12 @@ export const matchField = (
 		return rescuable ? rescueField(rescueContext()) : null;
 	}
 
-	return (
-		literalTiers(field, normalisedField, prepared, acronym) ??
-		fuzzyOrRescue(rescueContext(), rescuable)
-	);
+	const literal = literalTiers(field, normalisedField, prepared, acronym);
+	// One character anywhere matches most of any list and ranks none of it, so it
+	// counts only where it starts a word.
+	if (normalisedQuery.length === 1) {
+		return literal !== null && literal.score <= SCORES.BOUNDARY ? literal : null;
+	}
+	if (literal !== null || literalOnly) return literal;
+	return fuzzyOrRescue(rescueContext(), rescuable);
 };

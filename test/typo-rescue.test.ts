@@ -184,13 +184,13 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 	// matcher silently drops hits, a looser one scans for nothing.
 
 	it("a query too short to correct through a missing class finds nothing", () => {
-		expect(fuzzyMatch("gene", "genx")).toBeNull();
-		expect(createFuzzySearch(["gene"])("genx")).toHaveLength(0);
+		expect(fuzzyMatch("gen", "gex")).toBeNull();
+		expect(createFuzzySearch(["gen"])("gex")).toHaveLength(0);
 	});
 
 	it("one character longer, and both agree it can", () => {
-		expect(fuzzyMatch("genes", "genxs")?.tier).toBe("corrected");
-		expect(createFuzzySearch(["genes"])("genxs")[0]?.fields[0]?.tier).toBe("corrected");
+		expect(fuzzyMatch("gene", "genx")?.tier).toBe("corrected");
+		expect(createFuzzySearch(["gene"])("genx")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("a multi-word query relaxes once its mistyped word is long enough", () => {
@@ -222,21 +222,48 @@ describe("matcher and searcher agree on the typo floor", () => {
 		return matched;
 	};
 
-	it("a four-character swap is not corrected", () => {
-		expect(agreedTier("Soft Gold Hat", "sfot")).not.toBe("corrected");
+	it("a four-character swap is corrected", () => {
+		expect(agreedTier("Soft Gold Hat", "sfot")).toBe("corrected");
 	});
 
-	it("a four-character dropped keystroke is not corrected", () => {
-		expect(agreedTier("South Raven, Bangladesh", "soth")).not.toBe("corrected");
+	it("a four-character correction must start a word", () => {
+		expect(agreedTier("Nicolas", "colt")).toBeNull();
 	});
 
-	it("a phrase whose words are all under five characters is not corrected", () => {
-		expect(agreedTier("Soft Gold Hat", "sfot gold")).not.toBe("corrected");
+	it("a four-character query that matches as typed is not corrected", () => {
+		// The fuzzy chain "So…th" is a reading of what was typed; the dropped
+		// keystroke ("south") is only a guess.
+		expect(agreedTier("South Raven, Bangladesh", "soth")).toBe("fuzzy");
+	});
+
+	it("a phrase's four-character word is corrected, a shorter one is not", () => {
+		expect(agreedTier("Soft Gold Hat", "sfot gold")).toBe("corrected");
 		expect(agreedTier("Big Oak Table", "bg oak")).not.toBe("corrected");
 	});
 
 	it("a four-character word is corrected inside a phrase that reaches the floor", () => {
 		expect(agreedTier("Soft Golden Hat", "sfot golden")).toBe("corrected");
+	});
+});
+
+describe("a short query is corrected only when nothing matches it as typed", () => {
+	it("one item matching as typed keeps every other item uncorrected", () => {
+		const search = createFuzzySearch(["Soft Gold Hat", "Safe Fort Inn"]);
+		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+			["Safe Fort Inn", "fuzzy"],
+		]);
+	});
+
+	it("with nothing matching as typed, the correction is offered", () => {
+		const search = createFuzzySearch(["Soft Gold Hat", "Red Oak Table"]);
+		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+			["Soft Gold Hat", "corrected"],
+		]);
+	});
+
+	it("a five-character query is corrected alongside matches as typed", () => {
+		const search = createFuzzySearch(["Golden Hat", "Gloden Pond"]);
+		expect(search("gloden").map((r) => r.fields[0]?.tier)).toEqual(["prefix", "corrected"]);
 	});
 });
 

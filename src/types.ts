@@ -76,10 +76,21 @@ export type FuzzyResult<T> = {
 };
 
 /**
+ * Options for one search.
+ */
+export type SearchOptions = {
+	/** Return at most this many results, best first (a positive integer). Once
+	 *  that many items match the query as typed, the fuzzy and corrected matches
+	 *  that could not outrank them are never computed. */
+	limit?: number;
+};
+
+/**
  * A prepared fuzzy search function.
  */
 export type FuzzySearcher<T> = {
-	(query: string): FuzzyResult<T>[];
+	/** @throws {RangeError} when `limit` is not a positive integer. */
+	(query: string, options?: SearchOptions): FuzzyResult<T>[];
 	/**
 	 * Build the whole-list mask index now instead of on the first query that needs it.
 	 * Every query that doesn't extend the previous one then filters on the index

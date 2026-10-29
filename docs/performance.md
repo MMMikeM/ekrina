@@ -69,7 +69,7 @@ The cost lands where a user pays it: construction is allocation, the first query
 ### Survivors carry across keystrokes
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
-This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borwn` as a corrected `brown` and fails `borw`, which is below the typo floor), so caching matches would be wrong.
+This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borw` as a corrected `brow` and fails `bor`, which is too short to correct), so caching matches would be wrong.
 Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
@@ -136,7 +136,7 @@ A correction must never outrank a literal hit; `test/tier-constants.test.ts` pin
 A constant minimum query length for the rescues has to pick one workload to fail: at a floor of 7 the long-text junk rate was 0 but short queries lost their insertion and substitution ranking (MRR 0.547 and 0.000); at 5 the ranking held (0.952 and 0.923) but long text junked 30 probes.
 `minTypoQueryLength(fieldLength)` gets both, and it is the same lesson as the retry cap: junk risk grows with the field, so the guard has to grow with it.
 
-### No correction below five characters
+### Short corrections are a fallback
 
 `fuzzyMatch` used to correct four-character queries (a swap, `sfot`; a drop, `soth`) and phrases of short words (`bg oak`), but the searcher only ran its rescue pass from five characters, so it returned those corrections on a fresh searcher's first multi-word query and never again.
 Teaching the searcher the four-character rescue was measured both ways it can be built, each interleaved against the searcher without it over the full Ekrina matrix, five rounds (base Ekrina, cold query, without → with):
@@ -148,15 +148,37 @@ Teaching the searcher the four-character rescue was measured both ways it can be
 
 Neither build changed a single result, rank or tier on those probes.
 Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex cost of that test is the whole slowdown.
-So the matcher holds the searcher's floor instead — five characters for a single word, one five-character word for a phrase, inside which the mistyped word may still be four (`sfot golden` is corrected).
+So the matcher held the searcher's floor instead: five characters for a single word, one five-character word for a phrase.
 
-The floor's quality cost was measured too, with the searcher's floor dropped to four over the 24 probes at 10k (base Ekrina, five → four):
+The 24 probes measured what that floor cost, with every edit allowed from four characters over 10k items (base Ekrina, five → four):
 
 - the four-character typo probe goes from no match to rank 4 of 402 on mixed (`anxe`) and rank 2 of 38 on ascii (`daxe`);
 - `rsaw` falls from rank 2 of 7 to 23rd of 34, `kepa` returns 74 items instead of 7, and `hget` 25 junk rows instead of none;
 - `bench/longtext.test.ts` fails its zero-junk assertion.
 
-MRR moves 0.82 → 0.81 on mixed and 0.77 → 0.79 on ascii, inside the ±0.02 tie band, so the floor stays at five.
+Sorting the added corrections by edit showed where the damage came from.
+A drop leaves three characters that most fields contain: `saw` and `raw` are 23 of `rsaw`'s 27 new rows.
+A substitution in the middle of a word does the rest: `colt` corrected to the `cola` in "Nicolas" is the long-text failure.
+The corrections that find `anxe` and `daxe` are substitutions at a word start.
+
+So below five characters a correction is a fallback, with three limits:
+
+- it must start a word, at a tier from `exact` to `boundary`, or `multi-word` inside a phrase;
+- it never drops a character;
+- the searcher offers it only when no item matches the query as typed, so `rsaw` and `kepa`, which do, are never corrected.
+
+MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` keep their ranks and sets, and the long-text test passes.
+The cost lands only on four-character queries that match nothing (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
+
+| Query                 | Cold             | After `buildIndex()` |
+| --------------------- | ---------------: | -------------------: |
+| `anxe`, mixed @10k    |  2.19 → 8.18 ms  |      0.67 → 4.49 ms  |
+| `zzzz`, mixed @100k   |  4.43 → 24.04 ms |      4.99 → 9.58 ms  |
+| `zzzzz`, mixed @100k  | 20.96 → 21.35 ms |      7.56 → 8.23 ms  |
+| `rsaw`, mixed @100k   |  5.92 → 5.98 ms  |      3.96 → 4.08 ms  |
+
+A four-character miss now costs what a five-character miss (`zzzzz`) already did, and a query that matches as typed costs what it did before.
+`fuzzyMatch` sees one string, so it applies the fallback to that string alone: it corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
 
 ## Benchmarking lessons
 
