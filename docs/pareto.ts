@@ -42,7 +42,7 @@ const METRICS: Record<
 		X1: number;
 		ticks: number[];
 		heading: string;
-		subtitle: (probes: number) => string;
+		subtitle: (families: number, queries: number) => string;
 		axis: string;
 		title: string;
 		tail: string;
@@ -54,8 +54,8 @@ const METRICS: Record<
 		X1: 40,
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. per-query session time",
-		subtitle: (probes) =>
-			`MRR over ${probes} probes · mixed 10k corpus · one searcher, all probes once (batch)`,
+		subtitle: (families, queries) =>
+			`MRR over ${families} query families · mixed 10k corpus · one searcher, ${queries} queries once (batch)`,
 		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
 		tail: "Ekrina owns the accurate end of the frontier; the faster points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
@@ -66,7 +66,7 @@ const METRICS: Record<
 		X1: 120,
 		ticks: [1, 2, 5, 10, 20, 50, 100],
 		heading: "Ranking quality vs. cold search time",
-		subtitle: (probes) => `MRR over ${probes} probes · mixed 10k corpus · fresh process per search`,
+		subtitle: (families) => `MRR over ${families} query families · mixed 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
 		tail: "The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
@@ -105,12 +105,12 @@ const W = 820,
 const plotW = W - ML - MR,
 	plotH = 372; // plot bottom fixed at y=434
 const Y0 = 0.1,
-	Y1 = 0.92;
+	Y1 = 1;
 const lx = Math.log10;
 const Y = (mrr: number): number => MT + ((Y1 - mrr) / (Y1 - Y0)) * plotH;
 const f = (v: number): number => Number(v.toFixed(1));
 const DOT_R = 6.5;
-const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
+const yTicks = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 const tnum = 'font-variant-numeric="tabular-nums"';
 
 // Non-dominated set: sweep by time ascending, keep strict MRR improvements.
@@ -127,7 +127,13 @@ const frontierOf = <T extends { mrr: number; ms: number }>(pts: T[]): T[] => {
 	return out;
 };
 
-const render = (C: Palette, metric: Metric, data: Point[], probes: number): string => {
+const render = (
+	C: Palette,
+	metric: Metric,
+	data: Point[],
+	families: number,
+	queries: number,
+): string => {
 	const M = METRICS[metric];
 	const X = (ms: number): number => ML + ((lx(ms) - lx(M.X0)) / (lx(M.X1) - lx(M.X0))) * plotW;
 	const pts = data.map((d) => ({
@@ -148,7 +154,7 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
 	const desc =
 		`Scatter plot of ${data.length} configurations of eight JavaScript fuzzy search libraries comparing MRR ` +
 		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
-		`on a log scale, on the mixed 10k corpus over ${probes} probes. ` +
+		`on a log scale, on the mixed 10k corpus over ${families} query families. ` +
 		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
 		M.tail;
 
@@ -223,7 +229,7 @@ const render = (C: Palette, metric: Metric, data: Point[], probes: number): stri
   </defs>
   <rect x="0" y="0" width="${W}" height="${H}" fill="${C.surface}"/>
   <text x="${ML}" y="28" fill="${C.ink}" font-size="18" font-weight="600">${M.heading}</text>
-  <text x="${ML}" y="47" fill="${C.ink2}" font-size="13">${M.subtitle(probes)}</text>
+  <text x="${ML}" y="47" fill="${C.ink2}" font-size="13">${M.subtitle(families, queries)}</text>
   <g>
     ${grid}
   </g>
@@ -266,16 +272,17 @@ export const renderPareto = (artifact: Artifact): void => {
 			total: oneShots.reduce((a, b) => a + b, 0) / oneShots.length,
 		};
 	});
-	const probes = artifact.probes.mixed?.length ?? 0;
+	const families = artifact.families?.mixed?.filter((family) => family.scored).length ?? 0;
+	const queries = artifact.probes.mixed?.length ?? 0;
 	for (const metric of Object.keys(METRICS) as Metric[]) {
 		const { file } = METRICS[metric];
 		writeFileSync(
 			new URL(`./${file}-light.svg`, import.meta.url),
-			render(LIGHT, metric, data, probes),
+			render(LIGHT, metric, data, families, queries),
 		);
 		writeFileSync(
 			new URL(`./${file}-dark.svg`, import.meta.url),
-			render(DARK, metric, data, probes),
+			render(DARK, metric, data, families, queries),
 		);
 		const front = frontierOf(
 			data.map((d) => ({ n: displayName(d.name), mrr: d.mrr, ms: d[metric] })),
