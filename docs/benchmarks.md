@@ -226,8 +226,8 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 <!-- bench:families-mixed -->
 | Family                     | Ekrina | Ekrina (acronym) | Fuse.js (all opts) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |----------------------------|-------:|-----------------:|-------------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
-| long-word                  |   0.99 |             0.99 |               0.99 |              1.00 |       1.00 |      1.00 |         1.00 |             0.99 |  0.99 |
-| short-word                 |   0.91 |             0.91 |               0.81 |              1.00 |       0.93 |      0.98 |         1.00 |             0.91 |  0.86 |
+| long-word                  |   1.00 |             1.00 |               0.99 |              1.00 |       1.00 |      1.00 |         1.00 |             0.99 |  0.99 |
+| short-word                 |   1.00 |             1.00 |               0.81 |              1.00 |       0.93 |      0.98 |         1.00 |             0.91 |  0.86 |
 | two-words                  |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      1.00 |         0.90 |             0.90 |  0.90 |
 | two-words-reversed         |   1.00 |             1.00 |               1.00 |              1.00 |       0.12 |      1.00 |         0.10 |             0.60 |  0.10 |
 | two-words-partial-reversed |   1.00 |             1.00 |               1.00 |              1.00 |       0.35 |      1.00 |         0.00 |             0.00 |  0.00 |
@@ -235,16 +235,16 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 | two-words-typo             |   1.00 |             1.00 |               0.97 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | two-words-typo-second      |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | two-words-typo-reversed    |   1.00 |             1.00 |               1.00 |              1.00 |       0.00 |      0.00 |         0.00 |             0.00 |  0.00 |
-| plural-to-singular         |   0.94 |             0.94 |               0.85 |              1.00 |       0.94 |      0.70 |         0.58 |             0.70 |  0.69 |
-| short-word-typo            |   0.59 |             0.59 |               0.19 |              0.00 |       0.95 |      0.00 |         0.00 |             0.00 |  0.00 |
+| plural-to-singular         |   0.97 |             0.97 |               0.85 |              1.00 |       0.94 |      0.70 |         0.58 |             0.70 |  0.69 |
+| short-word-typo            |   0.86 |             0.86 |               0.19 |              0.00 |       0.95 |      0.00 |         0.00 |             0.00 |  0.00 |
 | prefix                     |   1.00 |             1.00 |               0.98 |              1.00 |       1.00 |      1.00 |         1.00 |             1.00 |  0.97 |
 | infix                      |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      1.00 |         1.00 |             1.00 |  1.00 |
-| scatter-light              |   0.98 |             0.98 |               0.96 |              1.00 |       1.00 |      1.00 |         1.00 |             0.99 |  0.99 |
+| scatter-light              |   1.00 |             1.00 |               0.96 |              1.00 |       1.00 |      1.00 |         1.00 |             0.99 |  0.99 |
 | scatter-medium             |   0.00 |             0.00 |               0.06 |              0.00 |       0.01 |      0.90 |         0.93 |             0.66 |  0.52 |
 | scatter-heavy              |   0.05 |             0.05 |               0.02 |              0.00 |       0.01 |      0.59 |         0.85 |             0.30 |  0.35 |
-| transposition              |   0.99 |             0.99 |               0.85 |              1.00 |       1.00 |      0.35 |         0.31 |             0.35 |  0.35 |
-| insertion                  |   0.99 |             0.99 |               1.00 |              1.00 |       1.00 |      0.20 |         0.20 |             0.20 |  0.20 |
-| substitution               |   0.96 |             0.96 |               0.94 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
+| transposition              |   1.00 |             1.00 |               0.85 |              1.00 |       1.00 |      0.35 |         0.31 |             0.35 |  0.35 |
+| insertion                  |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      0.20 |         0.20 |             0.20 |  0.20 |
+| substitution               |   1.00 |             1.00 |               0.94 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | acronym                    |   0.34 |             0.91 |               0.00 |              0.00 |       0.00 |      0.62 |         0.90 |             0.42 |  0.07 |
 | accent-stripped            |   1.00 |             1.00 |               1.00 |              1.00 |       0.78 |      1.00 |         1.00 |             1.00 |  0.11 |
 <!-- bench:end -->
@@ -254,8 +254,8 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 <!-- bench:families-ascii -->
 | Family                     | Ekrina | Ekrina (acronym) | Fuse.js (all opts) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |----------------------------|-------:|-----------------:|-------------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
-| long-word                  |   0.93 |             0.93 |               0.97 |              1.00 |       1.00 |      1.00 |         1.00 |             0.93 |  0.97 |
-| short-word                 |   0.86 |             0.86 |               0.70 |              1.00 |       0.85 |      0.93 |         1.00 |             0.86 |  0.84 |
+| long-word                  |   1.00 |             1.00 |               0.97 |              1.00 |       1.00 |      1.00 |         1.00 |             0.93 |  0.97 |
+| short-word                 |   1.00 |             1.00 |               0.70 |              1.00 |       0.85 |      0.93 |         1.00 |             0.86 |  0.84 |
 | two-words                  |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      1.00 |         1.00 |             1.00 |  1.00 |
 | two-words-reversed         |   1.00 |             1.00 |               1.00 |              1.00 |       0.01 |      1.00 |         0.00 |             0.70 |  0.00 |
 | two-words-partial-reversed |   1.00 |             1.00 |               0.95 |              1.00 |       0.23 |      1.00 |         0.05 |             0.10 |  0.07 |
@@ -263,16 +263,16 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 | two-words-typo             |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | two-words-typo-second      |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | two-words-typo-reversed    |   1.00 |             1.00 |               1.00 |              1.00 |       0.23 |      0.00 |         0.00 |             0.00 |  0.00 |
-| plural-to-singular         |   0.96 |             0.96 |               0.96 |              1.00 |       1.00 |      0.90 |         0.80 |             0.90 |  0.82 |
-| short-word-typo            |   0.79 |             0.79 |               0.31 |              0.00 |       0.86 |      0.20 |         0.15 |             0.20 |  0.20 |
+| plural-to-singular         |   1.00 |             1.00 |               0.96 |              1.00 |       1.00 |      0.90 |         0.80 |             0.90 |  0.82 |
+| short-word-typo            |   1.00 |             1.00 |               0.31 |              0.00 |       0.86 |      0.20 |         0.15 |             0.20 |  0.20 |
 | prefix                     |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      1.00 |         1.00 |             1.00 |  1.00 |
 | infix                      |   1.00 |             1.00 |               1.00 |              1.00 |       1.00 |      1.00 |         1.00 |             1.00 |  1.00 |
-| scatter-light              |   0.90 |             0.90 |               0.91 |              0.75 |       0.79 |      1.00 |         1.00 |             0.95 |  0.72 |
+| scatter-light              |   1.00 |             1.00 |               0.91 |              0.75 |       0.79 |      1.00 |         1.00 |             0.95 |  0.72 |
 | scatter-medium             |   0.00 |             0.00 |               0.22 |              0.00 |       0.14 |      0.90 |         0.95 |             0.80 |  0.62 |
-| scatter-heavy              |   0.03 |             0.03 |               0.00 |              0.00 |       0.00 |      0.28 |         0.67 |             0.10 |  0.16 |
-| transposition              |   0.98 |             0.98 |               0.95 |              1.00 |       1.00 |      0.20 |         0.20 |             0.15 |  0.20 |
-| insertion                  |   0.89 |             0.89 |               0.91 |              1.00 |       1.00 |      0.10 |         0.10 |             0.10 |  0.10 |
-| substitution               |   0.99 |             0.99 |               0.99 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
+| scatter-heavy              |   0.02 |             0.02 |               0.00 |              0.00 |       0.00 |      0.28 |         0.67 |             0.10 |  0.16 |
+| transposition              |   1.00 |             1.00 |               0.95 |              1.00 |       1.00 |      0.20 |         0.20 |             0.15 |  0.20 |
+| insertion                  |   1.00 |             1.00 |               0.91 |              1.00 |       1.00 |      0.10 |         0.10 |             0.10 |  0.10 |
+| substitution               |   1.00 |             1.00 |               0.99 |              1.00 |       1.00 |      0.00 |         0.00 |             0.00 |  0.00 |
 | acronym                    |   0.30 |             0.90 |               0.00 |              0.00 |       0.00 |      0.56 |         0.78 |             0.31 |  0.01 |
 | accent-stripped            |   1.00 |             1.00 |               0.65 |              1.00 |       0.60 |      1.00 |         1.00 |             1.00 |  0.20 |
 <!-- bench:end -->
@@ -333,9 +333,9 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-mixed -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym)            | 0.87 |     0.16 |    4.04 |    21.20 |        0.77 |
-| Ekrina                      | 0.84 |     0.15 |    3.78 |    21.73 |        0.80 |
-| Ekrina (indexed)            | 0.84 |     2.06 |    1.48 |    14.52 |        0.55 |
+| Ekrina (acronym)            | 0.90 |     0.16 |    4.04 |    21.20 |        0.77 |
+| Ekrina                      | 0.87 |     0.15 |    3.78 |    21.73 |        0.80 |
+| Ekrina (indexed)            | 0.87 |     2.06 |    1.48 |    14.52 |        0.55 |
 | Fuse.js (all opts)          | 0.79 |     1.56 |   15.99 |   376.17 |       15.01 |
 | uFuzzy (all opts)           | 0.76 |     5.20 |    1.89 |    32.79 |        1.29 |
 | fast-fuzzy                  | 0.72 |    32.22 |   16.42 |   173.10 |        6.50 |
@@ -355,9 +355,9 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-ascii -->
 | Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym)            | 0.87 |     0.13 |    3.69 |    18.95 |        0.71 |
-| Ekrina                      | 0.84 |     0.13 |    3.51 |    18.30 |        0.70 |
-| Ekrina (indexed)            | 0.84 |     2.66 |    1.49 |    19.91 |        0.77 |
+| Ekrina (acronym)            | 0.90 |     0.13 |    3.69 |    18.95 |        0.71 |
+| Ekrina                      | 0.87 |     0.13 |    3.51 |    18.30 |        0.70 |
+| Ekrina (indexed)            | 0.87 |     2.66 |    1.49 |    19.91 |        0.77 |
 | Fuse.js (all opts)          | 0.79 |     1.27 |   15.51 |   348.10 |       13.86 |
 | uFuzzy (all opts)           | 0.75 |     4.58 |    1.41 |    17.17 |        0.65 |
 | fast-fuzzy                  | 0.70 |    27.45 |   16.46 |   148.67 |        5.55 |
@@ -375,19 +375,18 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 Result-set size is _not_ a scorecard column: in a ranked UI any result list slices to the top N, so a large return does not hurt a picker (see "The corpus and the query families").
 Each family's median rows per library stay in [`bench/results.json`](../bench/results.json) for the places size does matter: filter-style UIs that show every match, and telling whether an MRR came from a selective matcher or from ranking a huge candidate set.
 
-_Ekrina (acronym) tops both corpora outright_ (0.87 mixed / 0.87 ascii), with base Ekrina and Ekrina (indexed) (0.84 / 0.84, identical ranks) next; the nearest non-Ekrina rows are Fuse.js (all opts) at 0.79 / 0.79 and uFuzzy (all opts) at 0.76 / 0.75.
+_Ekrina (acronym) tops both corpora outright_ (0.90 mixed / 0.90 ascii), with base Ekrina and Ekrina (indexed) (0.87 / 0.87, identical ranks) next; the nearest non-Ekrina rows are Fuse.js (all opts) at 0.79 / 0.79 and uFuzzy (all opts) at 0.76 / 0.75.
 The two Ekrina rows differ by one family: acronym, 0.34 base against 0.91 with the tier on, which is the whole of the gap.
 Read across the family tables, the lead comes from scoring near 1 on every family at once:
 
 - **Phrases in any order, half-typed or mistyped**: Ekrina scores 1.00 on all six phrase families, as do Fuse.js (all opts) and uFuzzy (all opts) on five of them; the subsequence engines score 0 on every phrase typo, and fast-fuzzy 0.12 or less on the reversed ones.
-- **Single-edit typos** (transposition, insertion, substitution): Ekrina scores 0.89–0.99, the edit-distance engines 0.85–1.00, the chain engines 0.35 or less.
+- **Words and single-edit typos**: Ekrina scores 1.00 on the plain-word families and on transposition, insertion and substitution, the edit-distance engines 0.85–1.00 on the typos, the chain engines 0.35 or less. Within a score a match that ends on a word boundary ranks first, so `will` finds "Will Smith" before "Willa Corkery", and a correction that completes a word before one that stops inside it.
 - **Refusal**: Ekrina returns nothing on both unscored families, where fast-fuzzy's median double typo returns 5 rows on mixed and 12 on ascii.
 
-Three families go against Ekrina, and the family tables show by how much:
+Two families go against Ekrina, and the family tables show by how much:
 
 - **Scatter** (medium and heavy): 0.00–0.05, where match-sorter scores 0.67–0.95 and fuzzysort 0.28–0.90. Ekrina refuses a chain that sparse on purpose, since the density floor that does it is what holds long-text junk at 0% ("Matching inside long text").
-- **Four-character typos**: 0.59 mixed / 0.79 ascii against fast-fuzzy's 0.95 / 0.86. Ekrina corrects a four-character query only when nothing matches it as typed, so a stray literal or fuzzy hit blocks the correction.
-- **Short words**: 0.91 / 0.86 against 1.00 for uFuzzy (all opts) and match-sorter. A whole word ties with the longer words it starts, so `will` ranks "Willa Corkery" level with "Will Smith".
+- **Four-character typos on mixed**: 0.86 against fast-fuzzy's 0.95 (1.00 against 0.86 on ascii). Ekrina corrects a four-character query only when nothing matches it as typed, so a stray literal or fuzzy hit blocks the correction.
 
 uFuzzy's typo configuration is the largest configuration spread in the table (0.76 mixed / 0.75 ascii against 0.24 / 0.24 for its defaults), so most of what separates uFuzzy from the field comes down to configuration rather than capability.
 
@@ -397,16 +396,16 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a 24-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Ekrina (indexed), Ekrina (acronym): Ekrina (acronym) tops MRR at 0.87 at 0.77 ms per query, Ekrina (indexed) reaches 0.84 at 0.55 ms, and everything else above 0.5 MRR, base Ekrina and Fuse.js (all opts, 0.79 at ~15 ms) included, is dominated." src="./pareto-query-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. per-query cost across a 24-query session, log scale, as a Pareto frontier. The frontier runs uFuzzy, fuzzysort, Ekrina (indexed), Ekrina (acronym): Ekrina (acronym) tops MRR at 0.90 at 0.77 ms per query, Ekrina (indexed) reaches 0.87 at 0.55 ms, and everything else above 0.5 MRR, base Ekrina and Fuse.js (all opts, 0.79 at ~15 ms) included, is dominated." src="./pareto-query-light.svg">
 </picture>
 
 Its x-axis is the batch's per-query time, how long a query takes once the searcher has answered twenty-three real ones, and its frontier runs uFuzzy → fuzzysort → Ekrina (indexed) → Ekrina (acronym).
-Base Ekrina sits off it because its batch pays for the mask build partway through, on the first query that needs the rescue, work its indexed twin did at construction, so the same 0.84 MRR costs it 0.80 ms per query against 0.55.
+Base Ekrina sits off it because its batch pays for the mask build partway through, on the first query that needs the rescue, work its indexed twin did at construction, so the same 0.87 MRR costs it 0.80 ms per query against 0.55.
 The fast end belongs to the bare-output engines, uFuzzy at 0.24 MRR and fuzzysort at 0.64; uFuzzy (all opts), at 0.76 the closest non-Ekrina row on quality, takes 1.29 ms per query against Ekrina (indexed)'s 0.55, and Fuse.js and fast-fuzzy are 11–35× slower.
 
 **Backend one-shot workload** (a fresh process runs constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
 Its frontier runs `fuzzy` → Ekrina (indexed) → Ekrina (acronym): a no-index substring scan at 0.43 MRR owns the fast end, and every other configuration - uFuzzy included, once its constructor-and-first-call reality is measured rather than amortised - is dominated.
-Base Ekrina is dominated too, by its indexed twin and only by a margin inside the tie band: 2.06 + 1.48 ms against 0.15 + 3.78 ms at the same 0.84 MRR, so building the mask index up front costs about what the first answer then saves.
+Base Ekrina is dominated too, by its indexed twin and only by a margin inside the tie band: 2.06 + 1.48 ms against 0.15 + 3.78 ms at the same 0.87 MRR, so building the mask index up front costs about what the first answer then saves.
 This is where base Ekrina's lazy preparation shows up, in two parts against a 0.11 ms constructor.
 A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings (~2 ms at 10k).
 The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the one-edit rescue, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
@@ -544,15 +543,15 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:session -->
 | Library            | `gra` | `grad` | `grady` | session |
 |--------------------|------:|-------:|--------:|--------:|
-| Ekrina             |  2.54 |   1.45 |    0.58 |    4.57 |
-| @nozbe/microfuzz   | 20.71 |  20.64 |   18.99 |   60.33 |
-| fuzzysort          |  5.93 |   3.61 |    1.97 |   11.50 |
-| uFuzzy (all opts)  |  3.99 |   2.02 |    2.02 |    8.03 |
-| Fuse.js (all opts) | 82.37 |  75.97 |  104.30 |  262.64 |
+| Ekrina             |  2.65 |   1.39 |    0.56 |    4.60 |
+| @nozbe/microfuzz   | 24.09 |  21.12 |   21.10 |   66.30 |
+| fuzzysort          |  7.44 |   6.12 |    2.09 |   15.66 |
+| uFuzzy (all opts)  |  3.97 |   2.11 |    2.15 |    8.23 |
+| Fuse.js (all opts) | 82.74 |  79.24 |  105.69 |  267.67 |
 <!-- bench:end -->
 
 Ekrina's per-keystroke time falls _3.7×_ across the word (2.16 → 1.37 → 0.59) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
-Ekrina takes every step of the session, the wide opener included (2.16 vs uFuzzy's 3.73), and the session total by 1.8× (4.12 vs 7.51), while returning tiers and ranges against uFuzzy's bare index array, at 0.76 MRR to Ekrina's 0.84.
+Ekrina takes every step of the session, the wide opener included (2.16 vs uFuzzy's 3.73), and the session total by 1.8× (4.12 vs 7.51), while returning tiers and ranges against uFuzzy's bare index array, at 0.76 MRR to Ekrina's 0.87.
 microfuzz stays at ~15–17 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 Unlike the scorecard, this table is a single process rather than a median of five, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time work (Ekrina's mask build, fuzzysort's lazy target prep) happens at load, not on keystroke one; the cold cells above measure it.
@@ -573,11 +572,11 @@ The probe: the document is the mixed corpus joined with spaces and sliced to gra
 |       128 |        0% |        15/15 |   0.004 |
 |       256 |        0% |        20/20 |   0.005 |
 |       512 |        0% |        20/20 |   0.007 |
-|      1024 |        0% |        20/20 |   0.018 |
-|      2048 |        0% |        20/20 |   0.030 |
-|      4096 |        0% |        20/20 |   0.054 |
-|      8192 |        0% |        20/20 |   0.107 |
-|     16384 |        0% |        20/20 |   0.208 |
+|      1024 |        0% |        20/20 |   0.019 |
+|      2048 |        0% |        20/20 |   0.033 |
+|      4096 |        0% |        20/20 |   0.060 |
+|      8192 |        0% |        20/20 |   0.114 |
+|     16384 |        0% |        20/20 |   0.214 |
 <!-- bench:end -->
 
 Zero junk at every length, while every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly) and label-corpus behaviour is unchanged (same MRR, same ranks, slightly tighter sets: `rsaw` 8 → 7, ascii's `sgh` 55 → 31).
@@ -591,16 +590,16 @@ Literal-only matching, for callers that want no fuzzy assemblies at all, is a on
 Everything above condenses to one recommendation: _pick Ekrina for list matching_, with two carve-outs the data supports.
 Three things carry the claim, each measured in its own section:
 
-- **Quality**: Ekrina (acronym) tops the scorecard on both corpora outright (0.87 mixed / 0.87 ascii), and base Ekrina (0.84) is still clear of every other library; the lead comes from scoring near 1 on every phrase and single-edit typo family at once, which no other library does.
+- **Quality**: Ekrina (acronym) tops the scorecard on both corpora outright (0.90 mixed / 0.90 ascii), and base Ekrina (0.87) is still clear of every other library; the lead comes from scoring near 1 on every phrase and single-edit typo family at once, which no other library does.
 - **Speed, measured cold**: the fastest 24-query session of anything above 0.5 MRR at both sizes (batch 14.8 ms at mixed 10k, ~0.5 ms per query after the first, and 10.0 ms / ~0.4 ms for Ekrina (indexed); ~4–57× under every typo-tolerant or tiered alternative), a near-zero constructor, ~5.5 kB gzip, zero deps. The honest asterisk is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages ~3.4 ms at 10k and ~13 ms at 100k across the timed queries, or ~1.3 ms and ~2.4 ms once Ekrina (indexed) has spent ~2 ms and ~12 ms building the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length, phrase probes included, so the same engine covers documents, not just labels.
 
 The carve-outs:
 
-- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo from five characters up (transposition, insertion, deletion and substitution), scoring 0.89–0.99 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed. _Two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter and the double-typo phrase.
+- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo from five characters up (transposition, insertion, deletion and substitution), scoring 1.00 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed. _Two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter and the double-typo phrase.
   If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool for the typos, and match-sorter or fuzzysort for the scatter (0.67–0.95 on the scatter families against Ekrina's 0.00–0.05); the scorecard measures what each gains and loses: 0.79 and 0.72 MRR on mixed for Fuse.js (all opts) and fast-fuzzy, at ~15 ms per cold query.
 - **Raw throughput when a bare index array is enough.** uFuzzy wins the 100k ascii batch outright (66% of Ekrina bare, ahead of Ekrina (indexed)'s 74%; with folding it drops to 92%, a tie with base Ekrina, and on mixed its folding config trails base Ekrina at 115%) and owns the fastest bare per-query and miss cells at every size.
-  Bare, it gives up most of the match quality to get there (0.24 MRR against Ekrina's 0.84); folded it scores 0.75–0.76, losing the joined-phrase and four-character typo families outright, and it has no ranges, tiers, or per-field config. A real trade, measured in full above.
+  Bare, it gives up most of the match quality to get there (0.24 MRR against Ekrina's 0.87); folded it scores 0.75–0.76, losing the joined-phrase and four-character typo families outright, and it has no ranges, tiers, or per-field config. A real trade, measured in full above.
 
 The rest of the field is dominated on these benchmarks:
 

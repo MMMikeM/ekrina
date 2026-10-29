@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 524" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" role="img" aria-labelledby="pareto-query-title pareto-query-desc">
   <title id="pareto-query-title">Fuzzy search libraries: MRR vs per-query cost across a 20-query session</title>
-  <desc id="pareto-query-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs uFuzzy (0.24 MRR at 0.24 ms) to fuzzysort (0.64 MRR at 0.54 ms) to Ekrina (indexed) (0.84 MRR at 0.55 ms) to Ekrina (acronym) (0.87 MRR at 0.77 ms). Ekrina owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.</desc>
+  <desc id="pareto-query-desc">Scatter plot of 15 configurations of eight JavaScript fuzzy search libraries comparing MRR (how highly each ranks the queried item) against query milliseconds with indexes prebuilt, on a log scale, on the mixed 10k corpus over 24 probes. The Pareto frontier runs uFuzzy (0.24 MRR at 0.24 ms) to fuzzysort (0.64 MRR at 0.54 ms) to Ekrina (indexed) (0.87 MRR at 0.55 ms) to Ekrina (acronym) (0.90 MRR at 0.77 ms). Ekrina owns the accurate end of the frontier; the cheaper points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0 0 L10 5 L0 10 z" fill="#898781"/>
@@ -51,15 +51,15 @@
   </g>
   <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Batch per-query: searcher built once, twenty distinct queries. Log scale, lower is better</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#52514e" font-size="13">Rank of queried item: 1st = 1.0, 10th = 0.1</text>
-  <path d="M128.7 370.5 L233 189 L235 98.3 L277.2 84.7" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
+  <path d="M128.7 370.5 L233 189 L235 84.7 L277.2 71.1" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">
     <line x1="34" y1="24" x2="4" y2="4" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
     <text x="40" y="20" fill="#898781" font-size="12" font-style="italic">faster &amp; more accurate</text>
   </g>
   <g>
-    <circle cx="277.2" cy="84.7" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="282.9" cy="98.3" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
-    <circle cx="235" cy="98.3" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="277.2" cy="71.1" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="282.9" cy="84.7" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
+    <circle cx="235" cy="84.7" r="6.5" fill="#2a78d6" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="663" cy="121" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="345" cy="134.6" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
     <circle cx="554.4" cy="152.7" r="6.5" fill="#898781" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
@@ -74,9 +74,9 @@
     <circle cx="128.7" cy="370.5" r="6.5" fill="#1baf7a" fill-opacity="0.9" stroke="#fcfcfb" stroke-width="1.5"/>
   </g>
   <g>
-    <text x="290.7" y="76.7" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (acronym)</text>
-    <text x="296.4" y="114.3" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina</text>
-    <text x="221.5" y="122.3" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (indexed)</text>
+    <text x="290.7" y="63.1" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (acronym)</text>
+    <text x="296.4" y="100.7" text-anchor="start" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina</text>
+    <text x="221.5" y="108.7" text-anchor="end" fill="#0b0b0b" font-size="12.5" font-weight="600">Ekrina (indexed)</text>
     <text x="358.5" y="126.6" text-anchor="start" fill="#898781" font-size="12.5">uFuzzy (all opts)</text>
     <text x="649.5" y="141" text-anchor="end" fill="#898781" font-size="12.5">Fuse.js (all opts)</text>
     <text x="567.9" y="156.7" text-anchor="start" fill="#898781" font-size="12.5">fast-fuzzy</text>

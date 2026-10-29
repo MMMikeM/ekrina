@@ -840,15 +840,15 @@
 			"ascii": [
 				{
 					"library": "ekrina (acronym)",
-					"mrr": 0.87
+					"mrr": 0.9
 				},
 				{
 					"library": "ekrina",
-					"mrr": 0.84
+					"mrr": 0.87
 				},
 				{
 					"library": "ekrina (indexed)",
-					"mrr": 0.84
+					"mrr": 0.87
 				},
 				{
 					"library": "fuse.js (all opts)",
@@ -902,15 +902,15 @@
 			"mixed": [
 				{
 					"library": "ekrina (acronym)",
-					"mrr": 0.87
+					"mrr": 0.9
 				},
 				{
 					"library": "ekrina",
-					"mrr": 0.84
+					"mrr": 0.87
 				},
 				{
 					"library": "ekrina (indexed)",
-					"mrr": 0.84
+					"mrr": 0.87
 				},
 				{
 					"library": "fuse.js (all opts)",
@@ -1086,7 +1086,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							5
+							4
 						]
 					},
 					"ekrina (indexed)": {
@@ -1094,7 +1094,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							5
+							4
 						]
 					},
 					"ekrina (acronym)": {
@@ -1102,7 +1102,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							5
+							4
 						]
 					},
 					"@nozbe/microfuzz": {
@@ -2092,25 +2092,25 @@
 				"cells": {
 					"ekrina": {
 						"count": 28,
-						"rank": 3,
+						"rank": 16,
 						"tiedRanks": [
-							1,
+							16,
 							28
 						]
 					},
 					"ekrina (indexed)": {
 						"count": 28,
-						"rank": 3,
+						"rank": 16,
 						"tiedRanks": [
-							1,
+							16,
 							28
 						]
 					},
 					"ekrina (acronym)": {
 						"count": 28,
-						"rank": 3,
+						"rank": 16,
 						"tiedRanks": [
-							1,
+							16,
 							28
 						]
 					},
@@ -2203,27 +2203,15 @@
 				"cells": {
 					"ekrina": {
 						"count": 4,
-						"rank": 1,
-						"tiedRanks": [
-							1,
-							2
-						]
+						"rank": 1
 					},
 					"ekrina (indexed)": {
 						"count": 4,
-						"rank": 1,
-						"tiedRanks": [
-							1,
-							2
-						]
+						"rank": 1
 					},
 					"ekrina (acronym)": {
 						"count": 4,
-						"rank": 1,
-						"tiedRanks": [
-							1,
-							2
-						]
+						"rank": 1
 					},
 					"@nozbe/microfuzz": {
 						"count": 64,
@@ -2301,7 +2289,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							9
+							7
 						]
 					},
 					"ekrina (indexed)": {
@@ -2309,7 +2297,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							9
+							7
 						]
 					},
 					"ekrina (acronym)": {
@@ -2317,7 +2305,7 @@
 						"rank": 2,
 						"tiedRanks": [
 							1,
-							9
+							7
 						]
 					},
 					"@nozbe/microfuzz": {
@@ -3184,7 +3172,7 @@
 						"rank": 1,
 						"tiedRanks": [
 							1,
-							6
+							5
 						]
 					},
 					"ekrina (indexed)": {
@@ -3192,7 +3180,7 @@
 						"rank": 1,
 						"tiedRanks": [
 							1,
-							6
+							5
 						]
 					},
 					"ekrina (acronym)": {
@@ -3200,7 +3188,7 @@
 						"rank": 1,
 						"tiedRanks": [
 							1,
-							6
+							5
 						]
 					},
 					"@nozbe/microfuzz": {
@@ -4360,26 +4348,26 @@
 				"cells": {
 					"ekrina": {
 						"count": 42,
-						"rank": 3,
+						"rank": 1,
 						"tiedRanks": [
 							1,
-							21
+							2
 						]
 					},
 					"ekrina (indexed)": {
 						"count": 42,
-						"rank": 3,
+						"rank": 1,
 						"tiedRanks": [
 							1,
-							21
+							2
 						]
 					},
 					"ekrina (acronym)": {
 						"count": 42,
-						"rank": 3,
+						"rank": 1,
 						"tiedRanks": [
 							1,
-							21
+							2
 						]
 					},
 					"@nozbe/microfuzz": {
@@ -5137,47 +5125,47 @@
 			{
 				"library": "ekrina",
 				"stepMs": [
-					2.5439170000001923,
-					1.4455000000000382,
-					0.5823750000001837
+					2.654207999999926,
+					1.387042000000065,
+					0.5618750000001
 				],
-				"sessionMs": 4.571792000000414
+				"sessionMs": 4.603125000000091
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					20.70695899999987,
-					20.639333999999963,
-					18.986625000000004
+					24.08683300000007,
+					21.11854200000016,
+					21.09674999999993
 				],
-				"sessionMs": 60.332917999999836
+				"sessionMs": 66.30212500000016
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					5.92516599999999,
-					3.6077080000000024,
-					1.9674580000000788
+					7.443208000000141,
+					6.124917000000096,
+					2.092791000000034
 				],
-				"sessionMs": 11.500332000000071
+				"sessionMs": 15.66091600000027
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					3.9947500000002947,
-					2.018750000000182,
-					2.0208330000000387
+					3.9694589999999152,
+					2.107499999999618,
+					2.1529169999998885
 				],
-				"sessionMs": 8.034333000000515
+				"sessionMs": 8.229875999999422
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					82.36612500000001,
-					75.97424999999976,
-					104.29666600000019
+					82.74187500000016,
+					79.23520899999994,
+					105.69450000000006
 				],
-				"sessionMs": 262.63704099999995
+				"sessionMs": 267.67158400000017
 			}
 		]
 	},
@@ -5188,63 +5176,63 @@
 				"junkRate": 0,
 				"presentHits": 8,
 				"presentProbes": 8,
-				"missMs": 0.0038749999999936335
+				"missMs": 0.004166999999995369
 			},
 			{
 				"docChars": 128,
 				"junkRate": 0,
 				"presentHits": 15,
 				"presentProbes": 15,
-				"missMs": 0.004083000000036918
+				"missMs": 0.0043330000000310065
 			},
 			{
 				"docChars": 256,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.0049579999999878055
+				"missMs": 0.005291999999997188
 			},
 			{
 				"docChars": 512,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.006916999999987183
+				"missMs": 0.007291000000009262
 			},
 			{
 				"docChars": 1024,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.0182079999999587
+				"missMs": 0.019333999999957996
 			},
 			{
 				"docChars": 2048,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.030041999999980362
+				"missMs": 0.03304100000002563
 			},
 			{
 				"docChars": 4096,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.05370800000002873
+				"missMs": 0.06024999999999636
 			},
 			{
 				"docChars": 8192,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.10675000000003365
+				"missMs": 0.11374999999998181
 			},
 			{
 				"docChars": 16384,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.20770800000013878
+				"missMs": 0.2135000000000673
 			}
 		]
 	},
@@ -11422,9 +11410,9 @@
 					"bernier"
 				],
 				"mrr": {
-					"ekrina": 0.93,
-					"ekrina (indexed)": 0.93,
-					"ekrina (acronym)": 0.93,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.93,
 					"@nozbe/microfuzz (all opts)": 0.93,
 					"fuzzy": 0.973,
@@ -11472,9 +11460,9 @@
 					"miss"
 				],
 				"mrr": {
-					"ekrina": 0.859,
-					"ekrina (indexed)": 0.859,
-					"ekrina (acronym)": 0.859,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.859,
 					"@nozbe/microfuzz (all opts)": 0.859,
 					"fuzzy": 0.845,
@@ -11872,9 +11860,9 @@
 					"langoshs"
 				],
 				"mrr": {
-					"ekrina": 0.965,
-					"ekrina (indexed)": 0.965,
-					"ekrina (acronym)": 0.965,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.9,
 					"@nozbe/microfuzz (all opts)": 0.9,
 					"fuzzy": 0.82,
@@ -11922,9 +11910,9 @@
 					"wext"
 				],
 				"mrr": {
-					"ekrina": 0.79,
-					"ekrina (indexed)": 0.79,
-					"ekrina (acronym)": 0.79,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.2,
 					"@nozbe/microfuzz (all opts)": 0.2,
 					"fuzzy": 0.2,
@@ -12072,9 +12060,9 @@
 					"lurine"
 				],
 				"mrr": {
-					"ekrina": 0.896,
-					"ekrina (indexed)": 0.896,
-					"ekrina (acronym)": 0.896,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.95,
 					"@nozbe/microfuzz (all opts)": 0.95,
 					"fuzzy": 0.718,
@@ -12172,9 +12160,9 @@
 					"bctlr"
 				],
 				"mrr": {
-					"ekrina": 0.029,
-					"ekrina (indexed)": 0.029,
-					"ekrina (acronym)": 0.029,
+					"ekrina": 0.019,
+					"ekrina (indexed)": 0.019,
+					"ekrina (acronym)": 0.019,
 					"@nozbe/microfuzz": 0.102,
 					"@nozbe/microfuzz (all opts)": 0.102,
 					"fuzzy": 0.158,
@@ -12222,9 +12210,9 @@
 					"centerville"
 				],
 				"mrr": {
-					"ekrina": 0.982,
-					"ekrina (indexed)": 0.982,
-					"ekrina (acronym)": 0.982,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.15,
 					"@nozbe/microfuzz (all opts)": 0.15,
 					"fuzzy": 0.2,
@@ -12272,9 +12260,9 @@
 					"langwworth"
 				],
 				"mrr": {
-					"ekrina": 0.889,
-					"ekrina (indexed)": 0.889,
-					"ekrina (acronym)": 0.889,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.1,
 					"@nozbe/microfuzz (all opts)": 0.1,
 					"fuzzy": 0.1,
@@ -12322,9 +12310,9 @@
 					"wilkxnson"
 				],
 				"mrr": {
-					"ekrina": 0.99,
-					"ekrina (indexed)": 0.99,
-					"ekrina (acronym)": 0.99,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
@@ -12537,9 +12525,9 @@
 					"goodyear"
 				],
 				"mrr": {
-					"ekrina": 0.992,
-					"ekrina (indexed)": 0.992,
-					"ekrina (acronym)": 0.992,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.992,
 					"@nozbe/microfuzz (all opts)": 0.992,
 					"fuzzy": 0.986,
@@ -12587,9 +12575,9 @@
 					"mlle"
 				],
 				"mrr": {
-					"ekrina": 0.906,
-					"ekrina (indexed)": 0.906,
-					"ekrina (acronym)": 0.906,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.906,
 					"@nozbe/microfuzz (all opts)": 0.906,
 					"fuzzy": 0.865,
@@ -12987,9 +12975,9 @@
 					"johnnys"
 				],
 				"mrr": {
-					"ekrina": 0.942,
-					"ekrina (indexed)": 0.942,
-					"ekrina (acronym)": 0.942,
+					"ekrina": 0.97,
+					"ekrina (indexed)": 0.97,
+					"ekrina (acronym)": 0.97,
 					"@nozbe/microfuzz": 0.7,
 					"@nozbe/microfuzz (all opts)": 0.7,
 					"fuzzy": 0.685,
@@ -13037,9 +13025,9 @@
 					"coxe"
 				],
 				"mrr": {
-					"ekrina": 0.59,
-					"ekrina (indexed)": 0.59,
-					"ekrina (acronym)": 0.59,
+					"ekrina": 0.861,
+					"ekrina (indexed)": 0.861,
+					"ekrina (acronym)": 0.861,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
@@ -13187,9 +13175,9 @@
 					"sewryn"
 				],
 				"mrr": {
-					"ekrina": 0.981,
-					"ekrina (indexed)": 0.981,
-					"ekrina (acronym)": 0.981,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.99,
 					"@nozbe/microfuzz (all opts)": 0.99,
 					"fuzzy": 0.988,
@@ -13337,9 +13325,9 @@
 					"orinetal"
 				],
 				"mrr": {
-					"ekrina": 0.992,
-					"ekrina (indexed)": 0.992,
-					"ekrina (acronym)": 0.992,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.35,
 					"@nozbe/microfuzz (all opts)": 0.35,
 					"fuzzy": 0.35,
@@ -13387,9 +13375,9 @@
 					"handmmade"
 				],
 				"mrr": {
-					"ekrina": 0.988,
-					"ekrina (indexed)": 0.988,
-					"ekrina (acronym)": 0.988,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0.2,
 					"@nozbe/microfuzz (all opts)": 0.2,
 					"fuzzy": 0.2,
@@ -13437,9 +13425,9 @@
 					"lucxlle"
 				],
 				"mrr": {
-					"ekrina": 0.958,
-					"ekrina (indexed)": 0.958,
-					"ekrina (acronym)": 0.958,
+					"ekrina": 1,
+					"ekrina (indexed)": 1,
+					"ekrina (acronym)": 1,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,

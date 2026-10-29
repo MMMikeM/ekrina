@@ -44,6 +44,9 @@ Design decisions worth recording, with the measurements that made them:
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never pays it.
   A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.2 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
+- **Within a score, a whole word ranks first.**
+  A match that ends on a word boundary sorts ahead of one that stops inside a word, then list order, so `will` finds "Will Smith" before "Willa Corkery" and a correction that completes a word before one that doesn't; score values are unchanged.
+  MRR rises 0.84 → 0.87 on both corpora (0.87 → 0.90 with acronyms), from the plain-word, typo and four-character typo families (docs/benchmarks.md, the family tables).
 - **One character matches only where it starts a word.**
   Anywhere, one character matches most of any list and ranks none of it; at word starts, a 100-item list returns a median of 9 rows per letter and 100k items about a quarter of the list.
   `fuzzyMatch` applies the same rule, so `fuzzyMatch("banana", "n")` is null.

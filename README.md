@@ -12,7 +12,7 @@ Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a sc
 
 - **Tells you how it matched.** Every match carries `tier`, `ranges` and `score`, so ranking, highlighting and "showing results for…" are all reads off the result.
 - **Survives a typo.** A transposition, an insertion, a deletion or a substitution each break the subsequence property; the four one-edit tiers still take all three at rank 1.
-- **Tops the match-quality scorecard.** 0.87 MRR on the mixed corpus at ~0.8 ms per query, against seven other libraries.
+- **Tops the match-quality scorecard.** 0.90 MRR on the mixed corpus at ~0.8 ms per query, against seven other libraries.
 - **Runs anywhere.** No `node:` imports, no DOM, nothing above ES2022: browsers, Node, Deno, Bun and edge runtimes, ESM and CJS.
 - **Stays small.** ~5.5 kB gzip, zero runtime dependencies, TS-first.
 
@@ -62,7 +62,7 @@ byField("ban");
 // so the title hit leads even though both are prefix matches.
 ```
 
-Results are sorted best-first (stable), and preprocessing is cached: each item is prepared the first time a query matches it, and the whole-list mask index the first time a query needs it.
+Results are sorted best-first; within a score, a match that ends on a word boundary comes first (`will` finds "Will Smith" before "Willa Corkery"), then list order. Preprocessing is cached: each item is prepared the first time a query matches it, and the whole-list mask index the first time a query needs it.
 
 A one-character query matches only where it starts a word (`"o"` finds "Open File", not "Folder"), since one character anywhere matches most of any list.
 Queries under five characters are corrected only when nothing matches them as typed.
@@ -231,7 +231,7 @@ Six behavioural differences to know about:
 - **`matches` became `fields`, and carries more than ranges.** microfuzz returns `Array<HighlightRanges | null>`, one entry per `getText` string. Ekrina returns `Array<MatchResult | null>`: the ranges are at `fields[i].ranges`, next to that field's own `score` and `tier`. The `[start, end]` inclusive convention is unchanged, so an existing highlight helper keeps working once it reads `.ranges`.
 - **The scores are an API contract here.** microfuzz documents its values as "not an API contract, can change between releases"; the shared tiers happen to agree today. Ekrina exports them as `SCORES`, pins them in `test/tier-constants.test.ts`, and treats a changed score as a breaking change with a CHANGELOG entry.
 - **There is no `strategy` option.** `'smart'` is the always-on behaviour. `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here". `'aggressive'` has no equivalent on purpose: the density floor that refuses scattered chains is what holds the long-text junk rate at 0%.
-- **Typos match.** On the same queries microfuzz scores 0.52 MRR and Ekrina 0.84, most of the gap from the one-edit tiers ([the scorecard](./docs/benchmarks.md#scorecard)).
+- **Typos match.** On the same queries microfuzz scores 0.52 MRR and Ekrina 0.87, most of the gap from the one-edit tiers ([the scorecard](./docs/benchmarks.md#scorecard)).
 - **`normalizeText` is `normaliseText`.** EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.** microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary. `useMemo(() => createFuzzySearch(list, getText), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
 
@@ -246,7 +246,7 @@ Each library at its best-scoring configuration, mixed corpus at 10k items, measu
 
 | Library                     |    Gzip | Deps |  MRR | ms/query | Tiers | Ranges | Typos    |
 | --------------------------- | ------: | ---: | ---: | -------: | :---: | :----: | -------- |
-| **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.87 | **0.77** |  🟢   |   🟢   | one edit |
+| **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.90 | **0.77** |  🟢   |   🟢   | one edit |
 | Fuse.js (all opts)          | ~9.3 kB |    0 | 0.79 |    15.01 |  🔴   |   🟡   | full     |
 | uFuzzy (all opts)           | ~4.1 kB |    0 | 0.76 |     1.29 |  🔴   |   🟢   | one edit |
 | fast-fuzzy                  |  ~11 kB |    1 | 0.72 |     6.50 |  🔴   |   🟡   | full     |
@@ -264,7 +264,7 @@ Accuracy against one whole cold search (index + one query) is the least flatteri
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.84 at ~3.5 ms one-shot and Ekrina (acronym) 0.87 at ~4.2 ms, and everything else, including Fuse.js (all opts) at 0.79 and ~18 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Mixed-corpus accuracy (MRR) vs. cold one-shot cost (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina (indexed), then Ekrina (acronym): Ekrina (indexed) scores 0.87 at ~3.5 ms one-shot and Ekrina (acronym) 0.90 at ~4.2 ms, and everything else, including Fuse.js (all opts) at 0.79 and ~18 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
 Ekrina is the only library that by default:
@@ -280,7 +280,7 @@ It was written for matching in-memory lists on the client, and the cold-process 
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: Ekrina scores 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), and 0.89–0.99 on the single-edit typos, which no other library matches across the board.
+- **Match quality**: Ekrina scores 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), and 1.00 on the plain words and single-edit typos, which no other library matches across the board.
   A transposition, an insertion and a substitution each break the subsequence property, so the subsequence engines score 0.35 or less there; Ekrina's one-edit tiers correct them, and inside a phrase the words that do occur pin the field so only the failing word is rescued.
   Ekrina refuses sparse chains on purpose, which costs it the scatter families (0.00–0.05 against 0.59–0.93 for the chain engines) and keeps long-text junk at 0%; two or more edits in one query remain the edit-distance engines' edge.
 - **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 15 ms at 10k and 57 ms at 100k, faster than any other library above 0.5 MRR, and ~4–57× under every typo-tolerant or tiered alternative, ~0.5–2.2 ms per query after the first.

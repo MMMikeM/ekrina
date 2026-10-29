@@ -53,6 +53,22 @@ describe("one-character queries", () => {
 	});
 });
 
+describe("ordering within a score", () => {
+	it("a whole word ranks before the longer words it starts", () => {
+		const search = createFuzzySearch(["Willa Corkery", "Williamson", "Will Smith"]);
+		expect(search("will").map((r) => [r.item, r.score])).toEqual([
+			["Will Smith", 0.5],
+			["Willa Corkery", 0.5],
+			["Williamson", 0.5],
+		]);
+	});
+
+	it("list order still breaks ties between whole words", () => {
+		const search = createFuzzySearch(["Will Jones", "Will Smith"]);
+		expect(search("will").map((r) => r.item)).toEqual(["Will Jones", "Will Smith"]);
+	});
+});
+
 describe("limit", () => {
 	const words = ["alpha", "alpine", "palace", "salad", "plaza", "lapel", "atlas", "apple", "pal"];
 	const search = createFuzzySearch(words);
