@@ -16,9 +16,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ekrina-scorecard-mixed -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym) | 0.90 |     0.16 |    4.04 |    21.20 |        0.77 |
-| Ekrina           | 0.87 |     0.15 |    3.78 |    21.73 |        0.80 |
-| Ekrina (indexed) | 0.87 |     2.06 |    1.48 |    14.52 |        0.55 |
+| Ekrina (acronym) | 0.90 |     0.13 |    3.93 |    18.73 |        0.67 |
+| Ekrina           | 0.87 |     0.13 |    3.71 |    18.49 |        0.67 |
+| Ekrina (indexed) | 0.87 |     2.10 |    1.34 |    13.54 |        0.52 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -26,9 +26,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ekrina-scorecard-ascii -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (acronym) | 0.90 |     0.13 |    3.69 |    18.95 |        0.71 |
-| Ekrina           | 0.87 |     0.13 |    3.51 |    18.30 |        0.70 |
-| Ekrina (indexed) | 0.87 |     2.66 |    1.49 |    19.91 |        0.77 |
+| Ekrina (acronym) | 0.90 |     0.12 |    3.42 |    19.03 |        0.71 |
+| Ekrina           | 0.87 |     0.12 |    3.33 |    18.68 |        0.71 |
+| Ekrina (indexed) | 0.87 |     2.08 |    1.43 |    15.35 |        0.59 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -40,17 +40,17 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:library-ekrina-speed-ascii -->
 | Library          |    index | cold query |    total | total rel |
 |------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**       |  0.34 ms |   12.83 ms | 13.13 ms |  **100%** |
-| Ekrina (acronym) |  0.43 ms |   12.98 ms | 13.31 ms |      101% |
-| Ekrina (indexed) | 12.49 ms |    2.94 ms | 14.77 ms |      112% |
+| **Ekrina**       |  0.36 ms |   12.41 ms | 12.74 ms |  **100%** |
+| Ekrina (acronym) |  0.31 ms |   12.21 ms | 12.55 ms |       99% |
+| Ekrina (indexed) | 12.08 ms |    2.64 ms | 14.15 ms |      111% |
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-ascii -->
 | Library          | batch/query | batch total | batch rel |
 |------------------|------------:|------------:|----------:|
-| **Ekrina**       |     3.00 ms |    76.65 ms |  **100%** |
-| Ekrina (acronym) |     3.26 ms |    83.66 ms |      109% |
-| Ekrina (indexed) |     2.22 ms |    55.71 ms |       73% |
+| **Ekrina**       |     2.51 ms |    64.52 ms |  **100%** |
+| Ekrina (acronym) |     2.51 ms |    64.53 ms |      100% |
+| Ekrina (indexed) |     1.95 ms |    49.31 ms |       76% |
 <!-- bench:end -->
 
 **mixed corpus:**
@@ -58,17 +58,17 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:library-ekrina-speed-mixed -->
 | Library          |    index | cold query |    total | total rel |
 |------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**       |  0.30 ms |   26.46 ms | 26.89 ms |  **100%** |
-| Ekrina (acronym) |  0.29 ms |   25.67 ms | 26.13 ms |       97% |
-| Ekrina (indexed) | 22.93 ms |    4.25 ms | 31.15 ms |      116% |
+| **Ekrina**       |  0.35 ms |   19.22 ms | 19.57 ms |  **100%** |
+| Ekrina (acronym) |  0.32 ms |   19.88 ms | 20.22 ms |      103% |
+| Ekrina (indexed) | 20.58 ms |    2.39 ms | 23.37 ms |      119% |
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-mixed -->
 | Library          | batch/query | batch total | batch rel |
 |------------------|------------:|------------:|----------:|
-| **Ekrina**       |     2.78 ms |    72.64 ms |  **100%** |
-| Ekrina (acronym) |     3.09 ms |    80.78 ms |      111% |
-| Ekrina (indexed) |     1.71 ms |    44.18 ms |       61% |
+| **Ekrina**       |     2.43 ms |    63.47 ms |  **100%** |
+| Ekrina (acronym) |     2.41 ms |    63.29 ms |      100% |
+| Ekrina (indexed) |     1.19 ms |    30.79 ms |       49% |
 <!-- bench:end -->
 
 ## Match quality, by query family

@@ -3,7 +3,7 @@
 Tiny, typed fuzzy matching. Zero dependencies, dual ESM/CJS, no platform assumptions — browsers, Node, Deno, Bun, edge runtimes.
 
 The package is `ekrina`; the working directory is still `mikrofuzz` from before the rename.
-Nothing has been published yet, so the public surface can still change freely until launch; the CHANGELOG is a single initial-release section recording the measured design decisions.
+1.0.0 is on npm (published 2026-08-04), so the public surface follows semver from here: an export, a score value or a `Tier` string changes only with a version bump and a CHANGELOG entry. The CHANGELOG has a section per release, each recording the measured design decisions it made.
 
 ## Hard constraints
 

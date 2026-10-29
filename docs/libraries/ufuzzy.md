@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ufuzzy-scorecard-mixed -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.76 |     5.20 |    1.89 |    32.79 |        1.29 |
-| uFuzzy                | 0.24 |     5.27 |    0.97 |     7.25 |        0.24 |
+| **uFuzzy (all opts)** | 0.76 |     4.95 |    1.68 |    23.40 |        0.91 |
+| uFuzzy                | 0.24 |     4.25 |    0.92 |     6.04 |        0.21 |
 <!-- bench:end -->
 
 **ascii corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ufuzzy-scorecard-ascii -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.75 |     4.58 |    1.41 |    17.17 |        0.65 |
-| uFuzzy                | 0.24 |     4.02 |    0.88 |     6.03 |        0.21 |
+| **uFuzzy (all opts)** | 0.75 |     4.73 |    1.39 |    17.27 |        0.66 |
+| uFuzzy                | 0.24 |     4.22 |    0.82 |     5.56 |        0.19 |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -37,19 +37,19 @@ Only the ascii corpus is shown, because the mixed tables list only configuration
 **ascii corpus:**
 
 <!-- bench:library-ufuzzy-speed-ascii -->
-| Library           |    index | cold query |    total | total rel |
-|-------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**        |  0.34 ms |   12.83 ms | 13.13 ms |  **100%** |
-| uFuzzy            |  7.74 ms |    3.01 ms |  7.84 ms |       60% |
-| uFuzzy (all opts) | 10.69 ms |    3.58 ms | 12.56 ms |       96% |
+| Library           |   index | cold query |    total | total rel |
+|-------------------|--------:|-----------:|---------:|----------:|
+| **Ekrina**        | 0.36 ms |   12.41 ms | 12.74 ms |  **100%** |
+| uFuzzy            | 4.13 ms |    2.46 ms |  6.54 ms |       51% |
+| uFuzzy (all opts) | 7.89 ms |    3.09 ms | 11.37 ms |       89% |
 <!-- bench:end -->
 
 <!-- bench:library-ufuzzy-batch-ascii -->
 | Library           | batch/query | batch total | batch rel |
 |-------------------|------------:|------------:|----------:|
-| **Ekrina**        |     3.00 ms |    76.65 ms |  **100%** |
-| uFuzzy            |     2.82 ms |    73.44 ms |       96% |
-| uFuzzy (all opts) |     3.90 ms |    98.86 ms |      129% |
+| **Ekrina**        |     2.51 ms |    64.52 ms |  **100%** |
+| uFuzzy            |     1.71 ms |    44.09 ms |       68% |
+| uFuzzy (all opts) |     2.38 ms |    60.21 ms |       93% |
 <!-- bench:end -->
 
 ## Match quality, by query family
