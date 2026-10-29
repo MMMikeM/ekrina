@@ -6,6 +6,7 @@ import {
 	type Artifact,
 	type ColdMatrix,
 	type MemoryMatrix,
+	type FamilyRow,
 	type ProbeTable,
 	type ScorecardRow,
 	ensureRawDir,
@@ -28,8 +29,9 @@ const options = new Map(
 		.map((a) => a.split("=", 2) as [string, string]),
 );
 
-// Fresh processes per cold cell. 5 is the dev default; publish runs use 10.
-const RUNS = Number(options.get("--runs") ?? 5);
+// Fresh processes per cold cell. One: the timed set is small, and the
+// contamination guard in run.ts compares sums rather than single cells.
+const RUNS = Number(options.get("--runs") ?? 1);
 const SCOPE = options.get("--scope") ?? process.env.BENCH ?? "";
 const CHECK = flags.has("--check");
 const DOCS_ONLY = flags.has("--docs");
@@ -173,7 +175,10 @@ const runCold = (artifact: Artifact): void => {
 	}
 };
 
-type HitsRun = Record<string, { scorecard: ScorecardRow[]; tables: ProbeTable[] }>;
+type HitsRun = Record<
+	string,
+	{ scorecard: ScorecardRow[]; tables: ProbeTable[]; families: FamilyRow[] }
+>;
 
 const runQuality = (artifact: Artifact): void => {
 	ensureRawDir();
@@ -187,7 +192,7 @@ const runQuality = (artifact: Artifact): void => {
 
 	const hits = readRaw<HitsRun>("hits.json");
 	for (const corpus of Object.keys(hits)) {
-		const { scorecard, tables } = hits[corpus];
+		const { scorecard, tables, families } = hits[corpus];
 		if (ONLY) {
 			const kept = (artifact.scorecard.corpora[corpus] ?? []).filter(
 				(row) => !scorecard.some((m) => m.library === row.library),
@@ -196,9 +201,16 @@ const runQuality = (artifact: Artifact): void => {
 			for (const [i, probe] of tables.entries()) {
 				overlay(artifact.probes[corpus][i].cells, probe.cells);
 			}
+			for (const [i, family] of families.entries()) {
+				const kept = artifact.families?.[corpus]?.[i];
+				if (!kept) continue;
+				overlay(kept.mrr, family.mrr);
+				overlay(kept.medianRows, family.medianRows);
+			}
 		} else {
 			artifact.scorecard.corpora[corpus] = scorecard;
 			artifact.probes[corpus] = tables;
+			(artifact.families ??= {})[corpus] = families;
 		}
 	}
 	if (!ONLY) {

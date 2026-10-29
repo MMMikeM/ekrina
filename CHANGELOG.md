@@ -37,7 +37,7 @@ Design decisions worth recording, with the measurements that made them:
 - **Below five characters, a correction is a fallback.**
   A four-character query is corrected only at a word start, never by dropping a character, and in the searcher only when no item matches it as typed.
   Correcting four characters everywhere sank `rsaw` from 2nd to 23rd, broke the long-text zero-junk guarantee and made short-query probes 2.9–3.8× slower at 100k.
-  As a fallback it finds the four-character typo probe (`anxe` 3rd, `daxe` 2nd), lifting MRR 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, changes nothing that matches as typed, and makes a four-character miss cost what a five-character one already did (docs/performance.md, "Short corrections are a fallback").
+  As a fallback it takes the four-character typo family from 0 to 0.59 on mixed and 0.79 on ascii, lifting MRR 0.82 → 0.84 and 0.80 → 0.84 with no other family moving, and makes a four-character miss cost what a five-character one already did (docs/performance.md, "Short corrections are a fallback").
   `fuzzyMatch` sees one string, so it corrects whenever that string has no match as typed; a list can show fewer corrections than `fuzzyMatch` returns per item.
 - **The fuzzy tier retries its first chunk from up to four admissible placements** and keeps the cheapest assembly, so a query whose first character also opens an earlier word ("towls" hitting the T of "Tasty Silk Towels") is not stranded: 307 → 0 missed assemblies over the ascii bench corpus.
   Later chunks stay leftmost-greedy, reconsidering those is what starts leaking junk.

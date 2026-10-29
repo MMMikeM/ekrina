@@ -27,12 +27,23 @@ export type ColdCell = {
 export type ColdMatrix = Record<string, Record<string, Record<string, Record<string, ColdCell>>>>;
 
 export type ScorecardRow = { library: string; mrr: number };
-export type ProbeCell = { count: number; rank: number | null };
+// `tiedRanks` spans the ranks the source shares with items the library scored
+// the same, which only list order puts in any sequence.
+export type ProbeCell = { count: number; rank: number | null; tiedRanks?: [number, number] };
 export type ProbeTable = {
 	kind: string;
 	query: string;
 	source: string | null;
 	cells: Record<string, ProbeCell>;
+};
+// One sampled query family: its MRR per library (scored families only) and
+// the median rows each returned.
+export type FamilyRow = {
+	kind: string;
+	scored: boolean;
+	queries: string[];
+	mrr: Record<string, number>;
+	medianRows: Record<string, number>;
 };
 export type SessionRow = { library: string; stepMs: number[]; sessionMs: number };
 export type LongtextRow = {
@@ -49,6 +60,7 @@ export type Artifact = {
 	coldMatrix: ColdMatrix;
 	scorecard: { corpora: Record<string, ScorecardRow[]> };
 	probes: Record<string, ProbeTable[]>;
+	families?: Record<string, FamilyRow[]>;
 	session: { size: number; corpus: string; steps: string[]; rows: SessionRow[] } | null;
 	longtext: { rows: LongtextRow[] } | null;
 	memory: MemoryMatrix | null;

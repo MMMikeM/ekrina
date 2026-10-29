@@ -30,7 +30,7 @@ Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run ove
 
 - `pnpm bench --docs` re-emits every table from the committed `results.json` without measuring. This is the one to reach for when reworking prose around a table.
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
-- `pnpm bench --speed` / `--quality` / `--memory` run one stage; `--runs=N` sets the scorecard's process count (default 5).
+- `pnpm bench --speed` / `--quality` / `--memory` run one stage; `--runs=N` sets the fresh processes per cold cell (default 1; a full run takes about four minutes).
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact — guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
 - `pnpm bench:test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
 
@@ -39,8 +39,8 @@ Adding a table means adding a region to `regions()` in `bench/tables.ts` and a m
 
 Three guards to respect rather than route around:
 
-- The pipeline exits nonzero on a contaminated run — base ekrina measuring slower than `ekrina (acronym)`, which runs strictly more code per query. That means the run absorbed GC or thermal debt. Rerun on a quiet machine; do not publish it.
-- `bench/corpus-*.json` is frozen, and regeneration is gated behind `GEN_CORPUS=1` because every published rank and MRR derives from those exact sequences. Regenerating also changes the probe queries, so the hand-written headings and prose around the probe tables need rewriting with them.
+- The pipeline exits nonzero on a contaminated run — base ekrina measuring more than 10% slower than `ekrina (acronym)`, summed over every cold cell, when the acronym row runs strictly more code per query. That means the run absorbed GC or thermal debt. Rerun on a quiet machine; do not publish it.
+- `bench/corpus-*.json` is frozen, and regeneration is gated behind `GEN_CORPUS=1` because every published rank and MRR derives from those exact sequences. Regenerating also changes the sampled query families and the representative queries, so the hand-written prose around the family tables needs rewriting with them.
 - `pnpm bench --scope=mixed-10k` scopes a dev run: it measures a partial matrix, so it prints and stops without touching `results.json` or the docs. `BENCH=` still works as an alias.
 
 ## Documentation
@@ -93,7 +93,7 @@ Name tests as behaviour, not method — `"a dropped keystroke in an otherwise ex
 
 A tier with its own semantics gets its own file (`fuzzy-tier`, `adjacent-swap`, `typo-rescue`, `acronym`), and regression tests keep their provenance — `known-issues.test.ts` pins the six v0.x bugs and says so.
 
-Statistical claims live in `bench/`, where the corpora and the measurement do: the long-text junk rate is asserted by `bench/longtext.test.ts`, gate soundness by `bench/funnel.test.ts`, ranks and result-set sizes by `bench/hits.test.ts`. `test/` pins behaviour and the published constants. `bench/funnel.test.ts` reaches into `../src/gates` on purpose — `dist` doesn't export the gates and shouldn't.
+Statistical claims live in `bench/`, where the corpora and the measurement do: the long-text junk rate is asserted by `bench/longtext.test.ts`, gate soundness by `bench/funnel.test.ts`, ranks and result-set sizes by `bench/hits.test.ts`, which scores MRR over sampled query families, each query by its first relevant result (`bench/corpus.ts` defines relevance), so no library is credited for how it breaks a tie. `test/` pins behaviour and the published constants. `bench/funnel.test.ts` reaches into `../src/gates` on purpose — `dist` doesn't export the gates and shouldn't.
 
 ## Prose
 

@@ -168,6 +168,7 @@ So below five characters a correction is a fallback, with three limits:
 - the searcher offers it only when no item matches the query as typed, so `rsaw` and `kepa`, which do, are never corrected.
 
 MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` keep their ranks and sets, and the long-text test passes.
+Rescored over the sampled query families that replaced single probes ([benchmarks.md](./benchmarks.md#match-quality-by-query-family)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
 The cost lands only on four-character queries that match nothing (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
 
 | Query                 | Cold             | After `buildIndex()` |

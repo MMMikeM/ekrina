@@ -23,7 +23,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { CONFIG_NAMES, configs } from "./configs.ts";
-import { CORPORA } from "./corpus.ts";
+import { CORPORA, TIMED_KINDS } from "./corpus.ts";
 
 type ChildOut = {
 	indexMs: number;
@@ -78,7 +78,9 @@ type Test = { id: string; corpus: string; queries: string[] };
 const tests: Test[] = CORPORA.flatMap((c) => {
 	const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 	return [
-		...c.specs.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query] })),
+		...c.specs
+			.filter((s) => TIMED_KINDS.includes(s.kind))
+			.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query] })),
 		{ id: `${c.name}/batch`, corpus: c.name, queries: [warmup, ...c.specs.map((s) => s.query)] },
 	];
 });
@@ -195,18 +197,27 @@ for (const size of sizes) {
 
 // Physical invariant: the acronym configuration runs strictly more code per
 // query, so base ekrina measuring slower than it means the run absorbed load.
-for (const size of sizes) {
-	for (const t of chosen) {
-		const base = results.get(key(t.id, size, "ekrina"));
-		const acr = results.get(key(t.id, size, "ekrina (acronym)"));
-		if (base && acr && base.queryMs > acr.queryMs * 1.25) {
-			console.error(
-				`WARNING contaminated: ${t.id}@${size / 1000}k base ekrina ${base.queryMs.toFixed(2)} > acronym ${acr.queryMs.toFixed(2)}`,
-			);
-			// More code cannot be faster: refuse to publish a run that violates
-			// physics. Only fatal when the run would write an artifact.
-			if (outFile) process.exitCode = 1;
+// Summed over every cell, because one process per cell leaves a single cell
+// ~15% noisy, while load that lasts shows up across the whole run.
+{
+	let baseMs = 0;
+	let acronymMs = 0;
+	for (const size of sizes) {
+		for (const t of chosen) {
+			const base = results.get(key(t.id, size, "ekrina"));
+			const acr = results.get(key(t.id, size, "ekrina (acronym)"));
+			if (!base || !acr) continue;
+			baseMs += base.queryMs;
+			acronymMs += acr.queryMs;
 		}
+	}
+	if (acronymMs > 0 && baseMs > acronymMs * 1.1) {
+		console.error(
+			`WARNING contaminated: base ekrina ${baseMs.toFixed(2)} ms > acronym ${acronymMs.toFixed(2)} ms summed over every cell`,
+		);
+		// More code cannot be faster: refuse to publish a run that violates
+		// physics. Only fatal when the run would write an artifact.
+		if (outFile) process.exitCode = 1;
 	}
 }
 

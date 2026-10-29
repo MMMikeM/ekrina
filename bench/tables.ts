@@ -266,28 +266,33 @@ const probeRows = (probe: ProbeTable): string[] =>
 			: [base],
 	);
 
-const rankCell = (cell: ProbeTable["cells"][string]): string =>
-	cell.count === 0 ? "—" : String(cell.rank ?? "✗");
+// Each library at its best-scoring configuration, with base Ekrina beside its
+// acronym row; the artifact keeps every configuration's cells.
+const FAMILY_LIBRARIES = [
+	"ekrina",
+	"ekrina (acronym)",
+	"fuse.js (all opts)",
+	"uFuzzy (all opts)",
+	"fast-fuzzy",
+	"fuzzysort",
+	"match-sorter",
+	"@nozbe/microfuzz",
+	"fuzzy",
+];
 
-const probeTable = (a: Artifact, probe: ProbeTable, kindIndex: number): string =>
-	mdTable(
-		["Library", "rank", "matches", "index ms", "cold ms", "total ms", "batch ms"],
-		probeRows(probe).map((lib) => {
-			const cell = probe.cells[lib];
-			const cold = cellOf(a, PROBE_CORPUS, probe.kind, PROBE_SIZE, lib);
-			const batch = cellOf(a, PROBE_CORPUS, "batch", PROBE_SIZE, lib)?.perQueryMs?.[kindIndex];
-			return [
-				displayName(lib),
-				rankCell(cell),
-				String(cell.count),
-				cold ? ms(cold.indexMs) : "—",
-				cold ? ms(cold.queryMs) : "—",
-				cold ? ms(cold.oneShotMs) : "—",
-				batch == null ? "—" : ms(batch),
-			];
-		}),
-		["left", "right", "right", "right", "right", "right", "right"],
+const familyTable = (a: Artifact, corpus: string, scored: boolean): string => {
+	const families = (a.families?.[corpus] ?? []).filter((family) => family.scored === scored);
+	return mdTable(
+		["Family", ...FAMILY_LIBRARIES.map(displayName)],
+		families.map((family) => [
+			family.kind,
+			...FAMILY_LIBRARIES.map((lib) =>
+				scored ? (family.mrr[lib] ?? 0).toFixed(2) : String(family.medianRows[lib] ?? "—"),
+			),
+		]),
+		["left", ...FAMILY_LIBRARIES.map((): Align => "right")],
 	);
+};
 
 /**
  * The guaranteed-miss probe has no rank to report, so its table prices the
@@ -296,13 +301,13 @@ const probeTable = (a: Artifact, probe: ProbeTable, kindIndex: number): string =
  */
 const missTable = (a: Artifact, probes: ProbeTable[]): string => {
 	const miss = probes.find((p) => p.kind === "miss");
-	const reference = probes.find((p) => p.kind === "long-word");
-	if (!miss || !reference) throw new Error("probe set is missing the miss or long-word query");
+	const reference = probes.find((p) => p.kind === "short-word");
+	if (!miss || !reference) throw new Error("probe set is missing the miss or short-word query");
 	return mdTable(
 		["Library", "matches", "cold ms", `vs \`${reference.query}\``],
 		probeRows(miss).map((lib) => {
 			const missCold = cellOf(a, PROBE_CORPUS, "miss", PROBE_SIZE, lib);
-			const refCold = cellOf(a, PROBE_CORPUS, "long-word", PROBE_SIZE, lib);
+			const refCold = cellOf(a, PROBE_CORPUS, "short-word", PROBE_SIZE, lib);
 			return [
 				displayName(lib),
 				String(miss.cells[lib].count),
@@ -384,14 +389,12 @@ export const regions = (a: Artifact): Record<string, string> => {
 		out[`scorecard-${corpus}`] = scorecardTable(a, corpus);
 	}
 
-	const probes = a.probes[PROBE_CORPUS] ?? [];
-	const kinds = new Set<string>();
-	for (const probe of probes) {
-		if (kinds.has(probe.kind)) throw new Error(`duplicate probe kind '${probe.kind}'`);
-		kinds.add(probe.kind);
-		out[`probe-${probe.kind}`] =
-			probe.kind === "miss" ? missTable(a, probes) : probeTable(a, probe, probes.indexOf(probe));
+	for (const corpus of Object.keys(a.families ?? {})) {
+		out[`families-${corpus}`] = familyTable(a, corpus, true);
+		out[`refusals-${corpus}`] = familyTable(a, corpus, false);
 	}
+	const probes = a.probes[PROBE_CORPUS] ?? [];
+	if (probes.some((probe) => probe.kind === "miss")) out["probe-miss"] = missTable(a, probes);
 
 	if (a.session) out.session = sessionTable(a);
 	if (a.longtext) out.longtext = longtextTable(a);
