@@ -381,6 +381,11 @@ type SearchOptions = {
 Ancient Greek ἔκρινα, eh-KREE-na, "I sifted, I judged", is the aorist of κρίνω, the root of criterion and critic, and cognate with the Latin _cernere_ behind discern.
 It sifts a list and judges each candidate against a criterion.
 
+## Security
+
+Ekrina has no runtime dependencies and no install scripts, and releases are published from CI with npm provenance.
+Reporting a vulnerability, verifying a release and the limits on hostile input are in [SECURITY.md](./SECURITY.md).
+
 ## License
 
 MIT

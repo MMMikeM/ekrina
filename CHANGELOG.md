@@ -3,6 +3,7 @@
 ## 1.1.0 (unreleased)
 
 Scores and `Tier` strings are unchanged from 1.0.0.
+Releases are published from CI through npm trusted publishing, with a provenance attestation; 1.0.0 was published by hand without one.
 Matching text longer than 256 characters takes linear time in its length; in 1.0.0 a crafted text and query could take seconds at 64k characters (below).
 A one-character query now returns its word-start matches, where 1.0.0 returned none.
 `FuzzySearcher` is now a callable object carrying `buildIndex`, so a hand-written implementation of the type, a test mock for instance, needs that method too.

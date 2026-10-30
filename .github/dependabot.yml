@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Keeps the pinned action SHAs current. npm packages are left out on purpose:
+  # the bench's comparison libraries are pinned so published numbers reproduce.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

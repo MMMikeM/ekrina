@@ -5,24 +5,32 @@ on:
     tags:
       - "v*"
 
+permissions: {}
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # OIDC trusted publishing — no NPM_TOKEN needed
+      id-token: write # OIDC trusted publishing and the provenance attestation
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          cache: true
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
-      # OIDC trusted publishing needs npm >= 11.5.1
-      - run: npm install -g npm@latest
-      # Authenticates via GitHub OIDC (no token); prepublishOnly runs
-      # lint:types + test + build; provenance is automatic.
-      - run: npm publish --access public
+      - name: Tag matches the package version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+      - run: pnpm gate
+      - run: pnpm pack --pack-destination "$RUNNER_TEMP"
+      # Trusted publishing needs npm 11.5.1 or later; pinned so a release never
+      # runs an npm nobody has seen.
+      - run: npm install --global npm@11.21.1
+      # Published from outside the checkout because npm refuses to run in a
+      # project whose devEngines names pnpm.
+      - working-directory: ${{ runner.temp }}
+        run: npm publish "./ekrina-${GITHUB_REF_NAME#v}.tgz" --provenance --access public
