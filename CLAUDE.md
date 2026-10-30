@@ -19,6 +19,8 @@ The package is `ekrina`; the working directory is still `mikrofuzz` from before 
 
 The gate is `pnpm gate`, and it runs before claiming done: build, then `lint:types`, lint and test, all as `vite.config.ts` tasks. Lint and test replay from the task cache when nothing they read changed; the type checks never do, because tsc 7 is a native binary the cache can't see read. `lint:types` covers `src`/`test` and, via `bench/tsconfig.json`, `bench/` and `docs/pareto.ts`. `pnpm format` runs oxfmt over `src` and `test`. `pnpm build` is tsdown → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
 
+A release is a `vX.Y.Z` tag pushed from `main`, after the version in `package.json` is bumped and its CHANGELOG section dated; `.github/workflows/publish.yml` refuses an undated or mismatched one, publishes to npm with provenance through trusted publishing, and creates the GitHub Release with that section as notes and the published tarball attached. A prerelease version (`1.2.0-beta.0`) goes out under its own dist-tag. Never publish from a laptop: `publishConfig.provenance` makes it fail outside CI.
+
 `pnpm test` covers `test/**` only. The bench workspace has its own suite, `pnpm bench:test`, which builds first, because it imports the built `ekrina`, and replays from cache when neither `dist/` nor `bench/` changed. `pnpm bench` stays a plain script on purpose: a measurement must never be replayed from a cache.
 
 ## Benchmarks and published numbers

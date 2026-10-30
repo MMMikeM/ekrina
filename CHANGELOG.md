@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 (unreleased)
+## 1.1.0 (2026-10-30)
 
 Scores and `Tier` strings are unchanged from 1.0.0.
 Releases are published from CI through npm trusted publishing, with a provenance attestation; 1.0.0 was published by hand without one.

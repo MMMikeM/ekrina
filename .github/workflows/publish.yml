@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Publish
 
 on:
   push:
@@ -7,12 +7,16 @@ on:
 
 permissions: {}
 
+# Tag-derived values reach the shell through env, never `${{ }}`
+# interpolation: git allows characters in a tag that a shell would run.
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write # OIDC trusted publishing and the provenance attestation
+    outputs:
+      prerelease: ${{ steps.meta.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -23,8 +27,41 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
-      - name: Tag matches the package version
-        run: test "$GITHUB_REF_NAME" = "v$(node -p 'require("./package.json").version')"
+
+      # 1.2.0-beta.0 publishes under the dist-tag "beta", never "latest".
+      - name: Version and dist-tag
+        id: meta
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [ "$version" != "$(node -p 'require("./package.json").version')" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json"
+            exit 1
+          fi
+          case "$version" in
+            *-*) tag="${version#*-}"; tag="${tag%%.*}"; prerelease=true ;;
+            *) tag=latest; prerelease=false ;;
+          esac
+          {
+            echo "version=$version"
+            echo "dist_tag=$tag"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from the CHANGELOG
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          heading=$(awk -v v="$VERSION" '$1 == "##" && $2 == v' CHANGELOG.md)
+          if [ -z "$heading" ]; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+          case "$heading" in
+            *unreleased*) echo "::error::date the $VERSION section of CHANGELOG.md before tagging"; exit 1 ;;
+          esac
+          awk -v v="$VERSION" '$1 == "##" && $2 == v { found = 1; next } found && /^## / { exit } found { print }' \
+            CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+
       - run: pnpm gate
       - run: pnpm pack --pack-destination "$RUNNER_TEMP"
       # Trusted publishing needs npm 11.5.1 or later; pinned so a release never
@@ -32,5 +69,41 @@ jobs:
       - run: npm install --global npm@11.21.1
       # Published from outside the checkout because npm refuses to run in a
       # project whose devEngines names pnpm.
-      - working-directory: ${{ runner.temp }}
-        run: npm publish "./ekrina-${GITHUB_REF_NAME#v}.tgz" --provenance --access public
+      - name: Publish to npm
+        working-directory: ${{ runner.temp }}
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          DIST_TAG: ${{ steps.meta.outputs.dist_tag }}
+        run: |
+          npm publish "./ekrina-$VERSION.tgz" --provenance --access public --tag "$DIST_TAG"
+          sha256sum "ekrina-$VERSION.tgz" > "ekrina-$VERSION.tgz.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            ${{ runner.temp }}/ekrina-*.tgz
+            ${{ runner.temp }}/ekrina-*.tgz.sha256
+            ${{ runner.temp }}/notes.md
+          if-no-files-found: error
+
+  # Its own job so write access to the repo never shares a runner with the
+  # publish credentials. The attached tarball is the file npm received.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ needs.publish.outputs.prerelease }}
+        run: |
+          flag=""
+          if [ "$PRERELEASE" = "true" ]; then flag="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" --notes-file notes.md $flag \
+            ekrina-*.tgz ekrina-*.tgz.sha256
