@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.1 (unreleased)
+## 1.1.1 (2026-10-30)
 
 - **A repeated word in a multi-word query needs its own occurrence.**
   `john john` no longer matches "John Smith" at the `multi-word` tier, and a phrase never returns two ranges over the same characters.
