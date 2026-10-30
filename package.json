@@ -1,6 +1,6 @@
 {
 	"name": "ekrina",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
 	"keywords": [
 		"autocomplete",
