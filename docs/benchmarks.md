@@ -591,16 +591,16 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:session -->
 | Library            | `gra` | `grad` | `grady` | session |
 |--------------------|------:|-------:|--------:|--------:|
-| Ekrina             |  2.34 |   1.36 |    0.57 |    4.27 |
-| @nozbe/microfuzz   | 20.01 |  18.88 |   17.89 |   56.78 |
-| fuzzysort          |  4.97 |   2.92 |    1.80 |    9.69 |
-| uFuzzy (all opts)  |  3.85 |   1.95 |    1.96 |    7.75 |
-| Fuse.js (all opts) | 84.28 | 108.48 |  116.87 |  309.62 |
+| Ekrina             |  2.28 |   1.34 |    0.58 |    4.19 |
+| @nozbe/microfuzz   | 17.28 |  16.62 |   16.16 |   50.06 |
+| fuzzysort          |  5.10 |   2.98 |    1.91 |   10.00 |
+| uFuzzy (all opts)  |  3.94 |   1.96 |    2.00 |    7.90 |
+| Fuse.js (all opts) | 84.48 | 112.91 |  124.28 |  321.67 |
 <!-- bench:end -->
 
-Ekrina's per-keystroke time falls _4.1×_ across the word (2.34 → 1.36 → 0.57) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
-Ekrina takes every step of the session, the wide opener included (2.34 vs uFuzzy's 3.85), and the session total by 1.8× (4.27 vs 7.75), against uFuzzy (all opts) at 0.75 MRR to Ekrina's 0.87.
-microfuzz stays at ~18–20 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
+Ekrina's per-keystroke time falls _3.9×_ across the word (2.28 → 1.34 → 0.58) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
+Ekrina takes every step of the session, the wide opener included (2.28 vs uFuzzy's 3.94), and the session total by 1.9× (4.19 vs 7.90), against uFuzzy (all opts) at 0.75 MRR to Ekrina's 0.87.
+microfuzz stays at ~16–17 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 This table is a single process, like every cold cell here, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time work (Ekrina's mask build, fuzzysort's lazy target prep) happens at load, not on keystroke one; the cold cells above measure it.
 Measured by [`bench/session.test.ts`](../bench/session.test.ts).
@@ -622,9 +622,9 @@ The probe: the document is the mixed corpus joined with spaces and sliced to gra
 |       512 |        0% |        20/20 |   0.008 |
 |      1024 |        0% |        20/20 |   0.019 |
 |      2048 |        0% |        20/20 |   0.031 |
-|      4096 |        0% |        20/20 |   0.056 |
-|      8192 |        0% |        20/20 |   0.106 |
-|     16384 |        0% |        20/20 |   0.209 |
+|      4096 |        0% |        20/20 |   0.059 |
+|      8192 |        0% |        20/20 |   0.108 |
+|     16384 |        0% |        20/20 |   0.210 |
 <!-- bench:end -->
 
 Zero junk at every length, while every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly) and label-corpus behaviour is unchanged (same MRR, same ranks, slightly tighter sets: `rsaw` 8 → 7, ascii's `sgh` 55 → 31).

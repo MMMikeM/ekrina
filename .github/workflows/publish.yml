@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # OIDC trusted publishing and the provenance attestation
+      id-token: write # OIDC trusted publishing and both attestations
+      attestations: write # the Sigstore attestation attached to the GitHub Release
     outputs:
       prerelease: ${{ steps.meta.outputs.prerelease }}
     steps:
@@ -25,6 +26,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
+          check-latest: true # a cached older 24.x could ship an npm without `npm stage`
           registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
 
@@ -64,30 +66,41 @@ jobs:
 
       - run: pnpm gate
       - run: pnpm pack --pack-destination "$RUNNER_TEMP"
-      # Trusted publishing needs npm 11.5.1 or later; pinned so a release never
-      # runs an npm nobody has seen.
-      - run: npm install --global npm@11.21.1
-      # Published from outside the checkout because npm refuses to run in a
-      # project whose devEngines names pnpm.
-      - name: Publish to npm
+      - id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/ekrina-*.tgz
+      # Staged, not published: the version goes live only when a maintainer
+      # approves it on npm with 2FA. Run from outside the checkout because npm
+      # refuses to run in a project whose devEngines names pnpm.
+      - name: Stage on npm
         working-directory: ${{ runner.temp }}
         env:
           VERSION: ${{ steps.meta.outputs.version }}
           DIST_TAG: ${{ steps.meta.outputs.dist_tag }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: |
-          npm publish "./ekrina-$VERSION.tgz" --provenance --access public --tag "$DIST_TAG"
+          npm stage publish "./ekrina-$VERSION.tgz" --provenance --access public --tag "$DIST_TAG"
           sha256sum "ekrina-$VERSION.tgz" > "ekrina-$VERSION.tgz.sha256"
+          cp "$BUNDLE" "ekrina-$VERSION.tgz.sigstore.json"
+          {
+            echo "ekrina@$VERSION is staged on npm and not yet live."
+            echo "Approve it with \`npm stage approve\` (see \`npm stage list ekrina\`) or on npmjs.com,"
+            echo "then publish the draft GitHub Release: \`gh release edit $GITHUB_REF_NAME --draft=false\`."
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release
           path: |
             ${{ runner.temp }}/ekrina-*.tgz
             ${{ runner.temp }}/ekrina-*.tgz.sha256
+            ${{ runner.temp }}/ekrina-*.tgz.sigstore.json
             ${{ runner.temp }}/notes.md
           if-no-files-found: error
 
   # Its own job so write access to the repo never shares a runner with the
-  # publish credentials. The attached tarball is the file npm received.
+  # publish credentials. The attached tarball is the file npm received. A draft
+  # until the staged version is approved, so it never announces an uninstallable one.
   github-release:
     needs: publish
     runs-on: ubuntu-latest
@@ -105,5 +118,5 @@ jobs:
           flag=""
           if [ "$PRERELEASE" = "true" ]; then flag="--prerelease"; fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --notes-file notes.md $flag \
-            ekrina-*.tgz ekrina-*.tgz.sha256
+            --title "$GITHUB_REF_NAME" --notes-file notes.md --draft $flag \
+            ekrina-*.tgz ekrina-*.tgz.sha256 ekrina-*.tgz.sigstore.json

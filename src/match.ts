@@ -59,8 +59,8 @@ const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
 
-const wordStartOccurrence = (haystack: string, needle: string): number => {
-	let at = haystack.indexOf(needle);
+const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
+	let at = haystack.indexOf(needle, from);
 	while (at > -1) {
 		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
 		at = haystack.indexOf(needle, at + 1);
@@ -88,10 +88,17 @@ const boundaryTier = (
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
 };
 
+// Each query word needs its own occurrence, so a repeated word must appear
+// twice. Longest first, so a short word can't take the start a longer one needs.
 const multiWordTier = (normalisedField: string, queryWords: string[]): MatchResult | null => {
 	const ranges: Range[] = [];
-	for (const word of queryWords) {
-		const at = wordStartOccurrence(normalisedField, word);
+	const isTaken = (start: number, end: number): boolean =>
+		ranges.some(([takenStart, takenEnd]) => start <= takenEnd && takenStart <= end);
+	for (const word of [...queryWords].sort((a, b) => b.length - a.length)) {
+		let at = wordStartOccurrence(normalisedField, word);
+		while (at > -1 && isTaken(at, at + word.length - 1)) {
+			at = wordStartOccurrence(normalisedField, word, at + 1);
+		}
 		if (at === -1) return null;
 		ranges.push([at, at + word.length - 1]);
 	}

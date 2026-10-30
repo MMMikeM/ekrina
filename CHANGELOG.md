@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 (unreleased)
+
+- **A repeated word in a multi-word query needs its own occurrence.**
+  `john john` no longer matches "John Smith" at the `multi-word` tier, and a phrase never returns two ranges over the same characters.
+  Found by the property tests in `test/properties.test.ts`, which assert every range indexes the caller's string without overlap.
+
+Releases are now staged on npm and go live only once a maintainer approves them with 2FA, and each GitHub Release carries a Sigstore attestation of its tarball.
+
 ## 1.1.0 (2026-10-30)
 
 Scores and `Tier` strings are unchanged from 1.0.0.
@@ -72,4 +80,4 @@ Design decisions worth recording, with the measurements that made them:
   Later chunks stay leftmost-greedy, because reconsidering those starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never runs it.
-  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.3 → 0.6 ms per keystroke (docs/benchmarks.md, session table).

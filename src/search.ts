@@ -29,7 +29,7 @@ const RESCUE_CUTOFF = 10;
 const sortByScore = <T>(a: FuzzyResult<T>, b: FuzzyResult<T>): number => a.score - b.score;
 
 const endsOnWordBoundary = (normalisedField: string, ranges: [number, number][]): boolean => {
-	const after = (ranges.at(-1)?.[1] ?? -1) + 1;
+	const after = ranges[ranges.length - 1][1] + 1;
 	return after >= normalisedField.length || isBoundaryChar(normalisedField[after]);
 };
 

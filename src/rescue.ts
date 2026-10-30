@@ -81,6 +81,9 @@ export const preferBetter = (
 	if (challenger === null) return incumbent;
 	if (challenger.score < incumbent.score - SCORE_EPSILON) return challenger;
 	if (incumbent.score < challenger.score - SCORE_EPSILON) return incumbent;
+	// Every caller passes the fuzzy chain as the challenger, so only the
+	// correction side of this tie runs today.
+	/* v8 ignore next */
 	return incumbent.tier === "fuzzy" ? challenger : incumbent;
 };
 
@@ -109,6 +112,8 @@ const rawSubstitution = (prepared: PreparedQuery, corrected: string): string => 
 			return query.slice(0, i) + corrected[i] + query.slice(i + 1);
 		}
 	}
+	// A substitution differs in exactly one place, so the loop always returns.
+	/* v8 ignore next */
 	return corrected;
 };
 
@@ -214,7 +219,7 @@ const buildRescueGates = (prepared: PreparedQuery): RescueState => {
 		return (prepared.rescueState = { variants, variantGate: null, gate: null });
 	}
 	const literals = variants.map((variant) => escapeRegex(variant.normalised));
-	const variantGate = literals.length ? new RegExp(literals.join("|")) : null;
+	const variantGate = new RegExp(literals.join("|"));
 	const splitAt = prepared.normalisedQuery.length >> 1;
 	literals.push(
 		escapeRegex(prepared.normalisedQuery.slice(0, splitAt)),
@@ -307,6 +312,8 @@ const rawWordSubstitution = (
 	for (let i = 0; i < corrected.length; i++) {
 		if (corrected[i] !== word[i]) return rawWord.slice(0, i) + corrected[i] + rawWord.slice(i + 1);
 	}
+	// A substitution differs in exactly one place, so the loop always returns.
+	/* v8 ignore next */
 	return corrected;
 };
 

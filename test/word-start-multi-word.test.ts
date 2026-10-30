@@ -36,3 +36,10 @@ describe("multi-word queries match word starts, not only whole words", () => {
 		}
 	});
 });
+
+describe("a repeated query word", () => {
+	it("needs its own occurrence in the field", () => {
+		expect(fuzzyMatch("John Smith", "john john")).toBeNull();
+		expect(fuzzyMatch("e", "e e")).toBeNull();
+	});
+});
