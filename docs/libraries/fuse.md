@@ -44,8 +44,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-ascii -->
 | Library             |  MRR | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|---------:|--------:|---------:|------------:|
-| Fuse.js (all opts)  | 0.82 |     1.18 |   19.07 |   423.02 |       16.84 |
 | **Fuse.js (tuned)** | 0.82 |     1.20 |   15.21 |   331.89 |       13.15 |
+| Fuse.js (all opts)  | 0.82 |     1.18 |   19.07 |   423.02 |       16.84 |
 | Fuse.js             | 0.71 |     1.16 |   17.34 |   528.73 |       21.39 |
 <!-- bench:end -->
 

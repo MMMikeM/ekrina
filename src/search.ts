@@ -1,5 +1,11 @@
 import { isBoundaryChar } from "./boundaries";
-import { buildRawGate, buildRescueBigramGate, buildWordStartRawGate, charMask } from "./gates";
+import {
+	buildRawGate,
+	buildRescueBigramGate,
+	buildWordStartRawGate,
+	charMask,
+	type Gate,
+} from "./gates";
 import { matchField, prepareQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
@@ -287,7 +293,7 @@ export function createFuzzySearch<T>(
 				// The gate runs out here because its verdict is what shrinks the
 				// cached set for the next keystroke; `preGated` stops matchField
 				// repeating it on the same string.
-				const gate: RegExp | null = multiWord ? prepared.presenceGate : prepared.fuzzyGate;
+				const gate: Gate | null = multiWord ? prepared.presenceGate : prepared.fuzzyGate;
 				const cached = survivorCache.survivors as Int32Array;
 				for (let k = 0; k < survivorCache.count; k++) {
 					const i = cached[k];

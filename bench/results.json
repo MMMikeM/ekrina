@@ -851,11 +851,11 @@
 					"mrr": 0.86
 				},
 				{
-					"library": "fuse.js (all opts)",
+					"library": "fuse.js (tuned)",
 					"mrr": 0.82
 				},
 				{
-					"library": "fuse.js (tuned)",
+					"library": "fuse.js (all opts)",
 					"mrr": 0.82
 				},
 				{
@@ -4917,11 +4917,7 @@
 					},
 					"fuse.js (tuned)": {
 						"count": 25,
-						"rank": null,
-						"tiedRanks": [
-							24,
-							193
-						]
+						"rank": null
 					},
 					"fuse.js (all opts)": {
 						"count": 1783,
@@ -5233,11 +5229,7 @@
 					},
 					"fuse.js (tuned)": {
 						"count": 26,
-						"rank": null,
-						"tiedRanks": [
-							278,
-							312
-						]
+						"rank": null
 					},
 					"fuse.js (all opts)": {
 						"count": 2047,
@@ -5437,47 +5429,47 @@
 			{
 				"library": "ekrina",
 				"stepMs": [
-					2.2586670000000595,
-					1.301332999999886,
-					0.54037500000004
+					2.342416999999841,
+					1.3593339999999898,
+					0.5655829999998332
 				],
-				"sessionMs": 4.1003749999999854
+				"sessionMs": 4.267333999999664
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					18.987750000000005,
-					20.047792000000072,
-					18.236707999999908
+					20.009917000000087,
+					18.878540999999814,
+					17.88916700000027
 				],
-				"sessionMs": 57.272249999999985
+				"sessionMs": 56.77762500000017
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					5.421334000000115,
-					2.9145410000000993,
-					1.7772079999999733
+					4.970915999999761,
+					2.918250000000171,
+					1.7984999999998763
 				],
-				"sessionMs": 10.113083000000188
+				"sessionMs": 9.687665999999808
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					3.8861249999999927,
-					1.924333999999817,
-					1.980417000000216
+					3.8455409999996846,
+					1.9473330000000715,
+					1.962083999999777
 				],
-				"sessionMs": 7.790876000000026
+				"sessionMs": 7.754957999999533
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					88.0595830000002,
-					110.76350000000002,
-					121.88366599999972
+					84.27754200000027,
+					108.47858399999996,
+					116.86754199999996
 				],
-				"sessionMs": 320.70674899999995
+				"sessionMs": 309.6236680000002
 			}
 		]
 	},
@@ -5488,14 +5480,14 @@
 				"junkRate": 0,
 				"presentHits": 8,
 				"presentProbes": 8,
-				"missMs": 0.0038329999999859865
+				"missMs": 0.004000000000019099
 			},
 			{
 				"docChars": 128,
 				"junkRate": 0,
 				"presentHits": 15,
 				"presentProbes": 15,
-				"missMs": 0.004166000000054737
+				"missMs": 0.004249999999956344
 			},
 			{
 				"docChars": 256,
@@ -5509,42 +5501,42 @@
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.006958999999937987
+				"missMs": 0.007791999999994914
 			},
 			{
 				"docChars": 1024,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.017791999999872132
+				"missMs": 0.018958999999995285
 			},
 			{
 				"docChars": 2048,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.029708000000027823
+				"missMs": 0.031124999999974534
 			},
 			{
 				"docChars": 4096,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.05333300000006602
+				"missMs": 0.05620800000019699
 			},
 			{
 				"docChars": 8192,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.10337499999991451
+				"missMs": 0.10641600000008111
 			},
 			{
 				"docChars": 16384,
 				"junkRate": 0,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.2050840000001699
+				"missMs": 0.20925000000011096
 			}
 		]
 	},

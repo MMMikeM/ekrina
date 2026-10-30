@@ -1,0 +1,40 @@
+name: Deno
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+# The packed tarball, not the source, as an installer would get it.
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/pack
+
+  smoke:
+    needs: pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    name: deno v2.x
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/smoke
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+      - run: tar xzf ekrina-*.tgz
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+      - run: deno run --allow-read .github/smoke/smoke.mjs
