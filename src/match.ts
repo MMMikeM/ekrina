@@ -1,6 +1,6 @@
 import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
-import { buildFuzzyGate, buildPresenceGate, charMask, isExactMask } from "./gates";
+import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import {
 	isRescuableQuery,
 	isShortQuery,
@@ -24,7 +24,7 @@ export type PreparedQuery = {
 	queryWords: string[];
 	queryMask: number;
 	presenceGate: RegExp | null;
-	fuzzyGate: RegExp;
+	fuzzyGate: Gate;
 	rescueState: RescueState | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
@@ -223,7 +223,7 @@ export const matchField = (
 	// the multi-word tier matches words out of order, and the subsequence gate
 	// would false-reject them. `preGated` means the searcher already ran this
 	// exact gate on this exact string.
-	const frontGate = preGated
+	const frontGate: Gate | null = preGated
 		? null
 		: queryWords.length > 1
 			? prepared.presenceGate

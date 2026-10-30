@@ -9,17 +9,35 @@ export const escapeRegex = (text: string): string => text.replace(/[.*+?^${}()|[
 const escapeCharClass = (text: string): string => text.replace(/[\^\]\\-]/g, "\\$&");
 
 // One query position in the subsequence gate: `matcher` matches the position,
-// `gapBody` is the char-class body excluded from the gap before it.
-type GatePosition = { matcher: string; gapBody: string };
+// `gapBody` is the char-class body excluded from the gap before it, and
+// `accepts` lists the code units that can stand at it.
+type GatePosition = { matcher: string; gapBody: string; accepts: string };
+
+/** A pre-gate: false only when the text cannot match the query. */
+export type Gate = { test: (text: string) => boolean };
+
+// The regex retries from every anchored start, so a long text full of starts
+// that fail late takes time quadratic in its length: seconds at 64k
+// characters. Past this length the gate is a linear in-order scan instead; it
+// ignores the anchoring, so it admits a superset and still only false-passes.
+const LINEAR_SCAN_ABOVE = 256;
+
+const holdsInOrder = (text: string, accepted: string[]): boolean => {
+	let next = 0;
+	for (let i = 0; i < text.length && next < accepted.length; i++) {
+		if (accepted[next].includes(text[i])) next++;
+	}
+	return next === accepted.length;
+};
 
 // One native test for "this field can hold the query as an admissible
 // subsequence": the query's positions in order with anything between, anchored
 // where the chunk assembler would actually start — a word boundary, or the
-// first three positions run consecutively. `[^x]*x` leaves the scan exactly
-// one place to stop per step, so it cannot backtrack (same survivors, 16%/8%
-// less gate time on ascii/mixed). The lookbehind beats a consuming
+// first three positions run consecutively. `[^x]*x` leaves each attempt
+// exactly one place to stop per step, so it cannot backtrack (same survivors,
+// 16%/8% less gate time on ascii/mixed). The lookbehind beats a consuming
 // `(?:^|non-word)`: same survivors, ~11% less scan time.
-const subsequenceGate = (positions: GatePosition[]): RegExp => {
+const subsequenceGate = (positions: GatePosition[]): Gate => {
 	const gap = (i: number): string => `[^${positions[i].gapBody}]*`;
 	const subsequenceFrom = (i: number): string => {
 		let out = positions[i].matcher;
@@ -33,7 +51,12 @@ const subsequenceGate = (positions: GatePosition[]): RegExp => {
 		.join("");
 	const afterRun =
 		runLength < positions.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
-	return new RegExp(`(?:(?<![${WORD_CHARS}])${subsequenceFrom(0)}|${run}${afterRun})`, "u");
+	const regex = new RegExp(`(?:(?<![${WORD_CHARS}])${subsequenceFrom(0)}|${run}${afterRun})`, "u");
+	const accepted = positions.map((position) => position.accepts);
+	return {
+		test: (text) =>
+			text.length > LINEAR_SCAN_ABOVE ? holdsInOrder(text, accepted) : regex.test(text),
+	};
 };
 
 /**
@@ -48,11 +71,12 @@ const subsequenceGate = (positions: GatePosition[]): RegExp => {
  * lengthens the subsequence and never changes the first three characters, so
  * the gate only ever admits fewer fields.
  */
-export const buildFuzzyGate = (normalisedQuery: string): RegExp =>
+export const buildFuzzyGate = (normalisedQuery: string): Gate =>
 	subsequenceGate(
 		[...normalisedQuery].map((point) => ({
 			matcher: escapeRegex(point),
 			gapBody: escapeCharClass(point),
+			accepts: point,
 		})),
 	);
 
@@ -64,7 +88,7 @@ export const buildFuzzyGate = (normalisedQuery: string): RegExp =>
  * non-Latin scripts, mostly — and the caller takes the mask path instead:
  * slower, never wrong. No `i` flag: the classes already carry both cases.
  */
-export const buildRawGate = (normalisedQuery: string): RegExp | null => {
+export const buildRawGate = (normalisedQuery: string): Gate | null => {
 	const unfold = unfoldTable();
 	const positions: GatePosition[] = [];
 	for (const char of normalisedQuery) {
@@ -73,7 +97,7 @@ export const buildRawGate = (normalisedQuery: string): RegExp | null => {
 		const gapBody = escapeCharClass(sources);
 		// A decomposed accent sits between letters in the raw text but not after
 		// normaliseText strips it, so the run steps over the same range it strips.
-		positions.push({ matcher: `[${gapBody}][\\u0300-\\u036f]*`, gapBody });
+		positions.push({ matcher: `[${gapBody}][\\u0300-\\u036f]*`, gapBody, accepts: sources });
 	}
 	return subsequenceGate(positions);
 };

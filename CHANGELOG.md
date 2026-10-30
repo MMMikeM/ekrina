@@ -3,9 +3,13 @@
 ## 1.1.0 (unreleased)
 
 Scores and `Tier` strings are unchanged from 1.0.0.
+Matching text longer than 256 characters takes linear time in its length; in 1.0.0 a crafted text and query could take seconds at 64k characters (below).
 A one-character query now returns its word-start matches, where 1.0.0 returned none.
 `FuzzySearcher` is now a callable object carrying `buildIndex`, so a hand-written implementation of the type, a test mock for instance, needs that method too.
 
+- **Long text is gated by a linear scan.**
+  The pre-gate regex retries from every anchored start, so text full of starts that fail late took time quadratic in its length: 1.3 s for `aaab` over 64k characters, 6.4 s for a crafted 128k-character text, and 1.7 s inside a searcher over one such field.
+  Past 256 characters the gate is now one pass checking the query's characters occur in order, which admits a superset of what the regex did, so results are unchanged and the same inputs answer in under 15 ms (`test/hostile-text.test.ts`).
 - **Each word of a multi-word query only has to start a word of the field.**
   `woo handcrafted` matches "Handcrafted Wooden Chair" at the `multi-word` tier, so a phrase stays a literal match, in any order, while its last word is half-typed (docs/benchmarks.md, the two-words-partial-reversed family).
 - **Within a score, a whole word ranks first.**
@@ -67,4 +71,4 @@ Design decisions worth recording, with the measurements that made them:
   Later chunks stay leftmost-greedy, because reconsidering those starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never runs it.
-  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.2 → 1.3 → 0.5 ms per keystroke (docs/benchmarks.md, session table).
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.4 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
