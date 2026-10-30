@@ -6,6 +6,8 @@
   `john john` no longer matches "John Smith" at the `multi-word` tier, and a phrase never returns two ranges over the same characters.
   Found by the property tests in `test/properties.test.ts`, which assert every range indexes the caller's string without overlap.
 
+Releases are now staged on npm and go live only once a maintainer approves them with 2FA, and each GitHub Release carries a Sigstore attestation of its tarball.
+
 ## 1.1.0 (2026-10-30)
 
 Scores and `Tier` strings are unchanged from 1.0.0.

@@ -57,7 +57,8 @@
 		"gate": "vp run verify",
 		"bench": "pnpm build && node bench/pipeline.ts",
 		"bench:test": "vp run suite",
-		"prepublishOnly": "pnpm lint:types && pnpm test && pnpm build"
+		"prepublishOnly": "pnpm lint:types && pnpm test && pnpm build",
+		"release": "git tag -a \"v$npm_package_version\" -m \"v$npm_package_version\" && git push origin \"v$npm_package_version\""
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.5",

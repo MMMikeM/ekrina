@@ -14,10 +14,18 @@ Fixes land in the latest 1.x release; older versions are not patched.
 
 ## Releases
 
-Every release is built and published by [the publish workflow](./.github/workflows/publish.yml) from a version tag, through npm trusted publishing, with a provenance attestation that links the tarball to its commit and workflow run.
+Every release is built by [the publish workflow](./.github/workflows/publish.yml) from a version tag and staged on npm through trusted publishing, with a provenance attestation that links the tarball to its commit and workflow run.
+A staged version goes live only when a maintainer approves it with 2FA, so a compromised workflow cannot publish on its own.
 `publishConfig.provenance` is set, so a publish from anywhere but CI fails.
 `npm audit signatures` verifies an installed copy.
-1.0.0 predates this and was published by hand, without an attestation.
+The GitHub Release carries the same tarball, its SHA-256 and a Sigstore attestation, which `gh attestation verify ekrina-<version>.tgz --repo MMMikeM/ekrina` checks.
+1.0.0 predates this and was published by hand, without an attestation; 1.1.0 was published directly from CI, before staging.
+
+## Testing
+
+The tests cover every statement and branch of `src/`, and `pnpm gate` fails below 100%.
+Property tests (`test/properties.test.ts`, with fast-check) check the published invariants against random input: ranges always index the caller's string, normalisation is 1:1, and a search typed keystroke by keystroke returns what a fresh one does.
+CI runs `pnpm audit` over the development dependencies, CodeQL on every pull request, and the packed tarball on Node 18–24, Bun and Deno.
 
 ## Cost on hostile input
 
