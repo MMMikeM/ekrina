@@ -320,3 +320,10 @@ describe("a certain match always beats a speculative one", () => {
 		expect(results[0]?.fields[0]?.corrected).toBe("towels");
 	});
 });
+
+describe("a typo in a word holding digits", () => {
+	it("is corrected like any other", () => {
+		const search = createFuzzySearch(["abc12345 x", "zzz"]);
+		expect(search("abc12x45")[0]?.fields[0]?.corrected).toBe("abc12345");
+	});
+});

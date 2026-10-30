@@ -44,9 +44,12 @@ export const unfoldTable = (): Record<string, string> => {
 		const lower = lowers[i];
 		let candidate = candidates[i];
 		if (candidate === "ł") candidate = "l";
+		// The rest mirrors computeFold for code points these ranges don't hold today.
+		/* v8 ignore start */
 		else if (candidate === "ς") candidate = "σ";
 		const folded = candidate.length === 1 ? candidate : lower.length === 1 ? lower : sources[i];
 		if (folded.length !== 1) continue;
+		/* v8 ignore stop */
 		const unit = folded.charCodeAt(0);
 		if ((unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57)) {
 			built[folded] = (built[folded] ?? "") + sources[i];

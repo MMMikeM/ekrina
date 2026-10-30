@@ -87,3 +87,16 @@ describe("FuzzyResult invariants", () => {
 		expect(r.score).toBe(Math.min(...matched));
 	});
 });
+
+describe("fields that tie on score", () => {
+	it("a whole word in any tied field ranks the item first", () => {
+		const search = createFuzzySearch(
+			[
+				{ name: "Willa Young", alias: "Willow" },
+				{ name: "Willa Young", alias: "Will Z" },
+			],
+			[{ text: (row) => row.name }, { text: (row) => row.alias }],
+		);
+		expect(search("will").map((result) => result.item.alias)).toEqual(["Will Z", "Willow"]);
+	});
+});

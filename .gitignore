@@ -2,3 +2,4 @@ dist/
 node_modules/
 bench/.raw/
 bench/.variants/
+coverage/

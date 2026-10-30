@@ -21,7 +21,10 @@ const computeFold = (char: string): string => {
 		? stripped
 		: lowered.length === char.length
 			? lowered
-			: char;
+			: // No code point reaches this today (checked over all of Unicode); it
+				// keeps the fold 1:1 if a later Unicode changes a case mapping.
+				/* v8 ignore next */
+				char;
 };
 
 // Dense array through Latin Extended + Greek + Cyrillic (an indexed load beats
@@ -79,6 +82,8 @@ export const normaliseText = (text: string): string => {
 // bigram filter, never strengthen it.
 export const bigramClass = (unit: number): number => {
 	if (unit >= 97 && unit <= 122) return unit - 96;
+	// Folded text has no capitals; this keeps the classes identical to charMask's.
+	/* v8 ignore next */
 	if (unit >= 65 && unit <= 90) return unit - 64;
 	if (unit >= 48 && unit <= 57) return 27 + (unit & 3);
 	if (unit > 127) return 31 + (unit & 1);
@@ -153,13 +158,20 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 			if (foldedUnit >= 97 && foldedUnit <= 122) {
 				mask |= 1 << (foldedUnit - 97);
 				unitClass = foldedUnit - 96;
-			} else if (foldedUnit >= 65 && foldedUnit <= 90) {
+			}
+			// No code point above 127 folds to A–Z or a digit (checked over all of
+			// Unicode). These keep a new fold from dropping a mask bit, which would
+			// make the gates false-reject.
+			/* v8 ignore start */
+			else if (foldedUnit >= 65 && foldedUnit <= 90) {
 				mask |= 1 << (foldedUnit - 65);
 				unitClass = foldedUnit - 64;
 			} else if (foldedUnit >= 48 && foldedUnit <= 57) {
 				mask |= 1 << (26 + (foldedUnit & 3));
 				unitClass = 27 + (foldedUnit & 3);
-			} else if (foldedUnit > 127) {
+			}
+			/* v8 ignore stop */
+			else if (foldedUnit > 127) {
 				mask |= 1 << (30 + (foldedUnit & 1));
 				if (foldedUnit >= 0x300 && foldedUnit <= 0x36f) degraded = true;
 				else unitClass = 31 + (foldedUnit & 1);

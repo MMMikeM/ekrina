@@ -173,7 +173,7 @@ So for a short query, a list can show fewer corrections than `fuzzyMatch` return
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
-- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 4.1× by its last letter even over 100k items.
+- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.9× by its last letter even over 100k items.
   Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; an exact long word returns a median of 5 rows where Fuse.js returns 153.
 - **Backend one-shot lookups**: constructor + first answer takes ~3.8 ms in a cold process over 10k items, so indexing per request is fine.

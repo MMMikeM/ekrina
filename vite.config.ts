@@ -22,16 +22,25 @@ export default defineConfig({
 		clean: true,
 		sourcemap: false,
 		minify: true,
-		publint: true,
-		attw: true,
+		// attw, publint and the bundler only warn by default; these make each one
+		// fail the build instead.
+		failOnWarn: true,
+		attw: { level: "error" },
+		publint: { strict: true },
 	},
 	test: {
 		include: ["test/**/*.test.ts"],
+		coverage: {
+			provider: "v8",
+			include: ["src/**"],
+			reporter: ["text-summary"],
+			thresholds: { 100: true },
+		},
 	},
 	run: {
 		tasks: {
 			verify: {
-				command: ["vp lint", "vp test run"],
+				command: ["vp lint", "vp test run --coverage"],
 				dependsOn: ["types"],
 			},
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
@@ -45,7 +54,7 @@ export default defineConfig({
 				command: "vp test run",
 				cwd: "bench",
 				dependsOn: ["build"],
-				input: [{ auto: true }, "!bench/node_modules/.vite/**"],
+				cache: { input: [{ auto: true }, "!bench/node_modules/.vite/**"] },
 			},
 		},
 	},

@@ -80,3 +80,9 @@ describe("acronym tier", () => {
 		);
 	});
 });
+
+describe("a one-character query", () => {
+	it("never matches as an acronym", () => {
+		expect(fuzzyMatch("banana", "n", { acronym: true })).toBeNull();
+	});
+});

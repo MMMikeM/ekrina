@@ -61,7 +61,9 @@
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.5",
-		"@voidzero-dev/vite-plus-core": "^0.2.7",
+		"@vitest/coverage-v8": "5.0.5",
+		"@voidzero-dev/vite-plus-core": "^1.4.0",
+		"fast-check": "4.10.2",
 		"publint": "^0.3.22",
 		"typescript": "^7.0.2",
 		"vite": "catalog:",
@@ -70,12 +72,12 @@
 	"devEngines": {
 		"packageManager": {
 			"name": "pnpm",
-			"version": "11.18.0",
+			"version": "12.16.1",
 			"onFail": "download"
 		}
 	},
 	"engines": {
 		"node": ">=18"
 	},
-	"packageManager": "pnpm@11.18.0"
+	"packageManager": "pnpm@12.16.1"
 }
