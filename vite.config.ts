@@ -27,6 +27,14 @@ export default defineConfig({
 		failOnWarn: true,
 		attw: { level: "error" },
 		publint: { strict: true },
+		// The minifier keeps `v8 ignore` hints as annotations, beside the @__PURE__
+		// ones consumers' tree-shaking needs, so they're stripped on their own.
+		plugins: [
+			{
+				name: "strip-coverage-hints",
+				renderChunk: (code: string) => code.replace(/\/\* v8 ignore (?:next|start|stop) \*\//g, ""),
+			},
+		],
 	},
 	test: {
 		include: ["test/**/*.test.ts"],
