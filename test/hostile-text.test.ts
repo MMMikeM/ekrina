@@ -7,6 +7,11 @@ const msToRun = (run: () => unknown): number => {
 	return Date.now() - start;
 };
 
+// Machines and coverage instrumentation differ by 20x, so a cost that must not
+// grow with the query is pinned as a ratio of two runs on the same machine.
+const fastestMsToRun = (run: () => unknown): number =>
+	Math.max(1, Math.min(msToRun(run), msToRun(run), msToRun(run)));
+
 // Each of these took 0.8–6 s while the long-text gate was a regex.
 const hostile: [string, string, string][] = [
 	["a head with no tail after it", "b" + "a".repeat(64_000), "aaab"],
@@ -104,16 +109,20 @@ describe("a query an attacker controls", () => {
 		expect(fuzzyMatch(`hello ${word}`, `hello ${dropped}`)?.tier).not.toBe("corrected");
 	});
 
-	it("is cheap to match against every row of a list", () => {
+	it("costs no more than a short query when matched against every row of a list", () => {
 		const rows = Array.from({ length: 10_000 }, (_, i) => `Blue Wooden Chair ${i}`);
-		const query = mixedWord(256);
-		expect(msToRun(() => rows.map((row) => fuzzyMatch(row, query)))).toBeLessThan(250);
+		const matchEveryRow = (query: string) => () => rows.map((row) => fuzzyMatch(row, query));
+		const short = fastestMsToRun(matchEveryRow("chair"));
+		expect(fastestMsToRun(matchEveryRow(mixedWord(256)))).toBeLessThan(short * 4);
 	});
 
-	it("walks each field once for a repeated word, however many mid-word hits it skips", () => {
-		const fields = Array(50).fill(("xthe ".repeat(200) + "the ").repeat(64));
-		const query = Array(64).fill("the").join(" ");
-		expect(msToRun(() => createFuzzySearch(fields)(query))).toBeLessThan(250);
+	it("walks a field once for a repeated word, however many mid-word hits it skips", () => {
+		const field = "xthe ".repeat(12_800) + "the xthe ".repeat(64);
+		const copiesOfThe = (copies: number) => () => {
+			for (let run = 0; run < 30; run++) fuzzyMatch(field, Array(copies).fill("the").join(" "));
+		};
+		const twoCopies = fastestMsToRun(copiesOfThe(2));
+		expect(fastestMsToRun(copiesOfThe(64))).toBeLessThan(twoCopies * 4);
 	});
 
 	it("matches regular-expression syntax literally", () => {
