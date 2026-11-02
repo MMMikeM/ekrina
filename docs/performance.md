@@ -54,7 +54,7 @@ Bucketed classes (digits, non-ASCII) can only merge bits, so a collision weakens
 Stage 1 is one native regex chosen by query type.
 Multi-word queries get an order-independent presence gate, because the multi-word tier matches words in any order and a subsequence gate would falsely reject `"foo bar"` against `"bar … foo"` (pinned by `bench/correctness.test.ts`).
 Single-word queries get a subsequence gate: with one word there is no ordering concern, and one in-order pass is both stricter and faster than the presence gate's k lookaheads.
-For pure a–z queries the mask is already an exact distinct-character presence check, so the presence regex is skipped as redundant (`presenceGateRedundant`).
+For pure a–z queries the mask is already an exact distinct-character presence check, so the presence regex is skipped as redundant (`needsPresenceGate` in `prepareQuery`).
 
 The substitution rescue needs the mask relaxed by one character class, and that relaxation is slow because it widens the survivor set, which the scan's speed depends on keeping small.
 A bigram gate re-tightens it.
