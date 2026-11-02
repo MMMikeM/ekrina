@@ -6,7 +6,7 @@ import {
 	charMask,
 	type Gate,
 } from "./gates";
-import { matchField, prepareQuery } from "./match";
+import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
@@ -46,6 +46,8 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
  *
  * Judges the string on its own: a searcher over a list can return fewer
  * corrections than this does per item (see createFuzzySearch).
+ * A query is matched on its first 256 characters, and one holding a word over
+ * 64 characters is never corrected.
  */
 export const fuzzyMatch = (
 	text: string,
@@ -53,10 +55,8 @@ export const fuzzyMatch = (
 	options: MatchOptions = {},
 ): MatchResult | null => {
 	const { acronym = false } = options;
-	const normalisedQuery = normaliseText(query);
-	if (!normalisedQuery.length) return null;
-
-	const q = prepareQuery(query, normalisedQuery);
+	const q = prepareBoundedQuery(query);
+	if (q === null) return null;
 	const field = text.trim();
 	const normalisedField = normaliseText(field);
 
@@ -97,6 +97,8 @@ const resolveFieldSpecs = <T>(
  * matches most of any real collection and ranks none of it.
  * A query under five characters is corrected only when no item matches it as
  * typed, and no correction is tried once ten items match literally.
+ * A query is matched on its first 256 characters, and one holding a word over
+ * 64 characters is never corrected.
  * An empty spec array is honoured as written: the searcher has no searchable
  * fields and every query returns no results.
  *
@@ -210,12 +212,11 @@ export function createFuzzySearch<T>(
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
 			throw new RangeError(`limit must be a positive integer, got ${limit}`);
 		}
-		const normalisedQuery = normaliseText(query);
-		if (normalisedQuery.length === 0) return [];
+		const prepared = prepareBoundedQuery(query);
+		if (prepared === null) return [];
+		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
-		const prepared = prepareQuery(query, normalisedQuery);
-		const { queryMask } = prepared;
 		// Same predicate matchField's mask gate uses, so the two cannot drift.
 		const rescuable = isRescuableQuery(normalisedQuery, prepared.queryWords);
 		const multiWord = prepared.queryWords.length > 1;

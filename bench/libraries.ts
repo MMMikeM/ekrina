@@ -22,7 +22,7 @@ export type LibraryMeta = {
 
 export const META: Record<string, LibraryMeta> = {
 	ekrina: {
-		gzipKB: 6.2,
+		gzipKB: 6.4,
 		deps: 0,
 		type: "subsequence (tiered)",
 		module: "esm",

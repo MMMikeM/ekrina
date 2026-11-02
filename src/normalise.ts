@@ -34,6 +34,7 @@ const DENSE_FOLDS_MAX = 0x4ff;
 // oxlint-disable-next-line unicorn/no-new-array
 const denseFolds: (string | undefined)[] = new Array(DENSE_FOLDS_MAX + 1).fill(undefined);
 const rareFolds = new Map<string, string>();
+const RARE_FOLDS_MAX = 65_536;
 
 export const foldChar = (char: string): string => {
 	const codePoint = char.codePointAt(0) as number;
@@ -45,6 +46,9 @@ export const foldChar = (char: string): string => {
 	let folded = rareFolds.get(char);
 	if (folded === undefined) {
 		folded = computeFold(char);
+		// Queries can name any code point, so the cache is bounded rather than
+		// left to grow towards all of Unicode.
+		if (rareFolds.size >= RARE_FOLDS_MAX) rareFolds.clear();
 		rareFolds.set(char, folded);
 	}
 	return folded;

@@ -40,7 +40,7 @@ Size and type, Ekrina first, then by bundle size ascending.
 <!-- bench:libraries -->
 | Library          | Gzip    | Deps | Type                 |
 |------------------|---------|------|----------------------|
-| **Ekrina**       | ~6.2 kB | 0    | subsequence (tiered) |
+| **Ekrina**       | ~6.4 kB | 0    | subsequence (tiered) |
 | fuzzy            | ~0.8 kB | 0    | substring            |
 | @nozbe/microfuzz | ~1.7 kB | 0    | subsequence          |
 | match-sorter     | ~3.4 kB | 2    | subsequence (tiered) |
@@ -638,13 +638,13 @@ Literal-only matching, for callers that want no fuzzy assemblies at all, is a on
 The recommendation is to _pick Ekrina for list matching_, with two carve-outs the data supports.
 
 - **Quality**: Ekrina (acronym) tops the scorecard on both corpora (0.89 mixed / 0.89 ascii), and base Ekrina (0.87 / 0.86) is still clear of every other library, Fuse.js (tuned) the closest at 0.82; the lead comes from scoring near 1 on every phrase and single-edit typo family at once, which no other library does.
-- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of anything above 0.7 MRR at both sizes (13.5 ms at mixed 10k, ~0.52 ms per query after the first), base Ekrina ties uFuzzy (all opts) inside the tie band (18.5 ms, ~0.67 ms per query), and both are ~3–55× under every typo-tolerant or tiered alternative, with a near-zero constructor, ~6.2 kB gzip and zero deps.
+- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of anything above 0.7 MRR at both sizes (13.5 ms at mixed 10k, ~0.52 ms per query after the first), base Ekrina ties uFuzzy (all opts) inside the tie band (18.5 ms, ~0.67 ms per query), and both are ~3–55× under every typo-tolerant or tiered alternative, with a near-zero constructor, ~6.4 kB gzip and zero deps.
   The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages ~3.7 ms at 10k and 12–19 ms at 100k across the timed queries, or ~1.4 ms and 2.4–2.6 ms once Ekrina (indexed) has spent ~2 ms and 12–21 ms building the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk at 0% at every measured document length, phrase probes included, so the same engine covers documents, not just labels.
 
 The carve-outs:
 
-- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo from five characters up (transposition, insertion, deletion and substitution), scoring 0.98–1.00 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed.
+- **Typo tolerance beyond a single edit.** The one-edit tiers correct every single-character typo in words of five to 64 characters (transposition, insertion, deletion and substitution), scoring 0.98–1.00 on those families, and inside phrases too, where the failing word is corrected alone; from four characters they correct only when nothing matches as typed.
   _Two or more_ edits in one query still need real edit distance, and Ekrina deliberately refuses both deep scatter and the double-typo phrase.
   If user-typed queries over messy data must match through those, Fuse.js (Bitap) or fast-fuzzy (edit distance) is the right tool for the typos, and match-sorter or fuzzysort for the scatter (0.30–0.95 on the deeper scatter families against Ekrina's 0.00); the scorecard measures what each gains and loses: 0.82 and 0.71 MRR on mixed for Fuse.js (tuned) and fast-fuzzy, at ~15 ms per cold query.
 - **Raw throughput when a bare index array is enough.** Bare uFuzzy runs the 100k ascii batch in 68% of base Ekrina's time (Ekrina (indexed) 76%; folding uFuzzy 93%, and 105% on mixed), and owns the fastest per-query time at 10k ([uFuzzy](./libraries/ufuzzy.md)).
