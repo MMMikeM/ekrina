@@ -22,7 +22,7 @@
 
 A fuzzy matcher usually hands back a number.
 Ranking on it is guesswork, highlighting means re-running the match yourself, and one transposed character makes the whole thing return nothing at all.
-Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a score whose scale is pinned by tests; it also corrects single-character typos, in ~5.5 kB with zero dependencies, on any runtime with ES2022.
+Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a score whose scale is pinned by tests; it also corrects single-character typos, in ~6.2 kB with zero dependencies, on any runtime with ES2022.
 
 - **Tells you how it matched.**
   Every match carries `tier`, `ranges` and `score`, so ranking, highlighting and "showing results for…" are all reads off the result.
@@ -33,7 +33,7 @@ Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a sc
 - **Runs anywhere.**
   No `node:` imports, no DOM, nothing above ES2022: browsers, Node, Deno, Bun and edge runtimes, ESM and CJS.
 - **Stays small.**
-  ~5.5 kB gzip, zero runtime dependencies, TS-first.
+  ~6.2 kB gzip, zero runtime dependencies, TS-first.
 
 Corrects single-character typos, not general edit distance, which keeps it small and fast.
 Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), [benchmarked](./docs/benchmarks.md) against it and six others, and there is a [migration diff](#migrating-from-nozbemicrofuzz) if you are coming from it.
@@ -271,7 +271,7 @@ Behavioural differences:
   microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary.
   `useMemo(() => createFuzzySearch(list, getText), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
 
-Ekrina is ~5.5 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
+Ekrina is ~6.2 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
 
 ## How it compares
 
@@ -283,7 +283,7 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 
 | Library                     |    Gzip | Deps |  MRR | ms/query | Tiers | Ranges | Typos    |
 | --------------------------- | ------: | ---: | ---: | -------: | :---: | :----: | -------- |
-| **Ekrina** (acronym)        | ~5.5 kB |    0 | 0.89 | **0.67** |  🟢   |   🟢   | one edit |
+| **Ekrina** (acronym)        | ~6.2 kB |    0 | 0.89 | **0.67** |  🟢   |   🟢   | one edit |
 | Fuse.js (tuned)             | ~9.3 kB |    0 | 0.82 |    13.46 |  🔴   |   🟡   | full     |
 | uFuzzy (all opts)           | ~4.1 kB |    0 | 0.75 |     0.91 |  🔴   |   🟢   | one edit |
 | fast-fuzzy                  |  ~11 kB |    1 | 0.71 |     6.40 |  🔴   |   🟡   | full     |
@@ -333,12 +333,12 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
 Pick Ekrina.
 It tops the quality scorecard on both benchmark corpora outright, and with `buildIndex()` it runs the fastest realistic session of anything above 0.7 MRR at every published size.
-At ~5.5 kB gzip it sits mid-pack on size, and the one-edit rescue machinery is where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
-Fuse.js and fast-fuzzy are 1.7–2× larger.
+At ~6.2 kB gzip it is the third-largest of the eight, and the one-edit rescue machinery is both where the size goes and where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
+Only Fuse.js and fast-fuzzy are larger, at 1.5–1.8×.
 The exception:
 
 - **Typos beyond a single edit must still match** (user-typed queries over messy data): the four typo tiers cover every one-character mistake from five characters up, and a swap or substitution at a word start from four when nothing else matches, but two or more edits in one query need real edit distance.
-  Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.7–2× the bundle and ~6–13 ms queries.
+  Pick `Fuse.js` (Bitap) or `fast-fuzzy`, at 1.5–1.8× the bundle and ~6–13 ms queries.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 
