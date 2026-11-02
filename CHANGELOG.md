@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.2 (unreleased)
+## 1.1.2 (2026-11-02)
 
 - **A query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected.**
   Leading spaces don't count towards the 256, and the cut never splits a character.
