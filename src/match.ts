@@ -1,6 +1,7 @@
 import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
+import { normaliseText } from "./normalise";
 import {
 	isRescuableQuery,
 	isShortQuery,
@@ -9,7 +10,6 @@ import {
 	type RescueContext,
 	rescueField,
 	type RescueState,
-	type RescueVariant,
 } from "./rescue";
 import { SCORES } from "./scores";
 import type { MatchResult, Range } from "./types";
@@ -22,13 +22,14 @@ export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;
 	queryWords: string[];
+	wordsLongestFirst: string[];
 	queryMask: number;
-	presenceGate: RegExp | null;
+	presenceGate: Gate | null;
 	fuzzyGate: Gate;
 	rescueState: RescueState | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
-	wordVariants: (RescueVariant[] | null)[] | undefined;
+	wordRescueStates: (RescueState | null)[] | undefined;
 };
 
 // The raw query is stored trimmed so the exact-case tiers treat padding as
@@ -43,15 +44,49 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		query: query.trim(),
 		normalisedQuery,
 		queryWords,
+		wordsLongestFirst: longestFirst(queryWords),
 		queryMask,
-		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
-		fuzzyGate: buildFuzzyGate(normalisedQuery),
+		presenceGate: needsPresenceGate ? lazyGate(() => buildPresenceGate(normalisedQuery)) : null,
+		fuzzyGate: lazyGate(() => buildFuzzyGate(normalisedQuery)),
 		rescueState: undefined,
 		lastCorrection: undefined,
 		wordStarts: undefined,
-		wordVariants: undefined,
+		wordRescueStates: undefined,
 	};
 };
+
+// Every gate and correction is built from the query at more than linear cost in
+// its length, so only its first 256 characters are matched (@see SECURITY.md).
+const MAX_QUERY_LENGTH = 256;
+
+const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
+
+const boundQuery = (query: string): string => {
+	const text = query.trimStart();
+	if (text.length <= MAX_QUERY_LENGTH) return text;
+	const splitsPair = isHighSurrogate(text.charCodeAt(MAX_QUERY_LENGTH - 1));
+	return text.slice(0, splitsPair ? MAX_QUERY_LENGTH - 1 : MAX_QUERY_LENGTH);
+};
+
+// Null when the query holds nothing to match.
+export const prepareBoundedQuery = (query: string): PreparedQuery | null => {
+	const bounded = boundQuery(query);
+	const normalisedQuery = normaliseText(bounded);
+	return normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
+};
+
+// The mask check rejects most fields before a gate runs, so a gate is built on
+// its first test rather than with the query.
+const lazyGate = (build: () => Gate): Gate => {
+	let gate: Gate | undefined;
+	return { test: (text) => (gate ??= build()).test(text) };
+};
+
+// Repeats sort together so multiWordTier can resume each copy after the last.
+const longestFirst = (words: string[]): string[] =>
+	words.length > 1
+		? [...words].sort((a, b) => b.length - a.length || Number(a > b) - Number(a < b))
+		: words;
 
 const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 
@@ -89,17 +124,23 @@ const boundaryTier = (
 };
 
 // Each query word needs its own occurrence, so a repeated word must appear
-// twice. Longest first, so a short word can't take the start a longer one needs.
-const multiWordTier = (normalisedField: string, queryWords: string[]): MatchResult | null => {
+// twice. Longest first, so a short word can't take the start a longer one needs;
+// each copy of a repeated word resumes after the last, so a query of one word
+// repeated walks the field once instead of once per copy.
+const multiWordTier = (normalisedField: string, words: string[]): MatchResult | null => {
 	const ranges: Range[] = [];
 	const isTaken = (start: number, end: number): boolean =>
 		ranges.some(([takenStart, takenEnd]) => start <= takenEnd && takenStart <= end);
-	for (const word of [...queryWords].sort((a, b) => b.length - a.length)) {
-		let at = wordStartOccurrence(normalisedField, word);
+	let from = 0;
+	for (let i = 0; i < words.length; i++) {
+		const word = words[i];
+		if (word !== words[i - 1]) from = 0;
+		let at = wordStartOccurrence(normalisedField, word, from);
 		while (at > -1 && isTaken(at, at + word.length - 1)) {
 			at = wordStartOccurrence(normalisedField, word, at + 1);
 		}
 		if (at === -1) return null;
+		from = at + 1;
 		ranges.push([at, at + word.length - 1]);
 	}
 	return { score: SCORES.MULTI_WORD, tier: "multi-word", ranges: ranges.sort(sortByRangeStart) };
@@ -168,7 +209,7 @@ const literalTiers = (
 	prepared: PreparedQuery,
 	acronym: boolean,
 ): MatchResult | null => {
-	const { query, normalisedQuery, queryWords } = prepared;
+	const { query, normalisedQuery, queryWords, wordsLongestFirst } = prepared;
 
 	if (field === query) {
 		return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
@@ -189,7 +230,7 @@ const literalTiers = (
 	if (boundary) return boundary;
 
 	if (queryWords.length > 1) {
-		const multi = multiWordTier(normalisedField, queryWords);
+		const multi = multiWordTier(normalisedField, wordsLongestFirst);
 		if (multi) return multi;
 	}
 

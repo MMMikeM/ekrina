@@ -26,7 +26,7 @@ Everything an index would hold is built on demand, during queries.
 
 ```mermaid
 flowchart TD
-    Q["search(query, { limit })"] --> P["normaliseText -> prepareQuery"]
+    Q["search(query, { limit })"] --> P["first 256 characters -> normaliseText -> prepareQuery"]
     P --> E{"empty?"}
     E -->|yes| Z(["[]"])
     E -->|no| ONE{"one character?"}
@@ -56,7 +56,7 @@ Which path a query takes depends on:
 1. whether it is one character, which matches only where it starts a word;
 2. whether it extends the previous one;
 3. whether it is a single word made of characters the fold table covers;
-4. whether it needs a correction, which a four-character query gets only when nothing matches it as typed.
+4. whether it needs a correction, which a four-character query gets only when nothing matches it as typed, and a query holding a word over 64 characters never gets.
 
 Every subsequence gate, raw or normalised, checks a field longer than 256 characters with one linear in-order scan instead of its regex, which would take time quadratic in the field's length on crafted text.
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.2 (2026-11-02)
+
+- **A query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected.**
+  Leading spaces don't count towards the 256, and the cut never splits a character.
+  Before this, a query of a few thousand characters made the gate regex throw an uncaught `SyntaxError`, a single long word made typo correction cost time and memory quadratic in its length (0.4 s and ~220 MB at 1,000 characters), and a phrase with an absent word of 16,385 characters never returned.
+  `test/hostile-text.test.ts` holds each hostile query shape from an external review, and `pnpm bench --quality` reproduces every published rank and MRR.
+- **A phrase that repeats one word walks each field once.**
+  Each copy resumes after the last, so a field whose word starts sit between mid-word hits is no longer rescanned per copy: 64 copies of `the` over 50 such fields went from 452 ms to 25 ms.
+- **`fuzzyMatch` builds its gates only for a field that gets past the character check.**
+  Matching every row of a list one call at a time no longer pays for gates most rows never reach, which matters most for a long query: 10,000 rows against a 256-character word went from 380 ms to under 10 ms.
+- **The cache of rare-character folds is bounded**, so queries naming many distinct code points cannot grow it towards all of Unicode.
+
 ## 1.1.1 (2026-10-30)
 
 - **A repeated word in a multi-word query needs its own occurrence.**

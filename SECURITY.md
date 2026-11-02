@@ -25,10 +25,13 @@ The GitHub Release carries the same tarball, its SHA-256 and a Sigstore attestat
 
 The tests cover every statement and branch of `src/`, and `pnpm gate` fails below 100%.
 Property tests (`test/properties.test.ts`, with fast-check) check the published invariants against random input: ranges always index the caller's string, normalisation is 1:1, and a search typed keystroke by keystroke returns what a fresh one does.
-CI runs `pnpm audit` over the development dependencies, CodeQL on every pull request, and the packed tarball on Node 18–24, Bun and Deno.
+CI runs `pnpm audit` over the development dependencies, CodeQL on every pull request, and the packed tarball on Node 18, 20, 22 and 24, Bun and Deno.
 
 ## Cost on hostile input
 
-Matching time grows with the length of the text and of the query, so a caller matching untrusted input should cap both.
-Text longer than 256 characters is gated by one linear scan, and [`test/hostile-text.test.ts`](./test/hostile-text.test.ts) holds crafted inputs that took seconds in 1.0.0 to linear time.
-Shorter text goes through a regular expression whose worst case is quadratic in the text's length, which 256 characters keeps small.
+The query is the input a caller usually doesn't control, so ekrina bounds it: a query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected for typos.
+[`test/hostile-text.test.ts`](./test/hostile-text.test.ts) holds the query shapes that threw, hung or ran for seconds before 1.1.2 (very long words, phrases with very long or many repeated words, thousands of distinct characters) and requires each to answer quickly without throwing.
+
+The list's text is the implementer's own, and its cost grows with its length.
+Text longer than 256 characters is gated by one linear scan, and the same test file holds crafted texts that took seconds in 1.0.0 to linear time; shorter text goes through a regular expression whose worst case is quadratic in its length, which 256 characters keeps small.
+The gate is what that bounds, not matching as a whole: an item's own text can still make a typo correction cost more than linear time, so a list built from untrusted long text should be capped by the caller.

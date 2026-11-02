@@ -22,12 +22,12 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `chunk`                    | a consecutive matched run inside the fuzzy tier (same type as `Range`, different meaning)                                                          | `Chunk` alias                                |
 | `chain`                    | an assembled sequence of chunks covering the whole query                                                                                            | `fuzzyChainMatch`, `ChainScore`              |
 | `gate`                     | a fast per-query pre-filter that can only false-pass, never false-reject                                                                            | `gates.ts`                                   |
-| `mask`                     | the 32-bit char-class summary used by the O(1) gate; every stored mask is scope-qualified (`queryMask`, `fieldMasks`, `unionMasks`, `requiredMask`) | `charMask`                                   |
+| `mask`                     | the 32-bit char-class summary used by the O(1) gate; every stored mask is scope-qualified (`queryMask`, `fieldMasks`, `UnionIndex.masks`, `requiredMask`) | `charMask`                                   |
 | `class`                    | unqualified: a charMask bucket (`bigramClass`, `missingClasses`, `classBit`); regex character classes always say "char class"                       | `charMask`, `escapeCharClass`                |
 | `bigram`                   | an adjacent pair of char classes, hashed into a 64-bit presence set for the rescue gate                                                             | `FieldBigrams`, `RescueBigramGate`           |
 | `survivor`                 | an item index that passed the gate for the previous query                                                                                           | `survivorCache`                              |
 | `relaxed`                  | the mask gate tolerating exactly one missing class (what a substitution typo looks like from a mask)                                                | `relaxedPass`, `isRescuableQuery`            |
-| `rescue`                   | the one-edit correction machinery; `rescueState` is its per-query gate cache, `RescueContext` the per-field call state                              | `rescue.ts`                                  |
+| `rescue`                   | the one-edit correction machinery; `rescueState` and `wordRescueStates` are its per-query gate caches, `RescueContext` the per-field call state                              | `rescue.ts`                                  |
 | `variant`                  | one enumerated one-edit correction candidate (swap or drop)                                                                                         | `RescueVariant`                              |
 | `subject`                  | what a rescue corrects, the whole query, or a phrase's one absent word                                                                             | `CorrectionSubject`                          |
 | `window`                   | a field slice exactly one substitution away from the subject                                                                                        | `substitutedWindows`                         |
@@ -45,7 +45,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 
 Schemes the code follows deliberately; new code joins them.
 
-- **Lengths are spelled out**: `queryLength`, `chunkLength`, `subjectLength`, never `Len`.
+- **Lengths are spelled out**: `queryLength`, `runLength`, `subjectLength`, never `Len`.
 - **Positions**: a string offset is `at` (or `<noun>At`: `soleAt`, `wordAt`, `halfAt`, `insertAt`, `splitAt`); a scan start is `from` (or `<noun>From`: `queryFrom`); an array index is `<noun>Index` (`wordIndex`, `absentIndex`).
 - **Characters**: `char` is a code point as a string; `unit` is a numeric UTF-16 code unit (`charCodeAt`); `codePoint` is a numeric code point (`codePointAt`).
 - **Bigram halves** carry the `Lo`/`Hi` suffix; field-side sets are `bigrams*`, query-side requirements are `required*`; the per-field accumulator keeps bare `{ lo, hi }` (`FieldBigrams`).
