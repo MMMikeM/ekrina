@@ -43,3 +43,16 @@ describe("a repeated query word", () => {
 		expect(fuzzyMatch("e", "e e")).toBeNull();
 	});
 });
+
+describe("a query word that starts another query word", () => {
+	it("moves past the start the longer word took", () => {
+		expect(fuzzyMatch("north nor", "nor north")).toEqual({
+			score: SCORES.MULTI_WORD,
+			tier: "multi-word",
+			ranges: [
+				[0, 4],
+				[6, 8],
+			],
+		});
+	});
+});
