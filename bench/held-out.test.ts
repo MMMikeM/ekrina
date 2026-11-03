@@ -1,0 +1,71 @@
+/**
+ * Diagnostic, never published: ekrina's rows on the published families scored
+ * again on items and seeds no tuning has seen (corpus.ts `heldOut`), beside the
+ * published score, so a gain that exists only on the published queries shows up
+ * as a gap.
+ */
+import { writeFileSync } from "node:fs";
+import { describe, expect, it } from "vite-plus/test";
+import { ensureRawDir, rawFile } from "./artifact.ts";
+import { configs } from "./configs.ts";
+import { CORPORA, type SampledQuery, heldOut } from "./corpus";
+import { scoreFamilies, scorecardOf } from "./mrr.ts";
+
+const SIZE = 10_000;
+
+// Only ekrina is tuned against the published families, so only its rows can be
+// fit to them; the other libraries would double the suite's time to say nothing.
+const ekrinaRows = (list: string[]) => configs(list).filter((c) => c.name.startsWith("ekrina"));
+
+const score = (list: string[], samples: SampledQuery[]) => {
+	const all = ekrinaRows(list);
+	const families = scoreFamilies(samples, all, ekrinaRows([...list].reverse()));
+	return { families, scorecard: scorecardOf(families, all) };
+};
+
+const runOut: Record<string, unknown> = {};
+
+describe("held-out families", () => {
+	for (const corpus of CORPORA) {
+		it(`[${corpus.name}] keep the gain the published ones show`, { timeout: 120_000 }, () => {
+			const published = score(corpus.build(SIZE), corpus.samples);
+			const { items, samples } = heldOut(corpus);
+			const fresh = score(items, samples);
+			const mrrOf = (rows: typeof fresh.scorecard, library: string): number | undefined =>
+				rows.find((row) => row.library === library)?.mrr;
+			const table = published.scorecard.map(({ library, mrr }) => ({
+				library,
+				published: mrr,
+				heldOut: mrrOf(fresh.scorecard, library),
+			}));
+			console.table(table);
+			const families = fresh.families
+				.filter((family) => family.scored)
+				.map((family) => ({
+					kind: family.kind,
+					...Object.fromEntries(
+						Object.entries(family.mrr).map(([library, mrr]) => [
+							library,
+							`${published.families.find((p) => p.kind === family.kind)?.mrr[library]} → ${mrr}`,
+						]),
+					),
+				}));
+			runOut[corpus.name] = { table, families };
+			ensureRawDir();
+			writeFileSync(rawFile("held-out.json"), JSON.stringify(runOut, null, "\t"));
+			const gain = (rows: typeof fresh.scorecard): number | undefined => {
+				const base = mrrOf(rows, "ekrina");
+				const opted = mrrOf(rows, "ekrina (fuzzier)");
+				return base === undefined || opted === undefined ? undefined : opted - base;
+			};
+			const publishedGain = gain(published.scorecard);
+			const heldOutGain = gain(fresh.scorecard);
+			// `--only=` narrows the set, and a check against an absent row would assert nothing.
+			if (publishedGain !== undefined && heldOutGain !== undefined) {
+				expect(heldOutGain, "fuzzier's gain is fit to the published queries").toBeGreaterThanOrEqual(
+					publishedGain / 2,
+				);
+			}
+		});
+	}
+});

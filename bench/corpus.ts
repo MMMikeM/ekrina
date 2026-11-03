@@ -340,8 +340,7 @@ const answeredByFew = (items: string[], relevant: (item: string) => boolean): bo
 type Derived = { query: string; relevant: ((item: string) => boolean) | null } | null;
 type Family = { kind: QuerySpec["kind"]; derive: (words: string[], item: string) => Derived };
 
-const sampleQueries = (build: (n: number) => string[]): SampledQuery[] => {
-	const items = build(SAMPLE_SIZE);
+const sampleQueries = (items: string[], seedOffset: number): SampledQuery[] => {
 	const vocabulary = new Set(items.flatMap(foldedWords));
 	// A corrupted query that is itself a corpus word is a correct query, not a typo.
 	const typo = (query: string): string | null => (vocabulary.has(fold(query)) ? null : query);
@@ -486,7 +485,7 @@ const sampleQueries = (build: (n: number) => string[]): SampledQuery[] => {
 	const sampled: SampledQuery[] = [];
 	for (const [seed, { kind, derive }] of families.entries()) {
 		const seen = new Set<string>();
-		for (const at of shuffledIndices(items.length, seed + 1)) {
+		for (const at of shuffledIndices(items.length, seedOffset + seed + 1)) {
 			if (seen.size === SAMPLES_PER_FAMILY) break;
 			const derived = derive(wordsOf(items[at].toLowerCase()), items[at]);
 			if (!derived || seen.has(derived.query)) continue;
@@ -508,7 +507,21 @@ export type Corpus = {
 
 const makeCorpus = (name: Corpus["name"], build: (n: number) => string[]): Corpus => {
 	const specs = deriveQueries(build);
-	return { name, build, specs, queries: specs.map((s) => s.query), samples: sampleQueries(build) };
+	const samples = sampleQueries(build(SAMPLE_SIZE), 0);
+	return { name, build, specs, queries: specs.map((s) => s.query), samples };
+};
+
+// Items no published family was drawn from, sampled under other seeds: a
+// tuning change the published families like should hold here too, or it is fit
+// to the published queries rather than to typing.
+const HELD_OUT_FROM = 50_000;
+const HELD_OUT_SEED_OFFSET = 1_000;
+
+export type HeldOut = { items: string[]; samples: SampledQuery[] };
+
+export const heldOut = (corpus: Corpus): HeldOut => {
+	const items = corpus.build(HELD_OUT_FROM + SAMPLE_SIZE).slice(HELD_OUT_FROM);
+	return { items, samples: sampleQueries(items, HELD_OUT_SEED_OFFSET) };
 };
 
 export const CORPORA: Corpus[] = [
