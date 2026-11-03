@@ -15,7 +15,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
-import { fuzzyMatch, normaliseText, splitWords } from "ekrina";
+import { fuzzier, fuzzyMatch, normaliseText, splitWords } from "ekrina";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
@@ -80,12 +80,16 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 
 			let junk = 0;
 			for (const w of absent) if (fuzzyMatch(doc, w)) junk++;
+			// Two edits and sparse words reach further, which is why the opt-in
+			// stops at 512 characters: below that it must not junk-match either.
+			const junkWithFuzzier = absent.filter((w) => fuzzyMatch(doc, w, { fuzzier })).length;
 			let presentHits = 0;
 			for (const w of present) if (fuzzyMatch(doc, w)) presentHits++;
 
 			// The regression guard: v1 junked 5%→98% across these lengths; the
 			// density floor must hold the line at zero.
 			expect(junk).toBe(0);
+			expect(junkWithFuzzier, `fuzzier junk-matched a ${len}-char document`).toBe(0);
 			expect(presentHits).toBe(present.length);
 
 			let i = 0;

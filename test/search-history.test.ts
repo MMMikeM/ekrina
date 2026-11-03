@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch } from "../src/index";
+import { MODES } from "./modes";
 
 const typing = (query: string): string[] =>
 	Array.from({ length: query.length }, (_, k) => query.slice(0, k + 1));
@@ -10,19 +11,23 @@ const backspacing = (from: string, to: string): string[] =>
 type Session = { name: string; queries: string[] };
 
 const replaysEachSession = (list: string[], sessions: Session[]): void => {
-	for (const { name, queries } of sessions) {
-		it(name, () => {
-			const search = createFuzzySearch(list);
-			for (const query of queries) {
-				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
-			}
-		});
+	for (const { name: mode, searcher } of MODES) {
+		describe(mode, () => {
+			for (const { name, queries } of sessions) {
+				it(name, () => {
+					const search = searcher(list);
+					for (const query of queries) {
+						expect(search(query), query).toEqual(searcher(list)(query));
+					}
+				});
 
-		it(`${name}, with the index built first`, () => {
-			const search = createFuzzySearch(list);
-			search.buildIndex();
-			for (const query of queries) {
-				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
+				it(`${name}, with the index built first`, () => {
+					const search = searcher(list);
+					search.buildIndex();
+					for (const query of queries) {
+						expect(search(query), query).toEqual(searcher(list)(query));
+					}
+				});
 			}
 		});
 	}
