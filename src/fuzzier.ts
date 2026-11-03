@@ -20,18 +20,26 @@ const wordRun = /[\p{L}\p{N}_]+/gu;
 let rows = new Int32Array(0);
 
 // Optimal string alignment distance: insertions, deletions, substitutions and
-// adjacent swaps, each one edit. Capped at `limit + 1`.
+// adjacent swaps, each one edit. Capped at `limit + 1`. Only cells within
+// `limit` of the diagonal can stay under the cap, so the rest are never filled
+// and read as over it.
 const editDistance = (a: string, b: string, limit: number): number => {
 	const width = b.length + 1;
+	const over = limit + 1;
 	if (rows.length < 3 * width) rows = new Int32Array(3 * width);
+	rows.fill(over, 0, 3 * width);
 	let beforeLast = 0;
 	let last = width;
 	let current = 2 * width;
-	for (let j = 0; j < width; j++) rows[last + j] = j;
+	for (let j = 0; j <= Math.min(limit, b.length); j++) rows[last + j] = j;
 	for (let i = 1; i <= a.length; i++) {
-		rows[current] = i;
-		let rowMin = i;
-		for (let j = 1; j < width; j++) {
+		const from = Math.max(1, i - limit);
+		const to = Math.min(b.length, i + limit);
+		rows[current + from - 1] = from === 1 ? (i <= limit ? i : over) : over;
+		if (to + 1 < width) rows[current + to + 1] = over;
+		let rowMin = over;
+		if (from === 1 && i <= limit) rowMin = i;
+		for (let j = from; j <= to; j++) {
 			let cost = rows[last + j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
 			cost = Math.min(cost, rows[last + j] + 1, rows[current + j - 1] + 1);
 			if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
@@ -59,12 +67,14 @@ const classCounts = (letters: string): Int32Array => {
 
 const unmatchedLetters = (counts: Int32Array, queryMask: number, fieldMask: number): number => {
 	let missing = queryMask & ~fieldMask;
+	if (missing === 0) return 0;
 	let unmatched = 0;
 	for (; missing !== 0; missing &= missing - 1) unmatched += counts[31 - Math.clz32(missing & -missing)];
 	return unmatched;
 };
 
-type LetterGate = { units: number[]; counts: Int32Array; needed: number };
+// `asciiSlots` maps an ASCII code unit to its slot in `units`, or -1.
+type LetterGate = { units: number[]; asciiSlots: Int16Array; counts: Int32Array; needed: number };
 
 // Only a substitution or a deletion leaves a query letter unmatched, so a field
 // holding a correction shares all but `MAX_EDITS` of the query's letters.
@@ -79,7 +89,11 @@ const letterGate = (letters: string, needed: number): LetterGate => {
 			counts.push(1);
 		} else counts[at]++;
 	}
-	return { units, counts: Int32Array.from(counts), needed };
+	const asciiSlots = new Int16Array(128).fill(-1);
+	for (let slot = 0; slot < units.length; slot++) {
+		if (units[slot] < 128) asciiSlots[units[slot]] = slot;
+	}
+	return { units, asciiSlots, counts: Int32Array.from(counts), needed };
 };
 
 let remaining = new Int32Array(0);
@@ -93,28 +107,55 @@ const ASCII_CASE_BIT = 32;
 const holdsLetters = (gate: LetterGate, text: string, folded: boolean): boolean => {
 	if (remaining.length < gate.counts.length) remaining = new Int32Array(gate.counts.length);
 	remaining.set(gate.counts);
+	const { asciiSlots, needed } = gate;
 	let shared = 0;
 	for (let i = 0; i < text.length; i++) {
+		if (text.length - i < needed - shared) return false;
 		let unit = text.charCodeAt(i);
 		if (!folded) {
 			if (unit > 127) {
-				if (++shared >= gate.needed) return true;
+				if (++shared >= needed) return true;
 				continue;
 			}
 			if (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z) unit |= ASCII_CASE_BIT;
 		}
-		const at = gate.units.indexOf(unit);
+		const at = unit < 128 ? asciiSlots[unit] : gate.units.indexOf(unit);
 		if (at === -1 || remaining[at] === 0) continue;
 		remaining[at]--;
-		if (++shared >= gate.needed) return true;
+		if (++shared >= needed) return true;
 	}
 	return false;
 };
 
 type FieldWord = { word: string; at: number };
 
-const fieldWords = (normalisedField: string): FieldWord[] =>
-	Array.from(normalisedField.matchAll(wordRun), (match) => ({ word: match[0], at: match.index }));
+// Normalised text holds no ASCII capitals.
+const isAsciiWordUnit = (unit: number): boolean =>
+	(unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57) || unit === 95;
+
+// The regex's own word split, with a plain scan for the all-ASCII fields that
+// make up nearly every list.
+const fieldWords = (normalisedField: string): FieldWord[] => {
+	const words: FieldWord[] = [];
+	let start = -1;
+	for (let at = 0; at < normalisedField.length; at++) {
+		const unit = normalisedField.charCodeAt(at);
+		if (unit > 127) {
+			return Array.from(normalisedField.matchAll(wordRun), (match) => ({
+				word: match[0],
+				at: match.index,
+			}));
+		}
+		if (isAsciiWordUnit(unit)) {
+			if (start === -1) start = at;
+		} else if (start !== -1) {
+			words.push({ word: normalisedField.slice(start, at), at: start });
+			start = -1;
+		}
+	}
+	if (start !== -1) words.push({ word: normalisedField.slice(start), at: start });
+	return words;
+};
 
 const spelling = (field: string, normalisedField: string, { word, at }: FieldWord): string =>
 	field.length === normalisedField.length ? field.slice(at, at + word.length) : word;
@@ -143,6 +184,7 @@ const correctWord = (
 	word: string,
 	field: string,
 	normalisedField: string,
+	words: FieldWord[],
 	spaces: number,
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
@@ -154,7 +196,6 @@ const correctWord = (
 		const candidate = correction(edits + spaces + joinedEdits, field, normalisedField, first, last);
 		if (best === null || candidate.score < best.score) best = candidate;
 	};
-	const words = fieldWords(normalisedField);
 	for (let i = 0; i < words.length; i++) {
 		consider(words[i], words[i], 0);
 		if (spaces === 0 && i + 1 < words.length) consider(words[i], words[i + 1], 1);
@@ -190,9 +231,10 @@ const scatterWord = (
 	word: string,
 	field: string,
 	normalisedField: string,
+	words: FieldWord[],
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
-	for (const candidate of fieldWords(normalisedField)) {
+	for (const candidate of words) {
 		const runs = scatterRuns(word, candidate.word);
 		if (runs === null) continue;
 		const score =
@@ -257,8 +299,8 @@ const correctPhrase = (
 	prepared: PreparedQuery,
 	field: string,
 	normalisedField: string,
+	words: FieldWord[],
 ): MatchResult | null => {
-	const words = fieldWords(normalisedField);
 	const taken = words.map(() => false);
 	const placements = new Map<string, Placement[]>();
 	let edits = 0;
@@ -296,10 +338,11 @@ const correctSplitWord = (
 	queryWords: string[],
 	field: string,
 	normalisedField: string,
+	words: FieldWord[],
 ): MatchResult | null => {
 	const joined = queryWords.join("");
 	return queryWords.length === 2 && joined.length >= MIN_TWO_EDIT_WORD_LENGTH
-		? correctWord(joined, field, normalisedField, 1)
+		? correctWord(joined, field, normalisedField, words, 1)
 		: null;
 };
 
@@ -315,10 +358,15 @@ const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy 
 	if (phrase && competing) return null;
 	const letters = queryWords.join("");
 	const editable = !competing && (phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH);
-	const matchWord = (word: string, field: string, normalisedField: string): MatchResult | null =>
+	const matchWord = (
+		word: string,
+		field: string,
+		normalisedField: string,
+		words: FieldWord[],
+	): MatchResult | null =>
 		better(
-			editable ? correctWord(word, field, normalisedField, 0) : null,
-			scatterWord(word, field, normalisedField),
+			editable ? correctWord(word, field, normalisedField, words, 0) : null,
+			scatterWord(word, field, normalisedField, words),
 		);
 	const matchable = phrase
 		? queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH)
@@ -334,10 +382,11 @@ const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy 
 		match: (field, normalisedField, fieldMask) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH || !admitsMask(fieldMask)) return null;
 			if (!holdsLetters(gate, normalisedField, true)) return null;
+			const words = fieldWords(normalisedField);
 			return phrase
-				? (correctPhrase(prepared, field, normalisedField) ??
-						correctSplitWord(queryWords, field, normalisedField))
-				: matchWord(queryWords[0], field, normalisedField);
+				? (correctPhrase(prepared, field, normalisedField, words) ??
+						correctSplitWord(queryWords, field, normalisedField, words))
+				: matchWord(queryWords[0], field, normalisedField, words);
 		},
 	};
 };

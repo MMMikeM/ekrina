@@ -51,7 +51,19 @@ describe("two edits inside one word", () => {
 		expect(fuzzyMatch(`${"word ".repeat(100)}ergonomic`, "ergxnomiq", opt)?.tier).toBe("corrected");
 	});
 
-	it("spells a decomposed field's word in its composed form", () => {
+	it("finds the word among digits and trailing punctuation", () => {
+		expect(fuzzyMatch("Model 2000 Ergonomic (EU)", "ergxnomiq", opt)?.ranges).toEqual([[11, 19]]);
+	});
+
+	it("corrects a query holding a letter that never folds to ASCII", () => {
+		expect(fuzzyMatch("Søndergaard ApS", "søndrgrd", opt)?.corrected).toBe("Søndergaard");
+	});
+
+		it("finds the word in a field holding letters that never fold to ASCII", () => {
+		expect(fuzzyMatch("Ørsted Ergonomic", "ergxnomiq", opt)?.ranges).toEqual([[7, 15]]);
+	});
+
+		it("spells a decomposed field's word in its composed form", () => {
 		const r = fuzzyMatch("Café Ergonomic", "ergxnomiq", opt);
 		expect(r?.corrected).toBe("ergonomic");
 	});
