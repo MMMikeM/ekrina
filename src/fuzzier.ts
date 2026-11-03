@@ -162,10 +162,12 @@ const correctWord = (
 	return best;
 };
 
-// Each run of consecutive matched letters after the first costs this much, so
-// a query typed in fewer pieces ranks first.
-const SCATTER_RUN_PENALTY = 0.5;
-const SCATTER_SKIP_PENALTY = 0.1;
+// Just above CONTAINS and ranked by the share of the word left untyped, so a
+// sparse match inside one word outranks a fuzzy chain across several. Tuned on
+// the scatter families and confirmed on fresh queries (@see docs/performance.md).
+const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
+const SCATTER_SKIP_WEIGHT = 0.5;
+const LATER_WORD_PENALTY = 0.05;
 
 // The query's letters in order inside one field word that starts with the
 // same letter, at least half of that word typed.
@@ -194,10 +196,9 @@ const scatterWord = (
 		const runs = scatterRuns(word, candidate.word);
 		if (runs === null) continue;
 		const score =
-			TYPO_PENALTY * MAX_EDITS +
-			(candidate.at === 0 ? SCORES.PREFIX : SCORES.BOUNDARY) +
-			SCATTER_RUN_PENALTY * (runs.length - 1) +
-			SCATTER_SKIP_PENALTY * (candidate.word.length - word.length);
+			SCATTER_SCORE +
+			SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
+			(candidate.at === 0 ? 0 : LATER_WORD_PENALTY);
 		if (best !== null && best.score <= score) continue;
 		for (const run of runs) {
 			run[0] += candidate.at;
@@ -302,20 +303,23 @@ const correctSplitWord = (
 		: null;
 };
 
-const matchWord = (word: string, field: string, normalisedField: string): MatchResult | null =>
-	better(
-		word.length >= MIN_TWO_EDIT_WORD_LENGTH ? correctWord(word, field, normalisedField, 0) : null,
-		scatterWord(word, field, normalisedField),
-	);
-
-const prepare = (prepared: PreparedQuery): PreparedStrategy | null => {
+// Edit distance over every field word is what makes a reading expensive, so
+// beside other matches only the sparse reading competes; edits stand in only
+// for a query that matched nothing.
+const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
 	const { queryWords, queryMask } = prepared;
 	if (queryWords.length === 0 || queryWords.some((word) => word.length > MAX_WORD_LENGTH)) {
 		return null;
 	}
 	const phrase = queryWords.length > 1;
+	if (phrase && competing) return null;
 	const letters = queryWords.join("");
-	const editable = phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH;
+	const editable = !competing && (phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH);
+	const matchWord = (word: string, field: string, normalisedField: string): MatchResult | null =>
+		better(
+			editable ? correctWord(word, field, normalisedField, 0) : null,
+			scatterWord(word, field, normalisedField),
+		);
 	const matchable = phrase
 		? queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH)
 		: letters.length >= MIN_SCATTER_LENGTH;
@@ -341,8 +345,9 @@ const prepare = (prepared: PreparedQuery): PreparedStrategy | null => {
 const fuzzierStrategy: Strategy = { prepare };
 
 /**
- * Matches what the default ladder refuses, tried only when nothing matches the
- * query otherwise and only on fields up to 512 characters:
+ * Matches what the default ladder refuses, on fields up to 512 characters. A
+ * sparse word competes while fewer than ten items match the query as typed;
+ * mistakes are corrected only when nothing matches it otherwise.
  *
  * - up to two mistakes, where the default rescue corrects one: a wrong,
  *   missing, extra or swapped character, or a space typed inside a word or
@@ -351,9 +356,10 @@ const fuzzierStrategy: Strategy = { prepare };
  * - a word typed sparsely: at least four of its letters, in order, starting
  *   with its first and covering at least half of it (`hget` for "Huguette").
  *
- * Every such match is tier `"corrected"` and scores `TYPO_PENALTY` per edit
- * plus the tier it lands on, so it sorts below every one-edit correction; a
- * sparse match scores as two edits plus a cost per extra run and skipped
- * letter.
+ * Every such match is tier `"corrected"` and scores above `SCORES.CONTAINS`,
+ * so it never outranks the query as typed. A mistake costs `TYPO_PENALTY`
+ * each, on top of the tier the corrected query lands on; a sparse match scores
+ * just above `CONTAINS`, lower the more of the word was typed. It replaces a
+ * weaker fuzzy or corrected match on the same field.
  */
 export const fuzzier: Fuzzier = fuzzierStrategy as unknown as Fuzzier;

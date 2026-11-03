@@ -70,7 +70,7 @@ describe("two edits inside one word", () => {
 describe("a word typed sparsely", () => {
 	it("half its letters, in order, from its first", () => {
 		expect(fuzzyMatch("Huguette Brown", "hget", opt)).toEqual({
-			score: 2 * TYPO_PENALTY + SCORES.PREFIX + 2 * 0.5 + 4 * 0.1,
+			score: SCORES.CONTAINS + 0.05 + 0.5 * (4 / 8),
 			tier: "corrected",
 			corrected: "Huguette",
 			ranges: [
@@ -115,8 +115,23 @@ describe("a word typed sparsely", () => {
 		expect(fuzzyMatch("Hagueta Hxgxextx", "hget", opt)?.corrected).toBe("Hagueta");
 	});
 
-	it("loses to a two-edit reading of the same word", () => {
-		expect(fuzzyMatch("Handcrafted", "handcrftd", opt)?.ranges).toEqual([[0, 10]]);
+	it("outranks a two-edit reading of the same word", () => {
+		expect(fuzzyMatch("Handcrafted", "handcrftd", opt)?.ranges).toEqual([
+			[0, 5],
+			[7, 8],
+			[10, 10],
+		]);
+	});
+
+	it("replaces a weaker fuzzy chain on the same field", () => {
+		expect(fuzzyMatch("Handcrafted", "hndcrfted")?.tier).toBe("fuzzy");
+		expect(fuzzyMatch("Handcrafted", "hndcrfted", opt)?.score).toBeCloseTo(
+			SCORES.CONTAINS + 0.05 + 0.5 * (2 / 11),
+		);
+	});
+
+	it("never replaces a match as typed", () => {
+		expect(fuzzyMatch("Huguette", "huguet", opt)?.tier).toBe("prefix");
 	});
 });
 
@@ -233,7 +248,50 @@ describe("two edits in one word of a phrase", () => {
 });
 
 describe("in a searcher", () => {
-	it("corrects only once nothing in the list matches", () => {
+	it("joins the results while fewer than ten items match as typed", () => {
+		const search = searcher(["Huguette Brown", "Hget Lane"]);
+		expect(search("hget").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+			["Hget Lane", "prefix"],
+			["Huguette Brown", "corrected"],
+		]);
+		const crowded = searcher([...Array.from({ length: 10 }, (_, k) => `Hget ${k}`), "Huguette"]);
+		expect(crowded("hget")).toHaveLength(10);
+		expect(crowded("hget", { limit: 3 })).toHaveLength(3);
+	});
+
+	it("replaces a weaker result on the same item", () => {
+		const search = searcher(["Handcrafted"]);
+		expect(search("hndcrfted")[0].fields[0]?.tier).toBe("corrected");
+	});
+
+	it("keeps a correction that already scores better", () => {
+		expect(searcher(["huguette"])("hugutte")[0].fields[0]).toEqual({
+			score: TYPO_PENALTY,
+			tier: "corrected",
+			corrected: "huguette",
+			ranges: [[0, 7]],
+		});
+	});
+
+	it("corrects a phrase only when nothing matches it", () => {
+		const search = searcher(["Handcrafted Wooden Chair", "Handcraxted Wooxen Table"]);
+		expect(search("handcrafted wooden").map((r) => r.item)).toEqual(["Handcrafted Wooden Chair"]);
+	});
+
+		it("scores each field that opts in and keeps the best", () => {
+		const search = createFuzzySearch(
+			[{ title: "Hxgxextx", body: "Hagueta" }],
+			[
+				{ text: (r) => r.title, fuzzier },
+				{ text: (r) => r.body, fuzzier },
+			],
+		);
+		const [result] = search("hget");
+		expect(result.fields.map((field) => field?.corrected)).toEqual(["Hxgxextx", "Hagueta"]);
+		expect(result.score).toBe(result.fields[1]?.score);
+	});
+
+	it("corrects a list that matches nothing", () => {
 		const search = searcher(["Ergonomic Chair", "Ergonomic Desk", "Rustic Steel Pizza"]);
 		expect(search("ergxnomiq").map((r) => r.item)).toEqual(["Ergonomic Chair", "Ergonomic Desk"]);
 		expect(search("rustix stexl")[0].fields[0]?.corrected).toBe("Rustic Steel");

@@ -13,6 +13,10 @@ export type PreparedStrategy = {
 
 // What a Fuzzier is behind its opaque public type, kept out of the public
 // surface so a strategy's internals can change without a major version.
-export type Strategy = { prepare: (prepared: PreparedQuery) => PreparedStrategy | null };
+// `competing` means the query already has matches, so only readings cheap
+// enough to run beside them are prepared.
+export type Strategy = {
+	prepare: (prepared: PreparedQuery, competing: boolean) => PreparedStrategy | null;
+};
 
 export const strategyOf = (fuzzier: Fuzzier): Strategy => fuzzier as unknown as Strategy;

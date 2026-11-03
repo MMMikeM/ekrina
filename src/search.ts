@@ -62,11 +62,13 @@ export const fuzzyMatch = (
 	const normalisedField = normaliseText(field);
 	const fieldMask = charMask(normalisedField);
 
-	const result =
-		matchField(field, normalisedField, fieldMask, q, acronym) ??
-		(fuzzier === undefined
-			? null
-			: (strategyOf(fuzzier).prepare(q)?.match(field, normalisedField, fieldMask) ?? null));
+	let result = matchField(field, normalisedField, fieldMask, q, acronym);
+	if (fuzzier !== undefined && (result === null || result.score > SCORES.CONTAINS)) {
+		const fallback = strategyOf(fuzzier)
+			.prepare(q, result !== null)
+			?.match(field, normalisedField, fieldMask);
+		if (fallback && (result === null || fallback.score < result.score)) result = fallback;
+	}
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);
 	return result;
@@ -149,6 +151,12 @@ export function createFuzzySearch<T>(
 	const hasFuzzier = resolvedSpecs.some((spec) => spec.fuzzier !== null);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
+	// Which result each item holds in the current query, so a fuzzier match can
+	// replace a weaker one; a stamp from an earlier query means none.
+	// oxlint-disable-next-line unicorn/no-new-array
+	const heldResults: (FuzzyResult<T> | undefined)[] | null = hasFuzzier ? new Array(count) : null;
+	const heldStamps = hasFuzzier ? new Int32Array(count) : null;
+	let generation = 0;
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -232,6 +240,7 @@ export function createFuzzySearch<T>(
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
+		generation++;
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -252,12 +261,31 @@ export function createFuzzySearch<T>(
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
 
+		// Returns whether the match ends on a word boundary. Results are fresh
+		// objects per call, so the atBest shift can mutate.
+		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
+			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
+			result.score += resolvedSpecs[f].atBest;
+			if (leads !== null) {
+				const lead = leads[at];
+				if (lead) shiftRanges(result.ranges, lead);
+			}
+			return endsWord;
+		};
+
+		const record = (i: number, entry: FuzzyResult<T>, endsWord: boolean): void => {
+			(endsWord ? boundaryEndMatches : midWordMatches).push(entry);
+			if (heldResults !== null) {
+				heldResults[i] = entry;
+				(heldStamps as Int32Array)[i] = generation;
+			}
+		};
+
 		const scoreItem = (
 			i: number,
 			mayRescue: boolean,
 			preGated: boolean,
 			literalOnly: boolean,
-			fallbacks: (PreparedStrategy | null)[] | null = null,
 		): void => {
 			materialise(i);
 			const base = i * specCount;
@@ -266,30 +294,18 @@ export function createFuzzySearch<T>(
 			let fields: (MatchResult | null)[] | null = null;
 
 			for (let f = 0; f < specCount; f++) {
-				const spec = resolvedSpecs[f];
-				const field = trimmedFields[base + f] as string;
-				const normalisedField = normalisedFields[base + f] as string;
-				const result =
-					fallbacks === null
-						? matchField(
-								field,
-								normalisedField,
-								fieldMasks[base + f],
-								prepared,
-								spec.acronym,
-								mayRescue,
-								preGated,
-								literalOnly,
-							)
-						: (fallbacks[f]?.match(field, normalisedField, fieldMasks[base + f]) ?? null);
+				const result = matchField(
+					trimmedFields[base + f] as string,
+					normalisedFields[base + f] as string,
+					fieldMasks[base + f],
+					prepared,
+					resolvedSpecs[f].acronym,
+					mayRescue,
+					preGated,
+					literalOnly,
+				);
 				if (result) {
-					const endsWord = endsOnWordBoundary(normalisedFields[base + f] as string, result.ranges);
-					// Fresh object per matchField call, so the atBest shift can mutate.
-					result.score += spec.atBest;
-					if (leads !== null) {
-						const lead = leads[base + f];
-						if (lead) shiftRanges(result.ranges, lead);
-					}
+					const endsWord = placeFieldResult(result, base + f, f);
 					if (result.score < bestScore) bestEndsWord = endsWord;
 					else if (result.score === bestScore) bestEndsWord ||= endsWord;
 					bestScore = Math.min(bestScore, result.score);
@@ -302,7 +318,7 @@ export function createFuzzySearch<T>(
 
 			if (fields) {
 				if (bestScore <= SCORES.CONTAINS) literalHits++;
-				(bestEndsWord ? boundaryEndMatches : midWordMatches).push({ item: list[i], score: bestScore, fields });
+				record(i, { item: list[i], score: bestScore, fields }, bestEndsWord);
 			}
 		};
 
@@ -389,22 +405,58 @@ export function createFuzzySearch<T>(
 			}
 		};
 
-		// The opt-in fallback stands in for a missing match, like a short query's
-		// correction: it scans the whole list only once nothing else matched.
+		const admitsFallback = (i: number, fallbacks: (PreparedStrategy | null)[]): boolean => {
+			const base = i * specCount;
+			for (let f = 0; f < specCount; f++) {
+				const fallback = fallbacks[f];
+				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
+				if (fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) return true;
+			}
+			return false;
+		};
+
+		// A fallback match joins the item's results, or replaces a weaker fuzzy or
+		// corrected one; a literal match is never touched.
+		const offerFallbacks = (
+			i: number,
+			held: FuzzyResult<T> | undefined,
+			fallbacks: (PreparedStrategy | null)[],
+		): void => {
+			materialise(i);
+			const base = i * specCount;
+			let entry = held;
+			for (let f = 0; f < specCount; f++) {
+				const result = fallbacks[f]?.match(
+					trimmedFields[base + f] as string,
+					normalisedFields[base + f] as string,
+					fieldMasks[base + f],
+				);
+				if (!result) continue;
+				const endsWord = placeFieldResult(result, base + f, f);
+				if (entry === undefined) {
+					// oxlint-disable-next-line unicorn/no-new-array
+					const fields: (MatchResult | null)[] = new Array(specCount).fill(null);
+					fields[f] = result;
+					entry = { item: list[i], score: result.score, fields };
+					record(i, entry, endsWord);
+				} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
+					entry.fields[f] = result;
+					entry.score = Math.min(entry.score, result.score);
+				}
+			}
+		};
+
 		const fuzzierPass = (): void => {
-			const fallbacks = resolvedSpecs.map((spec) => spec.fuzzier?.prepare(prepared) ?? null);
+			const competing = boundaryEndMatches.length + midWordMatches.length > 0;
+			const fallbacks = resolvedSpecs.map(
+				(spec) => spec.fuzzier?.prepare(prepared, competing) ?? null,
+			);
 			if (fallbacks.every((fallback) => fallback === null)) return;
 			unionIndex ??= buildUnionIndex();
 			for (let i = 0; i < count; i++) {
-				const base = i * specCount;
-				for (let f = 0; f < specCount; f++) {
-					const fallback = fallbacks[f];
-					if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
-					if (fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) {
-						scoreItem(i, false, false, false, fallbacks);
-						break;
-					}
-				}
+				const held = (heldStamps as Int32Array)[i] === generation ? heldResults?.[i] : undefined;
+				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
+				if (admitsFallback(i, fallbacks)) offerFallbacks(i, held, fallbacks);
 			}
 		};
 
@@ -440,8 +492,11 @@ export function createFuzzySearch<T>(
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
+		// Taken before the relaxed pass, which rescores the literal hits.
+		const offeringFuzzier =
+			hasFuzzier && literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		if (rescuing) relaxedPass();
-		if (hasFuzzier && boundaryEndMatches.length + midWordMatches.length === 0) fuzzierPass();
+		if (offeringFuzzier) fuzzierPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
 		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
