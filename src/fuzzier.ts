@@ -228,6 +228,11 @@ const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
 const SCATTER_SKIP_WEIGHT = 0.5;
 const LATER_WORD_PENALTY = 0.05;
 
+// A word's start typed whole with one letter after it is that word with one
+// letter too many, which the ladder corrects at its own price.
+const isStrayLastLetter = (runs: Range[], word: string): boolean =>
+	runs.length === 2 && runs[0][1] === word.length - 2;
+
 // The query's letters in order inside one field word that starts with the
 // same letter, at least half of that word typed.
 const scatterRuns = (word: string, candidate: string): Range[] | null => {
@@ -242,7 +247,7 @@ const scatterRuns = (word: string, candidate: string): Range[] | null => {
 		else runs.push([at, at]);
 		next++;
 	}
-	return next === word.length ? runs : null;
+	return next === word.length && !isStrayLastLetter(runs, word) ? runs : null;
 };
 
 const scatterWord = (
@@ -435,7 +440,8 @@ const fuzzierStrategy: Strategy = { prepare };
  *   left out between two. A word takes two from eight letters, a phrase word
  *   one from five;
  * - a word typed sparsely: at least four of its letters, in order, starting
- *   with its first and covering at least half of it (`hget` for "Huguette").
+ *   with its first and covering at least half of it (`hget` for "Huguette"),
+ *   but not its start alone with one stray letter after (`salmas`).
  *
  * Every such match is tier `"corrected"` and scores above `SCORES.CONTAINS`,
  * so it never outranks the query as typed. A mistake costs `TYPO_PENALTY`

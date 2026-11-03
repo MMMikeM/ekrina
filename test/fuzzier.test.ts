@@ -128,6 +128,12 @@ describe("a word typed sparsely", () => {
 		expect(fuzzyMatch("Hugoe Tam", "hget", opt)).toBeNull();
 	});
 
+	it("leaves a word with one letter too many to the ladder", () => {
+		const search = searcher(["East Salmacester", "Lake Salma", "Nikolaus Group", "Nikola Czajka"]);
+		expect(search("salmas")[0].item).toBe("Lake Salma");
+		expect(search("nikolas").map((r) => r.score)).toEqual([TYPO_PENALTY + SCORES.PREFIX, TYPO_PENALTY + SCORES.PREFIX]);
+	});
+
 	it("finds the word in an accented field", () => {
 		expect(fuzzyMatch("Résumé", "rsme", opt)?.corrected).toBe("Résumé");
 	});
