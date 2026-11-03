@@ -15,8 +15,9 @@ export type HighlightRanges = Range[];
  * apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
  * actually appears here", and filtering to it is how you opt out of guessing.
  *
- * `corrected` names a single-character fix the *query* needed, not the field;
- * `MatchResult.corrected` carries the fixed query.
+ * `corrected` names a fix the *query* needed, not the field: one character by
+ * default, up to two with `twoEditTypos`. `MatchResult.corrected` carries the
+ * fixed query.
  */
 export type Tier =
 	| "exact"
@@ -37,11 +38,21 @@ export type Tier =
 export type MatchResult = {
 	score: number;
 	tier: Tier;
-	/** The query with its one mistyped character fixed, in the caller's own
-	 *  casing. Present only when `tier` is `"corrected"`. */
+	/** The query with its mistyped characters fixed. Present only when `tier`
+	 *  is `"corrected"`. A one-edit fix keeps the caller's own casing; a word
+	 *  `twoEditTypos` fixed is spelt as the field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };
+
+declare const typoStrategy: unique symbol;
+
+/**
+ * An opt-in typo correction strategy, such as `twoEditTypos`. Opaque: import
+ * one and pass it as `typos`. Code for a strategy ships only to callers who
+ * import it.
+ */
+export type TypoStrategy = { readonly [typoStrategy]: true };
 
 /**
  * Options for the fuzzyMatch primitive.
@@ -49,6 +60,8 @@ export type MatchResult = {
 export type MatchOptions = {
 	/** Enable the acronym (word-initials) tier (default: false). */
 	acronym?: boolean;
+	/** Corrections to try when the string matches nothing else. */
+	typos?: TypoStrategy;
 };
 
 /**
@@ -59,6 +72,9 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
+	/** Corrections to try on this field when no item matches the query
+	 *  otherwise. */
+	typos?: TypoStrategy;
 	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
 	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
 	atBest?: number;

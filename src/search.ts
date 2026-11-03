@@ -10,6 +10,7 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
+import { correctorOf, type TypoCorrection, type TypoCorrector } from "./typos";
 import type {
 	FieldSpec,
 	FuzzyResult,
@@ -54,19 +55,29 @@ export const fuzzyMatch = (
 	query: string,
 	options: MatchOptions = {},
 ): MatchResult | null => {
-	const { acronym = false } = options;
+	const { acronym = false, typos } = options;
 	const q = prepareBoundedQuery(query);
 	if (q === null) return null;
 	const field = text.trim();
 	const normalisedField = normaliseText(field);
+	const fieldMask = charMask(normalisedField);
 
-	const result = matchField(field, normalisedField, charMask(normalisedField), q, acronym);
+	const result =
+		matchField(field, normalisedField, fieldMask, q, acronym) ??
+		(typos === undefined
+			? null
+			: (correctorOf(typos).prepare(q)?.correct(field, normalisedField, fieldMask) ?? null));
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);
 	return result;
 };
 
-type ResolvedSpec<T> = { text: (item: T) => string | null; acronym: boolean; atBest: number };
+type ResolvedSpec<T> = {
+	text: (item: T) => string | null;
+	acronym: boolean;
+	atBest: number;
+	typos: TypoCorrector | null;
+};
 
 // The whole-corpus rescue index: per-item union masks and bigram sets.
 type UnionIndex = { masks: Int32Array; bigramsLo: Int32Array; bigramsHi: Int32Array };
@@ -84,6 +95,7 @@ const resolveFieldSpecs = <T>(
 	return specs.map((spec) => ({
 		text: spec.text,
 		acronym: spec.acronym ?? false,
+		typos: spec.typos === undefined ? null : correctorOf(spec.typos),
 		atBest: spec.atBest ?? 0,
 	}));
 };
@@ -129,6 +141,7 @@ export function createFuzzySearch<T>(
 	extract?: ((item: T) => string | null) | FieldSpec<T>[],
 ): FuzzySearcher<T> {
 	const resolvedSpecs = resolveFieldSpecs(extract);
+	const hasTypos = resolvedSpecs.some((spec) => spec.typos !== null);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
 
@@ -239,6 +252,7 @@ export function createFuzzySearch<T>(
 			mayRescue: boolean,
 			preGated: boolean,
 			literalOnly: boolean,
+			corrections: (TypoCorrection | null)[] | null = null,
 		): void => {
 			materialise(i);
 			const base = i * specCount;
@@ -248,16 +262,21 @@ export function createFuzzySearch<T>(
 
 			for (let f = 0; f < specCount; f++) {
 				const spec = resolvedSpecs[f];
-				const result = matchField(
-					trimmedFields[base + f] as string,
-					normalisedFields[base + f] as string,
-					fieldMasks[base + f],
-					prepared,
-					spec.acronym,
-					mayRescue,
-					preGated,
-					literalOnly,
-				);
+				const field = trimmedFields[base + f] as string;
+				const normalisedField = normalisedFields[base + f] as string;
+				const result =
+					corrections === null
+						? matchField(
+								field,
+								normalisedField,
+								fieldMasks[base + f],
+								prepared,
+								spec.acronym,
+								mayRescue,
+								preGated,
+								literalOnly,
+							)
+						: (corrections[f]?.correct(field, normalisedField, fieldMasks[base + f]) ?? null);
 				if (result) {
 					const endsWord = endsOnWordBoundary(normalisedFields[base + f] as string, result.ranges);
 					// Fresh object per matchField call, so the atBest shift can mutate.
@@ -365,6 +384,23 @@ export function createFuzzySearch<T>(
 			}
 		};
 
+		// Opt-in corrections stand in for a missing match, like a short query's: they
+		// are tried over the whole list only once nothing else matched.
+		const typoPass = (): void => {
+			const corrections = resolvedSpecs.map((spec) => spec.typos?.prepare(prepared) ?? null);
+			if (corrections.every((correction) => correction === null)) return;
+			unionIndex ??= buildUnionIndex();
+			for (let i = 0; i < count; i++) {
+				const base = i * specCount;
+				for (let f = 0; f < specCount; f++) {
+					if (corrections[f]?.admits(fieldMasks[base + f])) {
+						scoreItem(i, false, false, false, corrections);
+						break;
+					}
+				}
+			}
+		};
+
 		const commitSurvivorCache = (seedNextQuery: boolean): void => {
 			survivorCache.query = normalisedQuery;
 			survivorCache.multiWord = multiWord;
@@ -398,6 +434,7 @@ export function createFuzzySearch<T>(
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
 		if (rescuing) relaxedPass();
+		if (hasTypos && boundaryEndMatches.length + midWordMatches.length === 0) typoPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
 		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
