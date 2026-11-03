@@ -19,6 +19,7 @@ A staged version goes live only when a maintainer approves it with 2FA, so a com
 `publishConfig.provenance` is set, so a publish from anywhere but CI fails.
 `npm audit signatures` verifies an installed copy.
 The GitHub Release carries the same tarball, its SHA-256 and a Sigstore attestation, which `gh attestation verify ekrina-<version>.tgz --repo MMMikeM/ekrina` checks.
+The attestation's SLSA provenance is also attached on its own, as `ekrina-<version>.tgz.intoto.jsonl`.
 1.0.0 predates this and was published by hand, without an attestation; 1.1.0 was published directly from CI, before staging.
 
 ## Testing

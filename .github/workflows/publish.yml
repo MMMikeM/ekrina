@@ -83,6 +83,9 @@ jobs:
           npm stage publish "./ekrina-$VERSION.tgz" --provenance --access public --tag "$DIST_TAG"
           sha256sum "ekrina-$VERSION.tgz" > "ekrina-$VERSION.tgz.sha256"
           cp "$BUNDLE" "ekrina-$VERSION.tgz.sigstore.json"
+          # The bundle already holds the SLSA provenance; OpenSSF Scorecard only
+          # recognises it as a separate envelope named *.intoto.jsonl.
+          jq -c .dsseEnvelope "$BUNDLE" > "ekrina-$VERSION.tgz.intoto.jsonl"
           {
             echo "ekrina@$VERSION is staged on npm and not yet live."
             echo "Approve it with \`npm stage approve\` (see \`npm stage list ekrina\`) or on npmjs.com,"
@@ -95,6 +98,7 @@ jobs:
             ${{ runner.temp }}/ekrina-*.tgz
             ${{ runner.temp }}/ekrina-*.tgz.sha256
             ${{ runner.temp }}/ekrina-*.tgz.sigstore.json
+            ${{ runner.temp }}/ekrina-*.tgz.intoto.jsonl
             ${{ runner.temp }}/notes.md
           if-no-files-found: error
 
@@ -119,4 +123,4 @@ jobs:
           if [ "$PRERELEASE" = "true" ]; then flag="--prerelease"; fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" --notes-file notes.md --draft $flag \
-            ekrina-*.tgz ekrina-*.tgz.sha256 ekrina-*.tgz.sigstore.json
+            ekrina-*.tgz ekrina-*.tgz.sha256 ekrina-*.tgz.sigstore.json ekrina-*.tgz.intoto.jsonl
