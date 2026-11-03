@@ -10,7 +10,7 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
-import { correctorOf, type TypoCorrection, type TypoCorrector } from "./typos";
+import { type PreparedStrategy, type Strategy, strategyOf } from "./strategy";
 import type {
 	FieldSpec,
 	FuzzyResult,
@@ -55,7 +55,7 @@ export const fuzzyMatch = (
 	query: string,
 	options: MatchOptions = {},
 ): MatchResult | null => {
-	const { acronym = false, typos } = options;
+	const { acronym = false, fuzzier } = options;
 	const q = prepareBoundedQuery(query);
 	if (q === null) return null;
 	const field = text.trim();
@@ -64,9 +64,9 @@ export const fuzzyMatch = (
 
 	const result =
 		matchField(field, normalisedField, fieldMask, q, acronym) ??
-		(typos === undefined
+		(fuzzier === undefined
 			? null
-			: (correctorOf(typos).prepare(q)?.correct(field, normalisedField, fieldMask) ?? null));
+			: (strategyOf(fuzzier).prepare(q)?.match(field, normalisedField, fieldMask) ?? null));
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);
 	return result;
@@ -76,7 +76,7 @@ type ResolvedSpec<T> = {
 	text: (item: T) => string | null;
 	acronym: boolean;
 	atBest: number;
-	typos: TypoCorrector | null;
+	fuzzier: Strategy | null;
 };
 
 // The whole-corpus rescue index: per-item union masks and bigram sets.
@@ -95,7 +95,7 @@ const resolveFieldSpecs = <T>(
 	return specs.map((spec) => ({
 		text: spec.text,
 		acronym: spec.acronym ?? false,
-		typos: spec.typos === undefined ? null : correctorOf(spec.typos),
+		fuzzier: spec.fuzzier === undefined ? null : strategyOf(spec.fuzzier),
 		atBest: spec.atBest ?? 0,
 	}));
 };
@@ -124,6 +124,11 @@ const resolveFieldSpecs = <T>(
  * const search = createFuzzySearch(users, (u) => u.name);
  *
  * @example
+ * // Opt in to fuzzier matching for a field
+ * import { createFuzzySearch, fuzzier } from "ekrina";
+ * const search = createFuzzySearch(names, [{ text: (n) => n, fuzzier }]);
+ *
+ * @example
  * // Multiple fields, per-field config (body never outranks title)
  * const search = createFuzzySearch(posts, [
  *   { text: (p) => p.title },
@@ -141,7 +146,7 @@ export function createFuzzySearch<T>(
 	extract?: ((item: T) => string | null) | FieldSpec<T>[],
 ): FuzzySearcher<T> {
 	const resolvedSpecs = resolveFieldSpecs(extract);
-	const hasTypos = resolvedSpecs.some((spec) => spec.typos !== null);
+	const hasFuzzier = resolvedSpecs.some((spec) => spec.fuzzier !== null);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
 
@@ -252,7 +257,7 @@ export function createFuzzySearch<T>(
 			mayRescue: boolean,
 			preGated: boolean,
 			literalOnly: boolean,
-			corrections: (TypoCorrection | null)[] | null = null,
+			fallbacks: (PreparedStrategy | null)[] | null = null,
 		): void => {
 			materialise(i);
 			const base = i * specCount;
@@ -265,7 +270,7 @@ export function createFuzzySearch<T>(
 				const field = trimmedFields[base + f] as string;
 				const normalisedField = normalisedFields[base + f] as string;
 				const result =
-					corrections === null
+					fallbacks === null
 						? matchField(
 								field,
 								normalisedField,
@@ -276,7 +281,7 @@ export function createFuzzySearch<T>(
 								preGated,
 								literalOnly,
 							)
-						: (corrections[f]?.correct(field, normalisedField, fieldMasks[base + f]) ?? null);
+						: (fallbacks[f]?.match(field, normalisedField, fieldMasks[base + f]) ?? null);
 				if (result) {
 					const endsWord = endsOnWordBoundary(normalisedFields[base + f] as string, result.ranges);
 					// Fresh object per matchField call, so the atBest shift can mutate.
@@ -384,17 +389,19 @@ export function createFuzzySearch<T>(
 			}
 		};
 
-		// Opt-in corrections stand in for a missing match, like a short query's: they
-		// are tried over the whole list only once nothing else matched.
-		const typoPass = (): void => {
-			const corrections = resolvedSpecs.map((spec) => spec.typos?.prepare(prepared) ?? null);
-			if (corrections.every((correction) => correction === null)) return;
+		// The opt-in fallback stands in for a missing match, like a short query's
+		// correction: it scans the whole list only once nothing else matched.
+		const fuzzierPass = (): void => {
+			const fallbacks = resolvedSpecs.map((spec) => spec.fuzzier?.prepare(prepared) ?? null);
+			if (fallbacks.every((fallback) => fallback === null)) return;
 			unionIndex ??= buildUnionIndex();
 			for (let i = 0; i < count; i++) {
 				const base = i * specCount;
 				for (let f = 0; f < specCount; f++) {
-					if (corrections[f]?.admits(fieldMasks[base + f])) {
-						scoreItem(i, false, false, false, corrections);
+					const fallback = fallbacks[f];
+					if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
+					if (fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) {
+						scoreItem(i, false, false, false, fallbacks);
 						break;
 					}
 				}
@@ -434,7 +441,7 @@ export function createFuzzySearch<T>(
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
 		if (rescuing) relaxedPass();
-		if (hasTypos && boundaryEndMatches.length + midWordMatches.length === 0) typoPass();
+		if (hasFuzzier && boundaryEndMatches.length + midWordMatches.length === 0) fuzzierPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
 		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);

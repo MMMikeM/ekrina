@@ -16,8 +16,8 @@ export type HighlightRanges = Range[];
  * actually appears here", and filtering to it is how you opt out of guessing.
  *
  * `corrected` names a fix the *query* needed, not the field: one character by
- * default, up to two with `twoEditTypos`. `MatchResult.corrected` carries the
- * fixed query.
+ * default, more with `fuzzier`. `MatchResult.corrected` carries the fixed
+ * query.
  */
 export type Tier =
 	| "exact"
@@ -40,19 +40,18 @@ export type MatchResult = {
 	tier: Tier;
 	/** The query with its mistyped characters fixed. Present only when `tier`
 	 *  is `"corrected"`. A one-edit fix keeps the caller's own casing; a word
-	 *  `twoEditTypos` fixed is spelt as the field spells it. */
+	 *  `fuzzier` fixed is spelt as the field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };
 
-declare const typoStrategy: unique symbol;
+declare const fuzzierBrand: unique symbol;
 
 /**
- * An opt-in typo correction strategy, such as `twoEditTypos`. Opaque: import
- * one and pass it as `typos`. Code for a strategy ships only to callers who
- * import it.
+ * The opt-in matching behind `fuzzier`. Opaque: import `fuzzier` and pass it
+ * on, and its code ships only to callers who do.
  */
-export type TypoStrategy = { readonly [typoStrategy]: true };
+export type Fuzzier = { readonly [fuzzierBrand]: true };
 
 /**
  * Options for the fuzzyMatch primitive.
@@ -60,8 +59,8 @@ export type TypoStrategy = { readonly [typoStrategy]: true };
 export type MatchOptions = {
 	/** Enable the acronym (word-initials) tier (default: false). */
 	acronym?: boolean;
-	/** Corrections to try when the string matches nothing else. */
-	typos?: TypoStrategy;
+	/** Matching to try when the string matches nothing else: pass `fuzzier`. */
+	fuzzier?: Fuzzier;
 };
 
 /**
@@ -72,9 +71,9 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** Corrections to try on this field when no item matches the query
-	 *  otherwise. */
-	typos?: TypoStrategy;
+	/** Matching to try on this field when no item matches the query
+	 *  otherwise: pass `fuzzier`. */
+	fuzzier?: Fuzzier;
 	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
 	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
 	atBest?: number;
