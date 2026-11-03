@@ -12,25 +12,40 @@ const msToRun = (run: () => unknown): number => {
 const fastestMsToRun = (run: () => unknown): number =>
 	Math.max(1, Math.min(msToRun(run), msToRun(run), msToRun(run)));
 
+// Linear work doubles with the text, and the quadratic paths these tests guard
+// against quadrupled.
+const growthWhenDoubled = (runAtScale: (scale: 1 | 2) => unknown): number => {
+	const tenRuns = (scale: 1 | 2) => () => {
+		for (let run = 0; run < 10; run++) runAtScale(scale);
+	};
+	return fastestMsToRun(tenRuns(2)) / fastestMsToRun(tenRuns(1));
+};
+
 // Each of these took 0.8–6 s while the long-text gate was a regex.
-const hostile: [string, string, string][] = [
-	["a head with no tail after it", "b" + "a".repeat(64_000), "aaab"],
-	["a phrase whose words never occur", "aaa ".repeat(16_000) + "b", "aaaa bbbb"],
-	["word starts that all fail late", "xa b c d" + " a".repeat(32_000), "abcd"],
-	["runs that all fail late", "xab c d e" + " abc".repeat(32_000), "abcde"],
-	["a typo correction over repetition", "b" + "a".repeat(64_000), "a".repeat(30) + "b"],
+const hostile: [string, (scale: number) => string, string][] = [
+	["a head with no tail after it", (scale) => "b" + "a".repeat(64_000 * scale), "aaab"],
+	["a phrase whose words never occur", (scale) => "aaa ".repeat(16_000 * scale) + "b", "aaaa bbbb"],
+	["word starts that all fail late", (scale) => "xa b c d" + " a".repeat(32_000 * scale), "abcd"],
+	["runs that all fail late", (scale) => "xab c d e" + " abc".repeat(32_000 * scale), "abcde"],
+	[
+		"a typo correction over repetition",
+		(scale) => "b" + "a".repeat(16_000 * scale),
+		"a".repeat(30) + "b",
+	],
 ];
 
 describe("matching long text an attacker controls", () => {
-	for (const [label, text, query] of hostile) {
+	for (const [label, textAtScale, query] of hostile) {
 		it(`answers in linear time: ${label}`, () => {
-			expect(msToRun(() => fuzzyMatch(text, query))).toBeLessThan(250);
+			const text = { 1: textAtScale(1), 2: textAtScale(2) };
+			expect(growthWhenDoubled((scale) => fuzzyMatch(text[scale], query))).toBeLessThan(3);
 		});
 	}
 
 	it("a searcher answers in linear time over one hostile field", () => {
-		const search = createFuzzySearch(["xa b c d" + " a".repeat(32_000)]);
-		expect(msToRun(() => search("abcd"))).toBeLessThan(250);
+		const field = { 1: "xa b c d" + " a".repeat(32_000), 2: "xa b c d" + " a".repeat(64_000) };
+		const search = (scale: 1 | 2) => createFuzzySearch([field[scale]])("abcd");
+		expect(growthWhenDoubled(search)).toBeLessThan(3);
 	});
 });
 
