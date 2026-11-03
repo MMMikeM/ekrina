@@ -65,16 +65,18 @@ const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
-const unmatchedLetters = (counts: Int32Array, queryMask: number, fieldMask: number): number => {
-	let missing = queryMask & ~fieldMask;
-	if (missing === 0) return 0;
+const lacksAtMost = (counts: Int32Array, missingClasses: number, limit: number): boolean => {
 	let unmatched = 0;
-	for (; missing !== 0; missing &= missing - 1) unmatched += counts[31 - Math.clz32(missing & -missing)];
-	return unmatched;
+	for (let missing = missingClasses; missing !== 0; missing &= missing - 1) {
+		unmatched += counts[31 - Math.clz32(missing & -missing)];
+		if (unmatched > limit) return false;
+	}
+	return true;
 };
 
-// `asciiSlots` maps an ASCII code unit to its slot in `units`, or -1.
-type LetterGate = { units: number[]; asciiSlots: Int16Array; counts: Int32Array; needed: number };
+// `asciiSlots` maps an ASCII code unit to its slot in `counts`, or -1; a
+// non-ASCII letter needs no slot, since only non-ASCII text can match it.
+type LetterGate = { asciiSlots: Int16Array; counts: Int32Array; needed: number };
 
 // Only a substitution or a deletion leaves a query letter unmatched, so a field
 // holding a correction shares all but `MAX_EDITS` of the query's letters.
@@ -93,7 +95,7 @@ const letterGate = (letters: string, needed: number): LetterGate => {
 	for (let slot = 0; slot < units.length; slot++) {
 		if (units[slot] < 128) asciiSlots[units[slot]] = slot;
 	}
-	return { units, asciiSlots, counts: Int32Array.from(counts), needed };
+	return { asciiSlots, counts: Int32Array.from(counts), needed };
 };
 
 let remaining = new Int32Array(0);
@@ -102,27 +104,41 @@ const ASCII_UPPER_A = 65;
 const ASCII_UPPER_Z = 90;
 const ASCII_CASE_BIT = 32;
 
-// `folded` is false for the caller's raw text, where a non-ASCII character may
-// fold to any letter and so counts as a match, keeping the gate false-pass only.
-const holdsLetters = (gate: LetterGate, text: string, folded: boolean): boolean => {
+// Reads the caller's own text, where a non-ASCII character may fold to any
+// letter and so counts as a match, keeping the gate false-pass only.
+const holdsLetters = (gate: LetterGate, text: string): boolean => {
 	if (remaining.length < gate.counts.length) remaining = new Int32Array(gate.counts.length);
 	remaining.set(gate.counts);
 	const { asciiSlots, needed } = gate;
 	let shared = 0;
 	for (let i = 0; i < text.length; i++) {
 		if (text.length - i < needed - shared) return false;
-		let unit = text.charCodeAt(i);
-		if (!folded) {
-			if (unit > 127) {
-				if (++shared >= needed) return true;
-				continue;
-			}
-			if (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z) unit |= ASCII_CASE_BIT;
+		const unit = text.charCodeAt(i);
+		if (unit > 127) {
+			if (++shared >= needed) return true;
+			continue;
 		}
-		const at = unit < 128 ? asciiSlots[unit] : gate.units.indexOf(unit);
+		const at = asciiSlots[unit | (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z ? ASCII_CASE_BIT : 0)];
 		if (at === -1 || remaining[at] === 0) continue;
 		remaining[at]--;
 		if (++shared >= needed) return true;
+	}
+	return false;
+};
+
+// The letter gate's subsequence form, for a reading that needs every letter in
+// order: a non-ASCII character matches whichever letter comes next.
+const holdsInOrder = (word: string, text: string): boolean => {
+	let next = 0;
+	for (let i = 0; i < text.length; i++) {
+		if (text.length - i < word.length - next) return false;
+		let unit = text.charCodeAt(i);
+		if (unit > 127) {
+			if (++next === word.length) return true;
+			continue;
+		}
+		if (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z) unit |= ASCII_CASE_BIT;
+		if (unit === word.charCodeAt(next) && ++next === word.length) return true;
 	}
 	return false;
 };
@@ -190,8 +206,10 @@ const correctWord = (
 	let best: MatchResult | null = null;
 	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
 		const budget = MAX_EDITS - spaces - joinedEdits;
+		const length = first === last ? first.word.length : first.word.length + last.word.length;
+		if (Math.abs(word.length - length) > budget) return;
 		const target = first === last ? first.word : first.word + last.word;
-		const edits = withinEdits(word, target, budget);
+		const edits = editDistance(word, target, budget);
 		if (edits > budget) return;
 		const candidate = correction(edits + spaces + joinedEdits, field, normalisedField, first, last);
 		if (best === null || candidate.score < best.score) best = candidate;
@@ -346,11 +364,31 @@ const correctSplitWord = (
 		: null;
 };
 
+type Gates = Pick<PreparedStrategy, "admitsMask" | "admitsText">;
+
+const scatterGates = (letters: string): Gates => {
+	const lettersMask = charMask(letters);
+	return {
+		admitsMask: (fieldMask) => (lettersMask & ~fieldMask) === 0,
+		admitsText: (text) => holdsInOrder(letters, text),
+	};
+};
+
+const editGates = (letters: string): Gates => {
+	const lettersMask = charMask(letters);
+	const counts = classCounts(letters);
+	const gate = letterGate(letters, letters.length - MAX_EDITS);
+	return {
+		admitsMask: (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, MAX_EDITS),
+		admitsText: (text) => holdsLetters(gate, text),
+	};
+};
+
 // Edit distance over every field word is what makes a reading expensive, so
 // beside other matches only the sparse reading competes; edits stand in only
 // for a query that matched nothing.
 const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
-	const { queryWords, queryMask } = prepared;
+	const { queryWords } = prepared;
 	if (queryWords.length === 0 || queryWords.some((word) => word.length > MAX_WORD_LENGTH)) {
 		return null;
 	}
@@ -372,16 +410,10 @@ const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy 
 		? queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH)
 		: letters.length >= MIN_SCATTER_LENGTH;
 	if (!matchable) return null;
-	const gate = letterGate(letters, editable ? letters.length - MAX_EDITS : letters.length);
-	const counts = classCounts(letters);
-	const admitsMask = (fieldMask: number): boolean =>
-		unmatchedLetters(counts, queryMask, fieldMask) <= (editable ? MAX_EDITS : 0);
 	return {
-		admitsMask,
-		admitsText: (text) => holdsLetters(gate, text, false),
-		match: (field, normalisedField, fieldMask) => {
-			if (normalisedField.length > MAX_FIELD_LENGTH || !admitsMask(fieldMask)) return null;
-			if (!holdsLetters(gate, normalisedField, true)) return null;
+		...(editable ? editGates(letters) : scatterGates(letters)),
+		match: (field, normalisedField) => {
+			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
 			const words = fieldWords(normalisedField);
 			return phrase
 				? (correctPhrase(prepared, field, normalisedField, words) ??

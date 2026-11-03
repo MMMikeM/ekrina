@@ -64,9 +64,11 @@ export const fuzzyMatch = (
 
 	let result = matchField(field, normalisedField, fieldMask, q, acronym);
 	if (fuzzier !== undefined && (result === null || result.score > SCORES.CONTAINS)) {
-		const fallback = strategyOf(fuzzier)
-			.prepare(q, result !== null)
-			?.match(field, normalisedField, fieldMask);
+		const strategy = strategyOf(fuzzier).prepare(q, result !== null);
+		const fallback =
+			strategy?.admitsMask(fieldMask) && strategy.admitsText(field)
+				? strategy.match(field, normalisedField)
+				: null;
 		if (fallback && (result === null || fallback.score < result.score)) result = fallback;
 	}
 	const lead = text.length - text.trimStart().length;
@@ -405,16 +407,6 @@ export function createFuzzySearch<T>(
 			}
 		};
 
-		const admitsFallback = (i: number, fallbacks: (PreparedStrategy | null)[]): boolean => {
-			const base = i * specCount;
-			for (let f = 0; f < specCount; f++) {
-				const fallback = fallbacks[f];
-				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
-				if (fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) return true;
-			}
-			return false;
-		};
-
 		// A fallback match joins the item's results, or replaces a weaker fuzzy or
 		// corrected one; a literal match is never touched.
 		const offerFallbacks = (
@@ -422,14 +414,16 @@ export function createFuzzySearch<T>(
 			held: FuzzyResult<T> | undefined,
 			fallbacks: (PreparedStrategy | null)[],
 		): void => {
-			materialise(i);
 			const base = i * specCount;
 			let entry = held;
 			for (let f = 0; f < specCount; f++) {
-				const result = fallbacks[f]?.match(
+				const fallback = fallbacks[f];
+				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
+				if (!fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) continue;
+				materialise(i);
+				const result = fallback.match(
 					trimmedFields[base + f] as string,
 					normalisedFields[base + f] as string,
-					fieldMasks[base + f],
 				);
 				if (!result) continue;
 				const endsWord = placeFieldResult(result, base + f, f);
@@ -452,11 +446,14 @@ export function createFuzzySearch<T>(
 				(spec) => spec.fuzzier?.prepare(prepared, competing) ?? null,
 			);
 			if (fallbacks.every((fallback) => fallback === null)) return;
-			unionIndex ??= buildUnionIndex();
-			for (let i = 0; i < count; i++) {
+			const survivorsOnly = competing && normalisedQuery === prepared.queryWords[0];
+			if (!survivorsOnly) unionIndex ??= buildUnionIndex();
+			const scanned = survivorsOnly ? survivorCount : count;
+			for (let k = 0; k < scanned; k++) {
+				const i = survivorsOnly ? survivors[k] : k;
 				const held = (heldStamps as Int32Array)[i] === generation ? heldResults?.[i] : undefined;
 				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
-				if (admitsFallback(i, fallbacks)) offerFallbacks(i, held, fallbacks);
+				offerFallbacks(i, held, fallbacks);
 			}
 		};
 

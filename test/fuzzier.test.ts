@@ -121,6 +121,15 @@ describe("a word typed sparsely", () => {
 	it("needs every letter it typed, in order", () => {
 		expect(fuzzyMatch("Huguette", "hgex", opt)).toBeNull();
 		expect(fuzzyMatch("Huguette", "hteg", opt)).toBeNull();
+		expect(fuzzyMatch("Tahugex", "hget", opt)).toBeNull();
+	});
+
+	it("needs every letter inside one word", () => {
+		expect(fuzzyMatch("Hugoe Tam", "hget", opt)).toBeNull();
+	});
+
+	it("finds the word in an accented field", () => {
+		expect(fuzzyMatch("Résumé", "rsme", opt)?.corrected).toBe("Résumé");
 	});
 
 	it("takes the field's best-typed word", () => {
@@ -269,6 +278,19 @@ describe("in a searcher", () => {
 		const crowded = searcher([...Array.from({ length: 10 }, (_, k) => `Hget ${k}`), "Huguette"]);
 		expect(crowded("hget")).toHaveLength(10);
 		expect(crowded("hget", { limit: 3 })).toHaveLength(3);
+	});
+
+	it("joins them keystroke by keystroke", () => {
+		const search = searcher(["Hget Lane", "Huguette Brown", "Hugo"]);
+		for (const prefix of ["h", "hg", "hge"]) search(prefix);
+		expect(search("hget").map((r) => r.item)).toEqual(["Hget Lane", "Huguette Brown"]);
+	});
+
+	it("joins them once a keystroke adds punctuation", () => {
+		const hgets = Array.from({ length: 10 }, (_, k) => `Hget ${k}`);
+		const search = searcher([...hgets, "Hget. Lane", "Huguette Brown"]);
+		search("hget");
+		expect(search("hget.").map((r) => r.item).slice(0, 2)).toEqual(["Hget. Lane", "Huguette Brown"]);
 	});
 
 	it("replaces a weaker result on the same item", () => {
