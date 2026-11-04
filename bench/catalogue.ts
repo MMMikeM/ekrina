@@ -299,14 +299,30 @@ const FAMILIES: Family[] = [
 	},
 ];
 
+/** Correct word → the ways people have been seen to misspell it. */
+export type Misspellings = Record<string, string[]>;
+
+const realMisspelling = (misspellings: Misspellings): Family => ({
+	group: "phonetic",
+	kind: "real misspelling",
+	derive: (words, _raw, random, isTypo) => {
+		for (const word of words) {
+			const seen = misspellings[word]?.filter((typed) => plain(typed) && isTypo(typed));
+			if (seen?.length) return { query: seen[Math.floor(random() * seen.length)], relevant: holdsWords(word) };
+		}
+		return null;
+	},
+});
+
 export type CatalogueSample = Sample & { group: Group };
 
 /** Up to ten queries per family over `items`, each answered by at most three of them. */
-export const catalogueSamples = (items: string[]): CatalogueSample[] => {
+export const catalogueSamples = (items: string[], misspellings?: Misspellings): CatalogueSample[] => {
 	const vocabulary = new Set(items.flatMap(foldedWords));
 	const isTypo = (query: string): boolean => !query.split(" ").every((word) => vocabulary.has(word));
+	const families = misspellings ? [...FAMILIES, realMisspelling(misspellings)] : FAMILIES;
 	const sampled: CatalogueSample[] = [];
-	for (const [seed, { group, kind, derive }] of FAMILIES.entries()) {
+	for (const [seed, { group, kind, derive }] of families.entries()) {
 		const random = seeded(SEED_OFFSET + seed + 1);
 		const seen = new Set<string>();
 		for (const at of shuffledIndices(items.length, SEED_OFFSET + seed + 1)) {
