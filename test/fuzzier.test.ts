@@ -162,6 +162,45 @@ describe("a word typed sparsely", () => {
 	});
 });
 
+describe("a key held down", () => {
+	it("costs one edit, so a short word still takes one more", () => {
+		expect(fuzzyMatch("Mark Twain", "twaaain", opt)).toEqual({
+			score: SCORES.BOUNDARY + 2 * TYPO_PENALTY,
+			tier: "corrected",
+			corrected: "Twain",
+			ranges: [[5, 9]],
+		});
+	});
+
+	it("however long the run, which a gate on the letters as typed would refuse", () => {
+		expect(fuzzyMatch("Mark Twain", "twaaaaaain", opt)?.corrected).toBe("Twain");
+	});
+
+	it("keeps a double letter the word really has", () => {
+		expect(fuzzyMatch("Coffee", "coffffee", opt)).toMatchObject({
+			score: SCORES.NORMALISED_EXACT + TYPO_PENALTY,
+			corrected: "Coffee",
+		});
+	});
+
+	it("leaves no room for two more edits", () => {
+		expect(fuzzyMatch("Mark Twain", "twaaaxn", opt)).toBeNull();
+	});
+
+	it("is read once a word, never twice", () => {
+		expect(fuzzyMatch("Mark Twain", "twaaainnn", opt)).toBeNull();
+	});
+
+	it("needs five letters once the run is cut", () => {
+		expect(fuzzyMatch("Ab Lane", "aaab", opt)).toBeNull();
+	});
+
+	it("stays out of a list where the word matches as typed", () => {
+		const search = createFuzzySearch(["Twaaain Street", "Mark Twain"], [{ text: (x: string) => x, fuzzier }]);
+		expect(search("twaaain").map((r) => r.item)).toEqual(["Twaaain Street"]);
+	});
+});
+
 describe("a gate that only false-passes", () => {
 	it("rejects a field missing three of the query's letters", () => {
 		expect(fuzzyMatch("ergonomic", "ergoxyzic", opt)).toBeNull();

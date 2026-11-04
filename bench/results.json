@@ -1015,7 +1015,7 @@
 			"emoji": [
 				{
 					"library": "ekrina (fuzzier)",
-					"mrr": 0.9,
+					"mrr": 0.91,
 					"junk": 0
 				},
 				{
@@ -5060,47 +5060,47 @@
 			{
 				"library": "ekrina",
 				"stepMs": [
-					1.7187910000000102,
-					0.7563750000001619,
-					0.44937499999991815
+					1.450666999999953,
+					0.7339159999999083,
+					0.4387080000001333
 				],
-				"sessionMs": 2.92454100000009
+				"sessionMs": 2.6232909999999947
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					15.848707999999988,
-					15.298084000000017,
-					15.501834000000144
+					17.49808299999995,
+					15.832458999999972,
+					15.617291000000023
 				],
-				"sessionMs": 46.64862600000015
+				"sessionMs": 48.947832999999946
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					4.534208000000035,
-					2.9527080000000296,
-					2.607958999999937
+					3.668583000000126,
+					2.5612499999999727,
+					1.9976670000000922
 				],
-				"sessionMs": 10.094875000000002
+				"sessionMs": 8.227500000000191
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					2.2192909999998847,
-					1.728708000000097,
-					2.2227920000000267
+					2.2307499999997162,
+					1.7222499999998035,
+					1.8178330000000642
 				],
-				"sessionMs": 6.170791000000008
+				"sessionMs": 5.770832999999584
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					89.0628340000003,
-					115.10679200000004,
-					125.48654199999964
+					86.77591699999994,
+					113.48329199999989,
+					124.9419170000001
 				],
-				"sessionMs": 329.656168
+				"sessionMs": 325.20112599999993
 			}
 		]
 	},
@@ -5113,7 +5113,7 @@
 				"fuzzierJunkRate": 0,
 				"presentHits": 7,
 				"presentProbes": 7,
-				"missMs": 0.003542000000010148
+				"missMs": 0.003541000000012673
 			},
 			{
 				"docChars": 128,
@@ -5131,7 +5131,7 @@
 				"fuzzierJunkRate": 0.005,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.00741699999997536
+				"missMs": 0.007458999999983007
 			},
 			{
 				"docChars": 512,
@@ -5140,7 +5140,7 @@
 				"fuzzierJunkRate": 0.015,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.0171659999999747
+				"missMs": 0.017125000000078217
 			},
 			{
 				"docChars": 1024,
@@ -5149,7 +5149,7 @@
 				"fuzzierJunkRate": 0.015,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.02979199999992943
+				"missMs": 0.029167000000029475
 			},
 			{
 				"docChars": 2048,
@@ -5158,7 +5158,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.05274999999994634
+				"missMs": 0.05279199999995399
 			},
 			{
 				"docChars": 4096,
@@ -5167,7 +5167,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.09858300000007603
+				"missMs": 0.09895800000003874
 			},
 			{
 				"docChars": 8192,
@@ -5176,7 +5176,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.19287499999995816
+				"missMs": 0.18824999999992542
 			},
 			{
 				"docChars": 16384,
@@ -5185,7 +5185,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.38287500000001273
+				"missMs": 0.3809999999998581
 			}
 		]
 	},
@@ -12559,7 +12559,7 @@
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"ekrina (fuzzier)": 0.9,
+					"ekrina (fuzzier)": 1,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
@@ -14701,7 +14701,7 @@
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"ekrina (fuzzier)": 0.8,
+					"ekrina (fuzzier)": 1,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
@@ -16843,7 +16843,7 @@
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"ekrina (fuzzier)": 0.9,
+					"ekrina (fuzzier)": 1,
 					"@nozbe/microfuzz": 0.225,
 					"@nozbe/microfuzz (all opts)": 0.225,
 					"fuzzy": 0.3,
@@ -16862,7 +16862,7 @@
 					"ekrina": 0,
 					"ekrina (indexed)": 0,
 					"ekrina (acronym)": 0,
-					"ekrina (fuzzier)": 1,
+					"ekrina (fuzzier)": 2,
 					"@nozbe/microfuzz": 9,
 					"@nozbe/microfuzz (all opts)": 9,
 					"fuzzy": 9,

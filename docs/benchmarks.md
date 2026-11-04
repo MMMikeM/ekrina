@@ -250,7 +250,7 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR weights t
 | typos         | two dropped letters           |             1.00 |   0.76 |             0.76 |       0.43 |            0.34 |              0.00 |      0.93 |             0.89 |         1.00 |  0.94 |
 | typos         | inserted neighbouring key     |             1.00 |   1.00 |             1.00 |       1.00 |            0.92 |              1.00 |      0.10 |             0.05 |         0.10 |  0.10 |
 | typos         | swapped neighbours            |             0.79 |   0.80 |             0.80 |       0.79 |            0.48 |              0.79 |      0.08 |             0.04 |         0.06 |  0.06 |
-| typos         | stuck key                     |             0.80 |   0.00 |             0.00 |       1.00 |            0.66 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       1.00 |            0.66 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 | typos         | first letter wrong            |             0.90 |   0.90 |             0.90 |       0.85 |            0.71 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
 | typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 | typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
@@ -290,7 +290,7 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR weights t
 | typos         | two dropped letters           |             1.00 |   0.82 |             0.82 |       0.46 |            0.41 |              0.00 |      1.00 |             1.00 |         1.00 |  0.97 |
 | typos         | inserted neighbouring key     |             1.00 |   1.00 |             1.00 |       1.00 |            0.85 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 | typos         | swapped neighbours            |             0.79 |   0.80 |             0.80 |       0.78 |            0.48 |              0.78 |      0.07 |             0.04 |         0.04 |  0.05 |
-| typos         | stuck key                     |             0.90 |   0.00 |             0.00 |       1.00 |            0.68 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       1.00 |            0.68 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 | typos         | first letter wrong            |             0.95 |   0.95 |             0.95 |       0.90 |            0.80 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
 | typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 | typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
@@ -330,7 +330,7 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR weights t
 | typos         | two dropped letters           |             1.00 |   0.90 |             0.90 |       0.74 |            0.49 |              0.00 |      0.83 |             0.68 |         0.82 |  0.69 |
 | typos         | inserted neighbouring key     |             0.95 |   0.95 |             0.95 |       1.00 |            0.87 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
 | typos         | swapped neighbours            |             1.00 |   1.00 |             1.00 |       1.00 |            0.44 |              1.00 |      0.38 |             0.29 |         0.24 |  0.38 |
-| typos         | stuck key                     |             0.90 |   0.00 |             0.00 |       0.88 |            0.81 |              0.00 |      0.23 |             0.23 |         0.22 |  0.30 |
+| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       0.88 |            0.81 |              0.00 |      0.23 |             0.23 |         0.22 |  0.30 |
 | typos         | first letter wrong            |             0.82 |   0.82 |             0.82 |       0.90 |            0.78 |              0.00 |      0.33 |             0.35 |         0.31 |  0.33 |
 | typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.05 |             0.00 |         0.00 |  0.00 |
 | typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       0.95 |            0.95 |              1.00 |      0.05 |             0.10 |         0.01 |  0.10 |
@@ -404,7 +404,7 @@ MRR reads native / en, and the ten scored queries per family are in [`bench/resu
 
 - **One edit** (neighbouring key, random letter, inserted key, swapped neighbours, first letter wrong): Ekrina scores 0.80–1.00, fast-fuzzy 0.78–1.00 and uFuzzy (all opts) 0.78–1.00 bar the first letter, where it scores 0; Fuse.js (tuned) scores 0.48–0.92, and the chain engines 0.10 or less.
 - **Dropped letter**: still a subsequence, so the chain engines score 0.62–0.93; base Ekrina scores 0.78 / 0.77 and Ekrina (fuzzier) 0.97 / 0.95.
-- **Two edits in one word or phrase** (two neighbouring keys, two dropped letters, stuck key, a typo in each of two words, two words joined with a typo): base Ekrina corrects one edit, so it scores 0 on four of the five; Ekrina (fuzzier) scores 0.80–1.00, fast-fuzzy 0.43–1.00 and Fuse.js (tuned) 0.34–1.00.
+- **Two edits in one word or phrase** (two neighbouring keys, two dropped letters, stuck key, a typo in each of two words, two words joined with a typo): base Ekrina corrects one edit, so it scores 0 on four of the five; Ekrina (fuzzier) scores 0.97–1.00, fast-fuzzy 0.43–1.00 and Fuse.js (tuned) 0.34–1.00.
   Two dropped letters stay a subsequence, which is why base Ekrina and the chain engines still reach 0.76–1.00 there.
 
 **Phonetic**
@@ -437,7 +437,7 @@ MRR reads native / en, and the ten scored queries per family are in [`bench/resu
 
 **Emoji**
 
-Labels and tags are short and share words heavily ("face", "hand", "flag: …"), and the ranking holds there: Ekrina (fuzzier) scores 0.90, fast-fuzzy 0.84 and Fuse.js (tuned) 0.71.
+Labels and tags are short and share words heavily ("face", "hand", "flag: …"), and the ranking holds there: Ekrina (fuzzier) scores 0.91, fast-fuzzy 0.84 and Fuse.js (tuned) 0.71.
 fast-fuzzy's lead families on the Wikidata corpora carry over (an absent word added, 1.00), and so do its losses (two words half typed, 0.13; reversed, 0.23).
 
 **Queries nothing answers**
@@ -520,7 +520,7 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-emoji -->
 | Library           |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (fuzzier)  | 0.90 | 0.00 |        — |       — |        — |           — |
+| Ekrina (fuzzier)  | 0.91 | 0.00 |        — |       — |        — |           — |
 | fast-fuzzy        | 0.84 | 0.26 |        — |       — |        — |           — |
 | Fuse.js (tuned)   | 0.71 | 0.35 |        — |       — |        — |           — |
 | Ekrina            | 0.70 | 0.00 |        — |       — |        — |           — |
@@ -692,16 +692,16 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:session -->
 | Library            | `hin` | `hint` | `hinto` | session |
 |--------------------|------:|-------:|--------:|--------:|
-| Ekrina             |  1.72 |   0.76 |    0.45 |    2.92 |
-| @nozbe/microfuzz   | 15.85 |  15.30 |   15.50 |   46.65 |
-| fuzzysort          |  4.53 |   2.95 |    2.61 |   10.09 |
-| uFuzzy (all opts)  |  2.22 |   1.73 |    2.22 |    6.17 |
-| Fuse.js (all opts) | 89.06 | 115.11 |  125.49 |  329.66 |
+| Ekrina             |  1.45 |   0.73 |    0.44 |    2.62 |
+| @nozbe/microfuzz   | 17.50 |  15.83 |   15.62 |   48.95 |
+| fuzzysort          |  3.67 |   2.56 |    2.00 |    8.23 |
+| uFuzzy (all opts)  |  2.23 |   1.72 |    1.82 |    5.77 |
+| Fuse.js (all opts) | 86.78 | 113.48 |  124.94 |  325.20 |
 <!-- bench:end -->
 
-Ekrina's per-keystroke time falls _3.8×_ across the word (1.72 → 0.76 → 0.45) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
-Ekrina takes every step of the session, the wide opener included (1.72 vs uFuzzy's 2.22), and the session total by 2.1× (2.92 vs 6.17), against uFuzzy (all opts) at 0.66 MRR to Ekrina's 0.70.
-microfuzz stays at ~15–16 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
+Ekrina's per-keystroke time falls _3.3×_ across the word (1.45 → 0.73 → 0.44) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
+Ekrina takes every step of the session, the wide opener included (1.45 vs uFuzzy's 2.23), and the session total by 2.2× (2.62 vs 5.77), against uFuzzy (all opts) at 0.66 MRR to Ekrina's 0.70.
+microfuzz stays at ~16–18 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 This table is a single process, like every cold cell here, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time work (Ekrina's mask build, fuzzysort's lazy target prep) happens at load, not on keystroke one; the cold cells above measure it.
 Measured by [`bench/session.test.ts`](../bench/session.test.ts).
@@ -723,11 +723,11 @@ A hit is then either the fuzzy tier assembling a chain (**fuzzy junk**) or the o
 |       128 |       0.0% |      0.0% |         0.0% |        14/14 |   0.005 |
 |       256 |       0.5% |      0.0% |         0.5% |        20/20 |   0.007 |
 |       512 |       1.5% |      0.5% |         1.5% |        20/20 |   0.017 |
-|      1024 |       1.5% |      1.0% |         1.5% |        20/20 |   0.030 |
+|      1024 |       1.5% |      1.0% |         1.5% |        20/20 |   0.029 |
 |      2048 |       2.0% |      0.5% |         2.0% |        20/20 |   0.053 |
 |      4096 |       2.0% |      2.0% |         2.0% |        20/20 |   0.099 |
-|      8192 |       2.0% |      2.5% |         2.0% |        20/20 |   0.193 |
-|     16384 |       2.0% |      3.5% |         2.0% |        20/20 |   0.383 |
+|      8192 |       2.0% |      2.5% |         2.0% |        20/20 |   0.188 |
+|     16384 |       2.0% |      3.5% |         2.0% |        20/20 |   0.381 |
 <!-- bench:end -->
 
 The fuzzy tier junk-matches none of the absent words up to 128 characters, rising to 2% from 2,048, and the fuzzier opt-in adds nothing at any length; every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly).
@@ -741,7 +741,7 @@ Literal-only matching, for callers that want no fuzzy assemblies or corrections 
 
 The recommendation is to _pick Ekrina for list matching_, with `fuzzier` on when typing quality matters, and with two carve-outs the data supports.
 
-- **Quality**: Ekrina (fuzzier) tops the scorecard on all three corpora (0.91 en, 0.90 native and emoji) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
+- **Quality**: Ekrina (fuzzier) tops the scorecard on all three corpora (0.91 en and emoji, 0.90 native) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
   Base Ekrina scores 0.70 on every corpus with no junk: its one-edit rescue covers the one-edit families, and the opt-in adds the two-edit, split, joined and sparse readings.
 - **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (19.4 ms at native 10k, ~0.64 ms per query after the first), Ekrina (fuzzier) the fastest at 0.80 or above (29.9 ms, ~0.88 ms per query), and both run several times under every typo-tolerant or tiered alternative, with a near-zero constructor, ~6.4 kB gzip and zero deps.
   The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 4–5 ms at 10k and 10–14 ms at 100k across the timed queries, or ~2 ms and 2.7–3.4 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.

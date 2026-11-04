@@ -202,6 +202,24 @@ At 1.5 every set rises and no family on any set falls by 0.05 or more: real miss
 From 2 the deletion families start to lose (two vowels dropped 1.00 → 0.95 held out, and up to 0.15 at 2.5), so the weight stops at 1.5.
 The reading changes only order, never which items match, so the junk and long-text rates are unchanged.
 
+### A held key is one edit
+
+A two-edit correction needs eight letters, since below that a second edit reaches too many other words, so `fuzzier` could not undo `twaaain` or `cleeean`: a key held down adds two letters to a five-letter word.
+A run of three or more of one letter now counts as one edit, cut to two letters and corrected with the one edit left, once per word, when the cut word has five letters or more and nothing matches as typed.
+The reading is gated on the cut form, since a gate on the letters as typed refuses `twaaaaaain` on "Twain"; a fuzz of 157,030 matches with runs of three to eight letters found no false reject.
+Headline MRR of `fuzzier`, before → after:
+
+| Set             | Before | After |
+| --------------- | -----: | ----: |
+| en              |  0.906 | 0.909 |
+| native          |  0.898 | 0.904 |
+| emoji           |  0.904 | 0.907 |
+| en held-out     |  0.862 | 0.876 |
+| native held-out |  0.849 | 0.863 |
+
+Only the stuck-key family moved (0.50–0.90 → 0.98–1.00); the held-out draw uses the same generator as the published one, so it shows fresh queries, not other shapes of held key.
+The junk probes stay at 0 of 100 on every corpus, the long-text rates are unchanged, and five interleaved rounds of the 10k session put the two builds level outside two load spikes, one on each build.
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.

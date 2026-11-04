@@ -14,6 +14,9 @@ const MIN_TWO_EDIT_WORD_LENGTH = 8;
 // short is rejoined only when the space was the one mistake.
 const MIN_REJOINED_LENGTH = 6;
 const MIN_PHRASE_CORRECTION_LENGTH = 5;
+// The default rescue's floor: a held key spends one of the two edits, so a
+// shorter word would take two edits where the default gives it none.
+const MIN_STUCK_KEY_LENGTH = 5;
 const MIN_SCATTER_LENGTH = 4;
 const MAX_WORD_LENGTH = 64;
 // Longer text holds a near-namesake two edits from absent words: 173 absent
@@ -224,15 +227,15 @@ const correction = (
 	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
 };
 
-// A space typed or forgotten counts as one edit: `spaces` is how many the
-// reading already spent, `spare` how many more it may, and two adjacent field
-// words read joined spend one of those.
+// A space typed or forgotten, or a key held down, counts as one edit: `spent` is
+// how many the reading already spent, `spare` how many more it may, and two
+// adjacent field words read joined spend one of those.
 const correctWord = (
 	word: string,
 	field: string,
 	normalisedField: string,
 	words: FieldWord[],
-	spaces: number,
+	spent: number,
 	spare: number,
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
@@ -243,12 +246,12 @@ const correctWord = (
 		const target = first === last ? first.word : first.word + last.word;
 		const edits = editDistance(word, target, budget);
 		if (edits > budget) return;
-		const candidate = correction(edits + spaces + joinedEdits, field, normalisedField, first, last);
+		const candidate = correction(edits + spent + joinedEdits, field, normalisedField, first, last);
 		best = better(best, candidate);
 	};
 	for (let i = 0; i < words.length; i++) {
 		consider(words[i], words[i], 0);
-		if (spaces === 0 && i + 1 < words.length) consider(words[i], words[i + 1], 1);
+		if (spent === 0 && i + 1 < words.length) consider(words[i], words[i + 1], 1);
 	}
 	return best;
 };
@@ -465,6 +468,22 @@ const scatterGates = (letters: string): Gates => {
 	};
 };
 
+// A run of three or more of one letter, cut to two: a held key, whose one
+// mistake leaves the word itself or one edit from it (`twaaain`, `cleeean`,
+// `coffffee`). A word with two runs is left to the other readings.
+const STUCK_RUN = /(.)\1{2,}/gu;
+const stuckKeyForm = (word: string): string | null => {
+	const runs = word.match(STUCK_RUN);
+	if (runs?.length !== 1) return null;
+	const form = word.replace(STUCK_RUN, "$1$1");
+	return form.length >= MIN_STUCK_KEY_LENGTH ? form : null;
+};
+
+const eitherGate = (a: Gates, b: Gates): Gates => ({
+	admitsMask: (fieldMask) => a.admitsMask(fieldMask) || b.admitsMask(fieldMask),
+	admitsText: (text) => a.admitsText(text) || b.admitsText(text),
+});
+
 // `unmatched` is how many of the query's letters the edits can leave without a
 // counterpart in the field.
 const editGates = (letters: string, unmatched: number): Gates => {
@@ -493,7 +512,10 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 	const spare = competing ? 0 : spareBesideSpace(queryWords);
 	const letters = queryWords.join("");
 	const editable = !competing && (phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH);
-	const matchWord = (
+	// Gated on the form it corrects, since a long run would fail a gate built
+	// from the letters as typed.
+	const stuck = phrase || competing ? null : stuckKeyForm(letters);
+	const matchAsTyped = (
 		word: string,
 		field: string,
 		normalisedField: string,
@@ -503,6 +525,14 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 			editable ? correctWord(word, field, normalisedField, words, 0, MAX_EDITS) : null,
 			scatterWord(word, field, normalisedField, words),
 		);
+	const matchWord =
+		stuck === null
+			? matchAsTyped
+			: (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
+					better(
+						matchAsTyped(word, field, normalisedField, words),
+						correctWord(stuck, field, normalisedField, words, 1, MAX_EDITS - 1),
+					);
 	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
 	const matchable = phrase
 		? correctable || mayBeOneWord(queryWords)
@@ -511,8 +541,9 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 	// leave a letter unmatched.
 	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
 	if (!matchable) return null;
+	const gates = editable ? editGates(letters, unmatched) : scatterGates(letters);
 	return {
-		...(editable ? editGates(letters, unmatched) : scatterGates(letters)),
+		...(stuck === null ? gates : eitherGate(gates, editGates(stuck, MAX_EDITS - 1))),
 		// A sparse reading keeps no pairs of a word together.
 		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
 		match: (field, normalisedField) => {
