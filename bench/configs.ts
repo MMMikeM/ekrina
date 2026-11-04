@@ -17,7 +17,7 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 import fuzzy from "fuzzy";
 import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
-import { createFuzzySearch, fuzzier } from "ekrina";
+import { createFuzzySearch } from "ekrina";
 
 // The bundlers behind vitest unwrap a CJS `exports.default`; node's ESM loader
 // hands back the namespace object instead, and memory.ts runs under plain node.
@@ -179,19 +179,6 @@ const definitions = (list: string[]): Definition[] => [
 			return {
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
-				index: () => consume(createFuzzySearch(list, spec)),
-				stateful: true,
-			};
-		},
-	},
-	{
-		name: "ekrina (fuzzier)",
-		make: () => {
-			const spec = [{ text: (x: string) => x, fuzzier }];
-			const fuzzierSearch = createFuzzySearch(list, spec);
-			return {
-				count: (q) => fuzzierSearch(q).length,
-				probe: (q) => rankedOnly(fuzzierSearch(q).map((r) => r.item)),
 				index: () => consume(createFuzzySearch(list, spec)),
 				stateful: true,
 			};

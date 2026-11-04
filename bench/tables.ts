@@ -40,7 +40,7 @@ const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length
 
 /** The library a configuration belongs to: its name without the option suffix. */
 export const libraryOf = (config: string): string =>
-	config.replace(/ \((all opts|acronym|fuzzier|indexed|tuned)\)$/, "");
+	config.replace(/ \((all opts|acronym|indexed|tuned)\)$/, "");
 
 // Unrounded, from the families: the scorecard's two decimals tie configurations
 // that the families tell apart.
@@ -359,16 +359,15 @@ const longtextTable = (a: Artifact): string => {
 	const longtext = a.longtext;
 	if (!longtext) throw new Error("no long-text data — run the quality stage first");
 	return mdTable(
-		["doc chars", "fuzzy junk", "corrected", "fuzzier junk", "present hits", "miss ms"],
+		["doc chars", "fuzzy junk", "corrected", "present hits", "miss ms"],
 		longtext.rows.map((r) => [
 			String(r.docChars),
 			`${(100 * r.junkRate).toFixed(1)}%`,
 			`${(100 * r.correctedRate).toFixed(1)}%`,
-			`${(100 * r.fuzzierJunkRate).toFixed(1)}%`,
 			`${r.presentHits}/${r.presentProbes}`,
 			r.missMs.toFixed(3),
 		]),
-		["right", "right", "right", "right", "right", "right"],
+		["right", "right", "right", "right", "right"],
 	);
 };
 

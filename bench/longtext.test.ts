@@ -16,17 +16,16 @@
  */
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
-import { fuzzier, fuzzyMatch, normaliseText, splitWords } from "ekrina";
+import { fuzzyMatch, normaliseText, splitWords } from "ekrina";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
 
 const DOC_LENGTHS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
 const ABSENT_PROBES = 200;
 // Guards against growth, not targets: on the native corpus the fuzzy tier
-// measured 2% at 16k, corrections 3.5%, and the fuzzier added none.
+// measured 2% at 16k and corrections 3.5%.
 const MAX_JUNK_RATE = 0.05;
 const MAX_CORRECTED_RATE = 0.05;
-const MAX_FUZZIER_JUNK_RATE = 0.05;
 const PRESENT_PROBES = 20;
 
 let sink = 0;
@@ -85,9 +84,6 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 			);
 
 			const tiers = absent.map((w) => fuzzyMatch(doc, w)?.tier);
-			// Two edits and sparse words reach further, which is why the opt-in
-			// stops at 512 characters.
-			const fuzzierTiers = absent.map((w) => fuzzyMatch(doc, w, { fuzzier })?.tier);
 			const share = (of: (string | undefined)[], counts: (tier: string) => boolean): number =>
 				of.filter((tier) => tier !== undefined && counts(tier)).length / ABSENT_PROBES;
 			let presentHits = 0;
@@ -102,7 +98,6 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 				docChars: len,
 				junkRate: share(tiers, (tier) => tier !== "corrected"),
 				correctedRate: share(tiers, (tier) => tier === "corrected"),
-				fuzzierJunkRate: share(fuzzierTiers, (tier) => tier !== "corrected"),
 				presentHits,
 				presentProbes: present.length,
 				missMs,
@@ -115,7 +110,6 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		for (const row of rows) {
 			expect(row.junkRate, `fuzzy-tier junk on a ${row.docChars}-char document`).toBeLessThanOrEqual(MAX_JUNK_RATE);
 			expect(row.correctedRate, `corrections on a ${row.docChars}-char document`).toBeLessThanOrEqual(MAX_CORRECTED_RATE);
-			expect(row.fuzzierJunkRate, `fuzzier junk on a ${row.docChars}-char document`).toBeLessThanOrEqual(MAX_FUZZIER_JUNK_RATE);
 			expect(row.presentHits).toBe(row.presentProbes);
 		}
 	});

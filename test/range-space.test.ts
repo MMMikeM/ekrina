@@ -4,7 +4,7 @@
  * i.e. virtually all real data. Every tier reports the same space.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzier, fuzzyMatch, normaliseText } from "../src/index";
+import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
 
 describe("ranges index the caller's string", () => {
 	describe("leading whitespace", () => {
@@ -25,15 +25,15 @@ describe("ranges index the caller's string", () => {
 			expect(results[0]?.fields[0]?.ranges).toEqual([[2, 4]]);
 		});
 
-		it("shifts the fuzzier's corrected and sparse ranges too", () => {
-			expect(fuzzyMatch("  Ergonomic", "ergxnomiq", { fuzzier })?.ranges).toEqual([[2, 10]]);
+		it("shifts two-edit and sparse ranges too", () => {
+			expect(fuzzyMatch("  Ergonomic", "ergxnomiq")?.ranges).toEqual([[2, 10]]);
 			const sparse = [
 				[2, 2],
 				[4, 4],
 				[6, 7],
 			];
-			expect(fuzzyMatch("  Huguette", "hget", { fuzzier })?.ranges).toEqual(sparse);
-			const search = createFuzzySearch(["  Huguette"], [{ text: (s) => s, fuzzier }]);
+			expect(fuzzyMatch("  Huguette", "hget")?.ranges).toEqual(sparse);
+			const search = createFuzzySearch(["  Huguette"]);
 			expect(search("hget")[0]?.fields[0]?.ranges).toEqual(sparse);
 		});
 

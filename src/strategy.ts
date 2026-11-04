@@ -1,5 +1,5 @@
 import type { PreparedQuery } from "./match";
-import type { Fuzzier, MatchResult } from "./types";
+import type { MatchResult } from "./types";
 
 // What one query admits under a strategy, prepared once and tried against
 // fields that matched nothing else.
@@ -13,16 +13,19 @@ export type PreparedStrategy = {
 	admitsText: (text: string) => boolean;
 	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
+	// The reading may match fields the literal pass rejected, so every item is
+	// tried rather than its survivors.
+	wholeList: boolean;
 };
 
-// What a Fuzzier is behind its opaque public type, kept out of the public
-// surface so a strategy's internals can change without a major version.
-// `competing` means the query already has matches, so only readings cheap
-// enough to run beside them are prepared. A competing reading must match only
-// fields the literal pass lets through (`buildFuzzyGate` for one word, every
-// word character present for a phrase): the searcher then tries just those.
+// What the query already matched: nothing, only fuzzy chains, or literally.
+export type Competition = "none" | "fuzzy" | "literal";
+
+// Beside other matches only readings cheap enough to run beside them are
+// prepared. A reading that is not `wholeList` must match only fields the
+// literal pass lets through (`buildFuzzyGate` for one word, every word
+// character present for a phrase): the searcher then tries just those.
 export type Strategy = {
-	prepare: (prepared: PreparedQuery, competing: boolean) => PreparedStrategy | null;
+	prepare: (prepared: PreparedQuery, competition: Competition) => PreparedStrategy | null;
 };
 
-export const strategyOf = (fuzzier: Fuzzier): Strategy => fuzzier as unknown as Strategy;

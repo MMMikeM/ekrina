@@ -14,9 +14,9 @@ export type HighlightRanges = Range[];
  * fuzzy chain or a correction, and the tier is what tells those apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
  * actually appears here", and filtering to it is how you opt out of guessing.
  *
- * `corrected` names a fix the *query* needed, not the field: one character by
- * default, more with `fuzzier`. `MatchResult.corrected` carries the fixed
- * query.
+ * `corrected` names a fix the *query* needed, not the field: up to two
+ * mistakes, a key held down, a stray or missing space, or a word typed
+ * sparsely. `MatchResult.corrected` carries the fixed query.
  */
 export type Tier =
 	| "exact"
@@ -38,19 +38,11 @@ export type MatchResult = {
 	score: number;
 	tier: Tier;
 	/** The query with its mistyped characters fixed. Present only when `tier`
-	 *  is `"corrected"`. A one-edit fix keeps the caller's own casing; a word
-	 *  `fuzzier` fixed is spelt as the field spells it. */
+	 *  is `"corrected"`. A single mistyped character fixed keeps the caller's
+	 *  own casing; a word read any other way is spelt as the field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };
-
-declare const fuzzierBrand: unique symbol;
-
-/**
- * The opt-in matching behind `fuzzier`. Opaque: import `fuzzier` and pass it
- * on, and its code ships only to callers who do.
- */
-export type Fuzzier = { readonly [fuzzierBrand]: true };
 
 /**
  * Options for the fuzzyMatch primitive.
@@ -58,8 +50,6 @@ export type Fuzzier = { readonly [fuzzierBrand]: true };
 export type MatchOptions = {
 	/** Enable the acronym (word-initials) tier (default: false). */
 	acronym?: boolean;
-	/** More matching, tried when the string holds no match as typed: pass `fuzzier`. */
-	fuzzier?: Fuzzier;
 };
 
 /**
@@ -70,9 +60,6 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** More matching for this field, tried while fewer than ten items match the
-	 *  query as typed: pass `fuzzier`. */
-	fuzzier?: Fuzzier;
 	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
 	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
 	atBest?: number;

@@ -3,8 +3,8 @@ import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
 import { bigramBit, bigramClass } from "./normalise";
 import { charMask } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
-import type { PreparedStrategy, Strategy } from "./strategy";
-import type { Fuzzier, MatchResult, Range } from "./types";
+import type { Competition, PreparedStrategy, Strategy } from "./strategy";
+import type { MatchResult, Range } from "./types";
 
 const MAX_EDITS = 2;
 // Below this a second edit reaches too many other words: unanswerable 7-letter
@@ -17,6 +17,9 @@ const MIN_PHRASE_CORRECTION_LENGTH = 5;
 // The default rescue's floor: a held key spends one of the two edits, so a
 // shorter word would take two edits where the default gives it none.
 const MIN_STUCK_KEY_LENGTH = 5;
+// Under the default rescue's floor only a swap is safe to undo: it keeps every
+// letter, where a drop or a substitution leaves three that most fields hold.
+const SWAP_ONLY_LENGTH = 4;
 const MIN_SCATTER_LENGTH = 4;
 const MAX_WORD_LENGTH = 64;
 // Longer text holds a near-namesake two edits from absent words: 173 absent
@@ -256,11 +259,13 @@ const correctWord = (
 	return best;
 };
 
-// Just above CONTAINS and ranked by the share of the word left untyped, steeply
-// enough that a word typed with most of it skipped falls below a correction
-// that finishes a word (@see docs/performance.md).
+// Just above CONTAINS and ranked by the share of the word left untyped, and by
+// each letter skipped past the first, so a word read with several letters
+// skipped falls below a correction that finishes a word, where one dropped
+// letter does not (@see docs/performance.md).
 const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
 const SCATTER_SKIP_WEIGHT = 1.5;
+const SCATTER_EXTRA_SKIP_PENALTY = 0.15;
 const LATER_WORD_PENALTY = 0.05;
 
 // A word's start typed whole with one letter after it is that word with one
@@ -298,6 +303,7 @@ const scatterWord = (
 		const score =
 			SCATTER_SCORE +
 			SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
+			SCATTER_EXTRA_SKIP_PENALTY * Math.max(0, candidate.word.length - word.length - 1) +
 			(candidate.at === 0 ? 0 : LATER_WORD_PENALTY);
 		if (best !== null && best.score <= score) continue;
 		for (const run of runs) {
@@ -479,6 +485,35 @@ const stuckKeyForm = (word: string): string | null => {
 	return form.length >= MIN_STUCK_KEY_LENGTH ? form : null;
 };
 
+// Every adjacent swap of a short word. Swaps at different places change
+// different letters, so only a swap of two equal ones repeats a form: the word.
+const swapForms = (word: string): string[] => {
+	const forms: string[] = [];
+	for (let k = 0; k + 1 < word.length; k++) {
+		if (word[k] !== word[k + 1]) forms.push(word.slice(0, k) + word[k + 1] + word[k] + word.slice(k + 2));
+	}
+	return forms;
+};
+
+// A swap undone only where the form starts a field word, so it lands at a word
+// start as the default's short corrections do.
+const swapWord = (
+	forms: string[],
+	field: string,
+	normalisedField: string,
+	words: FieldWord[],
+): MatchResult | null => {
+	let best: MatchResult | null = null;
+	for (const form of forms) {
+		for (const candidate of words) {
+			if (!candidate.word.startsWith(form)) continue;
+			const corrected = spelling(field, normalisedField, { word: form, at: candidate.at });
+			best = better(best, scoreCorrection(1, field, normalisedField, form, corrected));
+		}
+	}
+	return best;
+};
+
 const eitherGate = (a: Gates, b: Gates): Gates => ({
 	admitsMask: (fieldMask) => a.admitsMask(fieldMask) || b.admitsMask(fieldMask),
 	admitsText: (text) => a.admitsText(text) || b.admitsText(text),
@@ -515,6 +550,7 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 	// Gated on the form it corrects, since a long run would fail a gate built
 	// from the letters as typed.
 	const stuck = phrase || competing ? null : stuckKeyForm(letters);
+	const swaps = phrase || competing || letters.length !== SWAP_ONLY_LENGTH ? null : swapForms(letters);
 	const matchAsTyped = (
 		word: string,
 		field: string,
@@ -526,13 +562,16 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 			scatterWord(word, field, normalisedField, words),
 		);
 	const matchWord =
-		stuck === null
-			? matchAsTyped
-			: (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
+		stuck !== null
+			? (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
 					better(
 						matchAsTyped(word, field, normalisedField, words),
 						correctWord(stuck, field, normalisedField, words, 1, MAX_EDITS - 1),
-					);
+					)
+			: swaps !== null
+				? (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
+						better(matchAsTyped(word, field, normalisedField, words), swapWord(swaps, field, normalisedField, words))
+				: matchAsTyped;
 	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
 	const matchable = phrase
 		? correctable || mayBeOneWord(queryWords)
@@ -543,9 +582,14 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 	if (!matchable) return null;
 	const gates = editable ? editGates(letters, unmatched) : scatterGates(letters);
 	return {
-		...(stuck === null ? gates : eitherGate(gates, editGates(stuck, MAX_EDITS - 1))),
+		...(stuck !== null
+			? eitherGate(gates, editGates(stuck, MAX_EDITS - 1))
+			: swaps !== null
+				? eitherGate(gates, editGates(letters, 0))
+				: gates),
 		// A sparse reading keeps no pairs of a word together.
 		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
+		wholeList: !competing,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
 			const words = fieldWords(normalisedField);
@@ -565,7 +609,14 @@ type Readings = { query: string; byCompeting: (PreparedStrategy | null | undefin
 // would otherwise rebuild the same gates for every row, competing or not.
 let lastReadings: Readings | null = null;
 
-const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
+// A short word with only fuzzy chains beside it is read in full, swaps and
+// all, since a swap is the one edit worth trying that short and its target
+// never passes the literal gates.
+const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
+	queryWords.length === 1 && queryWords[0].length === SWAP_ONLY_LENGTH;
+
+const prepare = (prepared: PreparedQuery, competition: Competition): PreparedStrategy | null => {
+	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
 	if (lastReadings?.query !== prepared.query) {
 		lastReadings = { query: prepared.query, byCompeting: [undefined, undefined] };
 	}
@@ -573,26 +624,9 @@ const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy 
 	return (lastReadings.byCompeting[slot] ??= prepareReading(prepared, competing));
 };
 
-const fuzzierStrategy: Strategy = { prepare };
-
-/**
- * Matches what the default ladder refuses, on fields up to 512 characters. A
- * sparse word, or a word split by a stray space alone, competes while fewer
- * than ten items match the query as typed; other mistakes are corrected only
- * when nothing matches it otherwise.
- *
- * - up to two mistakes, where the default rescue corrects one: a wrong,
- *   missing, extra or swapped character, or a space typed inside a word or
- *   left out between two. A word takes two from eight letters, a phrase word
- *   one from five;
- * - a word typed sparsely: at least four of its letters, in order, starting
- *   with its first and covering at least half of it (`hget` for "Huguette"),
- *   but not its start alone with one stray letter after (`salmas`).
- *
- * Every such match is tier `"corrected"` and scores above `SCORES.CONTAINS`,
- * so it never outranks the query as typed. A mistake costs `TYPO_PENALTY`
- * each, on top of the tier the corrected query lands on; a sparse match scores
- * just above `CONTAINS`, lower the more of the word was typed. It replaces a
- * weaker fuzzy or corrected match on the same field.
- */
-export const fuzzier: Fuzzier = fuzzierStrategy as unknown as Fuzzier;
+// The second pass, tried on fields up to 512 characters once the ladder and
+// its one-edit rescue have run. A sparse word, or a word split by a stray space
+// alone, competes while fewer than ten items match the query as typed, and a
+// swap in a four-letter word while none matches it literally; other mistakes
+// are corrected only when nothing matches it otherwise.
+export const readings: Strategy = { prepare };

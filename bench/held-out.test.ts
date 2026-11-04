@@ -12,6 +12,9 @@ import { CORPORA, heldOut } from "./corpus";
 import { type Sample, scoreFamilies, scorecardOf } from "./mrr.ts";
 
 const SIZE = 10_000;
+// The gap measured when the families were fixed was 0.03–0.04; one twice that
+// would mean a change scores on the published queries and not on fresh ones.
+const MAX_HELD_OUT_GAP = 0.08;
 
 // Only ekrina is tuned against the published families, so only its rows can be
 // fit to them; the other libraries would double the suite's time to say nothing.
@@ -53,17 +56,12 @@ describe("held-out families", () => {
 			runOut[corpus.name] = { table, families };
 			ensureRawDir();
 			writeFileSync(rawFile("held-out.json"), JSON.stringify(runOut, null, "\t"));
-			const gain = (rows: typeof fresh.scorecard): number | undefined => {
-				const base = mrrOf(rows, "ekrina");
-				const opted = mrrOf(rows, "ekrina (fuzzier)");
-				return base === undefined || opted === undefined ? undefined : opted - base;
-			};
-			const publishedGain = gain(published.scorecard);
-			const heldOutGain = gain(fresh.scorecard);
+			const publishedMrr = mrrOf(published.scorecard, "ekrina");
+			const heldOutMrr = mrrOf(fresh.scorecard, "ekrina");
 			// `--only=` narrows the set, and a check against an absent row would assert nothing.
-			if (publishedGain !== undefined && heldOutGain !== undefined) {
-				expect(heldOutGain, "fuzzier's gain is fit to the published queries").toBeGreaterThanOrEqual(
-					publishedGain / 2,
+			if (publishedMrr !== undefined && heldOutMrr !== undefined) {
+				expect(publishedMrr - heldOutMrr, "Ekrina is fit to the published queries").toBeLessThanOrEqual(
+					MAX_HELD_OUT_GAP,
 				);
 			}
 		});

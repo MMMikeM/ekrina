@@ -99,12 +99,6 @@ describe("bench validity: per-library match counts and source rank", () => {
 					const { count, rank } = outcome(ekrina.probe(query), source);
 					if (kind === "miss") {
 						expect(count, `ekrina matched garbage "${query}"`).toBe(0);
-					} else if (kind === "two-words-double-typo") {
-						// Two edits in one phrase: the one-edit rescue must refuse
-						// rather than guess. The edit-distance engines may match it;
-						// ekrina returning anything here means the multi-word rescue
-						// invented a correction.
-						expect(count, `ekrina guessed at the double typo "${query}"`).toBe(0);
 					} else if (kind === "two-words-extra") {
 						// Every query word must match; an OR engine may return the item.
 						expect(count, `ekrina matched a phrase missing "${query}"`).toBe(0);

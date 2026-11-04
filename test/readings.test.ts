@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzier, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
+import { createFuzzySearch, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
 
-const opt = { fuzzier };
-const searcher = (list: string[]) => createFuzzySearch(list, [{ text: (s) => s, fuzzier }]);
+const searcher = (list: string[]) => createFuzzySearch(list);
 
 describe("two edits inside one word", () => {
 	it("two wrong characters in an eight-letter word", () => {
-		expect(fuzzyMatch("Ergonomic Chair", "ergxnomiq", opt)).toEqual({
+		expect(fuzzyMatch("Ergonomic Chair", "ergxnomiq")).toEqual({
 			score: 2 * TYPO_PENALTY + SCORES.PREFIX,
 			tier: "corrected",
 			corrected: "Ergonomic",
@@ -15,74 +14,70 @@ describe("two edits inside one word", () => {
 	});
 
 	it("a swap and a wrong character, at a later word", () => {
-		const r = fuzzyMatch("Lake Daveshire", "dacvehsire", opt);
+		const r = fuzzyMatch("Lake Daveshire", "dacvehsire");
 		expect(r?.corrected).toBe("Daveshire");
 		expect(r?.score).toBeCloseTo(2 * TYPO_PENALTY + SCORES.BOUNDARY);
 		expect(r?.ranges).toEqual([[5, 13]]);
 	});
 
 	it("a dropped and a doubled keystroke", () => {
-		expect(fuzzyMatch("handcrafted", "handcraaftd", opt)?.corrected).toBe("handcrafted");
+		expect(fuzzyMatch("handcrafted", "handcraaftd")?.corrected).toBe("handcrafted");
 	});
 
 	it("prefers the field's first word between equal corrections", () => {
-		expect(fuzzyMatch("Ergonomqx Ergonomxq", "ergonomic", opt)?.ranges).toEqual([[0, 8]]);
-	});
-
-	it("is off unless imported and passed", () => {
-		expect(fuzzyMatch("Ergonomic Chair", "ergxnomiq")).toBeNull();
+		expect(fuzzyMatch("Ergonomqx Ergonomxq", "ergonomic")?.ranges).toEqual([[0, 8]]);
 	});
 
 	it("never corrects a word under eight letters twice", () => {
-		expect(fuzzyMatch("Stuart Jast", "stewart", opt)).toBeNull();
+		expect(fuzzyMatch("Stuart Jast", "stewart")).toBeNull();
 	});
 
 	it("never corrects three edits", () => {
-		expect(fuzzyMatch("ergonomic", "erxonqmix", opt)).toBeNull();
-		expect(fuzzyMatch("ergonomic", "ergonomicxyz", opt)).toBeNull();
+		expect(fuzzyMatch("ergonomic", "erxonqmix")).toBeNull();
+		expect(fuzzyMatch("ergonomic", "ergonomicxyz")).toBeNull();
 	});
 
 	it("leaves a field that already matches to the ladder", () => {
-		expect(fuzzyMatch("Ergonomic Chair", "ergonomic", opt)?.tier).toBe("prefix");
+		expect(fuzzyMatch("Ergonomic Chair", "ergonomic")?.tier).toBe("prefix");
 	});
 
 	it("never reaches into text over 512 characters", () => {
-		expect(fuzzyMatch(`${"word ".repeat(101)}ergonomic`, "ergxnomiq", opt)).toBeNull();
-		expect(fuzzyMatch(`${"word ".repeat(100)}ergonomic`, "ergxnomiq", opt)?.tier).toBe("corrected");
+		expect(fuzzyMatch(`${"word ".repeat(101)}ergonomic`, "ergxnomiq")).toBeNull();
+		expect(fuzzyMatch(`${"word ".repeat(100)}ergonomic`, "ergxnomiq")?.tier).toBe("corrected");
 	});
 
 	it("finds the word among digits and trailing punctuation", () => {
-		expect(fuzzyMatch("Model 2000 Ergonomic (EU)", "ergxnomiq", opt)?.ranges).toEqual([[11, 19]]);
+		expect(fuzzyMatch("Model 2000 Ergonomic (EU)", "ergxnomiq")?.ranges).toEqual([[11, 19]]);
 	});
 
 	it("corrects a query holding a letter that never folds to ASCII", () => {
-		expect(fuzzyMatch("Søndergaard ApS", "søndrgrd", opt)?.corrected).toBe("Søndergaard");
+		expect(fuzzyMatch("Søndergaard ApS", "søndrgrd")?.corrected).toBe("Søndergaard");
 	});
 
 		it("finds the word in a field holding letters that never fold to ASCII", () => {
-		expect(fuzzyMatch("Ørsted Ergonomic", "ergxnomiq", opt)?.ranges).toEqual([[7, 15]]);
+		expect(fuzzyMatch("Ørsted Ergonomic", "ergxnomiq")?.ranges).toEqual([[7, 15]]);
 	});
 
 	it("spells a decomposed field's word in its composed form", () => {
-		expect(fuzzyMatch("Cafe\u0301 Ergonomic", "ergxnomiq", opt)?.corrected).toBe("Ergonomic");
-		expect(fuzzyMatch("Re\u0301sume\u0301", "rsme", opt)?.corrected).toBe("Résumé");
+		expect(fuzzyMatch("Cafe\u0301 Ergonomic", "ergxnomiq")?.corrected).toBe("Ergonomic");
+		expect(fuzzyMatch("Re\u0301sume\u0301", "rsme")?.corrected).toBe("Résumé");
 	});
 
 	it("holds a word over 64 characters to no correction", () => {
 		const long = "a".repeat(70);
-		expect(fuzzyMatch(`${long}bc`, `${long}xy`, opt)).toBeNull();
+		expect(fuzzyMatch(`${long}bc`, `${long}xy`)).toBeNull();
 	});
 
 	it("needs a query holding a word", () => {
-		expect(fuzzyMatch("!!!!!!!!", "!!!!!!!!", opt)?.tier).toBe("exact");
-		expect(fuzzyMatch("ergonomic", "--------", opt)).toBeNull();
+		expect(fuzzyMatch("!!!!!!!!", "!!!!!!!!")?.tier).toBe("exact");
+		expect(fuzzyMatch("ergonomic", "--------")).toBeNull();
 	});
 });
 
 describe("a word typed sparsely", () => {
 	it("half its letters, in order, from its first", () => {
-		expect(fuzzyMatch("Huguette Brown", "hget", opt)).toEqual({
-			score: SCORES.CONTAINS + 0.05 + 1.5 * (4 / 8),
+		expect(fuzzyMatch("Huguette Brown", "hget")).toEqual({
+			score: SCORES.CONTAINS + 0.05 + 1.5 * (4 / 8) + 0.15 * 3,
 			tier: "corrected",
 			corrected: "Huguette",
 			ranges: [
@@ -94,7 +89,7 @@ describe("a word typed sparsely", () => {
 	});
 
 	it("highlights the letters typed inside a later word", () => {
-		expect(fuzzyMatch("Port Huguette", "hgtte", opt)?.ranges).toEqual([
+		expect(fuzzyMatch("Port Huguette", "hgtte")?.ranges).toEqual([
 			[5, 5],
 			[7, 7],
 			[10, 12],
@@ -102,30 +97,30 @@ describe("a word typed sparsely", () => {
 	});
 
 	it("ranks a query typed in fewer pieces first", () => {
-		const search = createFuzzySearch(["Hxgxextx", "Hagueta"], [{ text: (s) => s, fuzzier }]);
+		const search = createFuzzySearch(["Hxgxextx", "Hagueta"]);
 		expect(search("hget").map((r) => r.item)).toEqual(["Hagueta", "Hxgxextx"]);
 	});
 
 	it("must start with the word's first letter", () => {
-		expect(fuzzyMatch("Huguette", "uget", opt)).toBeNull();
+		expect(fuzzyMatch("Huguette", "uget")).toBeNull();
 	});
 
 	it("must cover half the word", () => {
-		expect(fuzzyMatch("Huguettes", "hget", opt)).toBeNull();
+		expect(fuzzyMatch("Huguettes", "hget")).toBeNull();
 	});
 
 	it("needs four letters", () => {
-		expect(fuzzyMatch("Huguette", "hgt", opt)).toBeNull();
+		expect(fuzzyMatch("Huguette", "hgt")).toBeNull();
 	});
 
 	it("needs every letter it typed, in order", () => {
-		expect(fuzzyMatch("Huguette", "hgex", opt)).toBeNull();
-		expect(fuzzyMatch("Huguette", "hteg", opt)).toBeNull();
-		expect(fuzzyMatch("Tahugex", "hget", opt)).toBeNull();
+		expect(fuzzyMatch("Huguette", "hgex")).toBeNull();
+		expect(fuzzyMatch("Huguette", "hteg")).toBeNull();
+		expect(fuzzyMatch("Tahugex", "hget")).toBeNull();
 	});
 
 	it("needs every letter inside one word", () => {
-		expect(fuzzyMatch("Hugoe Tam", "hget", opt)).toBeNull();
+		expect(fuzzyMatch("Hugoe Tam", "hget")).toBeNull();
 	});
 
 	it("leaves a word with one letter too many to the ladder", () => {
@@ -135,15 +130,15 @@ describe("a word typed sparsely", () => {
 	});
 
 	it("finds the word in an accented field", () => {
-		expect(fuzzyMatch("Résumé", "rsme", opt)?.corrected).toBe("Résumé");
+		expect(fuzzyMatch("Résumé", "rsme")?.corrected).toBe("Résumé");
 	});
 
 	it("takes the field's best-typed word", () => {
-		expect(fuzzyMatch("Hagueta Hxgxextx", "hget", opt)?.corrected).toBe("Hagueta");
+		expect(fuzzyMatch("Hagueta Hxgxextx", "hget")?.corrected).toBe("Hagueta");
 	});
 
 	it("outranks a two-edit reading of the same word", () => {
-		expect(fuzzyMatch("Handcrafted", "handcrftd", opt)?.ranges).toEqual([
+		expect(fuzzyMatch("Handcrafted", "handcrftd")?.ranges).toEqual([
 			[0, 5],
 			[7, 8],
 			[10, 10],
@@ -151,20 +146,20 @@ describe("a word typed sparsely", () => {
 	});
 
 	it("replaces a weaker fuzzy chain on the same field", () => {
-		expect(fuzzyMatch("Handcrafted", "hndcrfted")?.tier).toBe("fuzzy");
-		expect(fuzzyMatch("Handcrafted", "hndcrfted", opt)?.score).toBeCloseTo(
-			SCORES.CONTAINS + 0.05 + 1.5 * (2 / 11),
+		expect(fuzzyMatch("Handcrafted", "hndcrfted")?.tier).toBe("corrected");
+		expect(fuzzyMatch("Handcrafted", "hndcrfted")?.score).toBeCloseTo(
+			SCORES.CONTAINS + 0.05 + 1.5 * (2 / 11) + 0.15,
 		);
 	});
 
 	it("never replaces a match as typed", () => {
-		expect(fuzzyMatch("Huguette", "huguet", opt)?.tier).toBe("prefix");
+		expect(fuzzyMatch("Huguette", "huguet")?.tier).toBe("prefix");
 	});
 });
 
 describe("a key held down", () => {
 	it("costs one edit, so a short word still takes one more", () => {
-		expect(fuzzyMatch("Mark Twain", "twaaain", opt)).toEqual({
+		expect(fuzzyMatch("Mark Twain", "twaaain")).toEqual({
 			score: SCORES.BOUNDARY + 2 * TYPO_PENALTY,
 			tier: "corrected",
 			corrected: "Twain",
@@ -173,53 +168,85 @@ describe("a key held down", () => {
 	});
 
 	it("however long the run, which a gate on the letters as typed would refuse", () => {
-		expect(fuzzyMatch("Mark Twain", "twaaaaaain", opt)?.corrected).toBe("Twain");
+		expect(fuzzyMatch("Mark Twain", "twaaaaaain")?.corrected).toBe("Twain");
 	});
 
 	it("keeps a double letter the word really has", () => {
-		expect(fuzzyMatch("Coffee", "coffffee", opt)).toMatchObject({
+		expect(fuzzyMatch("Coffee", "coffffee")).toMatchObject({
 			score: SCORES.NORMALISED_EXACT + TYPO_PENALTY,
 			corrected: "Coffee",
 		});
 	});
 
 	it("leaves no room for two more edits", () => {
-		expect(fuzzyMatch("Mark Twain", "twaaaxn", opt)).toBeNull();
+		expect(fuzzyMatch("Mark Twain", "twaaaxn")).toBeNull();
 	});
 
 	it("is read once a word, never twice", () => {
-		expect(fuzzyMatch("Mark Twain", "twaaainnn", opt)).toBeNull();
+		expect(fuzzyMatch("Mark Twain", "twaaainnn")).toBeNull();
 	});
 
 	it("needs five letters once the run is cut", () => {
-		expect(fuzzyMatch("Ab Lane", "aaab", opt)).toBeNull();
+		expect(fuzzyMatch("Ab Lane", "aaab")).toBeNull();
 	});
 
 	it("stays out of a list where the word matches as typed", () => {
-		const search = createFuzzySearch(["Twaaain Street", "Mark Twain"], [{ text: (x: string) => x, fuzzier }]);
+		const search = createFuzzySearch(["Twaaain Street", "Mark Twain"]);
 		expect(search("twaaain").map((r) => r.item)).toEqual(["Twaaain Street"]);
+	});
+});
+
+describe("a swap in a four-letter word", () => {
+	const search = (items: string[]) => createFuzzySearch(items);
+
+	it("is undone beside a fuzzy chain", () => {
+		const items = ["Louder Than Bombs", "Taha Hussein"];
+		expect(search(items)("tahn")[0]).toEqual({
+			item: "Louder Than Bombs",
+			score: SCORES.BOUNDARY + TYPO_PENALTY,
+			fields: [{ score: SCORES.BOUNDARY + TYPO_PENALTY, tier: "corrected", corrected: "Than", ranges: [[7, 10]] }],
+		});
+	});
+
+	it("finishes a longer word it starts", () => {
+		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]?.fields[0]).toMatchObject({
+			score: SCORES.PREFIX + TYPO_PENALTY,
+			corrected: "Than",
+		});
+	});
+
+	it("is not tried once a field matches it literally", () => {
+		expect(search(["Louder Than Bombs", "Tahnee Welch"])("tahn").map((r) => r.item)).toEqual([
+			"Tahnee Welch",
+		]);
+	});
+
+	it("lands only at a word start", () => {
+		expect(search(["Athan Street", "Taha Hussein"])("tahn").map((r) => r.item)).toEqual([
+			"Taha Hussein",
+		]);
 	});
 });
 
 describe("a gate that only false-passes", () => {
 	it("rejects a field missing three of the query's letters", () => {
-		expect(fuzzyMatch("ergonomic", "ergoxyzic", opt)).toBeNull();
+		expect(fuzzyMatch("ergonomic", "ergoxyzic")).toBeNull();
 	});
 
 	it("rejects a field holding too few of a repeated letter", () => {
-		expect(fuzzyMatch("pizza", "zzzzzzzz", opt)).toBeNull();
+		expect(fuzzyMatch("pizza", "zzzzzzzz")).toBeNull();
 	});
 });
 
 describe("one edit in each word of a phrase", () => {
 	it("both words mistyped, priced on the tier the corrected phrase lands on", () => {
-		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted wooxen", opt)).toEqual({
+		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted wooxen")).toEqual({
 			score: 2 * TYPO_PENALTY + SCORES.PREFIX,
 			tier: "corrected",
 			corrected: "Handcrafted Wooden",
 			ranges: [[0, 17]],
 		});
-		expect(fuzzyMatch("Handcrafted Wooden Table", "wooxen handcxafted", opt)).toEqual({
+		expect(fuzzyMatch("Handcrafted Wooden Table", "wooxen handcxafted")).toEqual({
 			score: 2 * TYPO_PENALTY + SCORES.MULTI_WORD,
 			tier: "corrected",
 			corrected: "Wooden Handcrafted",
@@ -231,40 +258,40 @@ describe("one edit in each word of a phrase", () => {
 	});
 
 	it("keeps a word typed correctly as the caller typed it", () => {
-		expect(fuzzyMatch("Small Wooden Table", "TABLE wooxen smxll", opt)?.corrected).toBe(
+		expect(fuzzyMatch("Small Wooden Table", "TABLE wooxen smxll")?.corrected).toBe(
 			"TABLE Wooden Small",
 		);
 	});
 
 	it("matches a repeated word to two field words", () => {
-		expect(fuzzyMatch("Wooden Wooden", "wooxen woodxn", opt)?.corrected).toBe("Wooden Wooden");
+		expect(fuzzyMatch("Wooden Wooden", "wooxen woodxn")?.corrected).toBe("Wooden Wooden");
 	});
 
 	it("corrects a decomposed query on its composed form", () => {
-		expect(fuzzyMatch("Rustic Wooden", "rustíx wooxen", opt)?.corrected).toBe(
+		expect(fuzzyMatch("Rustic Wooden", "rustíx wooxen")?.corrected).toBe(
 			"Rustic Wooden",
 		);
 	});
 
 	it("refuses three edits across a phrase", () => {
-		expect(fuzzyMatch("Handcrafted Wooden Tables", "handcxafted wooxen tablxs", opt)).toBeNull();
-		expect(fuzzyMatch("Handcrafted Wooden Tables", "hnadcrafted wodoen talbes", opt)).toBeNull();
+		expect(fuzzyMatch("Handcrafted Wooden Tables", "handcxafted wooxen tablxs")).toBeNull();
+		expect(fuzzyMatch("Handcrafted Wooden Tables", "hnadcrafted wodoen talbes")).toBeNull();
 	});
 
 	it("never corrects a word under five letters", () => {
-		expect(fuzzyMatch("Handcrafted Oak Table", "handcxafted oxk", opt)).toBeNull();
-		expect(fuzzyMatch("Big Oak", "bxg oxk", opt)).toBeNull();
+		expect(fuzzyMatch("Handcrafted Oak Table", "handcxafted oxk")).toBeNull();
+		expect(fuzzyMatch("Big Oak", "bxg oxk")).toBeNull();
 	});
 
 	it("refuses a word no field word is one edit from", () => {
-		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted plastic", opt)).toBeNull();
-		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted nedoow", opt)).toBeNull();
+		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted plastic")).toBeNull();
+		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted nedoow")).toBeNull();
 	});
 });
 
 describe("a space counts as one edit", () => {
 	it("a space forgotten between two words with a typo beside it", () => {
-		expect(fuzzyMatch("Lockman Dubuque", "lockmandubxque", opt)).toEqual({
+		expect(fuzzyMatch("Lockman Dubuque", "lockmandubxque")).toEqual({
 			score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT,
 			tier: "corrected",
 			corrected: "Lockman Dubuque",
@@ -273,7 +300,7 @@ describe("a space counts as one edit", () => {
 	});
 
 	it("a space typed inside a word", () => {
-		expect(fuzzyMatch("Port Catonsville", "cato nsville", opt)).toEqual({
+		expect(fuzzyMatch("Port Catonsville", "cato nsville")).toEqual({
 			score: TYPO_PENALTY + SCORES.BOUNDARY,
 			tier: "corrected",
 			corrected: "Catonsville",
@@ -282,51 +309,50 @@ describe("a space counts as one edit", () => {
 	});
 
 	it("a space typed between two short halves of a word", () => {
-		expect(fuzzyMatch("Hillside", "hill side", opt)).toEqual({
+		expect(fuzzyMatch("Hillside", "hill side")).toEqual({
 			score: TYPO_PENALTY + SCORES.NORMALISED_EXACT,
 			tier: "corrected",
 			corrected: "Hillside",
 			ranges: [[0, 7]],
 		});
-		expect(fuzzyMatch("Hillside Road", "hill sdie", opt)?.corrected).toBe("Hillside");
+		expect(fuzzyMatch("Hillside Road", "hill sdie")?.corrected).toBe("Hillside");
 		expect(searcher(["Database Admin", "Data Lake"])("data base").map((r) => r.item)).toEqual([
 			"Database Admin",
 		]);
 	});
 
 	it("a space typed inside a word, and one more mistake", () => {
-		expect(fuzzyMatch("Catonsville", "cato nsvxlle", opt)?.corrected).toBe("Catonsville");
+		expect(fuzzyMatch("Catonsville", "cato nsvxlle")?.corrected).toBe("Catonsville");
 	});
 
 	it("never a space and two more mistakes", () => {
-		expect(fuzzyMatch("Catonsville", "cato nsvxllq", opt)).toBeNull();
-		expect(fuzzyMatch("Lockman Dubuque", "lockmandxbxque", opt)).toBeNull();
+		expect(fuzzyMatch("Catonsville", "cato nsvxllq")).toBeNull();
+		expect(fuzzyMatch("Lockman Dubuque", "lockmandxbxque")).toBeNull();
 	});
 
 	it("needs eight letters once the space is gone to fix another mistake", () => {
-		expect(fuzzyMatch("Hillside", "hil sidx", opt)).toBeNull();
+		expect(fuzzyMatch("Hillside", "hil sidx")).toBeNull();
 	});
 
 	it("rejoins a split word beside weaker matches", () => {
 		const items = ["Mlle Anne Marty", "Marianne Lowe"];
-		expect(createFuzzySearch(items)("mari anne").map((r) => r.item)).toEqual(["Mlle Anne Marty"]);
 		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe", "Mlle Anne Marty"]);
 		const typed = searcher(["Mari Annx Shop", "Marianne Lowe"])("mari annx");
 		expect(typed.map((r) => r.item)).toEqual(["Mari Annx Shop"]);
 	});
 
 	it("rejoins a shorter word when the space was the only mistake", () => {
-		expect(fuzzyMatch("Clinton Kub", "cli nton", opt)?.corrected).toBe("Clinton");
-		expect(fuzzyMatch("Clinton Kub", "cli ntxn", opt)).toBeNull();
-		expect(fuzzyMatch("Kristy", "kri sty", opt)?.corrected).toBe("Kristy");
-		expect(fuzzyMatch("Kristy", "kr isty", opt)?.corrected).toBe("Kristy");
-		expect(fuzzyMatch("Kris", "kr is", opt)).toBeNull();
+		expect(fuzzyMatch("Clinton Kub", "cli nton")?.corrected).toBe("Clinton");
+		expect(fuzzyMatch("Clinton Kub", "cli ntxn")).toBeNull();
+		expect(fuzzyMatch("Kristy", "kri sty")?.corrected).toBe("Kristy");
+		expect(fuzzyMatch("Kristy", "kr isty")?.corrected).toBe("Kristy");
+		expect(fuzzyMatch("Kris", "kr is")).toBeNull();
 	});
 });
 
 describe("two edits in one word of a phrase", () => {
 	it("an eight-letter phrase word mistyped twice", () => {
-		expect(fuzzyMatch("Kristi Satterfield", "kristi satxerfqeld", opt)).toEqual({
+		expect(fuzzyMatch("Kristi Satterfield", "kristi satxerfqeld")).toEqual({
 			score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT,
 			tier: "corrected",
 			corrected: "kristi Satterfield",
@@ -335,7 +361,7 @@ describe("two edits in one word of a phrase", () => {
 	});
 
 	it("a shorter phrase word gets one", () => {
-		expect(fuzzyMatch("Kristi Wooden", "kristi woxdxn", opt)).toBeNull();
+		expect(fuzzyMatch("Kristi Wooden", "kristi woxdxn")).toBeNull();
 	});
 });
 
@@ -385,12 +411,12 @@ describe("in a searcher", () => {
 		expect(search("handcrafted wooden").map((r) => r.item)).toEqual(["Handcrafted Wooden Chair"]);
 	});
 
-		it("scores each field that opts in and keeps the best", () => {
+	it("scores each field and keeps the best", () => {
 		const search = createFuzzySearch(
 			[{ title: "Hxgxextx", body: "Hagueta" }],
 			[
-				{ text: (r) => r.title, fuzzier },
-				{ text: (r) => r.body, fuzzier },
+				{ text: (r) => r.title },
+				{ text: (r) => r.body },
 			],
 		);
 		const [result] = search("hget");
@@ -399,8 +425,8 @@ describe("in a searcher", () => {
 		const [reversed] = createFuzzySearch(
 			[{ title: "Hagueta", body: "Hxgxextx" }],
 			[
-				{ text: (r) => r.title, fuzzier },
-				{ text: (r) => r.body, fuzzier },
+				{ text: (r) => r.title },
+				{ text: (r) => r.body },
 			],
 		)("hget");
 		expect(reversed.score).toBe(reversed.fields[0]?.score);
@@ -434,8 +460,8 @@ describe("in a searcher", () => {
 	it("ranks an item by where its best field's match ends", () => {
 		const bodies = (items: { title: string; body: string }[]) =>
 			createFuzzySearch(items, [
-				{ text: (r) => r.title, fuzzier },
-				{ text: (r) => r.body, fuzzier },
+				{ text: (r) => r.title },
+				{ text: (r) => r.body },
 			])("hget").map((r) => r.item.body);
 		const beaten = [
 			{ title: "Hxgxet", body: "Hgueetx" },
@@ -456,8 +482,8 @@ describe("in a searcher", () => {
 				{ title: "Handcrafted Wooden Table", body: "Steel" },
 			],
 			[
-				{ text: (r) => r.title, fuzzier },
-				{ text: (r) => r.body, fuzzier },
+				{ text: (r) => r.title },
+				{ text: (r) => r.body },
 			],
 		);
 		expect(search("handcxafted wooxen").map((r) => r.item.title)).toEqual([
@@ -488,7 +514,6 @@ describe("in a searcher", () => {
 						if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
 						return s;
 					},
-					fuzzier,
 				},
 			],
 		);
@@ -496,31 +521,6 @@ describe("in a searcher", () => {
 		expect(() => search("hget")).toThrow("unreadable");
 		throwing = false;
 		expect(search("hget").map((r) => r.item)).toEqual(["Hget Lane", "Huguette Brown"]);
-	});
-
-	it("is off when a caller passes `false` or `null` for it", () => {
-		const off = [false, null] as unknown as undefined[];
-		for (const fuzzier of off) {
-			expect(fuzzyMatch("Ergonomic", "ergxnomiq", { fuzzier })).toBeNull();
-			expect(createFuzzySearch(["Ergonomic"], [{ text: (s) => s, fuzzier }])("ergo")).toHaveLength(1);
-		}
-	});
-
-	it("is off unless a field opts in", () => {
-		expect(createFuzzySearch(["Ergonomic Chair"])("ergxnomiq")).toEqual([]);
-		const search = createFuzzySearch(
-			[{ title: "Ergonomic Chair", body: "Ergonomic" }],
-			[{ text: (r) => r.title }, { text: (r) => r.body, fuzzier, atBest: 1 }],
-		);
-		expect(search("ergxnomiq")[0].fields).toEqual([
-			null,
-			{
-				score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT + 1,
-				tier: "corrected",
-				corrected: "Ergonomic",
-				ranges: [[0, 8]],
-			},
-		]);
 	});
 
 	it("skips a query too short to correct twice", () => {
@@ -534,7 +534,7 @@ describe("in a searcher", () => {
 	it("skips an item whose field is missing", () => {
 		const search = createFuzzySearch(
 			[{ name: null }, { name: "Ergonomic" }],
-			[{ text: (r) => r.name, fuzzier }],
+			[{ text: (r) => r.name }],
 		);
 		expect(search("ergxnomiq").map((r) => r.item.name)).toEqual(["Ergonomic"]);
 		expect(search("________")).toEqual([]);

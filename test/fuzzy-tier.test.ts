@@ -89,56 +89,74 @@ describe("chunk assembly reconsiders its first choice", () => {
 	// 131 needlessly expensive assemblies over the ascii bench corpus.
 
 	describe("finds the intended word past a decoy initial", () => {
-		// "corrected" is the point: the first-chunk retry produces the clean
-		// two-chunk assembly the dropped-keystroke rescue then recognises.
+		// A dropped letter is read as that word typed sparsely, which outranks
+		// any chain assembled across the decoy, so these land on the word itself.
 		it("matches inside the intended word past an earlier word-initial", () => {
 			const r = fuzzyMatch("Tasty Silk Towels", "towls");
 			expect(r?.tier).toBe("corrected");
-			expect(r?.corrected).toBe("towels");
-			expect(r?.score).toBeCloseTo(3.1); // boundary (1) + typo penalty (2.1)
-			expect(r?.ranges).toEqual([[11, 16]]);
+			expect(r?.corrected).toBe("Towels");
+			expect(r?.score).toBeCloseTo(2.35);
+			expect(r?.ranges).toEqual([
+				[11, 13],
+				[15, 16],
+			]);
 		});
 
 		it("skips a decoy initial two words back", () => {
 			const r = fuzzyMatch("New Mistyborough, San Marino", "marno");
-			expect(r?.score).toBeCloseTo(3.1);
-			expect(r?.ranges).toEqual([[22, 27]]);
+			expect(r?.corrected).toBe("Marino");
+			expect(r?.ranges).toEqual([
+				[22, 24],
+				[26, 27],
+			]);
 		});
 
 		it("skips a decoy initial across a punctuated boundary", () => {
 			const r = fuzzyMatch("South Eliseboro, Serbia", "seria");
-			expect(r?.score).toBeCloseTo(3.1);
-			expect(r?.ranges).toEqual([[17, 22]]);
+			expect(r?.corrected).toBe("Serbia");
+			expect(r?.ranges).toEqual([
+				[17, 19],
+				[21, 22],
+			]);
 		});
 
 		it("absorbs a decoy instead of paying for it as a lone chunk", () => {
 			const r = fuzzyMatch("Milwaukee, Malaysia", "malasia");
-			expect(r?.score).toBeCloseTo(3.1);
-			expect(r?.ranges).toEqual([[11, 18]]);
+			expect(r?.corrected).toBe("Malaysia");
+			expect(r?.ranges).toEqual([
+				[11, 14],
+				[16, 18],
+			]);
 		});
 
 		it("does not pay for a leading singleton when the word itself matches", () => {
 			const r = fuzzyMatch("Pfeffer - Predovic", "predvic");
-			expect(r?.score).toBeCloseTo(3.1);
-			expect(r?.ranges).toEqual([[10, 17]]);
+			expect(r?.corrected).toBe("Predovic");
+			expect(r?.ranges).toEqual([
+				[10, 13],
+				[15, 17],
+			]);
 		});
 
 		it("prefers the real word over a split assembly", () => {
 			const r = fuzzyMatch("Port Pasqualefurt, Bolivia", "pasquaefurt");
-			expect(r?.score).toBeCloseTo(3.1);
-			expect(r?.ranges).toEqual([[5, 16]]);
+			expect(r?.corrected).toBe("Pasqualefurt");
+			expect(r?.ranges).toEqual([
+				[5, 10],
+				[12, 16],
+			]);
 		});
 	});
 
 	describe("still assembles when no single edit explains the query", () => {
 		it("recovers a three-chunk assembly the leftmost path missed", () => {
-			const r = fuzzyMatch("Wiegand, Weissnat and Harris", "wead");
+			const r = fuzzyMatch("Wolff, Weissnat and Harris", "wead");
 			expect(r?.tier).toBe("fuzzy");
 			expect(r?.score).toBeCloseTo(4.4); // 2 + 0.4 + 1.6 + 0.4
 			expect(r?.ranges).toEqual([
-				[9, 10],
+				[7, 8],
+				[16, 16],
 				[18, 18],
-				[20, 20],
 			]);
 		});
 
@@ -166,8 +184,8 @@ describe("chunk assembly reconsiders its first choice", () => {
 			// Load-bearing bound, not a speed knob (see MAX_CHUNK_STARTS): four
 			// decoy initials is past the cap, so this buried match is refused —
 			// the price of holding the long-text junk rate at zero.
-			expect(fuzzyMatch("Tasty Tidy Trim Tall Towels", "towls")).toBeNull();
-			expect(fuzzyMatch("Tasty Tidy Trim Towels", "towls")?.tier).toBe("corrected");
+			expect(fuzzyMatch("Tasty Tidy Trim Tall Tow Wls", "towls")).toBeNull();
+			expect(fuzzyMatch("Tasty Tidy Trim Tow Wls", "towls")?.tier).toBe("fuzzy");
 		});
 
 		it("leaves the documented zebra hazard scored exactly as before", () => {

@@ -55,7 +55,6 @@ export type LongtextRow = {
 	/** Absent words the fuzzy tier matched; corrections to a neighbouring word are counted apart. */
 	junkRate: number;
 	correctedRate: number;
-	fuzzierJunkRate: number;
 	presentHits: number;
 	presentProbes: number;
 	missMs: number;

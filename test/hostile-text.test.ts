@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
-import { MODES } from "./modes";
 
 const msToRun = (run: () => unknown): number => {
 	const start = Date.now();
@@ -35,32 +34,35 @@ const hostile: [string, (scale: number) => string, string][] = [
 	],
 ];
 
-for (const { name, options, searcher } of MODES) {
-	describe(`matching long text an attacker controls, ${name}`, () => {
-		for (const [label, textAtScale, query] of hostile) {
-			it(`answers in linear time: ${label}`, () => {
-				const text = { 1: textAtScale(1), 2: textAtScale(2) };
-				expect(growthWhenDoubled((scale) => fuzzyMatch(text[scale], query, options))).toBeLessThan(3);
-			});
-		}
-
-		it("a searcher answers in linear time over one hostile field", () => {
-			const field = { 1: "xa b c d" + " a".repeat(32_000), 2: "xa b c d" + " a".repeat(64_000) };
-			const search = (scale: 1 | 2) => searcher([field[scale]])("abcd");
-			expect(growthWhenDoubled(search)).toBeLessThan(3);
+describe(`matching long text an attacker controls`, () => {
+	for (const [label, textAtScale, query] of hostile) {
+		it(`answers in linear time: ${label}`, () => {
+			const text = { 1: textAtScale(1), 2: textAtScale(2) };
+			expect(growthWhenDoubled((scale) => fuzzyMatch(text[scale], query))).toBeLessThan(3);
 		});
+	}
+
+	it("a searcher answers in linear time over one hostile field", () => {
+		const field = { 1: "xa b c d" + " a".repeat(32_000), 2: "xa b c d" + " a".repeat(64_000) };
+		const search = (scale: 1 | 2) => createFuzzySearch([field[scale]])("abcd");
+		expect(growthWhenDoubled(search)).toBeLessThan(3);
 	});
-}
+});
 
 describe("long text still matches the way short text does", () => {
 	const short = "Handcrafted Wooden Chair";
 	const long = "lorem ipsum dolor sit amet ".repeat(20) + short;
 
-	for (const query of ["wooden", "craft", "chair wooden", "hcrafted", "handcrafed", "woodn chair"]) {
+	for (const query of ["wooden", "craft", "chair wooden", "handcrafed", "woodn chair"]) {
 		it(`\`${query}\` reaches the same tier past the long-text gate`, () => {
 			expect(fuzzyMatch(long, query)?.tier).toBe(fuzzyMatch(short, query)?.tier);
 		});
 	}
+
+	it("a word typed sparsely is read as that word only up to 512 characters", () => {
+		expect(fuzzyMatch(short, "hcrafted")?.tier).toBe("corrected");
+		expect(fuzzyMatch(long, "hcrafted")?.tier).toBe("fuzzy");
+	});
 
 	it("a searcher finds a phrase in a long field", () => {
 		const search = createFuzzySearch([long, "Steel Table"]);
@@ -135,29 +137,27 @@ const hostileQueries: [string, string, string][] = [
 	],
 ];
 
-for (const { name, options, searcher } of MODES) {
-	describe(`a query an attacker controls, ${name}`, () => {
-		for (const [label, text, query] of hostileQueries) {
-			it(`answers quickly without throwing: ${label}`, () => {
-				expect(msToRun(() => fuzzyMatch(text, query, options))).toBeLessThan(250);
-				expect(msToRun(() => searcher([text, "Red Sofa"])(query))).toBeLessThan(250);
-			});
-		}
-
-		it("costs no more than a short query when matched against every row of a list", () => {
-			const rows = Array.from({ length: 10_000 }, (_, i) => `Blue Wooden Chair ${i}`);
-			const matchEveryRow = (query: string) => () => rows.map((row) => fuzzyMatch(row, query, options));
-			const short = fastestMsToRun(matchEveryRow("chair"));
-			expect(fastestMsToRun(matchEveryRow(mixedWord(256)))).toBeLessThan(short * 4);
+describe(`a query an attacker controls`, () => {
+	for (const [label, text, query] of hostileQueries) {
+		it(`answers quickly without throwing: ${label}`, () => {
+			expect(msToRun(() => fuzzyMatch(text, query))).toBeLessThan(250);
+			expect(msToRun(() => createFuzzySearch([text, "Red Sofa"])(query))).toBeLessThan(250);
 		});
+	}
 
-		it("walks a field once for a repeated word, however many mid-word hits it skips", () => {
-			const field = "xthe ".repeat(12_800) + "the xthe ".repeat(64);
-			const copiesOfThe = (copies: number) => () => {
-				for (let run = 0; run < 30; run++) fuzzyMatch(field, Array(copies).fill("the").join(" "), options);
-			};
-			const twoCopies = fastestMsToRun(copiesOfThe(2));
-			expect(fastestMsToRun(copiesOfThe(64))).toBeLessThan(twoCopies * 4);
-		});
+	it("costs no more than a short query when matched against every row of a list", () => {
+		const rows = Array.from({ length: 10_000 }, (_, i) => `Blue Wooden Chair ${i}`);
+		const matchEveryRow = (query: string) => () => rows.map((row) => fuzzyMatch(row, query));
+		const short = fastestMsToRun(matchEveryRow("chair"));
+		expect(fastestMsToRun(matchEveryRow(mixedWord(256)))).toBeLessThan(short * 4);
 	});
-}
+
+	it("walks a field once for a repeated word, however many mid-word hits it skips", () => {
+		const field = "xthe ".repeat(12_800) + "the xthe ".repeat(64);
+		const copiesOfThe = (copies: number) => () => {
+			for (let run = 0; run < 30; run++) fuzzyMatch(field, Array(copies).fill("the").join(" "));
+		};
+		const twoCopies = fastestMsToRun(copiesOfThe(2));
+		expect(fastestMsToRun(copiesOfThe(64))).toBeLessThan(twoCopies * 4);
+	});
+});

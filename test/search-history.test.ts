@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch } from "../src/index";
-import { MODES } from "./modes";
 
 const typing = (query: string): string[] =>
 	Array.from({ length: query.length }, (_, k) => query.slice(0, k + 1));
@@ -11,23 +10,19 @@ const backspacing = (from: string, to: string): string[] =>
 type Session = { name: string; queries: string[] };
 
 const replaysEachSession = (list: string[], sessions: Session[]): void => {
-	for (const { name: mode, searcher } of MODES) {
-		describe(mode, () => {
-			for (const { name, queries } of sessions) {
-				it(name, () => {
-					const search = searcher(list);
-					for (const query of queries) {
-						expect(search(query), query).toEqual(searcher(list)(query));
-					}
-				});
+	for (const { name, queries } of sessions) {
+		it(name, () => {
+			const search = createFuzzySearch(list);
+			for (const query of queries) {
+				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
+			}
+		});
 
-				it(`${name}, with the index built first`, () => {
-					const search = searcher(list);
-					search.buildIndex();
-					for (const query of queries) {
-						expect(search(query), query).toEqual(searcher(list)(query));
-					}
-				});
+		it(`${name}, with the index built first`, () => {
+			const search = createFuzzySearch(list);
+			search.buildIndex();
+			for (const query of queries) {
+				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
 			}
 		});
 	}
@@ -44,7 +39,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 
 		it("the dead ends below really match nothing", () => {
 			const search = createFuzzySearch(list);
-			expect(search("statsu reportqz")).toEqual([]);
+			expect(search("statsu reportqzx")).toEqual([]);
 			expect(search("qqzz")).toEqual([]);
 		});
 
@@ -53,7 +48,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 			{ name: "the same query twice", queries: ["statsu report", "statsu report"] },
 			{
 				name: "backspacing out of a dead end",
-				queries: ["statsu reportqz", ...backspacing("statsu reportqz", "statsu report")],
+				queries: ["statsu reportqzx", ...backspacing("statsu reportqzx", "statsu report")],
 			},
 			{ name: "after a query with no matches", queries: ["qqzz", "statsu report"] },
 			{

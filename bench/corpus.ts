@@ -177,12 +177,11 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		{ query: `${a} ${b} ${extra}`, kind: "two-words-extra", source: null },
 		// Phrase typos take a different route entirely (presence gate + per-word
 		// rescue): typo in the first word, the second, reversed order, and both
-		// words mistyped — two edits, which a one-edit rescue must refuse.
+		// words mistyped, one edit each.
 		{ query: `${substitute(a)} ${b}`, kind: "two-words-typo", source: pairSource },
 		{ query: `${a} ${substitute(b)}`, kind: "two-words-typo-second", source: pairSource },
 		{ query: `${b} ${substitute(a)}`, kind: "two-words-typo-reversed", source: pairSource },
-		// No source: the right answer is nothing.
-		{ query: `${substitute(a)} ${substitute(b)}`, kind: "two-words-double-typo", source: null },
+		{ query: `${substitute(a)} ${substitute(b)}`, kind: "two-words-double-typo", source: pairSource },
 		{ query: prefix, kind: "prefix", source: prefixSource },
 		// An interior slice, never a prefix: separates contains-anywhere matching
 		// from start-anchored ranking.

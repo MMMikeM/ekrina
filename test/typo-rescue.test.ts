@@ -1,7 +1,7 @@
 // One extra ("generric"), one missing ("genric"), one wrong ("genaric");
 // the adjacent swap has its own file.
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
+import { createFuzzySearch, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
 
 describe("a query missing a character", () => {
 	it("a dropped keystroke in an otherwise exact word", () => {
@@ -21,17 +21,15 @@ describe("a query missing a character", () => {
 		// normalised-exact tier (0.1), not the raw exact tier (0).
 		expect(fuzzyMatch("Wooden Table", "wooden tble")?.score).toBeCloseTo(2.2);
 		// Corrected query sits at a word boundary inside a longer field → 1 + 2.1.
-		expect(fuzzyMatch("Tasty Silk Towels", "towls")?.score).toBeCloseTo(3.1);
+		expect(fuzzyMatch("Tasty Silk Towels", "towals")?.score).toBeCloseTo(3.1);
 	});
 
-	it("holds a single-word query to the 5-character typo floor", () => {
+	it("never corrects a single word under four characters", () => {
 		// The chain may still survive ("cat" is a genuine subsequence of "coat"),
 		// just not the typo tier and the rank that comes with it.
 		expect(fuzzyMatch("coat", "cat")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("axb", "ab")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("the", "hte")).toBeNull(); // transposed, for comparison
-		expect(fuzzyMatch("South Raven, Bangladesh", "soth")?.tier).toBe("fuzzy");
-		expect(fuzzyMatch("Small Silk Chair", "smll")?.tier).toBe("fuzzy");
 	});
 
 	describe("a skipped separator is not a typo", () => {
@@ -230,10 +228,8 @@ describe("matcher and searcher agree on the typo floor", () => {
 		expect(agreedTier("Nicolas", "colt")).toBeNull();
 	});
 
-	it("a four-character query that matches as typed is not corrected", () => {
-		// The fuzzy chain "So…th" is a reading of what was typed; the dropped
-		// keystroke ("south") is only a guess.
-		expect(agreedTier("South Raven, Bangladesh", "soth")).toBe("fuzzy");
+	it("a four-character word with a letter dropped is read as that word", () => {
+		expect(agreedTier("South Raven, Bangladesh", "soth")).toBe("corrected");
 	});
 
 	it("a phrase's four-character word is corrected, a shorter one is not", () => {
@@ -247,9 +243,10 @@ describe("matcher and searcher agree on the typo floor", () => {
 });
 
 describe("a short query is corrected only when nothing matches it as typed", () => {
-	it("one item matching as typed keeps every other item uncorrected", () => {
+	it("a fuzzy chain beside it does not keep a swap uncorrected", () => {
 		const search = createFuzzySearch(["Soft Gold Hat", "Safe Fort Inn"]);
 		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+			["Soft Gold Hat", "corrected"],
 			["Safe Fort Inn", "fuzzy"],
 		]);
 	});
@@ -267,14 +264,11 @@ describe("a short query is corrected only when nothing matches it as typed", () 
 	});
 });
 
-describe("one edit only", () => {
-	it("two edits stay unmatched", () => {
+describe("how many edits a word takes", () => {
+	it("two edits cost twice the penalty", () => {
 		// An extra "y" AND a missing "a" — edit distance 2.
-		expect(fuzzyMatch("keyboard", "keyybord")).toBeNull();
-	});
-
-	it("two substitutions stay unmatched", () => {
-		expect(fuzzyMatch("ergonomic", "ergqnomiq")).toBeNull();
+		expect(fuzzyMatch("keyboard", "keyybord")?.score).toBeCloseTo(2 * TYPO_PENALTY);
+		expect(fuzzyMatch("ergonomic", "ergqnomiq")?.score).toBeCloseTo(2 * TYPO_PENALTY);
 	});
 });
 
