@@ -1,7 +1,7 @@
 // Every axis a query can drift along, each with an intensity dial, so a
 // search can turn each one up until no library still finds the item: where a
 // library stops is its limit on that axis. Diagnostic only (frontier.test.ts).
-import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices } from "./corpus";
+import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices } from "./corpus.ts";
 import { EDITS, type EditName, neighbourOf, type Random, randomLetterFor, seeded } from "./limits.ts";
 import type { Sample } from "./mrr.ts";
 

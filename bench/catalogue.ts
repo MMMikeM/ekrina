@@ -2,7 +2,7 @@
 // strength people actually reach, and weighted by group before any library is
 // measured. Diagnostic until it replaces corpus.ts's families: catalogue.test.ts
 // reports it, and no published number reads it.
-import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices, wordsOf } from "./corpus";
+import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices, wordsOf } from "./corpus.ts";
 import { ACCENTED } from "./frontier.ts";
 import {
 	applyEdits,

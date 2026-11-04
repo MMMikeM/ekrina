@@ -9,7 +9,7 @@ import {
 	holdsWords,
 	SAMPLE_SIZE,
 	shuffledIndices,
-} from "./corpus";
+} from "./corpus.ts";
 import type { Sample } from "./mrr.ts";
 
 const SAMPLES_PER_CELL = 10;
