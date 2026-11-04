@@ -374,6 +374,31 @@ describe("in a searcher", () => {
 		expect(bodies(tied)).toEqual(["Hxgxxet", "zzz"]);
 	});
 
+	it("keeps a one-edit fix the literal pass never reached", () => {
+		const search = searcher(["Hugte Lane", "Steel Table", "Huguette Brown", "Hugtx"]);
+		expect(search("hugte").map((r) => r.item)).toEqual(["Hugte Lane", "Hugtx", "Huguette Brown"]);
+	});
+
+	it("answers afresh after a query whose field text threw", () => {
+		let throwing = false;
+		const search = createFuzzySearch(
+			["Hget Lane", "Huguette Brown"],
+			[
+				{
+					text: (s) => {
+						if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
+						return s;
+					},
+					fuzzier,
+				},
+			],
+		);
+		throwing = true;
+		expect(() => search("hget")).toThrow("unreadable");
+		throwing = false;
+		expect(search("hget").map((r) => r.item)).toEqual(["Hget Lane", "Huguette Brown"]);
+	});
+
 	it("is off when a caller passes `false` or `null` for it", () => {
 		const off = [false, null] as unknown as undefined[];
 		for (const fuzzier of off) {

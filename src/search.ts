@@ -154,12 +154,20 @@ export function createFuzzySearch<T>(
 	const hasFuzzier = resolvedSpecs.some((spec) => spec.fuzzier !== null);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
-	// Which result each item holds in the current query, so a fuzzier match can
-	// replace a weaker one. Emptied before the query returns.
+	// Which result each item holds in the current matches, so a fuzzier match
+	// can replace a weaker one; a stamp from an earlier generation means none.
+	// Float64 so the generation count never wraps.
 	// oxlint-disable-next-line unicorn/no-new-array
 	const heldResults: (FuzzyResult<T> | undefined)[] | null = hasFuzzier ? new Array(count) : null;
+	const heldStamps = hasFuzzier ? new Float64Array(count) : null;
 	const heldEndsWord = hasFuzzier ? new Uint8Array(count) : null;
-	let heldItems: number[] = [];
+	let generation = 0;
+	// Where an item's best match ends follows its best field, as scoreItem sets it.
+	const regroupHeld = (i: number, score: number, bestScore: number, endsWord: boolean): void => {
+		const endsWords = heldEndsWord as Uint8Array;
+		if (score < bestScore) endsWords[i] = endsWord ? 1 : 0;
+		else if (score === bestScore && endsWord) endsWords[i] = 1;
+	};
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -243,6 +251,7 @@ export function createFuzzySearch<T>(
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
+		generation++;
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -263,6 +272,8 @@ export function createFuzzySearch<T>(
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
 		let fuzzierRescored = false;
+		// The held items in list order, when the fuzzier pass saw every one.
+		let heldInListOrder: number[] | null = null;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
 		// objects per call, so the atBest shift can mutate.
@@ -280,17 +291,15 @@ export function createFuzzySearch<T>(
 			(endsWord ? boundaryEndMatches : midWordMatches).push(entry);
 			if (heldResults !== null) {
 				heldResults[i] = entry;
+				(heldStamps as Float64Array)[i] = generation;
 				(heldEndsWord as Uint8Array)[i] = endsWord ? 1 : 0;
-				heldItems.push(i);
 			}
 		};
 
 		const forgetMatches = (): void => {
 			boundaryEndMatches = [];
 			midWordMatches = [];
-			if (heldResults === null) return;
-			for (const i of heldItems) heldResults[i] = undefined;
-			heldItems = [];
+			generation++;
 		};
 
 		const scoreItem = (
@@ -417,14 +426,15 @@ export function createFuzzySearch<T>(
 		};
 
 		// A fallback match joins the item's results, or replaces a weaker fuzzy or
-		// corrected one; a literal match is never touched.
+		// corrected one; a literal match is never touched. Returns whether it did.
 		const offerFallbacks = (
 			i: number,
 			held: FuzzyResult<T> | undefined,
 			fallbacks: (PreparedStrategy | null)[],
-		): void => {
+		): boolean => {
 			const base = i * specCount;
 			let entry = held;
+			let offered = false;
 			for (let f = 0; f < specCount; f++) {
 				const fallback = fallbacks[f];
 				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
@@ -442,25 +452,30 @@ export function createFuzzySearch<T>(
 					fields[f] = result;
 					entry = { item: list[i], score: result.score, fields };
 					record(i, entry, endsWord);
-					fuzzierRescored = true;
+					offered = true;
 				} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
 					entry.fields[f] = result;
-					const endsWords = heldEndsWord as Uint8Array;
-					if (result.score < entry.score) endsWords[i] = endsWord ? 1 : 0;
-					else if (result.score === entry.score && endsWord) endsWords[i] = 1;
+					regroupHeld(i, result.score, entry.score, endsWord);
 					entry.score = Math.min(entry.score, result.score);
-					fuzzierRescored = true;
+					offered = true;
 				}
 			}
+			return offered;
 		};
 
 		// The order the two lists and the stable sort give, rebuilt for the items
 		// the fuzzier pass added or rescored.
 		const heldInOrder = (): FuzzyResult<T>[] => {
 			const results = heldResults as FuzzyResult<T>[];
+			const stamps = heldStamps as Float64Array;
 			const endsWords = heldEndsWord as Uint8Array;
-			return heldItems
-				.sort((a, b) => results[a].score - results[b].score || endsWords[b] - endsWords[a] || a - b)
+			let held = heldInListOrder;
+			if (held === null) {
+				held = [];
+				for (let i = 0; i < count; i++) if (stamps[i] === generation) held.push(i);
+			}
+			return held
+				.sort((a, b) => results[a].score - results[b].score || endsWords[b] - endsWords[a])
 				.map((i) => results[i]);
 		};
 
@@ -473,12 +488,18 @@ export function createFuzzySearch<T>(
 			const survivorsOnly = competing && normalisedQuery === prepared.queryWords[0];
 			if (!survivorsOnly) unionIndex ??= buildUnionIndex();
 			const scanned = survivorsOnly ? survivorCount : count;
+			const seen: number[] = [];
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
-				const held = (heldResults as (FuzzyResult<T> | undefined)[])[i];
+				const held = (heldStamps as Float64Array)[i] === generation ? heldResults?.[i] : undefined;
+				if (held !== undefined) seen.push(i);
 				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
-				offerFallbacks(i, held, fallbacks);
+				if (!offerFallbacks(i, held, fallbacks)) continue;
+				fuzzierRescored = true;
+				if (held === undefined) seen.push(i);
 			}
+			// The relaxed pass matches items outside the survivors.
+			if (!survivorsOnly || !rescuing) heldInListOrder = seen;
 		};
 
 		const commitSurvivorCache = (seedNextQuery: boolean): void => {
@@ -522,7 +543,6 @@ export function createFuzzySearch<T>(
 		const results = fuzzierRescored
 			? heldInOrder()
 			: boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
-		forgetMatches();
 		if (limit !== undefined && results.length > limit) results.length = limit;
 		return results;
 	};

@@ -433,17 +433,19 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 	};
 };
 
-type Reading = { query: string; competing: boolean; strategy: PreparedStrategy | null };
+// Indexed by `competing`; undefined until that reading is first prepared.
+type Readings = { query: string; byCompeting: (PreparedStrategy | null | undefined)[] };
 
 // fuzzyMatch prepares its query per call, and a list matched one call per row
-// would otherwise rebuild the same gates for every row.
-let lastReading: Reading | null = null;
+// would otherwise rebuild the same gates for every row, competing or not.
+let lastReadings: Readings | null = null;
 
 const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
-	if (lastReading?.query !== prepared.query || lastReading.competing !== competing) {
-		lastReading = { query: prepared.query, competing, strategy: prepareReading(prepared, competing) };
+	if (lastReadings?.query !== prepared.query) {
+		lastReadings = { query: prepared.query, byCompeting: [undefined, undefined] };
 	}
-	return lastReading.strategy;
+	const slot = competing ? 1 : 0;
+	return (lastReadings.byCompeting[slot] ??= prepareReading(prepared, competing));
 };
 
 const fuzzierStrategy: Strategy = { prepare };

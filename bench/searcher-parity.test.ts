@@ -9,7 +9,6 @@
  */
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
-import { charMask } from "../src/gates";
 import { createFuzzySearch, fuzzier, fuzzyMatch, normaliseText, splitWords } from "../src/index";
 import { prepareBoundedQuery } from "../src/match";
 import { isShortQuery } from "../src/rescue";
@@ -80,9 +79,7 @@ const withFuzzierReading = (
 		const held = plain.get(item);
 		if (held !== undefined && held <= SCORES.CONTAINS) continue;
 		const field = item.trim();
-		const normalisedField = normaliseText(field);
-		if (!reading.admitsMask(charMask(normalisedField)) || !reading.admitsText(field)) continue;
-		const score = reading.match(field, normalisedField)?.score;
+		const score = reading.match(field, normaliseText(field))?.score;
 		if (score !== undefined && score < (held ?? Infinity)) expected.set(item, score);
 	}
 	return expected;
