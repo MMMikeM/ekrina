@@ -674,7 +674,7 @@ Every cell is process-cold, so read the columns as three different workloads.
 The **batch** column is the headline: one process, 24 distinct queries, so it shows whether the amortisation each design promises actually happens.
 Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts most items before any ladder work, and the lazy preparation happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
 _Ekrina (indexed) takes the batch at 100k among the configurations above 0.5 MRR_: 67% of base Ekrina's time on en and 64% on native.
-Folding uFuzzy ties base Ekrina on en (104%) and is faster on native (86%); bare uFuzzy, which can't fold and so is timed on en only, is faster again (72%, on [its page](./libraries/ufuzzy.md#speed-at-100k)), at 0.21 MRR bare and 0.66 folding.
+Folding uFuzzy ties base Ekrina on en (104%) and is faster on native (86%); bare uFuzzy, which can't fold and so is shown on en only, is faster again (72%, on [its page](./libraries/ufuzzy.md#speed-at-100k)), at 0.21 MRR bare and 0.66 folding.
 Ekrina (fuzzier) costs 24–34% over base Ekrina's batch for its 0.70 → 0.90 MRR.
 Base Ekrina's batch runs ~4.6–7× faster than microfuzz's, ~2× fuzzysort's, ~8–9× match-sorter's and ~41–46× Fuse.js (tuned)'s, and ~19× faster than fast-fuzzy's on en, the corpus it is timed on since it can't fold.
 The **cold query** column is where Ekrina's laziness shows up: 10–14 ms mean at 100k (en, native), most of it the rescue's union-and-bigram mask build (Ekrina (indexed), which builds it in its 10–15 ms constructor, answers first in 2.7–3.4 ms), done once per searcher and visible per query in the cells of [`bench/results.json`](../bench/results.json).
@@ -732,6 +732,7 @@ A hit is then either the fuzzy tier assembling a chain (**fuzzy junk**) or the o
 
 The fuzzy tier junk-matches none of the absent words up to 128 characters, rising to 2% from 2,048, and the fuzzier opt-in adds nothing at any length; every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly).
 Corrections rise with length to 3.5% at 16k, since a longer document holds more words one edit from any given query.
+The rates move with the words drawn: a separate draw of 400 absent words measured fuzzy junk at 3.5% on native and 4.3% on en from 4,096 characters up, so read the table as 2–4%.
 Miss time includes the one-edit rescues (a miss must fail those too), and it stays under 0.4 ms at 16k chars.
 Literal-only matching, for callers that want no fuzzy assemblies or corrections at all, is a one-line `tier` filter.
 [`bench/longtext.test.ts`](../bench/longtext.test.ts) keeps this table as a regression guard, failing if any of the three rates rises above 5%.
@@ -744,7 +745,7 @@ The recommendation is to _pick Ekrina for list matching_, with `fuzzier` on when
   Base Ekrina scores 0.70 on every corpus with no junk: its one-edit rescue covers the one-edit families, and the opt-in adds the two-edit, split, joined and sparse readings.
 - **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (19.4 ms at native 10k, ~0.64 ms per query after the first), Ekrina (fuzzier) the fastest at 0.80 or above (29.9 ms, ~0.88 ms per query), and both run several times under every typo-tolerant or tiered alternative, with a near-zero constructor, ~6.4 kB gzip and zero deps.
   The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 4–5 ms at 10k and 10–14 ms at 100k across the timed queries, or ~2 ms and 2.7–3.4 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
-- **Long text**: the density floor holds `fuzzyMatch` junk to 2% or less at every measured document length, so the same engine covers documents as well as labels.
+- **Long text**: the density floor holds `fuzzyMatch` junk to 2–4% at every measured document length, so the same engine covers documents as well as labels.
 
 The carve-outs:
 

@@ -180,7 +180,7 @@ So for a short query, a list can show fewer corrections than `fuzzyMatch` return
   Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; the exact long word `gensler` returns 1 row where the chain engines return 12 and Fuse.js 971 on its defaults.
 - **Backend one-shot lookups**: constructor + first answer takes 4–5 ms in a cold process over 10k items, so indexing per request is fine.
-- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.38 ms, and the density floor, the minimum share of its span a fuzzy chain must cover, holds false matches of absent words to 2% or less.
+- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.38 ms, and the density floor, the minimum share of its span a fuzzy chain must cover, holds false matches of absent words to 2–4%.
 
 ## Scores and tiers
 
@@ -222,7 +222,7 @@ if (top?.tier === "corrected") notice(`Showing results for ${top.corrected}`);
 All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.
 
 > **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk, since a long enough text holds the letters of almost any word somewhere.
-> The fuzzy tier refuses any assembly covering less than 18% of its span, which holds the junk rate for absent words to _2% or less at every measured length_ on real text ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
+> The fuzzy tier refuses any assembly covering less than 18% of its span, which holds the junk rate for absent words to _2–4% at every measured length_ on real text, depending on the corpus and the words drawn ([the long-text table](./docs/benchmarks.md#matching-inside-long-text)).
 
 > **Acronym semantics:** apostrophes are word-internal, so `People's` contributes one initial, `p`, and `lpdr` matches `Lao People's Democratic Republic`.
 > Stopwords count too: `Democratic Republic of the Congo` is `drotc`, and `drc` matches nothing (the density floor rejects so sparse a chain).
@@ -230,7 +230,7 @@ All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) with
 ## The fuzzy tier
 
 Ekrina ships one opinionated fuzzy mode, always on, with no strategy knob.
-Chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long-text junk to 2% or less).
+Chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long-text junk to 2–4%).
 Anything it refuses either matched a higher tier already or wasn't worth showing; keep only `score <= SCORES.CONTAINS` if you want literal matches only.
 
 ## Migrating from `@nozbe/microfuzz`
@@ -264,7 +264,7 @@ Behavioural differences:
 - **There is no `strategy` option.**
   `'smart'` is the always-on behaviour.
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
-  `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2% or less.
+  `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
 - **Typos match.**
   On the same queries microfuzz scores 0.41 MRR, Ekrina 0.70 and Ekrina with `fuzzier` 0.90 ([the scorecard](./docs/benchmarks.md#scorecard)).
 - **`normalizeText` is `normaliseText`.**
