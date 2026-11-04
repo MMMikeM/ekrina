@@ -264,8 +264,16 @@ describe("a space counts as one edit", () => {
 		expect(fuzzyMatch("Lockman Dubuque", "lockmandxbxque", opt)).toBeNull();
 	});
 
-	it("needs eight letters once the space is gone", () => {
+	it("needs eight letters once the space is gone to fix another mistake", () => {
 		expect(fuzzyMatch("Hillside", "hil sidx", opt)).toBeNull();
+	});
+
+	it("rejoins a shorter word when the space was the only mistake", () => {
+		expect(fuzzyMatch("Clinton Kub", "cli nton", opt)?.corrected).toBe("Clinton");
+		expect(fuzzyMatch("Clinton Kub", "cli ntxn", opt)).toBeNull();
+		expect(fuzzyMatch("Kristy", "kri sty", opt)?.corrected).toBe("Kristy");
+		expect(fuzzyMatch("Kristy", "kr isty", opt)?.corrected).toBe("Kristy");
+		expect(fuzzyMatch("Kris", "kr is", opt)).toBeNull();
 	});
 });
 

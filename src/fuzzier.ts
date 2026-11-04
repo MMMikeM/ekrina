@@ -10,6 +10,9 @@ const MAX_EDITS = 2;
 // Below this a second edit reaches too many other words: unanswerable 7-letter
 // queries got an answer 20% of the time, against 15% at 8.
 const MIN_TWO_EDIT_WORD_LENGTH = 8;
+// A stray space alone is the least ambiguous mistake to undo, so a word this
+// short is rejoined only when the space was the one mistake.
+const MIN_REJOINED_LENGTH = 6;
 const MIN_PHRASE_CORRECTION_LENGTH = 5;
 const MIN_SCATTER_LENGTH = 4;
 const MAX_WORD_LENGTH = 64;
@@ -222,17 +225,19 @@ const correction = (
 };
 
 // A space typed or forgotten counts as one edit: `spaces` is how many the
-// reading already spent, and two adjacent field words read joined spend one.
+// reading already spent, `spare` how many more it may, and two adjacent field
+// words read joined spend one of those.
 const correctWord = (
 	word: string,
 	field: string,
 	normalisedField: string,
 	words: FieldWord[],
 	spaces: number,
+	spare: number,
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
 	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
-		const budget = MAX_EDITS - spaces - joinedEdits;
+		const budget = spare - joinedEdits;
 		const length = first === last ? first.word.length : first.word.length + last.word.length;
 		if (!lengthsWithin(word.length, length, budget)) return;
 		const target = first === last ? first.word : first.word + last.word;
@@ -381,7 +386,11 @@ const correctPhrase = (
 };
 
 const mayBeOneWord = (queryWords: string[]): boolean =>
-	queryWords.length === 2 && queryWords[0].length + queryWords[1].length >= MIN_TWO_EDIT_WORD_LENGTH;
+	queryWords.length === 2 && queryWords[0].length + queryWords[1].length >= MIN_REJOINED_LENGTH;
+
+// The edits a two-word query read as one word may spend beside the space.
+const spareBesideSpace = (queryWords: string[]): number =>
+	queryWords.join("").length >= MIN_TWO_EDIT_WORD_LENGTH ? MAX_EDITS - 1 : 0;
 
 // A two-word query is also read as one word with a stray space in it.
 const correctSplitWord = (
@@ -391,7 +400,9 @@ const correctSplitWord = (
 	words: FieldWord[],
 ): MatchResult | null => {
 	const joined = queryWords.join("");
-	return mayBeOneWord(queryWords) ? correctWord(joined, field, normalisedField, words, 1) : null;
+	return mayBeOneWord(queryWords)
+		? correctWord(joined, field, normalisedField, words, 1, spareBesideSpace(queryWords))
+		: null;
 };
 
 // An adjacent swap breaks the three letter pairs around it; every other edit
@@ -429,7 +440,7 @@ const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number):
 
 // A phrase word under five letters is never corrected, so its pairs all occur;
 // the rest lose at most what the edits break. Read as one word, the joined
-// query has one edit to spare beside the space.
+// query loses only what its edits beside the space break.
 const phrasePairs = (queryWords: string[]): NonNullable<PreparedStrategy["admitsPairs"]> => {
 	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
 	const all = pairsOf(queryWords);
@@ -438,7 +449,7 @@ const phrasePairs = (queryWords: string[]): NonNullable<PreparedStrategy["admits
 		(lacksPairsAtMost(short, lo, hi, 0) &&
 			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
 		(joined !== null &&
-			lacksPairsAtMost(joined, lo, hi, (MAX_EDITS - 1) * PAIRS_ONE_EDIT_BREAKS));
+			lacksPairsAtMost(joined, lo, hi, spareBesideSpace(queryWords) * PAIRS_ONE_EDIT_BREAKS));
 };
 
 type Gates = Pick<PreparedStrategy, "admitsMask" | "admitsText">;
@@ -482,16 +493,16 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 		words: FieldWord[],
 	): MatchResult | null =>
 		better(
-			editable ? correctWord(word, field, normalisedField, words, 0) : null,
+			editable ? correctWord(word, field, normalisedField, words, 0, MAX_EDITS) : null,
 			scatterWord(word, field, normalisedField, words),
 		);
 	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
 	const matchable = phrase
 		? correctable || mayBeOneWord(queryWords)
 		: letters.length >= MIN_SCATTER_LENGTH;
-	// With no word long enough to correct, only the one edit beside a stray
-	// space can leave a letter unmatched.
-	const unmatched = phrase && !correctable ? MAX_EDITS - 1 : MAX_EDITS;
+	// With no word long enough to correct, only an edit beside a stray space can
+	// leave a letter unmatched.
+	const unmatched = phrase && !correctable ? spareBesideSpace(queryWords) : MAX_EDITS;
 	if (!matchable) return null;
 	return {
 		...(editable ? editGates(letters, unmatched) : scatterGates(letters)),
