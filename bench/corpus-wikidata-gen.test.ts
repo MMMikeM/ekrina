@@ -1,5 +1,5 @@
 /**
- * One-shot generator for corpus-wikidata-*.json and misspellings.json. Wikidata
+ * One-shot generator for corpus-en.json, corpus-native.json and misspellings.json. Wikidata
  * changes daily, so these files, not this script, are the corpus: running it
  * again redraws every item and every query sampled from them. Gated:
  *   GEN_WIKIDATA=1 pnpm --filter=ekrina-bench exec vitest run corpus-wikidata-gen
@@ -119,8 +119,8 @@ it.skipIf(!process.env.GEN_WIKIDATA)("regenerates the Wikidata corpus and misspe
 		en.push(row[1]);
 		native.push(row[2] || row[1]);
 	}
-	writeFileSync(new URL("./corpus-wikidata-en.json", import.meta.url), JSON.stringify(en));
-	writeFileSync(new URL("./corpus-wikidata-native.json", import.meta.url), JSON.stringify(native));
+	writeFileSync(new URL("./corpus-en.json", import.meta.url), JSON.stringify(en));
+	writeFileSync(new URL("./corpus-native.json", import.meta.url), JSON.stringify(native));
 
 	const page = await get(`https://en.wikipedia.org/w/index.php?oldid=${MISSPELLINGS_REVISION}&action=raw`);
 	const source = `https://en.wikipedia.org/w/index.php?title=Wikipedia:Lists_of_common_misspellings/For_machines&oldid=${MISSPELLINGS_REVISION}`;

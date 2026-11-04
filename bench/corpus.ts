@@ -1,33 +1,32 @@
 /**
  * Corpora + queries from the committed corpus-*.json snapshots. Frozen on
  * purpose: every published rank and MRR derives from these exact sequences,
- * and regeneration (corpus-gen.test.ts, GEN_CORPUS=1) changes the probes too.
- * `ascii` is en-locale; `mixed` lands ~5% of items with a diacritic (every
- * 7th item from fr/pl generators). Every non-miss query records its `source`
- * item so hits.test.ts can check each library surfaces it, and where.
+ * and regenerating them (corpus-wikidata-gen.test.ts, corpus-emoji-gen.test.ts)
+ * redraws every query too. `en` holds the English labels of the best-known
+ * Wikidata people, places, works, organisations and products; `native` the same
+ * items under their native names where Wikidata records one, so a tenth of it is
+ * in a non-Latin script. Every representative query records its `source` item
+ * so hits.test.ts can check each library surfaces it, and where.
  */
 import { readFileSync } from "node:fs";
+import { type CatalogueSample, catalogueSamples, HELD_OUT_SEED, type Misspellings } from "./catalogue.ts";
+import { foldedWords, stripAccents, wordsOf } from "./words.ts";
 
 // readFileSync, not JSON module imports: import attributes differ between
 // vitest's bundler and plain node (bench/run.ts children).
-const loadCorpus = (file: string): string[] =>
-	JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as string[];
-const asciiJson: string[] = loadCorpus("./corpus-ascii.json");
-const mixedJson: string[] = loadCorpus("./corpus-mixed.json");
+const loadJson = <T>(file: string): T => JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as T;
 
-// Generation was one reseed + sequential appends, so a prefix slice equals a
-// smaller build (1k ⊂ 10k ⊂ 100k) and 2k-sample queries hit at any size.
+/** Correct word → misspellings seen in the wild, from Wikipedia's list (misspellings.json). */
+export const MISSPELLINGS: Misspellings = loadJson<{ misspellings: Misspellings }>("./misspellings.json").misspellings;
+
+// Interleaved at generation, so a prefix slice keeps the corpus's mix
+// (1k ⊂ 10k ⊂ 100k) and queries derived from a small slice hit at any size.
 const slicer =
 	(data: string[]) =>
 	(n: number): string[] => {
-		if (n > data.length)
-			throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
+		if (n > data.length) throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
 		return data.slice(0, n);
 	};
-
-export const wordsOf = (s: string): string[] => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-const everyOther = (w: string): string => [...w].filter((_, k) => k % 2 === 0).join("");
-const stripAccents = (s: string): string => s.normalize("NFD").replace(/\p{M}+/gu, "");
 
 export type QuerySpec = {
 	query: string;
@@ -60,6 +59,9 @@ export type QuerySpec = {
 	source: string | null;
 };
 
+const plain = (word: string | undefined): word is string => word !== undefined && /^[a-z]+$/.test(word);
+const everyOther = (w: string): string => [...w].filter((_, k) => k % 2 === 0).join("");
+
 // Swaps at/after the middle, breaking the subsequence property on purpose:
 // transposition is edit-distance territory, not subsequence territory.
 const transpose = (w: string): string => {
@@ -84,188 +86,122 @@ const substitute = (w: string): string => {
 	return w.slice(0, k) + replacement + w.slice(k + 1);
 };
 
-// Derived from a fixed sample so every probe (bar the misses) actually matches.
+// Each kind takes the first item, from a fixed start, that can carry it: two
+// plain words, a long enough word, a word few items hold. A query a library
+// ranks inside a block of identical candidates measures list order, so every
+// word the probes are built on is held by at most two items of the 10k list.
 const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 	const sample = build(2000);
-	const wordAt = (i: number): string => wordsOf(sample[i])[0] ?? "steel";
-	const specs: QuerySpec[] = [
-		{ query: wordAt(4).toLowerCase(), kind: "long-word", source: sample[4] },
-		{ query: wordAt(517).toLowerCase(), kind: "short-word", source: sample[517] },
-		{
-			query: wordsOf(sample[8]).slice(0, 2).join(" ").toLowerCase(),
-			kind: "two-words",
-			source: sample[8],
-		},
+	const list = build(10_000);
+	const holding = new Map<string, Set<number>>();
+	for (const [at, item] of list.entries()) {
+		for (const word of foldedWords(item)) holding.set(word, (holding.get(word) ?? new Set()).add(at));
+	}
+	const vocabulary = new Set(holding.keys());
+	const holders = (first: string, ...rest: string[]): number =>
+		[...(holding.get(first) ?? [])].filter((at) => rest.every((word) => holding.get(word)?.has(at))).length;
+	const isNearUnique = (first: string, ...rest: string[]): boolean => holders(first, ...rest) <= 2;
+	const isTypo = (query: string): boolean => !query.split(" ").every((word) => vocabulary.has(word));
+	const firstFrom = <T>(start: number, pick: (item: string) => T | null): [T, string] => {
+		for (let i = start; i < sample.length; i++) {
+			const found = pick(sample[i]);
+			if (found !== null) return [found, sample[i]];
+		}
+		throw new Error(`no item from ${start} carries this probe`);
+	};
+	const firstWord = (min: number, max = Infinity) => (item: string): string | null => {
+		const word = foldedWords(item)[0];
+		return plain(word) && word.length >= min && word.length <= max && isNearUnique(word) ? word : null;
+	};
+
+	const [longWord, longSource] = firstFrom(4, firstWord(7));
+	const [shortWord, shortSource] = firstFrom(500, firstWord(4, 6));
+	const [[a, b], pairSource] = firstFrom(8, (item) => {
+		const [x, y] = foldedWords(item);
+		const typed = plain(x) && plain(y) && x.length >= 5 && y.length >= 5;
+		return typed && isNearUnique(x, y) && isTypo(substitute(x)) && isTypo(substitute(y)) ? [x, y] : null;
+	});
+	const [extra] = firstFrom(4, (item) => {
+		const word = foldedWords(item)[0];
+		return plain(word) && word.length >= 5 && word !== a && word !== b && holders(a, b, word) === 0 ? word : null;
+	});
+	const [prefix, prefixSource] = firstFrom(42, (item) => {
+		const word = foldedWords(item)[0];
+		return plain(word) && word.length >= 6 ? word.slice(0, 5) : null;
+	});
+	const [infix, infixSource] = firstFrom(900, (item) => {
+		const word = firstWord(8)(item);
+		return word ? word.slice(2, 7) : null;
+	});
+	// A plural against a singular-only corpus: one deletion. The plural must be
+	// absent, or the probe measures nothing.
+	const [plural, pluralSource] = firstFrom(0, (item) => {
+		const word = foldedWords(item).find((w) => plain(w) && w.length >= 5 && !w.endsWith("s") && isNearUnique(w));
+		return word && !vocabulary.has(`${word}s`) ? `${word}s` : null;
+	});
+	// Below ekrina's five-character typo floor on purpose: what the floor loses.
+	const [shortTypo, shortTypoSource] = firstFrom(1300, (item) => {
+		const word = firstWord(4, 4)(item);
+		return word && isTypo(substitute(word)) ? substitute(word) : null;
+	});
+	// Graded scatter probes from one source word; where a library stops
+	// surfacing the source is its effective fuzzy limit.
+	const [scatterWord, scatterSource] = firstFrom(1300, (item) => {
+		const word = firstWord(7)(item);
+		return word && [substitute(word), transpose(word), doubleChar(word)].every(isTypo) ? word : null;
+	});
+	const mid = Math.floor(scatterWord.length / 2);
+	const [acronym, acronymSource] = firstFrom(0, (item) => {
+		const words = foldedWords(item);
+		return words.length >= 3 && words.length <= 4 && words.every(plain) ? words.map((w) => w[0]).join("") : null;
+	});
+	const [accentStripped, accentSource] = firstFrom(0, (item) => {
+		const word = wordsOf(item.toLowerCase()).find((w) => w.length >= 4 && stripAccents(w) !== w);
+		return word ? stripAccents(word) : null;
+	});
+
+	return [
+		{ query: longWord, kind: "long-word", source: longSource },
+		{ query: shortWord, kind: "short-word", source: shortSource },
+		{ query: `${a} ${b}`, kind: "two-words", source: pairSource },
 		// Substring engines pass the in-order phrase without trying; only genuinely
 		// tokenised matching survives the reversal.
-		{
-			query: wordsOf(sample[8]).slice(0, 2).reverse().join(" ").toLowerCase(),
-			kind: "two-words-reversed",
-			source: sample[8],
-		},
+		{ query: `${b} ${a}`, kind: "two-words-reversed", source: pairSource },
 		// Mid-keystroke on the second word, reversed so no engine passes it as a
 		// prefix of the source.
-		{
-			query: [(wordsOf(sample[8])[1] ?? "chair").slice(0, 3), wordsOf(sample[8])[0] ?? "steel"]
-				.join(" ")
-				.toLowerCase(),
-			kind: "two-words-partial-reversed",
-			source: sample[8],
-		},
+		{ query: `${b.slice(0, 3)} ${a}`, kind: "two-words-partial-reversed", source: pairSource },
 		// The space forgotten: a subsequence of the source, but not a phrase.
-		{
-			query: wordsOf(sample[8]).slice(0, 2).join("").toLowerCase(),
-			kind: "two-words-joined",
-			source: sample[8],
-		},
+		{ query: `${a}${b}`, kind: "two-words-joined", source: pairSource },
 		// No source: one word the item lacks splits AND engines from OR engines,
 		// and neither answer is wrong.
-		{
-			query: [...wordsOf(sample[8]).slice(0, 2), wordAt(4)].join(" ").toLowerCase(),
-			kind: "two-words-extra",
-			source: null,
-		},
+		{ query: `${a} ${b} ${extra}`, kind: "two-words-extra", source: null },
 		// Phrase typos take a different route entirely (presence gate + per-word
 		// rescue): typo in the first word, the second, reversed order, and both
 		// words mistyped — two edits, which a one-edit rescue must refuse.
-		{
-			query: [substitute(wordsOf(sample[8])[0] ?? "steel"), wordsOf(sample[8])[1] ?? "chair"]
-				.join(" ")
-				.toLowerCase(),
-			kind: "two-words-typo",
-			source: sample[8],
-		},
-		{
-			query: [wordsOf(sample[8])[0] ?? "steel", substitute(wordsOf(sample[8])[1] ?? "chair")]
-				.join(" ")
-				.toLowerCase(),
-			kind: "two-words-typo-second",
-			source: sample[8],
-		},
-		{
-			query: [wordsOf(sample[8])[1] ?? "chair", substitute(wordsOf(sample[8])[0] ?? "steel")]
-				.join(" ")
-				.toLowerCase(),
-			kind: "two-words-typo-reversed",
-			source: sample[8],
-		},
+		{ query: `${substitute(a)} ${b}`, kind: "two-words-typo", source: pairSource },
+		{ query: `${a} ${substitute(b)}`, kind: "two-words-typo-second", source: pairSource },
+		{ query: `${b} ${substitute(a)}`, kind: "two-words-typo-reversed", source: pairSource },
 		// No source: the right answer is nothing.
-		{
-			query: [
-				substitute(wordsOf(sample[8])[0] ?? "steel"),
-				substitute(wordsOf(sample[8])[1] ?? "chair"),
-			]
-				.join(" ")
-				.toLowerCase(),
-			kind: "two-words-double-typo",
-			source: null,
-		},
-		{ query: sample[42].slice(0, 5).toLowerCase(), kind: "prefix", source: sample[42] },
+		{ query: `${substitute(a)} ${substitute(b)}`, kind: "two-words-double-typo", source: null },
+		{ query: prefix, kind: "prefix", source: prefixSource },
+		// An interior slice, never a prefix: separates contains-anywhere matching
+		// from start-anchored ranking.
+		{ query: infix, kind: "infix", source: infixSource },
+		{ query: plural, kind: "plural-to-singular", source: pluralSource },
+		{ query: shortTypo, kind: "short-word-typo", source: shortTypoSource },
+		{ query: scatterWord.slice(0, mid) + scatterWord.slice(mid + 1), kind: "scatter-light", source: scatterSource },
+		{ query: [...scatterWord].filter((_, k) => k % 3 !== 2).join(""), kind: "scatter-medium", source: scatterSource },
+		{ query: everyOther(scatterWord), kind: "scatter-heavy", source: scatterSource },
+		// The three edits that break the subsequence property outright — only
+		// edit-distance matching recovers these.
+		{ query: transpose(scatterWord), kind: "transposition", source: scatterSource },
+		{ query: doubleChar(scatterWord), kind: "insertion", source: scatterSource },
+		{ query: substitute(scatterWord), kind: "substitution", source: scatterSource },
+		// Subsequence engines can only hit initials as scattered chains.
+		{ query: acronym, kind: "acronym", source: acronymSource },
+		{ query: accentStripped, kind: "accent-stripped", source: accentSource },
+		{ query: "qxzwkv", kind: "miss", source: null },
 	];
-
-	// An interior slice, never a prefix: separates contains-anywhere matching
-	// from start-anchored ranking.
-	for (let i = 900; i < sample.length; i++) {
-		const infixWord = wordsOf(sample[i])[0] ?? "";
-		if (infixWord.length >= 8) {
-			specs.push({ query: infixWord.slice(2, 7).toLowerCase(), kind: "infix", source: sample[i] });
-			break;
-		}
-	}
-	// Graded scatter probes from ONE ≥7-char source word; where a library stops
-	// surfacing the source is its effective fuzzy limit. The word must be
-	// near-unique: faker template words appear in ~80 items, and a source's
-	// rank inside such a tie block is stable-sort corpus order — noise. This is
-	// what makes rank mean rank on every probe derived from this word.
-	const corpus10k = build(10_000).map((item) => item.toLowerCase());
-	const isNearUnique = (word: string): boolean => {
-		const needle = word.toLowerCase();
-		let holders = 0;
-		for (const item of corpus10k) {
-			if (item.includes(needle) && wordsOf(item).includes(needle) && ++holders > 2) return false;
-		}
-		return true;
-	};
-	// A plural against a singular-only corpus: one deletion. The word must be
-	// absent in plural form (or the probe measures nothing) and near-unique by
-	// the same tie-block argument.
-	{
-		const present = new Set(sample.flatMap((s) => wordsOf(s).map((w) => w.toLowerCase())));
-		outer: for (let i = 0; i < sample.length; i++) {
-			for (const raw of wordsOf(sample[i])) {
-				const word = raw.toLowerCase();
-				if (word.length < 5 || word.endsWith("s") || present.has(`${word}s`)) continue;
-				if (!isNearUnique(word)) continue;
-				specs.push({ query: `${word}s`, kind: "plural-to-singular", source: sample[i] });
-				break outer;
-			}
-		}
-	}
-	// Below ekrina's five-character typo floor on purpose: what the floor loses.
-	for (let i = 1300; i < sample.length; i++) {
-		const shortWord = wordsOf(sample[i])[0] ?? "";
-		if (/^\p{L}{4}$/u.test(shortWord) && isNearUnique(shortWord)) {
-			specs.push({
-				query: substitute(shortWord).toLowerCase(),
-				kind: "short-word-typo",
-				source: sample[i],
-			});
-			break;
-		}
-	}
-	for (let i = 1300; i < sample.length; i++) {
-		const scatterWord = wordsOf(sample[i])[0] ?? "";
-		if (scatterWord.length >= 7 && isNearUnique(scatterWord)) {
-			const mid = Math.floor(scatterWord.length / 2);
-			specs.push(
-				{
-					query: (scatterWord.slice(0, mid) + scatterWord.slice(mid + 1)).toLowerCase(),
-					kind: "scatter-light",
-					source: sample[i],
-				},
-				{
-					query: [...scatterWord]
-						.filter((_, k) => k % 3 !== 2)
-						.join("")
-						.toLowerCase(),
-					kind: "scatter-medium",
-					source: sample[i],
-				},
-				{ query: everyOther(scatterWord).toLowerCase(), kind: "scatter-heavy", source: sample[i] },
-				// The three edits that break the subsequence property outright —
-				// only edit-distance matching recovers these.
-				{ query: transpose(scatterWord).toLowerCase(), kind: "transposition", source: sample[i] },
-				{ query: doubleChar(scatterWord).toLowerCase(), kind: "insertion", source: sample[i] },
-				{ query: substitute(scatterWord).toLowerCase(), kind: "substitution", source: sample[i] },
-			);
-			break;
-		}
-	}
-	// Initials of the first 3+-word item ("Rath, Streich and Witting" → "rsaw");
-	// subsequence engines can only hit these as scattered chains.
-	const acronymItem = sample.find((item) => wordsOf(item).length >= 3);
-	if (acronymItem) {
-		specs.push({
-			query: wordsOf(acronymItem)
-				.map((w) => w[0])
-				.join("")
-				.toLowerCase(),
-			kind: "acronym",
-			source: acronymItem,
-		});
-	}
-	const isAccentedWord = (w: string): boolean => w.length >= 4 && stripAccents(w) !== w;
-	const accentedItem = sample.find((item) => wordsOf(item).some(isAccentedWord));
-	if (accentedItem) {
-		const accentedWord = wordsOf(accentedItem).find(isAccentedWord) as string;
-		specs.push({
-			query: stripAccents(accentedWord).toLowerCase(),
-			kind: "accent-stripped",
-			source: accentedItem,
-		});
-	}
-	specs.push({ query: "qxzwkv", kind: "miss", source: null });
-	return specs;
 };
 
 // The kinds timed cold, one process per cell: each takes a different path
@@ -280,254 +216,64 @@ export const TIMED_KINDS: QuerySpec["kind"][] = [
 	"miss",
 ];
 
-// A sampled query is scored against every item a person typing it could have
-// meant, so no library is credited for breaking a tie the right way. Refusal
-// families have no relevant item at all and are reported, not scored.
-export type SampledQuery = {
-	kind: QuerySpec["kind"];
-	query: string;
-	relevant: ((item: string) => boolean) | null;
-};
-
-const SAMPLES_PER_FAMILY = 10;
 export const SAMPLE_SIZE = 10_000;
-// A query dozens of items could answer is scored by whether a library matches
-// at all, not by how it ranks, so only near-unique intents are sampled.
-const MAX_RELEVANT_ITEMS = 3;
-
-// Relevance is judged on the bench's own folding, never the library under test's.
-const fold = (s: string): string => stripAccents(s).toLowerCase();
-const foldedWordsCache = new Map<string, string[]>();
-/** Drops the folded words cached for items no longer scored, such as a padded copy of the list. */
-export const forgetFoldedWords = (): void => foldedWordsCache.clear();
-
-export const foldedWords = (item: string): string[] => {
-	let words = foldedWordsCache.get(item);
-	if (words === undefined) foldedWordsCache.set(item, (words = wordsOf(fold(item))));
-	return words;
-};
-export const holdsWords =
-	(...wanted: string[]) =>
-	(item: string): boolean => {
-		const words = foldedWords(item);
-		return wanted.every((w) => words.includes(fold(w)));
-	};
-export const holdsWordWhere =
-	(test: (word: string) => boolean, ...alsoHolds: string[]) =>
-	(item: string): boolean =>
-		foldedWords(item).some(test) && holdsWords(...alsoHolds)(item);
-const initialsOf = (item: string): string =>
-	foldedWords(item)
-		.map((w) => w[0])
-		.join("");
-
-// A fixed shuffle of the list, so sources come from every position rather
-// than the head, where a list-order tie-break would favour them.
-export const shuffledIndices = (n: number, seed: number): number[] => {
-	const order = Array.from({ length: n }, (_, i) => i);
-	let state = seed;
-	for (let i = n - 1; i > 0; i--) {
-		state = (state * 1103515245 + 12345) & 0x7fffffff;
-		const j = state % (i + 1);
-		[order[i], order[j]] = [order[j], order[i]];
-	}
-	return order;
-};
-
-export const answeredByFew = (items: string[], relevant: (item: string) => boolean): boolean => {
-	let found = 0;
-	for (const item of items) if (relevant(item) && ++found > MAX_RELEVANT_ITEMS) return false;
-	return true;
-};
-
-type Derived = { query: string; relevant: ((item: string) => boolean) | null } | null;
-type Family = { kind: QuerySpec["kind"]; derive: (words: string[], item: string) => Derived };
-
-const sampleQueries = (items: string[], seedOffset: number): SampledQuery[] => {
-	const vocabulary = new Set(items.flatMap(foldedWords));
-	// A corrupted query that is itself a corpus word is a correct query, not a typo.
-	const typo = (query: string): string | null => (vocabulary.has(fold(query)) ? null : query);
-	const noItemHolds = (...words: string[]): boolean => !items.some(holdsWords(...words));
-	const twoWords = (words: string[]): words is [string, string, ...string[]] =>
-		words.length >= 2 && words[0].length >= 3 && words[1].length >= 3;
-
-	const families: Family[] = [
-		{ kind: "long-word", derive: ([w]) => (w?.length >= 7 ? { query: w, relevant: holdsWords(w) } : null) },
-		{
-			kind: "short-word",
-			derive: ([w]) => (w && w.length >= 4 && w.length <= 6 ? { query: w, relevant: holdsWords(w) } : null),
-		},
-		{
-			kind: "two-words",
-			derive: (ws) => (twoWords(ws) ? { query: `${ws[0]} ${ws[1]}`, relevant: holdsWords(ws[0], ws[1]) } : null),
-		},
-		{
-			kind: "two-words-reversed",
-			derive: (ws) => (twoWords(ws) ? { query: `${ws[1]} ${ws[0]}`, relevant: holdsWords(ws[0], ws[1]) } : null),
-		},
-		{
-			kind: "two-words-partial-reversed",
-			derive: (ws) => {
-				if (!twoWords(ws) || ws[1].length < 5) return null;
-				const typed = fold(ws[1].slice(0, 3));
-				return {
-					query: `${ws[1].slice(0, 3)} ${ws[0]}`,
-					relevant: holdsWordWhere((w) => w.startsWith(typed), ws[0]),
-				};
-			},
-		},
-		{
-			kind: "two-words-joined",
-			derive: (ws) => {
-				const query = twoWords(ws) ? typo(ws[0] + ws[1]) : null;
-				return query ? { query, relevant: holdsWords(ws[0], ws[1]) } : null;
-			},
-		},
-		{
-			kind: "two-words-typo",
-			derive: (ws) => {
-				const t = twoWords(ws) && ws[0].length >= 5 ? typo(substitute(ws[0])) : null;
-				return t ? { query: `${t} ${ws[1]}`, relevant: holdsWords(ws[0], ws[1]) } : null;
-			},
-		},
-		{
-			kind: "two-words-typo-second",
-			derive: (ws) => {
-				const t = twoWords(ws) && ws[1].length >= 5 ? typo(substitute(ws[1])) : null;
-				return t ? { query: `${ws[0]} ${t}`, relevant: holdsWords(ws[0], ws[1]) } : null;
-			},
-		},
-		{
-			kind: "two-words-typo-reversed",
-			derive: (ws) => {
-				const t = twoWords(ws) && ws[0].length >= 5 ? typo(substitute(ws[0])) : null;
-				return t ? { query: `${ws[1]} ${t}`, relevant: holdsWords(ws[0], ws[1]) } : null;
-			},
-		},
-		{
-			kind: "plural-to-singular",
-			derive: (ws) => {
-				const w = ws.find((word) => word.length >= 5 && !word.endsWith("s") && typo(`${word}s`));
-				return w ? { query: `${w}s`, relevant: holdsWords(w) } : null;
-			},
-		},
-		{
-			kind: "short-word-typo",
-			derive: ([w]) => {
-				const t = w && /^\p{L}{4}$/u.test(w) ? typo(substitute(w)) : null;
-				return t ? { query: t, relevant: holdsWords(w) } : null;
-			},
-		},
-		{
-			kind: "prefix",
-			derive: ([w]) => {
-				if (!w || w.length < 6) return null;
-				const typed = w.slice(0, 5);
-				return { query: typed, relevant: holdsWordWhere((word) => word.startsWith(fold(typed))) };
-			},
-		},
-		{
-			kind: "infix",
-			derive: ([w]) => {
-				if (!w || w.length < 8) return null;
-				const typed = w.slice(2, 7);
-				return { query: typed, relevant: holdsWordWhere((word) => word.includes(fold(typed))) };
-			},
-		},
-		...(
-			[
-				["scatter-light", (w: string) => w.slice(0, w.length >> 1) + w.slice((w.length >> 1) + 1)],
-				["scatter-medium", (w: string) => [...w].filter((_, k) => k % 3 !== 2).join("")],
-				["scatter-heavy", everyOther],
-				["transposition", transpose],
-				["insertion", doubleChar],
-				["substitution", substitute],
-			] as const
-		).map(
-			([kind, corrupt]): Family => ({
-				kind,
-				derive: ([w]) => {
-					const t = w && w.length >= 7 ? typo(corrupt(w)) : null;
-					return t && t !== w ? { query: t, relevant: holdsWords(w) } : null;
-				},
-			}),
-		),
-		{
-			kind: "acronym",
-			derive: (ws, item) =>
-				ws.length >= 3 ? { query: initialsOf(item), relevant: (other) => initialsOf(other) === initialsOf(item) } : null,
-		},
-		{
-			kind: "accent-stripped",
-			derive: (ws) => {
-				const w = ws.find((word) => word.length >= 4 && stripAccents(word) !== word);
-				return w ? { query: stripAccents(w), relevant: holdsWords(w) } : null;
-			},
-		},
-		{
-			kind: "two-words-extra",
-			derive: (ws, item) => {
-				if (!twoWords(ws)) return null;
-				const other = foldedWords(items[(items.indexOf(item) + 4999) % items.length])[0];
-				return other && noItemHolds(ws[0], ws[1], other)
-					? { query: `${ws[0]} ${ws[1]} ${other}`, relevant: null }
-					: null;
-			},
-		},
-		{
-			kind: "two-words-double-typo",
-			derive: (ws) => {
-				if (!twoWords(ws) || ws[0].length < 5 || ws[1].length < 5) return null;
-				const first = typo(substitute(ws[0]));
-				const second = typo(substitute(ws[1]));
-				return first && second ? { query: `${first} ${second}`, relevant: null } : null;
-			},
-		},
-	];
-
-	const sampled: SampledQuery[] = [];
-	for (const [seed, { kind, derive }] of families.entries()) {
-		const seen = new Set<string>();
-		for (const at of shuffledIndices(items.length, seedOffset + seed + 1)) {
-			if (seen.size === SAMPLES_PER_FAMILY) break;
-			const derived = derive(wordsOf(items[at].toLowerCase()), items[at]);
-			if (!derived || seen.has(derived.query)) continue;
-			if (derived.relevant && !answeredByFew(items, derived.relevant)) continue;
-			seen.add(derived.query);
-			sampled.push({ kind, ...derived });
-		}
-	}
-	return sampled;
-};
 
 export type Corpus = {
-	name: "ascii" | "mixed";
+	name: "en" | "native";
 	build: (n: number) => string[];
 	specs: QuerySpec[];
 	queries: string[];
-	samples: SampledQuery[];
+	samples: CatalogueSample[];
 };
 
-const makeCorpus = (name: Corpus["name"], build: (n: number) => string[]): Corpus => {
-	const specs = deriveQueries(build);
-	const samples = sampleQueries(build(SAMPLE_SIZE), 0);
-	return { name, build, specs, queries: specs.map((s) => s.query), samples };
+// Derived on first use: every bench/run.ts child loads this module only to
+// build a list, and would otherwise pay for queries it never runs.
+const makeCorpus = (name: Corpus["name"]): Corpus => {
+	const build = slicer(loadJson<string[]>(`./corpus-${name}.json`));
+	let specs: QuerySpec[] | undefined;
+	let samples: CatalogueSample[] | undefined;
+	return {
+		name,
+		build,
+		get specs() {
+			return (specs ??= deriveQueries(build));
+		},
+		get queries() {
+			return this.specs.map((s) => s.query);
+		},
+		get samples() {
+			return (samples ??= catalogueSamples(build(SAMPLE_SIZE), MISSPELLINGS));
+		},
+	};
 };
 
 // Items no published family was drawn from, sampled under other seeds: a
 // tuning change the published families like should hold here too, or it is fit
 // to the published queries rather than to typing.
 const HELD_OUT_FROM = 50_000;
-const HELD_OUT_SEED_OFFSET = 1_000;
 
-export type HeldOut = { items: string[]; samples: SampledQuery[] };
+export type HeldOut = { items: string[]; samples: CatalogueSample[] };
 
 export const heldOut = (corpus: Corpus): HeldOut => {
 	const items = corpus.build(HELD_OUT_FROM + SAMPLE_SIZE).slice(HELD_OUT_FROM);
-	return { items, samples: sampleQueries(items, HELD_OUT_SEED_OFFSET) };
+	return { items, samples: catalogueSamples(items, MISSPELLINGS, HELD_OUT_SEED) };
 };
 
-export const CORPORA: Corpus[] = [
-	makeCorpus("ascii", slicer(asciiJson)),
-	makeCorpus("mixed", slicer(mixedJson)),
-];
+export const CORPORA: Corpus[] = [makeCorpus("en"), makeCorpus("native")];
+
+/** A whole list too short for the 10k and 100k cells, so it is scored for quality only. */
+export type Picker = { name: "emoji"; items: string[]; samples: CatalogueSample[] };
+
+const makePicker = (name: Picker["name"]): Picker => {
+	const items = loadJson<string[]>(`./corpus-${name}.json`);
+	let samples: CatalogueSample[] | undefined;
+	return {
+		name,
+		items,
+		get samples() {
+			return (samples ??= catalogueSamples(items, MISSPELLINGS));
+		},
+	};
+};
+
+export const PICKERS: Picker[] = [makePicker("emoji")];

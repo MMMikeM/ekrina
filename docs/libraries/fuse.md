@@ -31,7 +31,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **mixed corpus:**
 
-<!-- bench:library-fuse-scorecard-mixed -->
+<!-- bench:library-fuse-scorecard-native -->
 | Library             |  MRR | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|---------:|--------:|---------:|------------:|
 | **Fuse.js (tuned)** | 0.82 |     1.26 |   15.02 |   335.78 |       13.46 |
@@ -41,7 +41,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **ascii corpus:**
 
-<!-- bench:library-fuse-scorecard-ascii -->
+<!-- bench:library-fuse-scorecard-en -->
 | Library             |  MRR | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|---------:|--------:|---------:|------------:|
 | **Fuse.js (tuned)** | 0.82 |     1.20 |   15.21 |   331.89 |       13.15 |
@@ -56,7 +56,7 @@ The mixed tables list only the configurations that fold diacritics, so the base 
 
 **ascii corpus:**
 
-<!-- bench:library-fuse-speed-ascii -->
+<!-- bench:library-fuse-speed-en -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
 | **Ekrina**         | 0.36 ms |   12.41 ms |  12.74 ms |  **100%** |
@@ -65,7 +65,7 @@ The mixed tables list only the configurations that fold diacritics, so the base 
 | Fuse.js (tuned)    | 5.55 ms |  130.93 ms | 136.35 ms |     1070% |
 <!-- bench:end -->
 
-<!-- bench:library-fuse-batch-ascii -->
+<!-- bench:library-fuse-batch-en -->
 | Library            | batch/query | batch total | batch rel |
 |--------------------|------------:|------------:|----------:|
 | **Ekrina**         |     2.51 ms |    64.52 ms |  **100%** |
@@ -76,7 +76,7 @@ The mixed tables list only the configurations that fold diacritics, so the base 
 
 **mixed corpus:**
 
-<!-- bench:library-fuse-speed-mixed -->
+<!-- bench:library-fuse-speed-native -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
 | **Ekrina**         | 0.35 ms |   19.22 ms |  19.57 ms |  **100%** |
@@ -84,7 +84,7 @@ The mixed tables list only the configurations that fold diacritics, so the base 
 | Fuse.js (tuned)    | 5.34 ms |  124.03 ms | 129.40 ms |      661% |
 <!-- bench:end -->
 
-<!-- bench:library-fuse-batch-mixed -->
+<!-- bench:library-fuse-batch-native -->
 | Library            | batch/query | batch total | batch rel |
 |--------------------|------------:|------------:|----------:|
 | **Ekrina**         |     2.43 ms |    63.47 ms |  **100%** |
@@ -98,7 +98,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **mixed corpus:**
 
-<!-- bench:library-fuse-families-mixed -->
+<!-- bench:library-fuse-families-native -->
 | Family                     | Fuse.js | Fuse.js (all opts) | Fuse.js (tuned) |
 |----------------------------|--------:|-------------------:|----------------:|
 | long-word                  |    0.94 |               0.94 |            0.94 |
@@ -126,7 +126,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **ascii corpus:**
 
-<!-- bench:library-fuse-families-ascii -->
+<!-- bench:library-fuse-families-en -->
 | Family                     | Fuse.js | Fuse.js (all opts) | Fuse.js (tuned) |
 |----------------------------|--------:|-------------------:|----------------:|
 | long-word                  |    0.96 |               0.96 |            0.96 |

@@ -8,8 +8,8 @@ import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 import { ensureRawDir, rawFile } from "./artifact.ts";
 import { configs } from "./configs.ts";
-import { CORPORA, type SampledQuery, heldOut } from "./corpus";
-import { scoreFamilies, scorecardOf } from "./mrr.ts";
+import { CORPORA, heldOut } from "./corpus";
+import { type Sample, scoreFamilies, scorecardOf } from "./mrr.ts";
 
 const SIZE = 10_000;
 
@@ -17,7 +17,7 @@ const SIZE = 10_000;
 // fit to them; the other libraries would double the suite's time to say nothing.
 const ekrinaRows = (list: string[]) => configs(list).filter((c) => c.name.startsWith("ekrina"));
 
-const score = (list: string[], samples: SampledQuery[]) => {
+const score = (list: string[], samples: Sample[]) => {
 	const all = ekrinaRows(list);
 	const families = scoreFamilies(samples, all, ekrinaRows([...list].reverse()));
 	return { families, scorecard: scorecardOf(families, all) };

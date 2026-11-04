@@ -7,8 +7,8 @@ import { writeFileSync } from "node:fs";
 import { it } from "vite-plus/test";
 import { ensureRawDir, rawFile } from "./artifact.ts";
 import { configs } from "./configs.ts";
-import { CORPORA } from "./corpus";
-import { limitSamples, SAMPLE_SIZE, unanswerable } from "./limits.ts";
+import { CORPORA, SAMPLE_SIZE } from "./corpus";
+import { limitSamples, unanswerable } from "./limits.ts";
 import { scoreFamilies } from "./mrr.ts";
 
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1] ?? 0;

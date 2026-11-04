@@ -233,7 +233,7 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 
 **mixed corpus:**
 
-<!-- bench:families-mixed -->
+<!-- bench:families-native -->
 | Family                     | Ekrina (acronym) | Ekrina | Fuse.js (tuned) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |----------------------------|-----------------:|-------:|----------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
 | long-word                  |             1.00 |   1.00 |            0.94 |              1.00 |       0.93 |      0.93 |         1.00 |             0.94 |  0.93 |
@@ -261,7 +261,7 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR is the me
 
 **ascii corpus:**
 
-<!-- bench:families-ascii -->
+<!-- bench:families-en -->
 | Family                     | Ekrina (acronym) | Ekrina | Fuse.js (tuned) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |----------------------------|-----------------:|-------:|----------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
 | long-word                  |             1.00 |   1.00 |            0.96 |              1.00 |       1.00 |      1.00 |         1.00 |             0.96 |  0.96 |
@@ -290,7 +290,7 @@ Two families have no right answer, so they are reported rather than scored: the 
 
 **mixed corpus:**
 
-<!-- bench:refusals-mixed -->
+<!-- bench:refusals-native -->
 | Family                | Ekrina (acronym) | Ekrina | Fuse.js (tuned) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |-----------------------|-----------------:|-------:|----------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
 | two-words-extra       |                0 |      0 |               0 |                 0 |          1 |         0 |            0 |                0 |     0 |
@@ -299,7 +299,7 @@ Two families have no right answer, so they are reported rather than scored: the 
 
 **ascii corpus:**
 
-<!-- bench:refusals-ascii -->
+<!-- bench:refusals-en -->
 | Family                | Ekrina (acronym) | Ekrina | Fuse.js (tuned) | uFuzzy (all opts) | fast-fuzzy | fuzzysort | match-sorter | @nozbe/microfuzz | fuzzy |
 |-----------------------|-----------------:|-------:|----------------:|------------------:|-----------:|----------:|-------------:|-----------------:|------:|
 | two-words-extra       |                0 |      0 |               0 |                 0 |          2 |         0 |            0 |                0 |     0 |
@@ -394,7 +394,7 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 
 **mixed corpus** (the query set above):
 
-<!-- bench:scorecard-mixed -->
+<!-- bench:scorecard-native -->
 | Library           |  MRR | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|---------:|--------:|---------:|------------:|
 | Ekrina (acronym)  | 0.89 |     0.13 |    3.93 |    18.73 |        0.67 |
@@ -411,7 +411,7 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 
 **ascii corpus** (its own queries over its own items; its accent family has five queries, the accented words the en locale emits, such as `cote` from "Côte d'Ivoire"):
 
-<!-- bench:scorecard-ascii -->
+<!-- bench:scorecard-en -->
 | Library           |  MRR | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|---------:|--------:|---------:|------------:|
 | Ekrina (acronym)  | 0.89 |     0.12 |    3.42 |    19.03 |        0.71 |
@@ -492,7 +492,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 
 ### ascii corpus
 
-<!-- bench:speed-ascii -->
+<!-- bench:speed-en -->
 | Library                   |     index | cold query |     total | total rel |
 |---------------------------|----------:|-----------:|----------:|----------:|
 | **Ekrina**                |   0.36 ms |   12.41 ms |  12.74 ms |  **100%** |
@@ -510,7 +510,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 
 **The session batch** (one process: a warmup match, then every family's representative query once):
 
-<!-- bench:batch-ascii -->
+<!-- bench:batch-en -->
 | Library                   | batch/query | batch total | batch rel |
 |---------------------------|------------:|------------:|----------:|
 | **Ekrina**                |     2.51 ms |    64.52 ms |  **100%** |
@@ -528,7 +528,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 
 ### mixed corpus
 
-<!-- bench:speed-mixed -->
+<!-- bench:speed-native -->
 | Library                   |    index | cold query |     total | total rel |
 |---------------------------|---------:|-----------:|----------:|----------:|
 | **Ekrina**                |  0.35 ms |   19.22 ms |  19.57 ms |  **100%** |
@@ -544,7 +544,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 
 **The session batch** (one process: a warmup match, then every family's representative query once):
 
-<!-- bench:batch-mixed -->
+<!-- bench:batch-native -->
 | Library                   | batch/query | batch total | batch rel |
 |---------------------------|------------:|------------:|----------:|
 | **Ekrina**                |     2.43 ms |    63.47 ms |  **100%** |

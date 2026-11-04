@@ -2,7 +2,7 @@
 // strength people actually reach, and weighted by group before any library is
 // measured. Diagnostic until it replaces corpus.ts's families: catalogue.test.ts
 // reports it, and no published number reads it.
-import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices, wordsOf } from "./corpus.ts";
+import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices, wordsOf } from "./words.ts";
 import { ACCENTED } from "./frontier.ts";
 import {
 	applyEdits,
@@ -36,8 +36,9 @@ type Family = {
 };
 
 const SAMPLES_PER_FAMILY = 10;
-// Clear of every other seed range: published 0, held out 1000, limits 2000, frontier 3000.
-const SEED_OFFSET = 4_000;
+// Clear of every other seed range: limits 2000, frontier 3000.
+export const PUBLISHED_SEED = 4_000;
+export const HELD_OUT_SEED = 5_000;
 
 const plain = (word: string | undefined): word is string => word !== undefined && /^[a-z]+$/.test(word);
 const wordOf = (words: string[], min: number): string | undefined => words.find((word) => plain(word) && word.length >= min);
@@ -284,7 +285,7 @@ const FAMILIES: Family[] = [
 		group: "reported only",
 		kind: "acronym",
 		derive: (words) => {
-			if (words.length < 3) return null;
+			if (words.length < 3 || words.length > 4) return null;
 			const initials = words.map((word) => word[0]).join("");
 			return { query: initials, relevant: (item) => foldedWords(item).map((word) => word[0]).join("") === initials };
 		},
@@ -317,15 +318,19 @@ const realMisspelling = (misspellings: Misspellings): Family => ({
 export type CatalogueSample = Sample & { group: Group };
 
 /** Up to ten queries per family over `items`, each answered by at most three of them. */
-export const catalogueSamples = (items: string[], misspellings?: Misspellings): CatalogueSample[] => {
+export const catalogueSamples = (
+	items: string[],
+	misspellings?: Misspellings,
+	seedOffset = PUBLISHED_SEED,
+): CatalogueSample[] => {
 	const vocabulary = new Set(items.flatMap(foldedWords));
 	const isTypo = (query: string): boolean => !query.split(" ").every((word) => vocabulary.has(word));
 	const families = misspellings ? [...FAMILIES, realMisspelling(misspellings)] : FAMILIES;
 	const sampled: CatalogueSample[] = [];
 	for (const [seed, { group, kind, derive }] of families.entries()) {
-		const random = seeded(SEED_OFFSET + seed + 1);
+		const random = seeded(seedOffset + seed + 1);
 		const seen = new Set<string>();
-		for (const at of shuffledIndices(items.length, SEED_OFFSET + seed + 1)) {
+		for (const at of shuffledIndices(items.length, seedOffset + seed + 1)) {
 			if (seen.size === SAMPLES_PER_FAMILY) break;
 			const derived = derive(foldedWords(items[at]), wordsOf(items[at].toLowerCase()), random, isTypo);
 			if (!derived || seen.has(derived.query) || !answeredByFew(items, derived.relevant)) continue;
@@ -339,7 +344,7 @@ export const catalogueSamples = (items: string[], misspellings?: Misspellings): 
 export type JunkProbe = { kind: string; queries: string[] };
 
 const PROBES_PER_KIND = 20;
-const JUNK_SEED = SEED_OFFSET + 900;
+const JUNK_SEED = PUBLISHED_SEED + 900;
 
 // Junk is probed at several distances from the corpus, so no one library's
 // edit budget decides where "unanswerable" starts.

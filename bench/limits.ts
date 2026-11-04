@@ -2,15 +2,8 @@
 // ekrina's tiers, so each library's limits show up as the cells where it
 // stops finding the item. Diagnostic only: limits.test.ts reports it, and no
 // published number reads it.
-import {
-	answeredByFew,
-	foldedWords,
-	holdsWordWhere,
-	holdsWords,
-	SAMPLE_SIZE,
-	shuffledIndices,
-} from "./corpus.ts";
 import type { Sample } from "./mrr.ts";
+import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices } from "./words.ts";
 
 const SAMPLES_PER_CELL = 10;
 // Clear of every seed corpus.ts samples with, so no cell reuses a published draw.
@@ -306,5 +299,3 @@ export const unanswerable = (items: string[]): Unanswerable[] => {
 		{ kind: "two absent words", queries: pairs },
 	];
 };
-
-export { SAMPLE_SIZE };

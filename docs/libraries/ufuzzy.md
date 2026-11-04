@@ -13,7 +13,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **mixed corpus:**
 
-<!-- bench:library-ufuzzy-scorecard-mixed -->
+<!-- bench:library-ufuzzy-scorecard-native -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
 | **uFuzzy (all opts)** | 0.75 |     4.95 |    1.68 |    23.40 |        0.91 |
@@ -22,7 +22,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **ascii corpus:**
 
-<!-- bench:library-ufuzzy-scorecard-ascii -->
+<!-- bench:library-ufuzzy-scorecard-en -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
 | **uFuzzy (all opts)** | 0.74 |     4.73 |    1.39 |    17.27 |        0.66 |
@@ -36,7 +36,7 @@ Only the ascii corpus is shown, because the mixed tables list only configuration
 
 **ascii corpus:**
 
-<!-- bench:library-ufuzzy-speed-ascii -->
+<!-- bench:library-ufuzzy-speed-en -->
 | Library           |   index | cold query |    total | total rel |
 |-------------------|--------:|-----------:|---------:|----------:|
 | **Ekrina**        | 0.36 ms |   12.41 ms | 12.74 ms |  **100%** |
@@ -44,7 +44,7 @@ Only the ascii corpus is shown, because the mixed tables list only configuration
 | uFuzzy (all opts) | 7.89 ms |    3.09 ms | 11.37 ms |       89% |
 <!-- bench:end -->
 
-<!-- bench:library-ufuzzy-batch-ascii -->
+<!-- bench:library-ufuzzy-batch-en -->
 | Library           | batch/query | batch total | batch rel |
 |-------------------|------------:|------------:|----------:|
 | **Ekrina**        |     2.51 ms |    64.52 ms |  **100%** |
@@ -58,7 +58,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **mixed corpus:**
 
-<!-- bench:library-ufuzzy-families-mixed -->
+<!-- bench:library-ufuzzy-families-native -->
 | Family                     | uFuzzy | uFuzzy (all opts) |
 |----------------------------|-------:|------------------:|
 | long-word                  |   1.00 |              1.00 |
@@ -86,7 +86,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **ascii corpus:**
 
-<!-- bench:library-ufuzzy-families-ascii -->
+<!-- bench:library-ufuzzy-families-en -->
 | Family                     | uFuzzy | uFuzzy (all opts) |
 |----------------------------|-------:|------------------:|
 | long-word                  |   1.00 |              1.00 |

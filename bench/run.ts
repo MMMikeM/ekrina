@@ -11,7 +11,7 @@
  *           never repetition.
  *
  *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
- *   node bench/run.ts ekrina mixed/garbage 10
+ *   node bench/run.ts ekrina native/miss 10
  *   node bench/run.ts all batch 5 --size=10k
  *
  * Variants match by case-insensitive substring; tests by `corpus/kind`, bare
@@ -22,7 +22,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { catalogueSamples, junkProbes } from "./catalogue.ts";
+import { junkProbes } from "./catalogue.ts";
 import { CONFIG_NAMES, configs } from "./configs.ts";
 import { CORPORA, SAMPLE_SIZE, TIMED_KINDS } from "./corpus.ts";
 
@@ -93,7 +93,7 @@ const catalogueTests = (): Test[] =>
 		const items = c.build(SAMPLE_SIZE);
 		const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 		const queries = [
-			...catalogueSamples(items).map((s) => s.query),
+			...c.samples.map((s) => s.query),
 			...junkProbes(items).flatMap((p) => p.queries),
 		];
 		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [warmup, ...queries] };

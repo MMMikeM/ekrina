@@ -13,7 +13,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **mixed corpus:**
 
-<!-- bench:library-fast-fuzzy-scorecard-mixed -->
+<!-- bench:library-fast-fuzzy-scorecard-native -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
 | **fast-fuzzy**        | 0.71 |    27.04 |   14.94 |   170.83 |        6.40 |
@@ -22,7 +22,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **ascii corpus:**
 
-<!-- bench:library-fast-fuzzy-scorecard-ascii -->
+<!-- bench:library-fast-fuzzy-scorecard-en -->
 | Library               |  MRR | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|---------:|--------:|---------:|------------:|
 | **fast-fuzzy**        | 0.70 |    25.42 |   15.21 |   135.02 |        4.99 |
@@ -36,7 +36,7 @@ Only the ascii corpus is shown, because the mixed tables list only configuration
 
 **ascii corpus:**
 
-<!-- bench:library-fast-fuzzy-speed-ascii -->
+<!-- bench:library-fast-fuzzy-speed-en -->
 | Library               |     index | cold query |     total | total rel |
 |-----------------------|----------:|-----------:|----------:|----------:|
 | **Ekrina**            |   0.36 ms |   12.41 ms |  12.74 ms |  **100%** |
@@ -44,7 +44,7 @@ Only the ascii corpus is shown, because the mixed tables list only configuration
 | fast-fuzzy (all opts) | 265.17 ms |   55.47 ms | 323.66 ms |     2540% |
 <!-- bench:end -->
 
-<!-- bench:library-fast-fuzzy-batch-ascii -->
+<!-- bench:library-fast-fuzzy-batch-en -->
 | Library               | batch/query | batch total | batch rel |
 |-----------------------|------------:|------------:|----------:|
 | **Ekrina**            |     2.51 ms |    64.52 ms |  **100%** |
@@ -58,7 +58,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **mixed corpus:**
 
-<!-- bench:library-fast-fuzzy-families-mixed -->
+<!-- bench:library-fast-fuzzy-families-native -->
 | Family                     | fast-fuzzy | fast-fuzzy (all opts) |
 |----------------------------|-----------:|----------------------:|
 | long-word                  |       0.93 |                  0.93 |
@@ -86,7 +86,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **ascii corpus:**
 
-<!-- bench:library-fast-fuzzy-families-ascii -->
+<!-- bench:library-fast-fuzzy-families-en -->
 | Family                     | fast-fuzzy | fast-fuzzy (all opts) |
 |----------------------------|-----------:|----------------------:|
 | long-word                  |       1.00 |                  1.00 |

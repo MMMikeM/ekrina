@@ -5,12 +5,13 @@
  * every benched configuration once per corpus and query and records how many
  * items matched and where the source ranked.
  *
- * MRR@10 comes from the sampled queries instead (corpus.ts `samples`): each is
- * scored by its first relevant result, so any item a person could have meant
- * counts. A second pass over the reversed list finds the ties list order
- * breaks, and a tie mixing relevant and irrelevant items scores its expected
- * first-relevant rank. Ranks are deterministic, so one untimed pass is the
- * whole measurement.
+ * MRR@10 comes from the sampled queries instead (corpus.ts `samples`, drawn
+ * from catalogue.ts's families): each is scored by its first relevant result,
+ * so any item a person could have meant counts. A second pass over the
+ * reversed list finds the ties list order breaks, and a tie mixing relevant and
+ * irrelevant items scores its expected first-relevant rank. The junk rate is
+ * the share of queries nothing answers that a library answers anyway. Ranks are
+ * deterministic, so one untimed pass is the whole measurement.
  */
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
@@ -21,9 +22,10 @@ import {
 	ensureRawDir,
 	rawFile,
 } from "./artifact.ts";
-import { type Probe, configByName, configs } from "./configs.ts";
-import { CORPORA } from "./corpus";
-import { scoreFamilies, scorecardOf, tieAround } from "./mrr.ts";
+import { junkProbes } from "./catalogue.ts";
+import { type Config, type Probe, configByName, configs } from "./configs.ts";
+import { CORPORA, PICKERS } from "./corpus";
+import { type Sample, scoreFamilies, scoreJunk, scorecardOf, tieAround } from "./mrr.ts";
 
 const SIZE = 10_000;
 
@@ -38,6 +40,19 @@ const runOut: Record<
 	string,
 	{ scorecard: ScorecardRow[]; tables: ProbeTable[]; families: FamilyRow[] }
 > = {};
+
+const scored = (list: string[], samples: Sample[], all: Config[], reversedAll: Config[]) => {
+	const families = [...scoreFamilies(samples, all, reversedAll), ...scoreJunk(junkProbes(list), all)];
+	return { families, scorecard: scorecardOf(families, all) };
+};
+
+// Same-process accumulation: the later corpus rewrites the file with every entry.
+const record = (name: string, entry: (typeof runOut)[string]): void => {
+	console.table(entry.scorecard);
+	runOut[name] = entry;
+	ensureRawDir();
+	writeFileSync(rawFile("hits.json"), JSON.stringify(runOut, null, "\t"));
+};
 
 describe("bench validity: per-library match counts and source rank", () => {
 	for (const { name, build, specs, samples } of CORPORA) {
@@ -61,15 +76,7 @@ describe("bench validity: per-library match counts and source rank", () => {
 				tables.push({ kind, query, source, cells });
 			}
 
-			const families = scoreFamilies(samples, all, reversedAll);
-			const scorecard = scorecardOf(families, all);
-			console.table(scorecard);
-
-			// Same-process accumulation: the later corpus rewrites the file with
-			// both entries.
-			runOut[name] = { scorecard, tables, families };
-			ensureRawDir();
-			writeFileSync(rawFile("hits.json"), JSON.stringify(runOut, null, "\t"));
+			record(name, { tables, ...scored(list, samples, all, reversedAll) });
 
 			const countFor = (lib: string, query: string, source: string | null): number =>
 				outcome(configByName(all, lib).probe(query), source).count;
@@ -126,6 +133,12 @@ describe("bench validity: per-library match counts and source rank", () => {
 					).toBeGreaterThanOrEqual(countFor(lib, query, source));
 				}
 			}
+		});
+	}
+	for (const { name, items, samples } of PICKERS) {
+		it(`[${name}] the whole list, scored for quality`, { timeout: 120_000 }, () => {
+			const all = configs(items);
+			record(name, { tables: [], ...scored(items, samples, all, configs([...items].reverse())) });
 		});
 	}
 });

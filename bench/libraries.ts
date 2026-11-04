@@ -168,7 +168,7 @@ export const bySize = (a: string, b: string): number =>
  * job, so it is omitted from that corpus's table rather than flagged in it.
  */
 export const foldsFor = (corpus: string, name: string): boolean => {
-	if (corpus !== "mixed") return true;
+	if (corpus !== "native") return true;
 	const diacritics = metaFor(name)?.features.diacritics;
 	return diacritics === "yes" || (diacritics === "opt-in" && / \((all opts|tuned)\)$/.test(name));
 };

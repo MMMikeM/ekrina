@@ -1,5 +1,5 @@
 /**
- * Frontend session probe: three keystrokes on the 100k mixed corpus starting at
+ * Frontend session probe: three keystrokes on the 100k native corpus starting at
  * the 3-char UI gate, each extending the last (typing). ekrina's prefix-narrowing cache rescans only
  * the previous query's mask-gate survivors, so successive keystrokes get
  * faster; every other library runs a full scan per keystroke.
@@ -37,13 +37,13 @@ const timeQuery = (run: () => number, reset?: () => void): number => {
 };
 
 it("frontend session: three successive queries at 100k", { timeout: 60_000 }, () => {
-	const mixed = CORPORA.find((c) => c.name === "mixed");
-	if (!mixed) throw new Error("mixed corpus missing");
-	const list = mixed.build(SIZE);
+	const native = CORPORA.find((c) => c.name === "native");
+	if (!native) throw new Error("native corpus missing");
+	const list = native.build(SIZE);
 	// The surname probe ("grady", the doc's short-word query), typed keystroke by
 	// keystroke from the 3-char UI gate: "gra" -> "grad" -> "grady" — the last
 	// step is the complete word.
-	const word = mixed.specs[1].query;
+	const word = native.specs[1].query;
 	const steps = [3, 4, 5].map((k) => word.slice(0, k));
 
 	// A configuration's `stateful` flag wires the typing-cache state (reset
@@ -77,6 +77,6 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	ensureRawDir();
 	writeFileSync(
 		rawFile("session.json"),
-		JSON.stringify({ size: SIZE, corpus: "mixed", steps, rows }, null, "\t"),
+		JSON.stringify({ size: SIZE, corpus: "native", steps, rows }, null, "\t"),
 	);
 });

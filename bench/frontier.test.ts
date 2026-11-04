@@ -13,9 +13,10 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { it } from "vite-plus/test";
 import { ensureRawDir, rawFile } from "./artifact.ts";
 import { type Config, configs } from "./configs.ts";
-import { CORPORA, foldedWords, forgetFoldedWords } from "./corpus";
+import { CORPORA } from "./corpus";
 import { AXES, frontierSamples } from "./frontier.ts";
 import { type Sample, scoreFamilies } from "./mrr.ts";
+import { foldedWords, forgetFoldedWords } from "./words.ts";
 
 const HOLDS = 0.5;
 const MIN_SAMPLES = 8;

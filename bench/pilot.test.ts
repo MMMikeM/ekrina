@@ -11,7 +11,8 @@ import { it } from "vite-plus/test";
 import { ensureRawDir, rawFile } from "./artifact.ts";
 import { catalogueSamples, type Misspellings, WEIGHTS } from "./catalogue.ts";
 import { scoreCatalogue } from "./catalogue-score.ts";
-import { SAMPLE_SIZE, shuffledIndices } from "./corpus";
+import { SAMPLE_SIZE } from "./corpus";
+import { shuffledIndices } from "./words.ts";
 
 const dir = process.env.PILOT;
 const misspellingsFile = dir ? join(dir, "misspellings.json") : "";

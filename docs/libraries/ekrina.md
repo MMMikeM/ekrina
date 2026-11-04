@@ -13,7 +13,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **mixed corpus:**
 
-<!-- bench:library-ekrina-scorecard-mixed -->
+<!-- bench:library-ekrina-scorecard-native -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
 | Ekrina (acronym) | 0.89 |     0.13 |    3.93 |    18.73 |        0.67 |
@@ -23,7 +23,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 **ascii corpus:**
 
-<!-- bench:library-ekrina-scorecard-ascii -->
+<!-- bench:library-ekrina-scorecard-en -->
 | Library          |  MRR | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|---------:|--------:|---------:|------------:|
 | Ekrina (acronym) | 0.89 |     0.12 |    3.42 |    19.03 |        0.71 |
@@ -37,7 +37,7 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 
 **ascii corpus:**
 
-<!-- bench:library-ekrina-speed-ascii -->
+<!-- bench:library-ekrina-speed-en -->
 | Library          |    index | cold query |    total | total rel |
 |------------------|---------:|-----------:|---------:|----------:|
 | **Ekrina**       |  0.36 ms |   12.41 ms | 12.74 ms |  **100%** |
@@ -45,7 +45,7 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 | Ekrina (indexed) | 12.08 ms |    2.64 ms | 14.15 ms |      111% |
 <!-- bench:end -->
 
-<!-- bench:library-ekrina-batch-ascii -->
+<!-- bench:library-ekrina-batch-en -->
 | Library          | batch/query | batch total | batch rel |
 |------------------|------------:|------------:|----------:|
 | **Ekrina**       |     2.51 ms |    64.52 ms |  **100%** |
@@ -55,7 +55,7 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 
 **mixed corpus:**
 
-<!-- bench:library-ekrina-speed-mixed -->
+<!-- bench:library-ekrina-speed-native -->
 | Library          |    index | cold query |    total | total rel |
 |------------------|---------:|-----------:|---------:|----------:|
 | **Ekrina**       |  0.35 ms |   19.22 ms | 19.57 ms |  **100%** |
@@ -63,7 +63,7 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 | Ekrina (indexed) | 20.58 ms |    2.39 ms | 23.37 ms |      119% |
 <!-- bench:end -->
 
-<!-- bench:library-ekrina-batch-mixed -->
+<!-- bench:library-ekrina-batch-native -->
 | Library          | batch/query | batch total | batch rel |
 |------------------|------------:|------------:|----------:|
 | **Ekrina**       |     2.43 ms |    63.47 ms |  **100%** |
@@ -77,7 +77,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **mixed corpus:**
 
-<!-- bench:library-ekrina-families-mixed -->
+<!-- bench:library-ekrina-families-native -->
 | Family                     | Ekrina | Ekrina (acronym) | Ekrina (indexed) |
 |----------------------------|-------:|-----------------:|-----------------:|
 | long-word                  |   1.00 |             1.00 |             1.00 |
@@ -105,7 +105,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 
 **ascii corpus:**
 
-<!-- bench:library-ekrina-families-ascii -->
+<!-- bench:library-ekrina-families-en -->
 | Family                     | Ekrina | Ekrina (acronym) | Ekrina (indexed) |
 |----------------------------|-------:|-----------------:|-----------------:|
 | long-word                  |   1.00 |             1.00 |             1.00 |

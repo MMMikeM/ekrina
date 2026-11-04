@@ -1,9 +1,16 @@
 import type { FamilyRow, ScorecardRow } from "./artifact.ts";
+import { WEIGHTS } from "./catalogue.ts";
 import type { Config } from "./configs.ts";
-import type { SampledQuery } from "./corpus.ts";
 
-// Any family of sampled queries, the published kinds or a diagnostic's own.
-export type Sample = Omit<SampledQuery, "kind"> & { kind: string };
+// A sampled query is scored against every item a person typing it could have
+// meant, so no library is credited for breaking a tie the right way. `group`
+// places a published family under its headline weight.
+export type Sample = {
+	kind: string;
+	query: string;
+	relevant: ((item: string) => boolean) | null;
+	group?: string;
+};
 
 // Reversing the list reverses the order inside each tie that list order breaks
 // and leaves every other pair alone, so the source's tie is the run around it
@@ -65,7 +72,7 @@ export const scoreFamilies = (
 		const ofKind = samples.filter((sample) => sample.kind === kind);
 		const scored = ofKind[0].relevant !== null;
 		const queries = ofKind.map((sample) => sample.query);
-		const row: FamilyRow = { kind, scored, queries, mrr: {}, medianRows: {} };
+		const row: FamilyRow = { kind, scored, queries, mrr: {}, medianRows: {}, ...(ofKind[0].group ? { group: ofKind[0].group } : {}) };
 		for (const [at, config] of all.entries()) {
 			const rrs: number[] = [];
 			const rows: number[] = [];
@@ -84,13 +91,55 @@ export const scoreFamilies = (
 	return families;
 };
 
-/** Each config's mean MRR over the scored families, best first. */
-export const scorecardOf = (families: FamilyRow[], all: Config[]): ScorecardRow[] => {
-	const scoredFamilies = families.filter((family) => family.scored);
-	return all
-		.map(({ name: library }) => ({
-			library,
-			mrr: Number(mean(scoredFamilies.map((family) => family.mrr[library])).toFixed(2)),
-		}))
-		.sort((a, b) => b.mrr - a.mrr);
+/** Queries nothing answers, as refusal rows: the share of them each config answers at all. */
+export const scoreJunk = (probes: { kind: string; queries: string[] }[], all: Config[]): FamilyRow[] =>
+	probes.map(({ kind, queries }) => {
+		const row: FamilyRow = { kind, scored: false, queries, mrr: {}, medianRows: {}, answered: {} };
+		for (const config of all) {
+			const counts = queries.map((query) => config.probe(query).count);
+			row.medianRows[config.name] = median(counts);
+			(row.answered as Record<string, number>)[config.name] = Number(
+				(counts.filter((count) => count > 0).length / counts.length).toFixed(2),
+			);
+		}
+		return row;
+	});
+
+/**
+ * A config's headline MRR: the mean over each group of its families, weighted by
+ * the group's fixed weight, unrounded. Families without a group weigh one each.
+ */
+export const headlineMrr = (families: FamilyRow[], library: string): number => {
+	const groups = new Map<string, number[]>();
+	for (const family of families.filter((f) => f.scored)) {
+		const group = family.group ?? family.kind;
+		groups.set(group, [...(groups.get(group) ?? []), family.mrr[library] ?? 0]);
+	}
+	let weighted = 0;
+	let weights = 0;
+	for (const [group, mrrs] of groups) {
+		const weight = WEIGHTS[group as keyof typeof WEIGHTS] ?? 1;
+		weighted += weight * mean(mrrs);
+		weights += weight;
+	}
+	return weights ? weighted / weights : 0;
 };
+
+/** The share of junk probes a config answers, over every refusal row that measured it. */
+export const junkRate = (families: FamilyRow[], library: string): number | undefined => {
+	const shares = families.flatMap((family) => (family.answered?.[library] === undefined ? [] : [family.answered[library]]));
+	return shares.length ? mean(shares) : undefined;
+};
+
+/** Each config's headline MRR and junk rate, best MRR first. */
+export const scorecardOf = (families: FamilyRow[], all: Config[]): ScorecardRow[] =>
+	all
+		.map(({ name: library }) => {
+			const junk = junkRate(families, library);
+			return {
+				library,
+				mrr: Number(headlineMrr(families, library).toFixed(2)),
+				...(junk === undefined ? {} : { junk: Number(junk.toFixed(2)) }),
+			};
+		})
+		.sort((a, b) => b.mrr - a.mrr);
