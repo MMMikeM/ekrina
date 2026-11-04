@@ -298,6 +298,9 @@ const MAX_RELEVANT_ITEMS = 3;
 // Relevance is judged on the bench's own folding, never the library under test's.
 const fold = (s: string): string => stripAccents(s).toLowerCase();
 const foldedWordsCache = new Map<string, string[]>();
+/** Drops the folded words cached for items no longer scored, such as a padded copy of the list. */
+export const forgetFoldedWords = (): void => foldedWordsCache.clear();
+
 export const foldedWords = (item: string): string[] => {
 	let words = foldedWordsCache.get(item);
 	if (words === undefined) foldedWordsCache.set(item, (words = wordsOf(fold(item))));

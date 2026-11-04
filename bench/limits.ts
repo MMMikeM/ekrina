@@ -16,9 +16,9 @@ const SAMPLES_PER_CELL = 10;
 // Clear of every seed corpus.ts samples with, so no cell reuses a published draw.
 const SEED_OFFSET = 2_000;
 
-type Random = () => number;
+export type Random = () => number;
 
-const seeded = (seed: number): Random => {
+export const seeded = (seed: number): Random => {
 	let state = seed;
 	return () => (state = (state * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
 };
@@ -45,19 +45,19 @@ const neighbours = (char: string): string[] => {
 	return near;
 };
 
-const neighbourOf = (char: string, random: Random): string => {
+export const neighbourOf = (char: string, random: Random): string => {
 	const near = neighbours(char);
 	return near[Math.floor(random() * near.length)];
 };
 
-const randomLetterFor = (word: string, random: Random): string => {
+export const randomLetterFor = (word: string, random: Random): string => {
 	const absent = [..."abcdefghijklmnopqrstuvwxyz"].filter((letter) => !word.includes(letter));
 	return absent[Math.floor(random() * absent.length)] ?? "x";
 };
 
 type Edit = (word: string, at: number, random: Random) => string | null;
 
-const EDITS = {
+export const EDITS = {
 	drop: (w, at) => w.slice(0, at) + w.slice(at + 1),
 	"insert-near": (w, at, random) => w.slice(0, at + 1) + neighbourOf(w[at], random) + w.slice(at + 1),
 	"substitute-near": (w, at, random) => w.slice(0, at) + neighbourOf(w[at], random) + w.slice(at + 1),
@@ -68,7 +68,7 @@ const EDITS = {
 	},
 } satisfies Record<string, Edit>;
 
-type EditName = keyof typeof EDITS;
+export type EditName = keyof typeof EDITS;
 
 const POSITIONS = {
 	first: () => 0,
