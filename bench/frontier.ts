@@ -37,7 +37,7 @@ const editSpread = (word: string, edits: EditName[], random: Random, gap: number
 	return typed;
 };
 
-const ACCENTED: Record<string, string> = { a: "á", e: "é", i: "í", o: "ó", u: "ú", c: "ç", n: "ñ", s: "š", z: "ž" };
+export const ACCENTED: Record<string, string> = { a: "á", e: "é", i: "í", o: "ó", u: "ú", c: "ç", n: "ñ", s: "š", z: "ž" };
 const VOWELS = new Set("aeiou");
 const steps = (to: number, from = 1): number[] => Array.from({ length: to - from + 1 }, (_, k) => from + k);
 

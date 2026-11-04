@@ -78,7 +78,7 @@ const POSITIONS = {
 
 // Edits spread evenly along the word and applied from the right, so an earlier
 // one never shifts where a later one lands, and none touch each other.
-const applyEdits = (word: string, edits: EditName[], random: Random): string | null => {
+export const applyEdits = (word: string, edits: EditName[], random: Random): string | null => {
 	const spots = edits.map((_, k) => Math.floor(((k + 0.5) * word.length) / edits.length));
 	if (spots.some((spot, k) => k > 0 && spot - spots[k - 1] < 3)) return null;
 	let typed: string | null = word;
