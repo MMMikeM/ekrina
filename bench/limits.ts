@@ -258,7 +258,7 @@ export const limitSamples = (items: string[]): LimitSample[] => {
 };
 
 // Optimal string alignment distance, stopping once a row passes `limit`.
-const editDistanceWithin = (a: string, b: string, limit: number): number => {
+export const editDistanceWithin = (a: string, b: string, limit: number): number => {
 	if (Math.abs(a.length - b.length) > limit) return limit + 1;
 	let before = Array.from({ length: b.length + 1 }, () => 0);
 	let last = Array.from({ length: b.length + 1 }, (_, j) => j);

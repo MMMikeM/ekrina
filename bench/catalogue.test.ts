@@ -7,10 +7,9 @@
 import { writeFileSync } from "node:fs";
 import { it } from "vite-plus/test";
 import { ensureRawDir, rawFile } from "./artifact.ts";
-import { catalogueSamples, type Group, WEIGHTS } from "./catalogue.ts";
+import { catalogueSamples, type Group, junkProbes, WEIGHTS } from "./catalogue.ts";
 import { configs } from "./configs.ts";
 import { CORPORA, SAMPLE_SIZE } from "./corpus";
-import { unanswerable } from "./limits.ts";
 import { scoreFamilies } from "./mrr.ts";
 
 const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -36,7 +35,7 @@ for (const corpus of CORPORA) {
 			...Object.fromEntries(Object.entries(family.mrr).map(([library, mrr]) => [short(library), mrr])),
 		}));
 
-		const junkQueries = unanswerable(items).flatMap(({ queries }) => queries);
+		const probes = junkProbes(items);
 		const scorecard = all
 			.map(({ name, probe }) => {
 				const byGroup = Object.fromEntries(
@@ -44,11 +43,12 @@ for (const corpus of CORPORA) {
 				) as Record<Group, number>;
 				const weighted = groups.reduce((sum, group) => sum + WEIGHTS[group] * byGroup[group], 0);
 				const weightUsed = groups.reduce((sum, group) => sum + WEIGHTS[group], 0);
-				const junk = junkQueries.filter((query) => probe(query).count > 0).length / junkQueries.length;
+				const junkByKind = probes.map(({ queries }) => queries.filter((query) => probe(query).count > 0).length / queries.length);
 				return {
 					library: short(name),
 					headline: round(weighted / weightUsed),
-					junk: round(junk),
+					junk: round(mean(junkByKind)),
+					...Object.fromEntries(probes.map(({ kind }, k) => [`junk: ${kind}`, round(junkByKind[k])])),
 					...Object.fromEntries(groups.map((group) => [group, round(byGroup[group])])),
 				};
 			})
@@ -56,13 +56,13 @@ for (const corpus of CORPORA) {
 
 		console.log(`\n[${corpus.name}] MRR@10 per family`);
 		console.table(perFamily);
-		console.log(`[${corpus.name}] headline (group-weighted MRR@10) and junk rate (share of ${junkQueries.length} unanswerable queries answered)`);
+		console.log(`[${corpus.name}] headline (group-weighted MRR@10) and junk rate (share of unanswerable queries answered, per kind and mean)`);
 		console.table(scorecard);
 
 		ensureRawDir();
 		writeFileSync(
 			rawFile(`catalogue-${corpus.name}.json`),
-			JSON.stringify({ weights: WEIGHTS, scorecard, perFamily, queries: families.map((f) => ({ family: f.kind, queries: f.queries })) }, null, "\t"),
+			JSON.stringify({ weights: WEIGHTS, probes, scorecard, perFamily, queries: families.map((f) => ({ family: f.kind, queries: f.queries })) }, null, "\t"),
 		);
 	});
 }

@@ -4,7 +4,16 @@
 // reports it, and no published number reads it.
 import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices, wordsOf } from "./corpus";
 import { ACCENTED } from "./frontier.ts";
-import { applyEdits, EDITS, type EditName, neighbourOf, type Random, randomLetterFor, seeded } from "./limits.ts";
+import {
+	applyEdits,
+	EDITS,
+	type EditName,
+	editDistanceWithin,
+	neighbourOf,
+	type Random,
+	randomLetterFor,
+	seeded,
+} from "./limits.ts";
 import type { Sample } from "./mrr.ts";
 
 export type Group = "typos" | "phonetic" | "partial words" | "query shape" | "noise" | "reported only";
@@ -309,4 +318,49 @@ export const catalogueSamples = (items: string[]): CatalogueSample[] => {
 		}
 	}
 	return sampled;
+};
+
+export type JunkProbe = { kind: string; queries: string[] };
+
+const PROBES_PER_KIND = 20;
+const JUNK_SEED = SEED_OFFSET + 900;
+
+// Junk is probed at several distances from the corpus, so no one library's
+// edit budget decides where "unanswerable" starts.
+export const junkProbes = (items: string[]): JunkProbe[] => {
+	const vocabulary = [...new Set(items.flatMap(foldedWords))];
+	const farFromEverything = (typed: string, distance: number): boolean =>
+		vocabulary.every((word) => editDistanceWithin(typed, word, distance - 1) >= distance);
+	const random = seeded(JUNK_SEED);
+	const order = shuffledIndices(items.length, JUNK_SEED);
+
+	const editedAway = (edits: number, count: number): string[] => {
+		const found: string[] = [];
+		for (const at of order) {
+			if (found.length === count) break;
+			const source = wordOf(foldedWords(items[at]), edits + 4);
+			if (!source) continue;
+			const spots = new Set<number>();
+			while (spots.size < edits) spots.add(Math.floor(random() * source.length));
+			const typed = [...source].map((char, k) => (spots.has(k) ? randomLetterFor(source, random) : char)).join("");
+			if (!found.includes(typed) && farFromEverything(typed, edits)) found.push(typed);
+		}
+		return found;
+	};
+
+	const randomStrings: string[] = [];
+	while (randomStrings.length < PROBES_PER_KIND) {
+		const typed = Array.from({ length: 7 }, () => randomLetterFor("", random)).join("");
+		if (!randomStrings.includes(typed) && farFromEverything(typed, 4)) randomStrings.push(typed);
+	}
+
+	const pairable = editedAway(3, 2 * PROBES_PER_KIND);
+	return [
+		...[3, 4, 5].map((edits) => ({ kind: `a word ${edits} edits from every word`, queries: editedAway(edits, PROBES_PER_KIND) })),
+		{ kind: "random letters, 4 edits from every word", queries: randomStrings },
+		{
+			kind: "two words, each 3 edits from every word",
+			queries: Array.from({ length: pairable.length >> 1 }, (_, k) => `${pairable[2 * k]} ${pairable[2 * k + 1]}`),
+		},
+	];
 };
