@@ -203,7 +203,7 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 // contains (2), so it must be tried first — a field matching both ways must
 // get the better tier, or cross-item ordering inverts. Initials never contain
 // a separator, so a multi-word query can never acronym-match.
-const literalTiers = (
+export const literalTiers = (
 	field: string,
 	normalisedField: string,
 	prepared: PreparedQuery,

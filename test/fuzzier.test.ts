@@ -173,11 +173,17 @@ describe("a gate that only false-passes", () => {
 });
 
 describe("one edit in each word of a phrase", () => {
-	it("both words mistyped", () => {
+	it("both words mistyped, priced on the tier the corrected phrase lands on", () => {
 		expect(fuzzyMatch("Handcrafted Wooden Table", "handcxafted wooxen", opt)).toEqual({
-			score: 2 * TYPO_PENALTY + SCORES.MULTI_WORD,
+			score: 2 * TYPO_PENALTY + SCORES.PREFIX,
 			tier: "corrected",
 			corrected: "Handcrafted Wooden",
+			ranges: [[0, 17]],
+		});
+		expect(fuzzyMatch("Handcrafted Wooden Table", "wooxen handcxafted", opt)).toEqual({
+			score: 2 * TYPO_PENALTY + SCORES.MULTI_WORD,
+			tier: "corrected",
+			corrected: "Wooden Handcrafted",
 			ranges: [
 				[0, 10],
 				[12, 17],
@@ -192,10 +198,7 @@ describe("one edit in each word of a phrase", () => {
 	});
 
 	it("matches a repeated word to two field words", () => {
-		expect(fuzzyMatch("Wooden Wooden", "wooxen woodxn", opt)?.ranges).toEqual([
-			[0, 5],
-			[7, 12],
-		]);
+		expect(fuzzyMatch("Wooden Wooden", "wooxen woodxn", opt)?.corrected).toBe("Wooden Wooden");
 	});
 
 	it("corrects a decomposed query on its composed form", () => {
@@ -223,13 +226,10 @@ describe("one edit in each word of a phrase", () => {
 describe("a space counts as one edit", () => {
 	it("a space forgotten between two words with a typo beside it", () => {
 		expect(fuzzyMatch("Lockman Dubuque", "lockmandubxque", opt)).toEqual({
-			score: 2 * TYPO_PENALTY + SCORES.PREFIX,
+			score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT,
 			tier: "corrected",
 			corrected: "Lockman Dubuque",
-			ranges: [
-				[0, 6],
-				[8, 14],
-			],
+			ranges: [[0, 14]],
 		});
 	});
 
@@ -259,13 +259,10 @@ describe("a space counts as one edit", () => {
 describe("two edits in one word of a phrase", () => {
 	it("an eight-letter phrase word mistyped twice", () => {
 		expect(fuzzyMatch("Kristi Satterfield", "kristi satxerfqeld", opt)).toEqual({
-			score: 2 * TYPO_PENALTY + SCORES.MULTI_WORD,
+			score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT,
 			tier: "corrected",
 			corrected: "kristi Satterfield",
-			ranges: [
-				[0, 5],
-				[7, 17],
-			],
+			ranges: [[0, 17]],
 		});
 	});
 
@@ -338,6 +335,14 @@ describe("in a searcher", () => {
 		)("hget");
 		expect(reversed.score).toBe(reversed.fields[0]?.score);
 		expect(reversed.fields[1]?.corrected).toBe("Hxgxextx");
+	});
+
+	it("ranks the item a correction spells whole above one it starts", () => {
+		const search = searcher(["Ergonomic Chair", "Ergonomic"]);
+		expect(search("ergxnomiq").map((r) => [r.item, r.score])).toEqual([
+			["Ergonomic", 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT],
+			["Ergonomic Chair", 2 * TYPO_PENALTY + SCORES.PREFIX],
+		]);
 	});
 
 	it("corrects a list that matches nothing", () => {
@@ -416,7 +421,7 @@ describe("in a searcher", () => {
 		expect(search("ergxnomiq")[0].fields).toEqual([
 			null,
 			{
-				score: 2 * TYPO_PENALTY + SCORES.PREFIX + 1,
+				score: 2 * TYPO_PENALTY + SCORES.NORMALISED_EXACT + 1,
 				tier: "corrected",
 				corrected: "Ergonomic",
 				ranges: [[0, 8]],

@@ -1,5 +1,5 @@
-import { WORD_CHARS } from "./boundaries";
-import type { PreparedQuery } from "./match";
+import { WORD_CHARS, wordChar } from "./boundaries";
+import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
 import { charMask } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
 import type { PreparedStrategy, Strategy } from "./strategy";
@@ -55,8 +55,11 @@ const editDistance = (a: string, b: string, limit: number): number => {
 	return Math.min(rows[last + width - 1], limit + 1);
 };
 
+// Each edit changes the length by at most one.
+const lengthsWithin = (a: number, b: number, limit: number): boolean => Math.abs(a - b) <= limit;
+
 const withinEdits = (a: string, b: string, limit: number): number =>
-	Math.abs(a.length - b.length) > limit ? limit + 1 : editDistance(a, b, limit);
+	lengthsWithin(a.length, b.length, limit) ? editDistance(a, b, limit) : limit + 1;
 
 // How many of the query's letters each character class holds, so a field
 // lacking a class leaves that many letters unmatched.
@@ -146,9 +149,9 @@ const holdsInOrder = (word: string, text: string): boolean => {
 
 type FieldWord = { word: string; at: number };
 
-// The ASCII part of WORD_CHARS; normalised text holds no ASCII capitals.
-const isAsciiWordUnit = (unit: number): boolean =>
-	(unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57) || unit === 95;
+const asciiWordUnits = Uint8Array.from({ length: 128 }, (_, unit) =>
+	wordChar.test(String.fromCharCode(unit)) ? 1 : 0,
+);
 
 // The regex's own word split, with a plain scan for the all-ASCII fields that
 // make up nearly every list.
@@ -163,7 +166,7 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 				at: match.index,
 			}));
 		}
-		if (isAsciiWordUnit(unit)) {
+		if (asciiWordUnits[unit] === 1) {
 			if (start === -1) start = at;
 		} else if (start !== -1) {
 			words.push({ word: normalisedField.slice(start, at), at: start });
@@ -181,22 +184,40 @@ const composed = (text: string, normalised: string): string =>
 const spelling = (field: string, normalisedField: string, { word, at }: FieldWord): string =>
 	composed(field, normalisedField).slice(at, at + word.length);
 
+const better = (a: MatchResult | null, b: MatchResult | null): MatchResult | null =>
+	a === null || (b !== null && b.score < a.score) ? b : a;
+
+// Priced as the built-in rescue prices one: the tier the corrected query lands
+// on, as if typed in lower case, plus a penalty per edit.
+const scoreCorrection = (
+	edits: number,
+	field: string,
+	normalisedField: string,
+	normalisedCorrected: string,
+	corrected: string,
+): MatchResult | null => {
+	const asTyped = prepareQuery(normalisedCorrected, normalisedCorrected);
+	const landed = literalTiers(field, normalisedField, asTyped, false);
+	/* v8 ignore next -- spelt from the field's own words, the corrected query always appears in it */
+	if (landed === null) return null;
+	return {
+		score: landed.score + TYPO_PENALTY * edits,
+		tier: "corrected",
+		corrected,
+		ranges: landed.ranges,
+	};
+};
+
 const correction = (
 	edits: number,
 	field: string,
 	normalisedField: string,
 	first: FieldWord,
 	last: FieldWord,
-): MatchResult => {
+): MatchResult | null => {
 	const span = { word: normalisedField.slice(first.at, last.at + last.word.length), at: first.at };
-	const ranges: Range[] = [[first.at, first.at + first.word.length - 1]];
-	if (last !== first) ranges.push([last.at, last.at + last.word.length - 1]);
-	return {
-		score: TYPO_PENALTY * edits + (first.at === 0 ? SCORES.PREFIX : SCORES.BOUNDARY),
-		tier: "corrected",
-		corrected: spelling(field, normalisedField, span),
-		ranges,
-	};
+	const corrected = spelling(field, normalisedField, span);
+	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
 };
 
 // A space typed or forgotten counts as one edit: `spaces` is how many the
@@ -212,12 +233,12 @@ const correctWord = (
 	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
 		const budget = MAX_EDITS - spaces - joinedEdits;
 		const length = first === last ? first.word.length : first.word.length + last.word.length;
-		if (Math.abs(word.length - length) > budget) return;
+		if (!lengthsWithin(word.length, length, budget)) return;
 		const target = first === last ? first.word : first.word + last.word;
 		const edits = editDistance(word, target, budget);
 		if (edits > budget) return;
 		const candidate = correction(edits + spaces + joinedEdits, field, normalisedField, first, last);
-		if (best === null || candidate.score < best.score) best = candidate;
+		best = better(best, candidate);
 	};
 	for (let i = 0; i < words.length; i++) {
 		consider(words[i], words[i], 0);
@@ -284,10 +305,7 @@ const scatterWord = (
 	return best;
 };
 
-const better = (a: MatchResult | null, b: MatchResult | null): MatchResult | null =>
-	a === null || (b !== null && b.score < a.score) ? b : a;
-
-type Placement = { candidate: FieldWord; edits: number; length: number };
+type Placement = { candidate: FieldWord; edits: number };
 
 const editsAllowed = (word: string, budget: number): number =>
 	Math.min(budget, word.length >= MIN_TWO_EDIT_WORD_LENGTH ? 2 : 1);
@@ -303,7 +321,7 @@ const placeWord = (
 	for (let i = 0; i < words.length; i++) {
 		if (!taken[i] && words[i].word.startsWith(word)) {
 			taken[i] = true;
-			return { candidate: words[i], edits: 0, length: word.length };
+			return { candidate: words[i], edits: 0 };
 		}
 	}
 	if (word.length < MIN_PHRASE_CORRECTION_LENGTH) return null;
@@ -320,7 +338,7 @@ const placeWord = (
 	}
 	if (pick === -1) return null;
 	taken[pick] = true;
-	return { candidate: words[pick], edits: pickEdits, length: words[pick].word.length };
+	return { candidate: words[pick], edits: pickEdits };
 };
 
 const correctPhrase = (
@@ -341,24 +359,24 @@ const correctPhrase = (
 	const { query, normalisedQuery, queryWords } = prepared;
 	const typed = composed(query, normalisedQuery);
 	let corrected = "";
+	let normalisedCorrected = "";
 	let from = 0;
-	const ranges: Range[] = [];
 	for (const word of queryWords) {
 		const at = normalisedQuery.indexOf(word, from);
-		const { candidate, edits: wordEdits, length } = (placements.get(word) as Placement[]).shift()!;
-		const spelt = wordEdits
-			? spelling(field, normalisedField, candidate)
-			: typed.slice(at, at + word.length);
-		corrected += typed.slice(from, at) + spelt;
+		const { candidate, edits: wordEdits } = (placements.get(word) as Placement[]).shift()!;
+		corrected +=
+			typed.slice(from, at) +
+			(wordEdits ? spelling(field, normalisedField, candidate) : typed.slice(at, at + word.length));
+		normalisedCorrected += normalisedQuery.slice(from, at) + (wordEdits ? candidate.word : word);
 		from = at + word.length;
-		ranges.push([candidate.at, candidate.at + length - 1]);
 	}
-	return {
-		score: TYPO_PENALTY * edits + SCORES.MULTI_WORD,
-		tier: "corrected",
-		corrected: corrected + typed.slice(from),
-		ranges: ranges.sort((a, b) => a[0] - b[0]),
-	};
+	return scoreCorrection(
+		edits,
+		field,
+		normalisedField,
+		normalisedCorrected + normalisedQuery.slice(from),
+		corrected + typed.slice(from),
+	);
 };
 
 // A two-word query is also read as one word with a stray space in it.
