@@ -62,7 +62,7 @@ const METRICS: Record<
 		ticks: [0.2, 0.5, 1, 2, 5, 10, 20],
 		heading: "Ranking quality vs. per-query session time",
 		subtitle: (families, queries) =>
-			`MRR over ${families} query families · mixed 10k corpus · one searcher, ${queries} queries once (batch)`,
+			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
 		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
 		tail: "Ekrina owns the accurate end of the frontier; the faster points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
@@ -73,7 +73,7 @@ const METRICS: Record<
 		X1: 120,
 		ticks: [1, 2, 5, 10, 20, 50, 100],
 		heading: "Ranking quality vs. cold search time",
-		subtitle: (families) => `MRR over ${families} query families · mixed 10k corpus · fresh process per search`,
+		subtitle: (families) => `MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
 		tail: "The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
@@ -160,7 +160,7 @@ const render = (
 	const desc =
 		`Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR ` +
 		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
-		`on a log scale, on the mixed 10k corpus over ${families} query families. ` +
+		`on a log scale, on the native 10k corpus over ${families} query families. ` +
 		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
 		M.tail;
 
@@ -287,16 +287,16 @@ const render = (
 `;
 };
 
-/** Both charts draw mixed 10k: MRR from the scorecard, times from the cold matrix. */
+/** Both charts draw native 10k: MRR from the scorecard, times from the cold matrix. */
 export const renderPareto = (artifact: Artifact): void => {
-	const scorecard = artifact.scorecard.corpora.mixed;
-	if (!scorecard?.length) throw new Error("no mixed scorecard — run the quality stage first");
-	const kinds = Object.keys(artifact.coldMatrix.mixed ?? {}).filter((k) => k !== "batch");
+	const scorecard = artifact.scorecard.corpora.native;
+	if (!scorecard?.length) throw new Error("no native scorecard — run the quality stage first");
+	const kinds = Object.keys(artifact.coldMatrix.native ?? {}).filter((k) => k !== "batch");
 	const headline = headlineConfigs(artifact);
 	const data: Point[] = scorecard.filter((r) => headline.has(r.library)).map((r) => {
-		const batch = artifact.coldMatrix.mixed?.batch?.["10000"]?.[r.library];
+		const batch = artifact.coldMatrix.native?.batch?.["10000"]?.[r.library];
 		if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
-		const oneShots = kinds.map((k) => artifact.coldMatrix.mixed[k]["10000"][r.library].oneShotMs);
+		const oneShots = kinds.map((k) => artifact.coldMatrix.native[k]["10000"][r.library].oneShotMs);
 		return {
 			name: r.library,
 			mrr: r.mrr,
@@ -304,8 +304,8 @@ export const renderPareto = (artifact: Artifact): void => {
 			total: oneShots.reduce((a, b) => a + b, 0) / oneShots.length,
 		};
 	});
-	const families = artifact.families?.mixed?.filter((family) => family.scored).length ?? 0;
-	const queries = artifact.probes.mixed?.length ?? 0;
+	const families = artifact.families?.native?.filter((family) => family.scored).length ?? 0;
+	const queries = artifact.probes.native?.length ?? 0;
 	for (const metric of Object.keys(METRICS) as Metric[]) {
 		const { file } = METRICS[metric];
 		writeFileSync(

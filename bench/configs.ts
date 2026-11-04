@@ -319,8 +319,8 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js (tuned)",
 		make: () => {
-			// Swept over 0.2–0.6 with and without ignoreLocation: 0.45 scores the best
-			// MRR, from a median 33 rows against the default's 560 (docs/libraries/fuse.md).
+			// Swept over 0.2–0.6 with and without ignoreLocation on the bench's earlier
+			// corpora, where 0.45 scored the best MRR (docs/libraries/fuse.md).
 			const fuseTuned = new Fuse(list, FUSE_TUNED);
 			return {
 				count: (q) => fuseTuned.search(q).length,

@@ -192,6 +192,11 @@ const runQuality = (artifact: Artifact): void => {
 	if (DRY) return;
 
 	const hits = readRaw<HitsRun>("hits.json");
+	const fresh: { scorecard: Artifact["scorecard"]["corpora"]; probes: Artifact["probes"]; families: NonNullable<Artifact["families"]> } = {
+		scorecard: {},
+		probes: {},
+		families: {},
+	};
 	for (const corpus of Object.keys(hits)) {
 		const { scorecard, tables, families } = hits[corpus];
 		if (ONLY) {
@@ -209,10 +214,16 @@ const runQuality = (artifact: Artifact): void => {
 				overlay(kept.medianRows, family.medianRows);
 			}
 		} else {
-			artifact.scorecard.corpora[corpus] = scorecard;
-			artifact.probes[corpus] = tables;
-			(artifact.families ??= {})[corpus] = families;
+			fresh.scorecard[corpus] = scorecard;
+			fresh.probes[corpus] = tables;
+			fresh.families[corpus] = families;
 		}
+	}
+	// A full run replaces every corpus, so one dropped from the bench leaves no row behind.
+	if (!ONLY) {
+		artifact.scorecard.corpora = fresh.scorecard;
+		artifact.probes = fresh.probes;
+		artifact.families = fresh.families;
 	}
 	if (!ONLY) {
 		artifact.session = readRaw("session.json");

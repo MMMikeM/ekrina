@@ -40,7 +40,7 @@ const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length
 
 /** The library a configuration belongs to: its name without the option suffix. */
 export const libraryOf = (config: string): string =>
-	config.replace(/ \((all opts|acronym|indexed|tuned)\)$/, "");
+	config.replace(/ \((all opts|acronym|fuzzier|indexed|tuned)\)$/, "");
 
 // Unrounded, from the families: the scorecard's two decimals tie configurations
 // that the families tell apart.

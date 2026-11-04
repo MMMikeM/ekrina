@@ -54,10 +54,13 @@ const measureCell = async (corpusName: string, configName: string): Promise<Memo
 	const corpus = CORPORA.find((c) => c.name === corpusName);
 	if (!corpus) throw new Error(`no corpus '${corpusName}'`);
 	const list = corpus.build(SIZE);
+	// Resolved before the baseline: deriving the queries builds caches that
+	// would otherwise land in every configuration's reading.
+	const queries = new Map(corpus.specs.map((s) => [s.kind, s.query]));
 	const queryOf = (kind: QuerySpec["kind"]): string => {
-		const spec = corpus.specs.find((s) => s.kind === kind);
-		if (!spec) throw new Error(`corpus '${corpusName}' has no '${kind}' probe`);
-		return spec.query;
+		const query = queries.get(kind);
+		if (query === undefined) throw new Error(`corpus '${corpusName}' has no '${kind}' probe`);
+		return query;
 	};
 
 	await settle();
