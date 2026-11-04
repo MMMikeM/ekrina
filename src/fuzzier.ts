@@ -395,15 +395,14 @@ const spareBesideSpace = (queryWords: string[]): number =>
 // A two-word query is also read as one word with a stray space in it.
 const correctSplitWord = (
 	queryWords: string[],
+	spare: number,
 	field: string,
 	normalisedField: string,
 	words: FieldWord[],
-): MatchResult | null => {
-	const joined = queryWords.join("");
-	return mayBeOneWord(queryWords)
-		? correctWord(joined, field, normalisedField, words, 1, spareBesideSpace(queryWords))
+): MatchResult | null =>
+	mayBeOneWord(queryWords)
+		? correctWord(queryWords.join(""), field, normalisedField, words, 1, spare)
 		: null;
-};
 
 // An adjacent swap breaks the three letter pairs around it; every other edit
 // breaks fewer.
@@ -440,16 +439,20 @@ const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number):
 
 // A phrase word under five letters is never corrected, so its pairs all occur;
 // the rest lose at most what the edits break. Read as one word, the joined
-// query loses only what its edits beside the space break.
-const phrasePairs = (queryWords: string[]): NonNullable<PreparedStrategy["admitsPairs"]> => {
+// query loses only what its `spare` edits beside the space break.
+const phrasePairs = (
+	queryWords: string[],
+	asPhrase: boolean,
+	spare: number,
+): NonNullable<PreparedStrategy["admitsPairs"]> => {
 	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
 	const all = pairsOf(queryWords);
 	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
 	return (lo, hi) =>
-		(lacksPairsAtMost(short, lo, hi, 0) &&
+		(asPhrase &&
+			lacksPairsAtMost(short, lo, hi, 0) &&
 			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
-		(joined !== null &&
-			lacksPairsAtMost(joined, lo, hi, spareBesideSpace(queryWords) * PAIRS_ONE_EDIT_BREAKS));
+		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
 };
 
 type Gates = Pick<PreparedStrategy, "admitsMask" | "admitsText">;
@@ -483,7 +486,11 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 		return null;
 	}
 	const phrase = queryWords.length > 1;
-	if (phrase && competing) return null;
+	// Beside other matches a phrase is read only as one word split by a stray
+	// space, the one mistake cheap enough to look for there.
+	if (phrase && competing && !mayBeOneWord(queryWords)) return null;
+	const asPhrase = phrase && !competing;
+	const spare = competing ? 0 : spareBesideSpace(queryWords);
 	const letters = queryWords.join("");
 	const editable = !competing && (phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH);
 	const matchWord = (
@@ -502,19 +509,20 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 		: letters.length >= MIN_SCATTER_LENGTH;
 	// With no word long enough to correct, only an edit beside a stray space can
 	// leave a letter unmatched.
-	const unmatched = phrase && !correctable ? spareBesideSpace(queryWords) : MAX_EDITS;
+	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
 	if (!matchable) return null;
 	return {
 		...(editable ? editGates(letters, unmatched) : scatterGates(letters)),
 		// A sparse reading keeps no pairs of a word together.
-		admitsPairs: phrase ? phrasePairs(queryWords) : null,
+		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
 			const words = fieldWords(normalisedField);
-			return phrase
-				? (correctPhrase(prepared, field, normalisedField, words) ??
-						correctSplitWord(queryWords, field, normalisedField, words))
-				: matchWord(queryWords[0], field, normalisedField, words);
+			if (!phrase) return matchWord(queryWords[0], field, normalisedField, words);
+			return (
+				(asPhrase ? correctPhrase(prepared, field, normalisedField, words) : null) ??
+				correctSplitWord(queryWords, spare, field, normalisedField, words)
+			);
 		},
 	};
 };
@@ -538,8 +546,9 @@ const fuzzierStrategy: Strategy = { prepare };
 
 /**
  * Matches what the default ladder refuses, on fields up to 512 characters. A
- * sparse word competes while fewer than ten items match the query as typed;
- * mistakes are corrected only when nothing matches it otherwise.
+ * sparse word, or a word split by a stray space alone, competes while fewer
+ * than ten items match the query as typed; other mistakes are corrected only
+ * when nothing matches it otherwise.
  *
  * - up to two mistakes, where the default rescue corrects one: a wrong,
  *   missing, extra or swapped character, or a space typed inside a word or

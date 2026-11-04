@@ -18,9 +18,9 @@ export type PreparedStrategy = {
 // What a Fuzzier is behind its opaque public type, kept out of the public
 // surface so a strategy's internals can change without a major version.
 // `competing` means the query already has matches, so only readings cheap
-// enough to run beside them are prepared. A competing reading of a one-word
-// query must match only fields `buildFuzzyGate` admits: the searcher then
-// tries just the fields its literal pass let through.
+// enough to run beside them are prepared. A competing reading must match only
+// fields the literal pass lets through (`buildFuzzyGate` for one word, every
+// word character present for a phrase): the searcher then tries just those.
 export type Strategy = {
 	prepare: (prepared: PreparedQuery, competing: boolean) => PreparedStrategy | null;
 };

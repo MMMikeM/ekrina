@@ -268,6 +268,14 @@ describe("a space counts as one edit", () => {
 		expect(fuzzyMatch("Hillside", "hil sidx", opt)).toBeNull();
 	});
 
+	it("rejoins a split word beside weaker matches", () => {
+		const items = ["Mlle Anne Marty", "Marianne Lowe"];
+		expect(createFuzzySearch(items)("mari anne").map((r) => r.item)).toEqual(["Mlle Anne Marty"]);
+		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe", "Mlle Anne Marty"]);
+		const typed = searcher(["Mari Annx Shop", "Marianne Lowe"])("mari annx");
+		expect(typed.map((r) => r.item)).toEqual(["Mari Annx Shop"]);
+	});
+
 	it("rejoins a shorter word when the space was the only mistake", () => {
 		expect(fuzzyMatch("Clinton Kub", "cli nton", opt)?.corrected).toBe("Clinton");
 		expect(fuzzyMatch("Clinton Kub", "cli ntxn", opt)).toBeNull();

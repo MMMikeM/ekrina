@@ -501,7 +501,10 @@ export function createFuzzySearch<T>(
 				(spec) => spec.fuzzier?.prepare(prepared, competing) ?? null,
 			);
 			if (fallbacks.every((fallback) => fallback === null)) return;
-			const survivorsOnly = competing && normalisedQuery === prepared.queryWords[0];
+			// A phrase's literal gates read only its words' characters; a single
+			// word's read its punctuation too, which no fuzzier reading needs.
+			const survivorsOnly =
+				competing && (multiWord || normalisedQuery === prepared.queryWords[0]);
 			if (!survivorsOnly) unionIndex ??= buildUnionIndex();
 			const admitsItem = unionIndex === null ? null : itemGateOf(fallbacks, unionIndex);
 			const scanned = survivorsOnly ? survivorCount : count;
