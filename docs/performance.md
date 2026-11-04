@@ -183,6 +183,25 @@ Only four-character queries that match nothing get slower (median first answer i
 A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
 `fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
 
+### Sparse matches are priced by what they skip
+
+`fuzzier` scores a word typed sparsely inside a longer one at `CONTAINS + 0.05` plus a weight times the share of the longer word left untyped.
+At a weight of 0.5 the reading ranked "constatn" on "Constantine" (2.19) and "diea" on "Daniela" (2.26) above the one-edit corrections that finish a word ("Constant Djakpa", 2.60), so on real misspellings the opt-in scored 0.57 on en and 0.65 on native where the default scored 0.73.
+Moving the base score instead traded the misspellings for the deletion families, which rely on the reading ranking high, and the headline did not move (−0.002 to +0.005 on every set).
+The skip weight separates the two, since a dropped letter skips 10–25% of a word and the regressions 27–43%. Headline MRR of `fuzzier`, by weight:
+
+| Set             |   0.5 |     1 |   1.5 |     2 |   2.5 |
+| --------------- | ----: | ----: | ----: | ----: | ----: |
+| en              | 0.899 | 0.899 | 0.906 | 0.906 | 0.908 |
+| native          | 0.895 | 0.895 | 0.898 | 0.900 | 0.897 |
+| emoji           | 0.901 | 0.901 | 0.904 | 0.906 | 0.905 |
+| en held-out     | 0.858 | 0.858 | 0.862 | 0.862 | 0.857 |
+| native held-out | 0.845 | 0.845 | 0.849 | 0.849 | 0.844 |
+
+At 1.5 every set rises and no family on any set falls by 0.05 or more: real misspellings on en go 0.57 → 0.65, random letter 0.78–0.88 → 0.88–0.95, and first letter wrong 0.80 → 0.90.
+From 2 the deletion families start to lose (two vowels dropped 1.00 → 0.95 held out, and up to 0.15 at 2.5), so the weight stops at 1.5.
+The reading changes only order, never which items match, so the junk and long-text rates are unchanged.
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.

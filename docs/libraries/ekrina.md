@@ -28,7 +28,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-ekrina-scorecard-en -->
 | Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (fuzzier) | 0.90 | 0.00 |     0.19 |    3.98 |    24.64 |        0.74 |
+| Ekrina (fuzzier) | 0.91 | 0.00 |     0.19 |    3.98 |    24.64 |        0.74 |
 | Ekrina           | 0.70 | 0.00 |     0.17 |    3.96 |    19.81 |        0.54 |
 | Ekrina (indexed) | 0.70 | 0.00 |     1.76 |    1.86 |    16.70 |        0.54 |
 | Ekrina (acronym) | 0.70 | 0.00 |     0.17 |    3.90 |    20.06 |        0.55 |
@@ -106,7 +106,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | typos         | inserted neighbouring key     |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | swapped neighbours            |   0.80 |             0.80 |             0.79 |             0.80 |
 | typos         | stuck key                     |   0.00 |             0.00 |             0.80 |             0.00 |
-| typos         | first letter wrong            |   0.90 |             0.90 |             0.80 |             0.90 |
+| typos         | first letter wrong            |   0.90 |             0.90 |             0.90 |             0.90 |
 | typos         | typo in each of two words     |   0.00 |             0.00 |             1.00 |             0.00 |
 | typos         | typo then a half-typed word   |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | two words joined, with a typo |   0.00 |             0.00 |             0.97 |             0.00 |
@@ -140,13 +140,13 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 |---------------|-------------------------------|-------:|-----------------:|-----------------:|-----------------:|
 | typos         | neighbouring key              |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | two neighbouring keys         |   0.00 |             0.00 |             1.00 |             0.00 |
-| typos         | random letter                 |   0.95 |             0.95 |             0.88 |             0.95 |
+| typos         | random letter                 |   0.95 |             0.95 |             0.95 |             0.95 |
 | typos         | dropped letter                |   0.77 |             0.77 |             0.95 |             0.77 |
 | typos         | two dropped letters           |   0.82 |             0.82 |             1.00 |             0.82 |
 | typos         | inserted neighbouring key     |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | swapped neighbours            |   0.80 |             0.80 |             0.79 |             0.80 |
 | typos         | stuck key                     |   0.00 |             0.00 |             0.90 |             0.00 |
-| typos         | first letter wrong            |   0.95 |             0.95 |             0.90 |             0.95 |
+| typos         | first letter wrong            |   0.95 |             0.95 |             0.95 |             0.95 |
 | typos         | typo in each of two words     |   0.00 |             0.00 |             1.00 |             0.00 |
 | typos         | typo then a half-typed word   |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | two words joined, with a typo |   0.00 |             0.00 |             0.97 |             0.00 |
@@ -170,7 +170,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 | noise         | accents added                 |   1.00 |             1.00 |             1.00 |             1.00 |
 | reported only | acronym                       |   0.64 |             0.88 |             0.64 |             0.64 |
 | reported only | plural for a singular         |   1.00 |             1.00 |             1.00 |             1.00 |
-| phonetic      | real misspelling              |   0.73 |             0.73 |             0.57 |             0.73 |
+| phonetic      | real misspelling              |   0.73 |             0.73 |             0.65 |             0.73 |
 <!-- bench:end -->
 
 **emoji corpus:**
@@ -180,7 +180,7 @@ MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.m
 |---------------|-------------------------------|-------:|-----------------:|-----------------:|-----------------:|
 | typos         | neighbouring key              |   1.00 |             1.00 |             1.00 |             1.00 |
 | typos         | two neighbouring keys         |   0.00 |             0.00 |             1.00 |             0.00 |
-| typos         | random letter                 |   0.88 |             0.88 |             0.78 |             0.88 |
+| typos         | random letter                 |   0.88 |             0.88 |             0.88 |             0.88 |
 | typos         | dropped letter                |   0.76 |             0.76 |             1.00 |             0.76 |
 | typos         | two dropped letters           |   0.90 |             0.90 |             1.00 |             0.90 |
 | typos         | inserted neighbouring key     |   0.95 |             0.95 |             0.95 |             0.95 |

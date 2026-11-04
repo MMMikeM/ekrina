@@ -841,7 +841,7 @@
 			"en": [
 				{
 					"library": "ekrina (fuzzier)",
-					"mrr": 0.9,
+					"mrr": 0.91,
 					"junk": 0
 				},
 				{
@@ -5060,47 +5060,47 @@
 			{
 				"library": "ekrina",
 				"stepMs": [
-					1.4296249999999873,
-					0.7337500000001,
-					0.4462079999998423
+					1.7187910000000102,
+					0.7563750000001619,
+					0.44937499999991815
 				],
-				"sessionMs": 2.6095829999999296
+				"sessionMs": 2.92454100000009
 			},
 			{
 				"library": "@nozbe/microfuzz",
 				"stepMs": [
-					15.886792000000014,
-					15.389582999999902,
-					15.058958999999959
+					15.848707999999988,
+					15.298084000000017,
+					15.501834000000144
 				],
-				"sessionMs": 46.335333999999875
+				"sessionMs": 46.64862600000015
 			},
 			{
 				"library": "fuzzysort",
 				"stepMs": [
-					4.066540999999916,
-					2.612292000000025,
-					2.052041999999801
+					4.534208000000035,
+					2.9527080000000296,
+					2.607958999999937
 				],
-				"sessionMs": 8.730874999999742
+				"sessionMs": 10.094875000000002
 			},
 			{
 				"library": "uFuzzy (all opts)",
 				"stepMs": [
-					2.205832999999984,
-					1.7074159999997391,
-					1.8443749999996726
+					2.2192909999998847,
+					1.728708000000097,
+					2.2227920000000267
 				],
-				"sessionMs": 5.757623999999396
+				"sessionMs": 6.170791000000008
 			},
 			{
 				"library": "fuse.js (all opts)",
 				"stepMs": [
-					88.34641699999975,
-					117.16433400000005,
-					128.28270799999973
+					89.0628340000003,
+					115.10679200000004,
+					125.48654199999964
 				],
-				"sessionMs": 333.79345899999953
+				"sessionMs": 329.656168
 			}
 		]
 	},
@@ -5122,7 +5122,7 @@
 				"fuzzierJunkRate": 0,
 				"presentHits": 14,
 				"presentProbes": 14,
-				"missMs": 0.004500000000007276
+				"missMs": 0.004542000000014923
 			},
 			{
 				"docChars": 256,
@@ -5131,7 +5131,7 @@
 				"fuzzierJunkRate": 0.005,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.007291999999949894
+				"missMs": 0.00741699999997536
 			},
 			{
 				"docChars": 512,
@@ -5140,7 +5140,7 @@
 				"fuzzierJunkRate": 0.015,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.016999999999939064
+				"missMs": 0.0171659999999747
 			},
 			{
 				"docChars": 1024,
@@ -5149,7 +5149,7 @@
 				"fuzzierJunkRate": 0.015,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.028583000000026004
+				"missMs": 0.02979199999992943
 			},
 			{
 				"docChars": 2048,
@@ -5158,7 +5158,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.0521249999999327
+				"missMs": 0.05274999999994634
 			},
 			{
 				"docChars": 4096,
@@ -5167,7 +5167,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.09716600000001563
+				"missMs": 0.09858300000007603
 			},
 			{
 				"docChars": 8192,
@@ -5176,7 +5176,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.18637499999999818
+				"missMs": 0.19287499999995816
 			},
 			{
 				"docChars": 16384,
@@ -5185,7 +5185,7 @@
 				"fuzzierJunkRate": 0.02,
 				"presentHits": 20,
 				"presentProbes": 20,
-				"missMs": 0.3789999999999054
+				"missMs": 0.38287500000001273
 			}
 		]
 	},
@@ -12284,7 +12284,7 @@
 					"ekrina": 0.95,
 					"ekrina (indexed)": 0.95,
 					"ekrina (acronym)": 0.95,
-					"ekrina (fuzzier)": 0.883,
+					"ekrina (fuzzier)": 0.95,
 					"@nozbe/microfuzz": 0,
 					"@nozbe/microfuzz (all opts)": 0,
 					"fuzzy": 0,
@@ -12614,7 +12614,7 @@
 					"ekrina": 0.95,
 					"ekrina (indexed)": 0.95,
 					"ekrina (acronym)": 0.95,
-					"ekrina (fuzzier)": 0.9,
+					"ekrina (fuzzier)": 0.95,
 					"@nozbe/microfuzz": 0.1,
 					"@nozbe/microfuzz (all opts)": 0.1,
 					"fuzzy": 0.1,
@@ -13934,7 +13934,7 @@
 					"ekrina": 0.729,
 					"ekrina (indexed)": 0.729,
 					"ekrina (acronym)": 0.729,
-					"ekrina (fuzzier)": 0.573,
+					"ekrina (fuzzier)": 0.647,
 					"@nozbe/microfuzz": 0.202,
 					"@nozbe/microfuzz (all opts)": 0.202,
 					"fuzzy": 0.147,
@@ -14756,7 +14756,7 @@
 					"ekrina": 0.9,
 					"ekrina (indexed)": 0.9,
 					"ekrina (acronym)": 0.9,
-					"ekrina (fuzzier)": 0.8,
+					"ekrina (fuzzier)": 0.9,
 					"@nozbe/microfuzz": 0.1,
 					"@nozbe/microfuzz (all opts)": 0.1,
 					"fuzzy": 0.1,
@@ -16568,7 +16568,7 @@
 					"ekrina": 0.875,
 					"ekrina (indexed)": 0.875,
 					"ekrina (acronym)": 0.875,
-					"ekrina (fuzzier)": 0.775,
+					"ekrina (fuzzier)": 0.875,
 					"@nozbe/microfuzz": 0.204,
 					"@nozbe/microfuzz (all opts)": 0.204,
 					"fuzzy": 0.203,

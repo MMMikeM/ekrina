@@ -253,11 +253,11 @@ const correctWord = (
 	return best;
 };
 
-// Just above CONTAINS and ranked by the share of the word left untyped, so a
-// sparse match inside one word outranks a fuzzy chain across several. Tuned on
-// the scatter families and confirmed on fresh queries (@see docs/performance.md).
+// Just above CONTAINS and ranked by the share of the word left untyped, steeply
+// enough that a word typed with most of it skipped falls below a correction
+// that finishes a word (@see docs/performance.md).
 const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
-const SCATTER_SKIP_WEIGHT = 0.5;
+const SCATTER_SKIP_WEIGHT = 1.5;
 const LATER_WORD_PENALTY = 0.05;
 
 // A word's start typed whole with one letter after it is that word with one

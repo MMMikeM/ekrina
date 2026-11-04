@@ -82,7 +82,7 @@ describe("two edits inside one word", () => {
 describe("a word typed sparsely", () => {
 	it("half its letters, in order, from its first", () => {
 		expect(fuzzyMatch("Huguette Brown", "hget", opt)).toEqual({
-			score: SCORES.CONTAINS + 0.05 + 0.5 * (4 / 8),
+			score: SCORES.CONTAINS + 0.05 + 1.5 * (4 / 8),
 			tier: "corrected",
 			corrected: "Huguette",
 			ranges: [
@@ -153,7 +153,7 @@ describe("a word typed sparsely", () => {
 	it("replaces a weaker fuzzy chain on the same field", () => {
 		expect(fuzzyMatch("Handcrafted", "hndcrfted")?.tier).toBe("fuzzy");
 		expect(fuzzyMatch("Handcrafted", "hndcrfted", opt)?.score).toBeCloseTo(
-			SCORES.CONTAINS + 0.05 + 0.5 * (2 / 11),
+			SCORES.CONTAINS + 0.05 + 1.5 * (2 / 11),
 		);
 	});
 
@@ -322,7 +322,9 @@ describe("in a searcher", () => {
 		const hgets = Array.from({ length: 10 }, (_, k) => `Hget ${k}`);
 		const search = searcher([...hgets, "Hget. Lane", "Huguette Brown"]);
 		search("hget");
-		expect(search("hget.").map((r) => r.item).slice(0, 2)).toEqual(["Hget. Lane", "Huguette Brown"]);
+		const items = search("hget.").map((r) => r.item);
+		expect(items[0]).toBe("Hget. Lane");
+		expect(items).toContain("Huguette Brown");
 	});
 
 	it("replaces a weaker result on the same item", () => {

@@ -30,7 +30,7 @@ Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a sc
 - **Survives a typo.**
   A transposition, an insertion or a substitution each break the subsequence property; the one-edit tiers still take all three at rank 1.
 - **Tops the match-quality scorecard with `fuzzier` on.**
-  0.90 MRR on each of three real-world corpora at under a millisecond per query, answering none of the queries nothing answers, against seven other libraries.
+  0.90–0.91 MRR on each of three real-world corpora at under a millisecond per query, answering none of the queries nothing answers, against seven other libraries.
 - **Runs anywhere.**
   No `node:` imports, no DOM, nothing above ES2022: browsers, Node, Deno, Bun and edge runtimes, ESM and CJS.
 - **Stays small.**
@@ -176,7 +176,7 @@ So for a short query, a list can show fewer corrections than `fuzzyMatch` return
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
-- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.2× by its last letter even over 100k items.
+- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.8× by its last letter even over 100k items.
   Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; the exact long word `gensler` returns 1 row where the chain engines return 12 and Fuse.js 971 on its defaults.
 - **Backend one-shot lookups**: constructor + first answer takes 4–5 ms in a cold process over 10k items, so indexing per request is fine.
@@ -266,7 +266,7 @@ Behavioural differences:
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
   `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
 - **Typos match.**
-  On the same queries microfuzz scores 0.41 MRR, Ekrina 0.70 and Ekrina with `fuzzier` 0.90 ([the scorecard](./docs/benchmarks.md#scorecard)).
+  On the same queries microfuzz scores 0.41 MRR, Ekrina 0.70 and Ekrina with `fuzzier` 0.90–0.91 ([the scorecard](./docs/benchmarks.md#scorecard)).
 - **`normalizeText` is `normaliseText`.**
   EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.**
@@ -323,9 +323,9 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: with `fuzzier` on, Ekrina scores 0.78–1.00 on every typo family, one edit or two, and 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), which no other library matches across the board.
+- **Match quality**: with `fuzzier` on, Ekrina scores 0.79–1.00 on every typo family, one edit or two, and 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), which no other library matches across the board.
   fast-fuzzy, the nearest, scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones.
-  Without `fuzzier`, the always-on one-edit rescue scores 0.80–1.00 on the one-edit families and 0–0.10 on the two-edit, split and joined ones, which is the gap between 0.70 and 0.90.
+  Without `fuzzier`, the always-on one-edit rescue scores 0.80–1.00 on the one-edit families and 0–0.10 on the two-edit, split and joined ones, which is the gap between 0.70 and 0.90–0.91.
   Ekrina requires every query word, so a query holding a word the item lacks returns nothing, where fast-fuzzy scores 0.80–1.00 on that family.
 - **Junk**: no Ekrina configuration answers any of the queries nothing answers, on any corpus, at any distance from the corpus; fast-fuzzy answers a quarter of them and Fuse.js (tuned) nearly half.
 - **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 20–24 ms at 10k and 54–69 ms at 100k, ~0.6–2.6 ms per query after the first; `fuzzier` adds 24–34%, and `buildIndex()` brings the default to 17–19 and 36–44 ms.
