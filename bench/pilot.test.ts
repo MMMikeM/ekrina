@@ -2,7 +2,7 @@
  * Diagnostic: the catalogue over candidate corpora that are not committed yet.
  * `PILOT=<dir>` scores every `<name>.json` list of strings in that directory,
  * cut to the first 10k of a fixed shuffle, with `<dir>/misspellings.json`
- * (correct word → misspellings) adding real misspellings when present. Writes
+ * (bench/misspellings.json's shape) adding real misspellings when present. Writes
  * .raw/pilot-<name>.json.
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -16,7 +16,7 @@ import { SAMPLE_SIZE, shuffledIndices } from "./corpus";
 const dir = process.env.PILOT;
 const misspellingsFile = dir ? join(dir, "misspellings.json") : "";
 const misspellings: Misspellings | undefined =
-	dir && existsSync(misspellingsFile) ? JSON.parse(readFileSync(misspellingsFile, "utf8")) : undefined;
+	dir && existsSync(misspellingsFile) ? JSON.parse(readFileSync(misspellingsFile, "utf8")).misspellings : undefined;
 const lists = dir ? readdirSync(dir).filter((file) => file.endsWith(".json") && file !== "misspellings.json") : [];
 
 if (lists.length === 0) it.skip("[pilot] needs PILOT=<dir> of corpora", () => {});
