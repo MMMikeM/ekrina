@@ -25,7 +25,7 @@ const slicer =
 		return data.slice(0, n);
 	};
 
-const wordsOf = (s: string): string[] => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+export const wordsOf = (s: string): string[] => s.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
 const everyOther = (w: string): string => [...w].filter((_, k) => k % 2 === 0).join("");
 const stripAccents = (s: string): string => s.normalize("NFD").replace(/\p{M}+/gu, "");
 
@@ -290,7 +290,7 @@ export type SampledQuery = {
 };
 
 const SAMPLES_PER_FAMILY = 10;
-const SAMPLE_SIZE = 10_000;
+export const SAMPLE_SIZE = 10_000;
 // A query dozens of items could answer is scored by whether a library matches
 // at all, not by how it ranks, so only near-unique intents are sampled.
 const MAX_RELEVANT_ITEMS = 3;
@@ -298,18 +298,18 @@ const MAX_RELEVANT_ITEMS = 3;
 // Relevance is judged on the bench's own folding, never the library under test's.
 const fold = (s: string): string => stripAccents(s).toLowerCase();
 const foldedWordsCache = new Map<string, string[]>();
-const foldedWords = (item: string): string[] => {
+export const foldedWords = (item: string): string[] => {
 	let words = foldedWordsCache.get(item);
 	if (words === undefined) foldedWordsCache.set(item, (words = wordsOf(fold(item))));
 	return words;
 };
-const holdsWords =
+export const holdsWords =
 	(...wanted: string[]) =>
 	(item: string): boolean => {
 		const words = foldedWords(item);
 		return wanted.every((w) => words.includes(fold(w)));
 	};
-const holdsWordWhere =
+export const holdsWordWhere =
 	(test: (word: string) => boolean, ...alsoHolds: string[]) =>
 	(item: string): boolean =>
 		foldedWords(item).some(test) && holdsWords(...alsoHolds)(item);
@@ -320,7 +320,7 @@ const initialsOf = (item: string): string =>
 
 // A fixed shuffle of the list, so sources come from every position rather
 // than the head, where a list-order tie-break would favour them.
-const shuffledIndices = (n: number, seed: number): number[] => {
+export const shuffledIndices = (n: number, seed: number): number[] => {
 	const order = Array.from({ length: n }, (_, i) => i);
 	let state = seed;
 	for (let i = n - 1; i > 0; i--) {
@@ -331,7 +331,7 @@ const shuffledIndices = (n: number, seed: number): number[] => {
 	return order;
 };
 
-const answeredByFew = (items: string[], relevant: (item: string) => boolean): boolean => {
+export const answeredByFew = (items: string[], relevant: (item: string) => boolean): boolean => {
 	let found = 0;
 	for (const item of items) if (relevant(item) && ++found > MAX_RELEVANT_ITEMS) return false;
 	return true;

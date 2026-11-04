@@ -2,6 +2,9 @@ import type { FamilyRow, ScorecardRow } from "./artifact.ts";
 import type { Config } from "./configs.ts";
 import type { SampledQuery } from "./corpus.ts";
 
+// Any family of sampled queries, the published kinds or a diagnostic's own.
+export type Sample = Omit<SampledQuery, "kind"> & { kind: string };
+
 // Reversing the list reverses the order inside each tie that list order breaks
 // and leaves every other pair alone, so the source's tie is the run around it
 // that the reversed ranking returns exactly backwards.
@@ -53,7 +56,7 @@ const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length
 
 /** MRR@10 and median result count per family, for configs built over a list and its reverse. */
 export const scoreFamilies = (
-	samples: SampledQuery[],
+	samples: Sample[],
 	all: Config[],
 	reversedAll: Config[],
 ): FamilyRow[] => {
