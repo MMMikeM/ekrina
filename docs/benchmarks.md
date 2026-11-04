@@ -53,15 +53,16 @@ Size and type, Ekrina first, then by bundle size ascending.
 The tables below show each library at its best-scoring configuration, plus every Ekrina configuration.
 That configuration is picked by running every one a library has against the same query families it is then ranked on, so each headline row is the library tuned to this bench, the most favourable reading of it the bench can produce.
 Each library's base row is what installing it gives you, and for two of them it scores much lower: uFuzzy 0.21 MRR rather than 0.66, and Fuse.js 0.72 rather than 0.76.
-Ekrina's tuned constants, `TYPO_PENALTY`, the density floor and the rescue cutoff, were set from measurements on the bench's earlier, synthetic corpora, before these existed.
+Ekrina's older constants, `TYPO_PENALTY`, the density floor and the rescue cutoff, were set from measurements on the bench's earlier, synthetic corpora; the second pass's sparse pricing was tuned on these, checked against held-out queries ([performance.md](./performance.md)).
 The query families were fixed, weights included, before any library was measured on these corpora, and [`bench/held-out.test.ts`](../bench/held-out.test.ts) scores Ekrina again on items and seeds the published families never drew from.
 Every other configuration is on its library's own page, against the rest of that library's: [Ekrina](./libraries/ekrina.md), [Fuse.js](./libraries/fuse.md), [uFuzzy](./libraries/ufuzzy.md), [fast-fuzzy](./libraries/fast-fuzzy.md), [@nozbe/microfuzz](./libraries/microfuzz.md) and [fuzzy](./libraries/fuzzy.md).
 An "(all opts)" row shares its base library's size, deps, and type.
-Ekrina's opt-in rows are named after the option they switch on: **(acronym)** for `acronym: true` and **(fuzzier)** for the `fuzzier` matcher, which adds two-edit corrections, sparse words, stray spaces and split or joined words.
+Ekrina's opt-in row is named after the option it switches on: **(acronym)** for `acronym: true`.
+**Ekrina (indexed)** is the defaults with `buildIndex()` called up front, so its results are Ekrina's and only its timings differ.
 The specific opt-ins the "(all opts)" rows switch on, and where output formats differ:
 
-- `Ekrina`: Typos 🟢 is the always-on one-edit rescue, reported as the `corrected` tier, a swap, an extra character, a missing one or a wrong one, i.e. Damerau-Levenshtein distance 1, not general edit distance
-- `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, the closest config to Ekrina's one-edit rescue
+- `Ekrina`: Typos 🟢 is the always-on typo rescue, reported as the `corrected` tier: up to two edits in a word, sparse words such as `hget` for "Huguette", a stray or missing space, a held key such as `twaaain`, and a four-letter swap such as `tahn` for "Than"
+- `uFuzzy`: folds diacritics via `latinize()`, matches multi-word via `outOfOrder`, and runs its one-typo `SingleError` mode with all four edits, its closest config to Ekrina's typo rescue
 - `Fuse.js`: returns `ranges` via `includeMatches`, folds diacritics via `ignoreDiacritics`, and matches multi-word via `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order, the same result set Ekrina's multi-word tier returns.
   Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
 - `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalisation doesn't strip accents
@@ -103,7 +104,7 @@ The guards:
 
 - Result counts must be identical across a cell's processes (a variant whose answer drifts is not timing comparable work).
 - Variant order rotates per repetition so thermal and load drift land evenly instead of on whichever library ran last.
-- Base Ekrina measuring more than 10% slower than its strictly-more-code acronym configuration, summed over every cell, fails the run outright (more code cannot be faster, a violated invariant means absorbed load, and the artifact is not written).
+- Ekrina measuring more than 10% slower than Ekrina (acronym), which runs strictly more code, summed over every cell, fails the run outright (more code cannot be faster, a violated invariant means absorbed load, and the artifact is not written).
 - The first cell is re-timed after the last as a drift canary.
 
 Numbers are expected to vary per machine: swapping between a Mac ARM host and an AMD x64 showed subtly different relative results.
@@ -133,7 +134,7 @@ Each query runs against the same 10,000 items in every library (the whole 1,923 
   It counts a query, not its rows, so a library that caps its result list gains nothing from the cap.
   The row counts behind it stay in [`bench/results.json`](../bench/results.json) as a diagnostic.
 - **The duration taken to run the query.**
-  Times spread three orders of magnitude on the same query (0.03 ms to ~120 ms at 100k), and search-as-you-type multiplies the spread: one query per keystroke, where 0.03 ms is invisible and 120 ms blows the frame budget.
+  Times spread more than two orders of magnitude on the same query (0.48 ms to 188 ms for `lopez pexro` in the en 100k batch, [`bench/results.json`](../bench/results.json)), and search-as-you-type multiplies the spread: one query per keystroke, where half a millisecond is invisible and 188 ms blows the frame budget.
 
 The rules that picked the query families ([`bench/catalogue.ts`](../bench/catalogue.ts)):
 
@@ -165,7 +166,7 @@ On the native corpus they are:
 | 8     | two words, first mistyped     | `pexro alonso`                | a typo inside a phrase; word-level rescue             |
 | 9     | two words, second mistyped    | `pedro aloxso`                | the rescue must find the failing word                 |
 | 10    | reversed phrase, one mistyped | `alonso pexro`                | the correction must survive order-independence        |
-| 11    | two words, both mistyped      | `pexro aloxso`                | two edits: 0 rows unless `fuzzier`                    |
+| 11    | two words, both mistyped      | `pexro aloxso`                | a typo in each word; the rescue must fix both         |
 | 12    | prefix / partial word         | `ameri`                       | a word not yet finished                               |
 | 13    | mid-word infix                | `ntiag`                       | contains-anywhere vs start-anchored ranking           |
 | 14    | plural typed, singular stored | `abrashis`                    | a trailing `-s` the corpus lacks, one deletion        |
@@ -186,8 +187,8 @@ MRR covers 33 scored families and 330 queries on every corpus; with ten queries 
 <!-- bench:build -->
 | build |  Ekrina | Ekrina (indexed) | @nozbe/microfuzz | fast-fuzzy | Fuse.js | uFuzzy (all opts) |
 |-------|--------:|-----------------:|-----------------:|-----------:|--------:|------------------:|
-| 10k   | 0.17 ms |          3.09 ms |          4.83 ms |   29.44 ms | 1.09 ms |           4.68 ms |
-| 100k  | 0.35 ms |         14.67 ms |         54.58 ms |  333.46 ms | 5.48 ms |           8.68 ms |
+| 10k   | 0.18 ms |          3.68 ms |          7.74 ms |   42.28 ms | 1.17 ms |           4.79 ms |
+| 100k  | 0.44 ms |         15.67 ms |         65.74 ms |  347.86 ms | 5.42 ms |           8.51 ms |
 <!-- bench:end -->
 
 Measured on the native corpus (process-cold constructor timings; build time barely differs between corpora).
@@ -195,22 +196,21 @@ Fuse.js's build is minimal because its "index" is trivial, and the work it defer
 fast-fuzzy's trie is the heaviest build in the set, and its subtree pruning needs it.
 fuzzysort has no constructor at all, so it has no column here, its lazy prepare-all pass lands in its first query's cold cell, where stock usage actually meets it.
 uFuzzy's base construction only shows up process-cold, because `new uFuzzy()` compiles the engine's regex machinery on first construction, and it never touches the list.
-The (all opts) column shown here also runs `latinize()` over the haystack, which is why it grows with the corpus (4.68 → 8.68 ms).
+The (all opts) column shown here also runs `latinize()` over the haystack, which is why it grows with the corpus (4.79 → 8.51 ms).
 microfuzz's column is its whole index: the constructor normalises every item and builds its word sets up front, so its first query adds only 0.06 MB to the memory table below.
-Ekrina's constructor only allocates - field text is trimmed, normalised and masked the first time an item survives a gate - so a 100k list swap takes about a third of a millisecond, and the first query then carries what construction deferred (its cold cells).
-Ekrina (indexed), the same searcher with its mask index built up front, moves the larger part of that deferred work into its constructor: 3.09 ms at 10k and 14.67 ms at 100k.
+Ekrina's constructor only allocates - field text is trimmed, normalised and masked the first time an item survives a gate - so a 100k list swap takes under half a millisecond (0.44 ms), and the first query then carries what construction deferred (its cold cells).
+Ekrina (indexed), the same searcher with its mask index built up front, moves the larger part of that deferred work into its constructor: 3.68 ms at 10k and 15.67 ms at 100k.
 
 ## Memory
 
 <!-- bench:memory -->
 | Library           | built MB | + `hinton` | + `qxzwkv` | + `gensler` | dropped MB |
 |-------------------|---------:|-----------:|-----------:|------------:|-----------:|
-| Ekrina            |     1.94 |       2.47 |       3.55 |        3.79 |       0.53 |
-| Ekrina (acronym)  |     1.94 |       2.47 |       3.55 |        3.80 |       0.54 |
-| Ekrina (fuzzier)  |     3.56 |       4.12 |       5.22 |        5.58 |       0.66 |
-| Ekrina (indexed)  |     2.99 |       3.78 |       3.80 |        3.99 |       0.50 |
+| Ekrina            |     3.56 |       4.12 |       5.22 |        5.58 |       0.66 |
+| Ekrina (acronym)  |     3.56 |       4.12 |       5.23 |        5.59 |       0.67 |
+| Ekrina (indexed)  |     4.61 |       5.43 |       5.48 |        5.77 |       0.63 |
 | @nozbe/microfuzz  |    45.94 |      46.00 |      46.00 |       46.00 |       0.12 |
-| fast-fuzzy        |   189.66 |     191.63 |     191.63 |      191.64 |       0.18 |
+| fast-fuzzy        |   189.68 |     191.65 |     191.65 |      191.65 |       0.18 |
 | Fuse.js (tuned)   |     6.92 |       7.04 |       7.12 |        7.07 |       0.18 |
 | fuzzy             |     0.02 |       0.05 |       0.05 |        0.05 |       0.05 |
 | fuzzysort         |     0.02 |      43.17 |      43.18 |       43.23 |      43.23 |
@@ -221,9 +221,9 @@ Ekrina (indexed), the same searcher with its mask index built up front, moves th
 What each configuration retains at 100k on the native corpus: `heapUsed + external` over a baseline taken with the list already in memory, so typed arrays count and the caller's own strings don't.
 Each row is one fresh process ([`bench/memory.ts`](../bench/memory.ts)): the searcher is built, then answers `hinton`, `qxzwkv` and `gensler` warm in that order, so each column includes every query before it.
 **dropped MB** is what is still retained once the searcher is unreachable and collected.
-Ekrina allocates its per-item caches empty at construction; `hinton` prepares the items it matches (~0.5 MB), and `qxzwkv`, the first query to reach the one-edit rescue, adds the mask index's bigram arrays (~1.1 MB).
-Ekrina (indexed) builds that index at construction instead (2.99 MB built), so `qxzwkv` adds only 0.02 MB.
-Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.5 MB of process-wide state stays behind on native and 0.2 MB on en: it grows with the characters a corpus holds rather than its items, consistent with the module-level cache of rare-character folds in [`src/normalise.ts`](../src/normalise.ts).
+Ekrina allocates its per-item caches empty at construction; `hinton` prepares the items it matches (~0.5 MB), and `qxzwkv`, the first query to reach the typo rescue, adds the mask index's bigram arrays (~1.1 MB).
+Ekrina (indexed) builds that index at construction instead (4.61 MB built), so `qxzwkv` adds only 0.05 MB.
+Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.7 MB of process-wide state stays behind on native and 0.4 MB on en: it grows with the characters a corpus holds rather than its items, consistent with the module-level cache of rare-character folds in [`src/normalise.ts`](../src/normalise.ts).
 fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, which is process-wide and unevicted, so its **dropped** column equals its footprint until you call `cleanup()`.
 Every other library gives its index back, leaving under 0.2 MB.
 The en cells, in [`bench/results.json`](../bench/results.json), tell the same story.
@@ -241,121 +241,121 @@ Each cell is MRR@10 over the family's ten queries; the scorecard's MRR weights t
 **native corpus:**
 
 <!-- bench:families-native -->
-| Group         | Family                        | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|---------------|-------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| typos         | neighbouring key              |             1.00 |   1.00 |             1.00 |       1.00 |            0.76 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | two neighbouring keys         |             0.97 |   0.00 |             0.00 |       1.00 |            0.87 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | random letter                 |             0.95 |   0.95 |             0.95 |       0.93 |            0.83 |              0.88 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | dropped letter                |             0.97 |   0.78 |             0.78 |       0.63 |            0.71 |              0.80 |      0.90 |             0.77 |         0.93 |  0.62 |
-| typos         | two dropped letters           |             1.00 |   0.76 |             0.76 |       0.43 |            0.34 |              0.00 |      0.93 |             0.89 |         1.00 |  0.94 |
-| typos         | inserted neighbouring key     |             1.00 |   1.00 |             1.00 |       1.00 |            0.92 |              1.00 |      0.10 |             0.05 |         0.10 |  0.10 |
-| typos         | swapped neighbours            |             0.79 |   0.80 |             0.80 |       0.79 |            0.48 |              0.79 |      0.08 |             0.04 |         0.06 |  0.06 |
-| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       1.00 |            0.66 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | first letter wrong            |             0.90 |   0.90 |             0.90 |       0.85 |            0.71 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
-| typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | two words joined, with a typo |             0.97 |   0.00 |             0.00 |       0.97 |            0.97 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| phonetic      | consonant spelt another way   |             1.00 |   0.80 |             0.80 |       0.93 |            0.78 |              0.65 |      0.10 |             0.10 |         0.10 |  0.10 |
-| phonetic      | letter doubled or singled     |             0.92 |   0.87 |             0.87 |       0.82 |            0.80 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
-| phonetic      | silent letters dropped        |             0.61 |   0.58 |             0.58 |       0.60 |            0.47 |              0.53 |      0.70 |             0.56 |         0.56 |  0.62 |
-| phonetic      | vowel sound spelt another way |             0.95 |   0.95 |             0.95 |       0.95 |            0.57 |              0.95 |      0.00 |             0.00 |         0.00 |  0.00 |
-| partial words | prefix of 3                   |             1.00 |   1.00 |             1.00 |       0.90 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.66 |
-| partial words | prefix of 5                   |             1.00 |   1.00 |             1.00 |       1.00 |            0.95 |              1.00 |      1.00 |             1.00 |         1.00 |  0.99 |
-| partial words | infix of 5                    |             1.00 |   1.00 |             1.00 |       1.00 |            0.93 |              1.00 |      1.00 |             1.00 |         1.00 |  1.00 |
-| partial words | two words half typed          |             1.00 |   1.00 |             1.00 |       0.14 |            1.00 |              1.00 |      1.00 |             1.00 |         0.95 |  0.80 |
-| partial words | a vowel dropped               |             0.97 |   0.92 |             0.92 |       0.71 |            0.70 |              0.71 |      0.87 |             0.87 |         1.00 |  0.88 |
-| partial words | 2 vowels dropped              |             0.95 |   0.25 |             0.25 |       0.37 |            0.43 |              0.03 |      0.90 |             0.80 |         0.95 |  0.76 |
-| query shape   | two words                     |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             0.88 |         0.90 |  0.68 |
-| query shape   | two words reversed            |             1.00 |   1.00 |             1.00 |       0.07 |            1.00 |              0.95 |      1.00 |             0.90 |         0.00 |  0.00 |
-| query shape   | two words joined              |             1.00 |   1.00 |             1.00 |       1.00 |            0.90 |              0.00 |      1.00 |             1.00 |         1.00 |  0.90 |
-| query shape   | an absent word added          |             0.00 |   0.00 |             0.00 |       0.80 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| noise         | space inside a word           |             1.00 |   0.00 |             0.00 |       0.91 |            1.00 |              0.90 |      1.00 |             0.00 |         0.00 |  0.00 |
-| noise         | punctuation inside a word     |             1.00 |   0.00 |             0.00 |       0.95 |            0.83 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| noise         | accents stripped              |             1.00 |   1.00 |             1.00 |       0.62 |            0.88 |              0.90 |      0.85 |             0.96 |         0.90 |  0.10 |
-| noise         | accents added                 |             1.00 |   1.00 |             1.00 |       0.93 |            1.00 |              1.00 |      1.00 |             0.96 |         1.00 |  0.00 |
-| reported only | acronym                       |             0.37 |   0.37 |             0.90 |       0.00 |            0.00 |              0.00 |      0.50 |             0.44 |         0.70 |  0.15 |
-| reported only | plural for a singular         |             1.00 |   1.00 |             1.00 |       1.00 |            0.88 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
-| phonetic      | real misspelling              |             0.65 |   0.73 |             0.73 |       0.74 |            0.58 |              0.64 |      0.40 |             0.30 |         0.30 |  0.30 |
+| Group         | Family                        | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|---------------|-------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| typos         | neighbouring key              |   1.00 |             1.00 |       1.00 |            0.76 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | two neighbouring keys         |   0.97 |             0.97 |       1.00 |            0.87 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | random letter                 |   0.95 |             0.95 |       0.93 |            0.83 |              0.88 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | dropped letter                |   0.97 |             0.97 |       0.63 |            0.71 |              0.80 |      0.90 |             0.77 |         0.93 |  0.62 |
+| typos         | two dropped letters           |   1.00 |             1.00 |       0.43 |            0.34 |              0.00 |      0.93 |             0.89 |         1.00 |  0.94 |
+| typos         | inserted neighbouring key     |   1.00 |             1.00 |       1.00 |            0.92 |              1.00 |      0.10 |             0.05 |         0.10 |  0.10 |
+| typos         | swapped neighbours            |   0.80 |             0.80 |       0.79 |            0.48 |              0.79 |      0.08 |             0.04 |         0.06 |  0.06 |
+| typos         | stuck key                     |   1.00 |             1.00 |       1.00 |            0.66 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | first letter wrong            |   0.90 |             0.90 |       0.85 |            0.71 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
+| typos         | typo in each of two words     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | typo then a half-typed word   |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | two words joined, with a typo |   0.97 |             0.97 |       0.97 |            0.97 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| phonetic      | consonant spelt another way   |   1.00 |             1.00 |       0.93 |            0.78 |              0.65 |      0.10 |             0.10 |         0.10 |  0.10 |
+| phonetic      | letter doubled or singled     |   0.92 |             0.92 |       0.82 |            0.80 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
+| phonetic      | silent letters dropped        |   0.61 |             0.61 |       0.60 |            0.47 |              0.53 |      0.70 |             0.56 |         0.56 |  0.62 |
+| phonetic      | vowel sound spelt another way |   0.95 |             0.95 |       0.95 |            0.57 |              0.95 |      0.00 |             0.00 |         0.00 |  0.00 |
+| partial words | prefix of 3                   |   1.00 |             1.00 |       0.90 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.66 |
+| partial words | prefix of 5                   |   1.00 |             1.00 |       1.00 |            0.95 |              1.00 |      1.00 |             1.00 |         1.00 |  0.99 |
+| partial words | infix of 5                    |   1.00 |             1.00 |       1.00 |            0.93 |              1.00 |      1.00 |             1.00 |         1.00 |  1.00 |
+| partial words | two words half typed          |   1.00 |             1.00 |       0.14 |            1.00 |              1.00 |      1.00 |             1.00 |         0.95 |  0.80 |
+| partial words | a vowel dropped               |   0.97 |             0.97 |       0.71 |            0.70 |              0.71 |      0.87 |             0.87 |         1.00 |  0.88 |
+| partial words | 2 vowels dropped              |   0.90 |             0.90 |       0.37 |            0.43 |              0.03 |      0.90 |             0.80 |         0.95 |  0.76 |
+| query shape   | two words                     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             0.88 |         0.90 |  0.68 |
+| query shape   | two words reversed            |   1.00 |             1.00 |       0.07 |            1.00 |              0.95 |      1.00 |             0.90 |         0.00 |  0.00 |
+| query shape   | two words joined              |   1.00 |             1.00 |       1.00 |            0.90 |              0.00 |      1.00 |             1.00 |         1.00 |  0.90 |
+| query shape   | an absent word added          |   0.00 |             0.00 |       0.80 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| noise         | space inside a word           |   1.00 |             1.00 |       0.91 |            1.00 |              0.90 |      1.00 |             0.00 |         0.00 |  0.00 |
+| noise         | punctuation inside a word     |   1.00 |             1.00 |       0.95 |            0.83 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| noise         | accents stripped              |   1.00 |             1.00 |       0.62 |            0.88 |              0.90 |      0.85 |             0.96 |         0.90 |  0.10 |
+| noise         | accents added                 |   1.00 |             1.00 |       0.93 |            1.00 |              1.00 |      1.00 |             0.96 |         1.00 |  0.00 |
+| reported only | acronym                       |   0.37 |             0.90 |       0.00 |            0.00 |              0.00 |      0.50 |             0.44 |         0.70 |  0.15 |
+| reported only | plural for a singular         |   1.00 |             1.00 |       1.00 |            0.88 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
+| phonetic      | real misspelling              |   0.78 |             0.78 |       0.74 |            0.58 |              0.64 |      0.40 |             0.30 |         0.30 |  0.30 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:families-en -->
-| Group         | Family                        | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|---------------|-------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| typos         | neighbouring key              |             1.00 |   1.00 |             1.00 |       1.00 |            0.90 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | two neighbouring keys         |             1.00 |   0.00 |             0.00 |       1.00 |            0.95 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | random letter                 |             0.95 |   0.95 |             0.95 |       0.93 |            0.81 |              0.88 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | dropped letter                |             0.95 |   0.77 |             0.77 |       0.64 |            0.73 |              0.83 |      0.90 |             0.77 |         0.91 |  0.68 |
-| typos         | two dropped letters           |             1.00 |   0.82 |             0.82 |       0.46 |            0.41 |              0.00 |      1.00 |             1.00 |         1.00 |  0.97 |
-| typos         | inserted neighbouring key     |             1.00 |   1.00 |             1.00 |       1.00 |            0.85 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | swapped neighbours            |             0.79 |   0.80 |             0.80 |       0.78 |            0.48 |              0.78 |      0.07 |             0.04 |         0.04 |  0.05 |
-| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       1.00 |            0.68 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | first letter wrong            |             0.95 |   0.95 |             0.95 |       0.90 |            0.80 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
-| typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | two words joined, with a typo |             0.97 |   0.00 |             0.00 |       0.97 |            0.97 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| phonetic      | consonant spelt another way   |             1.00 |   0.80 |             0.80 |       0.93 |            0.65 |              0.65 |      0.10 |             0.10 |         0.10 |  0.10 |
-| phonetic      | letter doubled or singled     |             1.00 |   0.95 |             0.95 |       0.93 |            0.83 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
-| phonetic      | silent letters dropped        |             0.60 |   0.57 |             0.57 |       0.53 |            0.48 |              0.58 |      0.66 |             0.54 |         0.51 |  0.58 |
-| phonetic      | vowel sound spelt another way |             0.95 |   0.95 |             0.95 |       0.81 |            0.44 |              0.80 |      0.00 |             0.00 |         0.00 |  0.00 |
-| partial words | prefix of 3                   |             1.00 |   1.00 |             1.00 |       0.90 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.57 |
-| partial words | prefix of 5                   |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.97 |
-| partial words | infix of 5                    |             1.00 |   1.00 |             1.00 |       1.00 |            0.92 |              1.00 |      0.95 |             1.00 |         1.00 |  0.94 |
-| partial words | two words half typed          |             1.00 |   1.00 |             1.00 |       0.14 |            1.00 |              1.00 |      1.00 |             1.00 |         0.95 |  0.85 |
-| partial words | a vowel dropped               |             0.97 |   0.94 |             0.94 |       0.76 |            0.76 |              0.76 |      0.87 |             0.85 |         0.95 |  0.84 |
-| partial words | 2 vowels dropped              |             0.93 |   0.13 |             0.13 |       0.28 |            0.35 |              0.02 |      0.93 |             0.80 |         0.93 |  0.81 |
-| query shape   | two words                     |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             0.88 |         0.90 |  0.68 |
-| query shape   | two words reversed            |             1.00 |   1.00 |             1.00 |       0.07 |            1.00 |              1.00 |      1.00 |             0.90 |         0.00 |  0.00 |
-| query shape   | two words joined              |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              0.00 |      1.00 |             1.00 |         1.00 |  0.80 |
-| query shape   | an absent word added          |             0.00 |   0.00 |             0.00 |       0.80 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| noise         | space inside a word           |             1.00 |   0.00 |             0.00 |       0.91 |            1.00 |              0.90 |      1.00 |             0.00 |         0.00 |  0.00 |
-| noise         | punctuation inside a word     |             1.00 |   0.00 |             0.00 |       0.95 |            0.82 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| noise         | accents stripped              |             1.00 |   1.00 |             1.00 |       0.65 |            0.85 |              1.00 |      0.93 |             0.96 |         1.00 |  0.13 |
-| noise         | accents added                 |             1.00 |   1.00 |             1.00 |       0.93 |            0.97 |              1.00 |      1.00 |             0.95 |         1.00 |  0.00 |
-| reported only | acronym                       |             0.64 |   0.64 |             0.88 |       0.05 |            0.00 |              0.00 |      0.78 |             0.47 |         0.73 |  0.03 |
-| reported only | plural for a singular         |             1.00 |   1.00 |             1.00 |       1.00 |            0.71 |              1.00 |      0.30 |             0.30 |         0.25 |  0.30 |
-| phonetic      | real misspelling              |             0.65 |   0.73 |             0.73 |       0.57 |            0.57 |              0.58 |      0.33 |             0.20 |         0.17 |  0.15 |
+| Group         | Family                        | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|---------------|-------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| typos         | neighbouring key              |   1.00 |             1.00 |       1.00 |            0.90 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | two neighbouring keys         |   1.00 |             1.00 |       1.00 |            0.95 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | random letter                 |   0.95 |             0.95 |       0.93 |            0.81 |              0.88 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | dropped letter                |   0.95 |             0.95 |       0.64 |            0.73 |              0.83 |      0.90 |             0.77 |         0.91 |  0.68 |
+| typos         | two dropped letters           |   1.00 |             1.00 |       0.46 |            0.41 |              0.00 |      1.00 |             1.00 |         1.00 |  0.97 |
+| typos         | inserted neighbouring key     |   1.00 |             1.00 |       1.00 |            0.85 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | swapped neighbours            |   0.79 |             0.79 |       0.78 |            0.48 |              0.78 |      0.07 |             0.04 |         0.04 |  0.05 |
+| typos         | stuck key                     |   1.00 |             1.00 |       1.00 |            0.68 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | first letter wrong            |   0.95 |             0.95 |       0.90 |            0.80 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
+| typos         | typo in each of two words     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | typo then a half-typed word   |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | two words joined, with a typo |   0.97 |             0.97 |       0.97 |            0.97 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| phonetic      | consonant spelt another way   |   1.00 |             1.00 |       0.93 |            0.65 |              0.65 |      0.10 |             0.10 |         0.10 |  0.10 |
+| phonetic      | letter doubled or singled     |   1.00 |             1.00 |       0.93 |            0.83 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
+| phonetic      | silent letters dropped        |   0.60 |             0.60 |       0.53 |            0.48 |              0.58 |      0.66 |             0.54 |         0.51 |  0.58 |
+| phonetic      | vowel sound spelt another way |   0.95 |             0.95 |       0.81 |            0.44 |              0.80 |      0.00 |             0.00 |         0.00 |  0.00 |
+| partial words | prefix of 3                   |   1.00 |             1.00 |       0.90 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.57 |
+| partial words | prefix of 5                   |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.97 |
+| partial words | infix of 5                    |   1.00 |             1.00 |       1.00 |            0.92 |              1.00 |      0.95 |             1.00 |         1.00 |  0.94 |
+| partial words | two words half typed          |   1.00 |             1.00 |       0.14 |            1.00 |              1.00 |      1.00 |             1.00 |         0.95 |  0.85 |
+| partial words | a vowel dropped               |   0.97 |             0.97 |       0.76 |            0.76 |              0.76 |      0.87 |             0.85 |         0.95 |  0.84 |
+| partial words | 2 vowels dropped              |   0.93 |             0.93 |       0.28 |            0.35 |              0.02 |      0.93 |             0.80 |         0.93 |  0.81 |
+| query shape   | two words                     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             0.88 |         0.90 |  0.68 |
+| query shape   | two words reversed            |   1.00 |             1.00 |       0.07 |            1.00 |              1.00 |      1.00 |             0.90 |         0.00 |  0.00 |
+| query shape   | two words joined              |   1.00 |             1.00 |       1.00 |            1.00 |              0.00 |      1.00 |             1.00 |         1.00 |  0.80 |
+| query shape   | an absent word added          |   0.00 |             0.00 |       0.80 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| noise         | space inside a word           |   1.00 |             1.00 |       0.91 |            1.00 |              0.90 |      1.00 |             0.00 |         0.00 |  0.00 |
+| noise         | punctuation inside a word     |   1.00 |             1.00 |       0.95 |            0.82 |              1.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| noise         | accents stripped              |   1.00 |             1.00 |       0.65 |            0.85 |              1.00 |      0.93 |             0.96 |         1.00 |  0.13 |
+| noise         | accents added                 |   1.00 |             1.00 |       0.93 |            0.97 |              1.00 |      1.00 |             0.95 |         1.00 |  0.00 |
+| reported only | acronym                       |   0.64 |             0.88 |       0.05 |            0.00 |              0.00 |      0.78 |             0.47 |         0.73 |  0.03 |
+| reported only | plural for a singular         |   1.00 |             1.00 |       1.00 |            0.71 |              1.00 |      0.30 |             0.30 |         0.25 |  0.30 |
+| phonetic      | real misspelling              |   0.78 |             0.78 |       0.57 |            0.57 |              0.58 |      0.33 |             0.20 |         0.17 |  0.15 |
 <!-- bench:end -->
 
 **emoji corpus:**
 
 <!-- bench:families-emoji -->
-| Group         | Family                        | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|---------------|-------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| typos         | neighbouring key              |             1.00 |   1.00 |             1.00 |       1.00 |            0.76 |              1.00 |      0.20 |             0.13 |         0.15 |  0.14 |
-| typos         | two neighbouring keys         |             1.00 |   0.00 |             0.00 |       1.00 |            0.58 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| typos         | random letter                 |             0.88 |   0.88 |             0.88 |       0.95 |            0.79 |              0.95 |      0.23 |             0.20 |         0.23 |  0.20 |
-| typos         | dropped letter                |             1.00 |   0.76 |             0.76 |       0.75 |            0.46 |              0.52 |      0.80 |             0.78 |         0.92 |  0.66 |
-| typos         | two dropped letters           |             1.00 |   0.90 |             0.90 |       0.74 |            0.49 |              0.00 |      0.83 |             0.68 |         0.82 |  0.69 |
-| typos         | inserted neighbouring key     |             0.95 |   0.95 |             0.95 |       1.00 |            0.87 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
-| typos         | swapped neighbours            |             1.00 |   1.00 |             1.00 |       1.00 |            0.44 |              1.00 |      0.38 |             0.29 |         0.24 |  0.38 |
-| typos         | stuck key                     |             1.00 |   0.00 |             0.00 |       0.88 |            0.81 |              0.00 |      0.23 |             0.23 |         0.22 |  0.30 |
-| typos         | first letter wrong            |             0.82 |   0.82 |             0.82 |       0.90 |            0.78 |              0.00 |      0.33 |             0.35 |         0.31 |  0.33 |
-| typos         | typo in each of two words     |             1.00 |   0.00 |             0.00 |       1.00 |            1.00 |              1.00 |      0.05 |             0.00 |         0.00 |  0.00 |
-| typos         | typo then a half-typed word   |             1.00 |   1.00 |             1.00 |       0.95 |            0.95 |              1.00 |      0.05 |             0.10 |         0.01 |  0.10 |
-| typos         | two words joined, with a typo |             1.00 |   0.00 |             0.00 |       0.85 |            0.81 |              0.00 |      0.05 |             0.05 |         0.03 |  0.07 |
-| phonetic      | consonant spelt another way   |             1.00 |   0.70 |             0.70 |       1.00 |            0.85 |              0.60 |      0.00 |             0.00 |         0.00 |  0.00 |
-| phonetic      | letter doubled or singled     |             0.87 |   0.87 |             0.87 |       0.83 |            0.70 |              0.77 |      0.60 |             0.55 |         0.60 |  0.55 |
-| phonetic      | silent letters dropped        |             0.60 |   0.60 |             0.60 |       0.56 |            0.27 |              0.50 |      0.50 |             0.60 |         0.60 |  0.50 |
-| phonetic      | vowel sound spelt another way |             0.85 |   0.90 |             0.90 |       0.95 |            0.45 |              0.85 |      0.43 |             0.28 |         0.33 |  0.36 |
-| partial words | prefix of 3                   |             1.00 |   1.00 |             1.00 |       0.65 |            0.67 |              1.00 |      0.95 |             1.00 |         1.00 |  0.61 |
-| partial words | prefix of 5                   |             1.00 |   1.00 |             1.00 |       1.00 |            0.90 |              1.00 |      1.00 |             1.00 |         1.00 |  0.98 |
-| partial words | infix of 5                    |             1.00 |   1.00 |             1.00 |       1.00 |            0.66 |              1.00 |      0.95 |             1.00 |         1.00 |  0.90 |
-| partial words | two words half typed          |             1.00 |   1.00 |             1.00 |       0.13 |            0.95 |              1.00 |      1.00 |             1.00 |         0.90 |  0.91 |
-| partial words | a vowel dropped               |             1.00 |   0.93 |             0.93 |       0.80 |            0.72 |              0.88 |      0.87 |             0.97 |         0.90 |  0.97 |
-| partial words | 2 vowels dropped              |             1.00 |   0.32 |             0.32 |       0.49 |            0.50 |              0.10 |      0.90 |             0.77 |         0.82 |  0.75 |
-| query shape   | two words                     |             1.00 |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  1.00 |
-| query shape   | two words reversed            |             1.00 |   1.00 |             1.00 |       0.23 |            1.00 |              0.92 |      1.00 |             0.70 |         0.12 |  0.10 |
-| query shape   | two words joined              |             1.00 |   1.00 |             1.00 |       0.88 |            0.95 |              0.00 |      1.00 |             1.00 |         1.00 |  1.00 |
-| query shape   | an absent word added          |             0.00 |   0.00 |             0.00 |       1.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| noise         | space inside a word           |             1.00 |   0.10 |             0.10 |       1.00 |            1.00 |              1.00 |      1.00 |             0.10 |         0.10 |  0.10 |
-| noise         | punctuation inside a word     |             1.00 |   0.10 |             0.10 |       1.00 |            1.00 |              1.00 |      0.10 |             0.10 |         0.10 |  0.10 |
-| noise         | accents stripped              |             0.95 |   0.95 |             0.95 |       0.80 |            0.74 |              0.70 |      1.00 |             0.95 |         0.95 |  0.04 |
-| noise         | accents added                 |             1.00 |   1.00 |             1.00 |       0.97 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.00 |
-| reported only | acronym                       |             0.35 |   0.35 |             0.90 |       0.02 |            0.00 |              0.00 |      0.78 |             0.62 |         0.23 |  0.04 |
-| reported only | plural for a singular         |             1.00 |   1.00 |             1.00 |       1.00 |            0.87 |              1.00 |      0.70 |             0.70 |         0.51 |  0.70 |
-| phonetic      | real misspelling              |             0.80 |   0.75 |             0.75 |       0.70 |            0.60 |              0.68 |      0.22 |             0.23 |         0.12 |  0.23 |
+| Group         | Family                        | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|---------------|-------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| typos         | neighbouring key              |   1.00 |             1.00 |       1.00 |            0.76 |              1.00 |      0.20 |             0.13 |         0.15 |  0.14 |
+| typos         | two neighbouring keys         |   1.00 |             1.00 |       1.00 |            0.58 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| typos         | random letter                 |   0.88 |             0.88 |       0.95 |            0.79 |              0.95 |      0.23 |             0.20 |         0.23 |  0.20 |
+| typos         | dropped letter                |   1.00 |             1.00 |       0.75 |            0.46 |              0.52 |      0.80 |             0.78 |         0.92 |  0.66 |
+| typos         | two dropped letters           |   1.00 |             1.00 |       0.74 |            0.49 |              0.00 |      0.83 |             0.68 |         0.82 |  0.69 |
+| typos         | inserted neighbouring key     |   0.95 |             0.95 |       1.00 |            0.87 |              1.00 |      0.20 |             0.20 |         0.20 |  0.20 |
+| typos         | swapped neighbours            |   1.00 |             1.00 |       1.00 |            0.44 |              1.00 |      0.38 |             0.29 |         0.24 |  0.38 |
+| typos         | stuck key                     |   1.00 |             1.00 |       0.88 |            0.81 |              0.00 |      0.23 |             0.23 |         0.22 |  0.30 |
+| typos         | first letter wrong            |   0.82 |             0.82 |       0.90 |            0.78 |              0.00 |      0.33 |             0.35 |         0.31 |  0.33 |
+| typos         | typo in each of two words     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.05 |             0.00 |         0.00 |  0.00 |
+| typos         | typo then a half-typed word   |   1.00 |             1.00 |       0.95 |            0.95 |              1.00 |      0.05 |             0.10 |         0.01 |  0.10 |
+| typos         | two words joined, with a typo |   1.00 |             1.00 |       0.85 |            0.81 |              0.00 |      0.05 |             0.05 |         0.03 |  0.07 |
+| phonetic      | consonant spelt another way   |   1.00 |             1.00 |       1.00 |            0.85 |              0.60 |      0.00 |             0.00 |         0.00 |  0.00 |
+| phonetic      | letter doubled or singled     |   0.87 |             0.87 |       0.83 |            0.70 |              0.77 |      0.60 |             0.55 |         0.60 |  0.55 |
+| phonetic      | silent letters dropped        |   0.60 |             0.60 |       0.56 |            0.27 |              0.50 |      0.50 |             0.60 |         0.60 |  0.50 |
+| phonetic      | vowel sound spelt another way |   0.90 |             0.90 |       0.95 |            0.45 |              0.85 |      0.43 |             0.28 |         0.33 |  0.36 |
+| partial words | prefix of 3                   |   1.00 |             1.00 |       0.65 |            0.67 |              1.00 |      0.95 |             1.00 |         1.00 |  0.61 |
+| partial words | prefix of 5                   |   1.00 |             1.00 |       1.00 |            0.90 |              1.00 |      1.00 |             1.00 |         1.00 |  0.98 |
+| partial words | infix of 5                    |   1.00 |             1.00 |       1.00 |            0.66 |              1.00 |      0.95 |             1.00 |         1.00 |  0.90 |
+| partial words | two words half typed          |   1.00 |             1.00 |       0.13 |            0.95 |              1.00 |      1.00 |             1.00 |         0.90 |  0.91 |
+| partial words | a vowel dropped               |   1.00 |             1.00 |       0.80 |            0.72 |              0.88 |      0.87 |             0.97 |         0.90 |  0.97 |
+| partial words | 2 vowels dropped              |   0.95 |             0.95 |       0.49 |            0.50 |              0.10 |      0.90 |             0.77 |         0.82 |  0.75 |
+| query shape   | two words                     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  1.00 |
+| query shape   | two words reversed            |   1.00 |             1.00 |       0.23 |            1.00 |              0.92 |      1.00 |             0.70 |         0.12 |  0.10 |
+| query shape   | two words joined              |   1.00 |             1.00 |       0.88 |            0.95 |              0.00 |      1.00 |             1.00 |         1.00 |  1.00 |
+| query shape   | an absent word added          |   0.00 |             0.00 |       1.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| noise         | space inside a word           |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      1.00 |             0.10 |         0.10 |  0.10 |
+| noise         | punctuation inside a word     |   1.00 |             1.00 |       1.00 |            1.00 |              1.00 |      0.10 |             0.10 |         0.10 |  0.10 |
+| noise         | accents stripped              |   0.95 |             0.95 |       0.80 |            0.74 |              0.70 |      1.00 |             0.95 |         0.95 |  0.04 |
+| noise         | accents added                 |   1.00 |             1.00 |       0.97 |            1.00 |              1.00 |      1.00 |             1.00 |         1.00 |  0.00 |
+| reported only | acronym                       |   0.35 |             0.90 |       0.02 |            0.00 |              0.00 |      0.78 |             0.62 |         0.23 |  0.04 |
+| reported only | plural for a singular         |   1.00 |             1.00 |       1.00 |            0.87 |              1.00 |      0.70 |             0.70 |         0.51 |  0.70 |
+| phonetic      | real misspelling              |   0.90 |             0.90 |       0.70 |            0.60 |              0.68 |      0.22 |             0.23 |         0.12 |  0.23 |
 <!-- bench:end -->
 
 Queries nothing answers have no rank to score, so each cell is the share of that kind's twenty queries a library answered at all, where 0 is correct.
@@ -363,37 +363,37 @@ Queries nothing answers have no rank to score, so each cell is the share of that
 **native corpus:**
 
 <!-- bench:refusals-native -->
-| Query nothing answers                   | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|-----------------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| a word 3 edits from every word          |             0.00 |   0.00 |             0.00 |       0.65 |            1.00 |              0.00 |      0.25 |             0.25 |         0.25 |  0.25 |
-| a word 4 edits from every word          |             0.00 |   0.00 |             0.00 |       0.40 |            0.55 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
-| a word 5 edits from every word          |             0.00 |   0.00 |             0.00 |       0.10 |            0.20 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| random letters, 4 edits from every word |             0.00 |   0.00 |             0.00 |       0.05 |            0.60 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
-| two words, each 3 edits from every word |             0.00 |   0.00 |             0.00 |       0.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| Query nothing answers                   | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|-----------------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| a word 3 edits from every word          |   0.00 |             0.00 |       0.65 |            1.00 |              0.00 |      0.25 |             0.25 |         0.25 |  0.25 |
+| a word 4 edits from every word          |   0.00 |             0.00 |       0.40 |            0.55 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
+| a word 5 edits from every word          |   0.00 |             0.00 |       0.10 |            0.20 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| random letters, 4 edits from every word |   0.00 |             0.00 |       0.05 |            0.60 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
+| two words, each 3 edits from every word |   0.00 |             0.00 |       0.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:refusals-en -->
-| Query nothing answers                   | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|-----------------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| a word 3 edits from every word          |             0.00 |   0.00 |             0.00 |       0.80 |            1.00 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
-| a word 4 edits from every word          |             0.00 |   0.00 |             0.00 |       0.35 |            0.55 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| a word 5 edits from every word          |             0.00 |   0.00 |             0.00 |       0.10 |            0.10 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
-| random letters, 4 edits from every word |             0.00 |   0.00 |             0.00 |       0.05 |            0.65 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
-| two words, each 3 edits from every word |             0.00 |   0.00 |             0.00 |       0.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| Query nothing answers                   | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|-----------------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| a word 3 edits from every word          |   0.00 |             0.00 |       0.80 |            1.00 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
+| a word 4 edits from every word          |   0.00 |             0.00 |       0.35 |            0.55 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| a word 5 edits from every word          |   0.00 |             0.00 |       0.10 |            0.10 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
+| random letters, 4 edits from every word |   0.00 |             0.00 |       0.05 |            0.65 |              0.00 |      0.05 |             0.05 |         0.05 |  0.05 |
+| two words, each 3 edits from every word |   0.00 |             0.00 |       0.00 |            0.00 |              0.00 |      0.00 |             0.00 |         0.00 |  0.00 |
 <!-- bench:end -->
 
 **emoji corpus:**
 
 <!-- bench:refusals-emoji -->
-| Query nothing answers                   | Ekrina (fuzzier) | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
-|-----------------------------------------|-----------------:|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
-| a word 3 edits from every word          |             0.00 |   0.00 |             0.00 |       0.75 |            0.95 |              0.00 |      0.55 |             0.55 |         0.55 |  0.55 |
-| a word 4 edits from every word          |             0.00 |   0.00 |             0.00 |       0.40 |            0.40 |              0.00 |      0.20 |             0.20 |         0.20 |  0.20 |
-| a word 5 edits from every word          |             0.00 |   0.00 |             0.00 |       0.10 |            0.00 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
-| random letters, 4 edits from every word |             0.00 |   0.00 |             0.00 |       0.00 |            0.30 |              0.00 |      0.35 |             0.35 |         0.35 |  0.35 |
-| two words, each 3 edits from every word |             0.00 |   0.00 |             0.00 |       0.05 |            0.10 |              0.00 |      0.05 |             0.00 |         0.00 |  0.00 |
+| Query nothing answers                   | Ekrina | Ekrina (acronym) | fast-fuzzy | Fuse.js (tuned) | uFuzzy (all opts) | fuzzysort | @nozbe/microfuzz | match-sorter | fuzzy |
+|-----------------------------------------|-------:|-----------------:|-----------:|----------------:|------------------:|----------:|-----------------:|-------------:|------:|
+| a word 3 edits from every word          |   0.00 |             0.00 |       0.75 |            0.95 |              0.00 |      0.55 |             0.55 |         0.55 |  0.55 |
+| a word 4 edits from every word          |   0.00 |             0.00 |       0.40 |            0.40 |              0.00 |      0.20 |             0.20 |         0.20 |  0.20 |
+| a word 5 edits from every word          |   0.00 |             0.00 |       0.10 |            0.00 |              0.00 |      0.10 |             0.10 |         0.10 |  0.10 |
+| random letters, 4 edits from every word |   0.00 |             0.00 |       0.00 |            0.30 |              0.00 |      0.35 |             0.35 |         0.35 |  0.35 |
+| two words, each 3 edits from every word |   0.00 |             0.00 |       0.05 |            0.10 |              0.00 |      0.05 |             0.00 |         0.00 |  0.00 |
 <!-- bench:end -->
 
 ### Family by family
@@ -402,22 +402,22 @@ MRR reads native / en, and the ten scored queries per family are in [`bench/resu
 
 **Typos**
 
-- **One edit** (neighbouring key, random letter, inserted key, swapped neighbours, first letter wrong): Ekrina scores 0.80–1.00, fast-fuzzy 0.78–1.00 and uFuzzy (all opts) 0.78–1.00 bar the first letter, where it scores 0; Fuse.js (tuned) scores 0.48–0.92, and the chain engines 0.10 or less.
-- **Dropped letter**: still a subsequence, so the chain engines score 0.62–0.93; base Ekrina scores 0.78 / 0.77 and Ekrina (fuzzier) 0.97 / 0.95.
-- **Two edits in one word or phrase** (two neighbouring keys, two dropped letters, stuck key, a typo in each of two words, two words joined with a typo): base Ekrina corrects one edit, so it scores 0 on four of the five; Ekrina (fuzzier) scores 0.97–1.00, fast-fuzzy 0.43–1.00 and Fuse.js (tuned) 0.34–1.00.
-  Two dropped letters stay a subsequence, which is why base Ekrina and the chain engines still reach 0.76–1.00 there.
+- **One edit** (neighbouring key, random letter, inserted key, swapped neighbours, first letter wrong): Ekrina scores 0.79–1.00, fast-fuzzy 0.78–1.00 and uFuzzy (all opts) 0.78–1.00 bar the first letter, where it scores 0; Fuse.js (tuned) scores 0.48–0.92, and the chain engines 0.10 or less.
+- **Dropped letter**: still a subsequence, so the chain engines score 0.62–0.93; Ekrina scores 0.97 / 0.95.
+- **Two edits in one word or phrase** (two neighbouring keys, two dropped letters, stuck key, a typo in each of two words, two words joined with a typo): Ekrina scores 0.97–1.00, fast-fuzzy 0.43–1.00 and Fuse.js (tuned) 0.34–1.00.
+  Two dropped letters stay a subsequence, which is why the chain engines still reach 0.89–1.00 there.
 
 **Phonetic**
 
-- **Consonants and vowels spelt another way** (`kortex`, `marilin`): Ekrina (fuzzier) scores 0.95–1.00, base Ekrina 0.80–0.95 and fast-fuzzy 0.81–0.95; Fuse.js (tuned) falls to 0.44–0.78.
-- **Silent letters dropped** (`rong`, `were`): 0.47–0.70 for every library, because several of the rewrites cost two or more edits.
-- **Real misspellings** (`tahn`, `rela`): base Ekrina scores 0.73 on both corpora, fast-fuzzy 0.74 / 0.57 and Ekrina (fuzzier) 0.65 on both, the one family where the opt-in scores below the base.
+- **Consonants and vowels spelt another way** (`kortex`, `marilin`): Ekrina scores 0.95–1.00 and fast-fuzzy 0.81–0.95; Fuse.js (tuned) falls to 0.44–0.78.
+- **Silent letters dropped** (`rong`, `were`): 0.47–0.70 for every library, with fuzzysort highest at 0.70 / 0.66 and Ekrina at 0.61 / 0.60.
+- **Real misspellings** (`tahn`, `rela`): Ekrina scores 0.78 on both corpora and fast-fuzzy 0.74 / 0.57.
 
 **Partial words**
 
 - **Prefixes and infixes**: 0.90–1.00 for every library but fuzzy, which falls to 0.57–0.66 on three-letter prefixes.
 - **Two words half typed** (`ana fra`): 0.80–1.00 everywhere except fast-fuzzy, at 0.14.
-- **Vowels dropped**: one vowel is 0.70–1.00 everywhere; with two, base Ekrina falls to 0.25 / 0.13 while Ekrina (fuzzier) and the chain engines keep 0.76–0.95.
+- **Vowels dropped**: one vowel is 0.70–1.00 everywhere; with two, Ekrina and the chain engines keep 0.76–0.95, while fast-fuzzy, Fuse.js (tuned) and uFuzzy (all opts) fall to 0.02–0.43.
 
 **Query shape**
 
@@ -427,45 +427,44 @@ MRR reads native / en, and the ten scored queries per family are in [`bench/resu
 
 **Noise**
 
-- **A space or punctuation inside a word** (`web ster`, `proa-ctiva`): base Ekrina scores 0 and Ekrina (fuzzier) 1.00, beside fast-fuzzy's 0.91–0.95, Fuse.js (tuned)'s 0.82–1.00 and uFuzzy (all opts)'s 0.90–1.00.
+- **A space or punctuation inside a word** (`web ster`, `proa-ctiva`): Ekrina scores 1.00, beside fast-fuzzy's 0.91–0.95, Fuse.js (tuned)'s 0.82–1.00 and uFuzzy (all opts)'s 0.90–1.00.
 - **Accents stripped and added**: the folding engines score 0.85–1.00, fast-fuzzy 0.62–0.93 through edit distance rather than folding, and fuzzy 0.00–0.13 with no folding at all.
 
 **Reported only**
 
-- **Acronym** (`fno`): base Ekrina scores 0.37 / 0.64 and Ekrina (acronym) 0.90 / 0.88; match-sorter (0.70 / 0.73) and fuzzysort (0.50 / 0.78) reach the initials as subsequence chains; Fuse.js and fast-fuzzy score 0.05 or less.
+- **Acronym** (`fno`): Ekrina scores 0.37 / 0.64 and Ekrina (acronym) 0.90 / 0.88; match-sorter (0.70 / 0.73) and fuzzysort (0.50 / 0.78) reach the initials as subsequence chains; Fuse.js and fast-fuzzy score 0.05 or less.
 - **Plural for a singular** (`kozarcis`): Ekrina, uFuzzy (all opts) and fast-fuzzy score 1.00, the chain engines 0.20–0.30.
 
 **Emoji**
 
-Labels and tags are short and share words heavily ("face", "hand", "flag: …"), and the ranking holds there: Ekrina (fuzzier) scores 0.91, fast-fuzzy 0.84 and Fuse.js (tuned) 0.71.
+Labels and tags are short and share words heavily ("face", "hand", "flag: …"), and the ranking holds there: Ekrina scores 0.91, fast-fuzzy 0.84 and Fuse.js (tuned) 0.71.
 fast-fuzzy's lead families on the Wikidata corpora carry over (an absent word added, 1.00), and so do its losses (two words half typed, 0.13; reversed, 0.23).
 
 **Queries nothing answers**
 
 Every Ekrina configuration and uFuzzy (all opts) answer none of them on any corpus.
-fast-fuzzy answers 65–80% of the words three edits from everything and 35–40% of those four edits away; Fuse.js (tuned) answers all of the three-edit words, 55% of the four-edit ones and 60–65% of the random strings, and Fuse.js's defaults answer nearly every query of every kind.
-The chain engines answer 10–25% of the three-edit words.
+On the Wikidata corpora fast-fuzzy answers 65–80% of the words three edits from everything and 35–40% of those four edits away; Fuse.js (tuned) answers all of the three-edit words, 55% of the four-edit ones and 60–65% of the random strings, and Fuse.js's defaults answer nearly every query of every kind.
+The chain engines answer 10–25% of the three-edit words there, and 55% on emoji.
 
 ### garbage (`qxzwkv`)
 
 <!-- bench:probe-miss -->
 | Library           | matches | cold ms | vs `hinton` |
 |-------------------|--------:|--------:|------------:|
-| Ekrina (fuzzier)  |       0 |   5.293 |         60% |
-| Ekrina            |       0 |   5.012 |         60% |
-| fast-fuzzy        |       0 |  13.632 |         84% |
-| Fuse.js (tuned)   |       0 |  13.939 |         85% |
-| uFuzzy (all opts) |       0 |   1.027 |         68% |
-| fuzzysort         |       0 |   6.961 |         96% |
-| @nozbe/microfuzz  |       0 |   2.716 |         74% |
-| match-sorter      |       0 |   3.714 |         48% |
-| fuzzy             |       0 |   1.773 |         81% |
+| Ekrina            |       0 |   5.392 |         59% |
+| fast-fuzzy        |       0 |  21.399 |         81% |
+| Fuse.js (tuned)   |       0 |  14.431 |         87% |
+| uFuzzy (all opts) |       0 |   1.310 |         83% |
+| fuzzysort         |       0 |   6.754 |         69% |
+| @nozbe/microfuzz  |       0 |   2.992 |         63% |
+| match-sorter      |       0 |   3.637 |         41% |
+| fuzzy             |       0 |   1.747 |         79% |
 <!-- bench:end -->
 
 No rank column: every library correctly returns nothing.
 What separates them is how long that answer takes, shown against each library's own time for the short-word query `hinton` (one that does match), so the column reads as "what fraction of a real query does a hopeless one take".
-A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts every one-edit correction of the query, the same second pass that scores 0.80–1.00 on the one-edit typo families above.
-That is why its miss takes 5.0 ms cold at 10k, where uFuzzy (all opts) and fuzzy, whose empty result covers only the query as typed, take 1.0–1.8 ms.
+A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts the corrections of the query, the same rescue that scores 0.79–1.00 on the one-edit typo families above.
+That is why its miss takes 5.4 ms cold at 10k, where uFuzzy (all opts) and fuzzy, whose empty result covers only the query as typed, take 1.3–1.7 ms.
 The work also happens once per searcher: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first query that needs the masks builds them and the other twenty-three reuse them.
 
 ## Scorecard
@@ -484,17 +483,16 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-native -->
 | Library           |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (fuzzier)  | 0.90 | 0.00 |     0.18 |    5.14 |    29.91 |        0.88 |
-| fast-fuzzy        | 0.81 | 0.24 |    29.44 |   14.59 |   130.44 |        4.77 |
-| Fuse.js (tuned)   | 0.76 | 0.47 |     1.10 |   15.59 |   293.11 |       11.53 |
-| Ekrina            | 0.70 | 0.00 |     0.17 |    4.89 |    23.55 |        0.64 |
-| Ekrina (indexed)  | 0.70 | 0.00 |     3.09 |    2.02 |    19.43 |        0.63 |
-| Ekrina (acronym)  | 0.70 | 0.00 |     0.17 |    4.95 |    23.84 |        0.64 |
-| uFuzzy (all opts) | 0.66 | 0.00 |     4.68 |    1.51 |    16.36 |        0.62 |
-| fuzzysort         | 0.46 | 0.07 |     0.04 |    7.19 |    13.65 |        0.26 |
-| @nozbe/microfuzz  | 0.41 | 0.07 |     4.83 |    3.25 |    36.27 |        1.38 |
-| match-sorter      | 0.39 | 0.07 |     0.04 |    5.74 |    60.71 |        2.21 |
-| fuzzy             | 0.30 | 0.07 |     0.04 |    1.92 |    39.03 |        1.54 |
+| Ekrina            | 0.91 | 0.00 |     0.18 |    6.13 |    35.76 |        1.06 |
+| Ekrina (indexed)  | 0.91 | 0.00 |     3.68 |    2.81 |    33.82 |        1.11 |
+| Ekrina (acronym)  | 0.91 | 0.00 |     0.34 |    6.10 |    37.65 |        1.07 |
+| fast-fuzzy        | 0.81 | 0.24 |    42.28 |   18.74 |   167.00 |        6.20 |
+| Fuse.js (tuned)   | 0.76 | 0.47 |     1.16 |   16.02 |   309.48 |       12.21 |
+| uFuzzy (all opts) | 0.66 | 0.00 |     4.79 |    1.63 |    16.85 |        0.64 |
+| fuzzysort         | 0.46 | 0.07 |     0.07 |    7.92 |    24.98 |        0.41 |
+| @nozbe/microfuzz  | 0.41 | 0.07 |     7.74 |    3.53 |    56.01 |        2.10 |
+| match-sorter      | 0.39 | 0.07 |     0.04 |    5.97 |    75.33 |        2.70 |
+| fuzzy             | 0.30 | 0.07 |     0.05 |    1.94 |    52.72 |        2.10 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -502,17 +500,16 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-en -->
 | Library           |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (fuzzier)  | 0.91 | 0.00 |     0.19 |    3.98 |    24.64 |        0.74 |
-| fast-fuzzy        | 0.80 | 0.26 |    25.78 |   20.93 |   118.87 |        4.16 |
-| Fuse.js (tuned)   | 0.76 | 0.46 |     1.10 |   14.13 |   255.32 |        9.99 |
-| Ekrina            | 0.70 | 0.00 |     0.17 |    3.96 |    19.81 |        0.54 |
-| Ekrina (indexed)  | 0.70 | 0.00 |     1.76 |    1.86 |    16.70 |        0.54 |
-| Ekrina (acronym)  | 0.70 | 0.00 |     0.17 |    3.90 |    20.06 |        0.55 |
-| uFuzzy (all opts) | 0.66 | 0.00 |     4.60 |    1.47 |    15.21 |        0.57 |
-| fuzzysort         | 0.45 | 0.03 |     0.04 |    7.03 |    13.16 |        0.25 |
-| @nozbe/microfuzz  | 0.40 | 0.03 |     4.78 |    3.35 |    36.51 |        1.38 |
-| match-sorter      | 0.38 | 0.03 |     0.03 |    5.40 |    55.93 |        2.01 |
-| fuzzy             | 0.29 | 0.03 |     0.04 |    1.74 |    35.75 |        1.41 |
+| Ekrina            | 0.92 | 0.00 |     0.19 |    5.55 |    30.28 |        0.92 |
+| Ekrina (indexed)  | 0.92 | 0.00 |     1.85 |    2.80 |    27.07 |        0.87 |
+| Ekrina (acronym)  | 0.92 | 0.00 |     0.20 |    4.48 |    34.27 |        1.06 |
+| fast-fuzzy        | 0.80 | 0.26 |    27.40 |   19.49 |   140.97 |        4.98 |
+| Fuse.js (tuned)   | 0.76 | 0.46 |     1.14 |   15.64 |   275.27 |       10.83 |
+| uFuzzy (all opts) | 0.66 | 0.00 |     5.25 |    1.54 |    15.74 |        0.59 |
+| fuzzysort         | 0.45 | 0.03 |     0.04 |    7.26 |    15.09 |        0.29 |
+| @nozbe/microfuzz  | 0.40 | 0.03 |     4.99 |    3.61 |    40.30 |        1.49 |
+| match-sorter      | 0.38 | 0.03 |     0.04 |    5.93 |    58.15 |        2.10 |
+| fuzzy             | 0.29 | 0.03 |     0.04 |    1.81 |    36.12 |        1.42 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
@@ -520,12 +517,11 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 <!-- bench:scorecard-emoji -->
 | Library           |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina (fuzzier)  | 0.91 | 0.00 |        — |       — |        — |           — |
+| Ekrina            | 0.91 | 0.00 |        — |       — |        — |           — |
+| Ekrina (indexed)  | 0.91 | 0.00 |        — |       — |        — |           — |
+| Ekrina (acronym)  | 0.91 | 0.00 |        — |       — |        — |           — |
 | fast-fuzzy        | 0.84 | 0.26 |        — |       — |        — |           — |
 | Fuse.js (tuned)   | 0.71 | 0.35 |        — |       — |        — |           — |
-| Ekrina            | 0.70 | 0.00 |        — |       — |        — |           — |
-| Ekrina (indexed)  | 0.70 | 0.00 |        — |       — |        — |           — |
-| Ekrina (acronym)  | 0.70 | 0.00 |        — |       — |        — |           — |
 | uFuzzy (all opts) | 0.65 | 0.00 |        — |       — |        — |           — |
 | fuzzysort         | 0.52 | 0.25 |        — |       — |        — |           — |
 | @nozbe/microfuzz  | 0.47 | 0.24 |        — |       — |        — |           — |
@@ -533,18 +529,18 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 | fuzzy             | 0.39 | 0.24 |        — |       — |        — |           — |
 <!-- bench:end -->
 
-_Ekrina (fuzzier) tops all three corpora_ at 0.90–0.91, with no junk; the nearest rows are fast-fuzzy at 0.80–0.84, answering a quarter of the queries nothing answers, and Fuse.js (tuned) at 0.71–0.76, answering nearly half.
-Base Ekrina scores 0.70 on every corpus, with no junk, above uFuzzy (all opts) at 0.65–0.66 and below the typo engines: its one-edit rescue covers the one-edit families, and the two-edit, split and joined families the opt-in exists for score 0 without it.
-Read across the family tables, the opt-in's lead comes from covering the edit families without giving up the shape ones:
+_Ekrina tops all three corpora_ at 0.91–0.92, with no junk; the nearest rows are fast-fuzzy at 0.80–0.84, answering a quarter of the queries nothing answers, and Fuse.js (tuned) at 0.71–0.76, answering 35–47% of them.
+Read across the family tables, Ekrina's lead comes from covering the edit families without giving up the shape ones:
 
-- **Typos and noise**: Ekrina (fuzzier) scores 0.79–1.00 on every typo family and on a space or punctuation inside a word, where fast-fuzzy and Fuse.js (tuned) also do well (0.43–1.00 and 0.34–1.00).
+- **Typos and noise**: Ekrina scores 0.79–1.00 on every typo family and on a space or punctuation inside a word, where fast-fuzzy and Fuse.js (tuned) also do well (0.43–1.00 and 0.34–1.00).
 - **Phrases in any order, half-typed or reversed**: Ekrina scores 1.00 on all of them, where fast-fuzzy scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones.
 - **Refusal**: Ekrina answers none of the queries nothing answers, at any distance, on any corpus.
 
 The families where Ekrina trails:
 
 - **An absent word added**: 0, where fast-fuzzy scores 0.80–1.00, since Ekrina requires every query word.
-- **Silent letters dropped and real misspellings**: 0.57–0.73, level with or just under fast-fuzzy; several of these rewrites cost two or more edits.
+- **Silent letters dropped**: 0.60–0.61, behind fuzzysort's 0.66–0.70 on the Wikidata corpora.
+- **A few typo and phonetic families on emoji** (random letter, inserted neighbouring key, first letter wrong, vowel sound spelt another way): 0.82–0.95, where fast-fuzzy scores 0.90–1.00.
 
 Two libraries score far higher with their options on, so for those the options decide the comparison: uFuzzy scores 0.66 with them against 0.21 on its defaults ([uFuzzy](./libraries/ufuzzy.md)), and Fuse.js 0.76 against 0.72 ([Fuse.js](./libraries/fuse.md)).
 
@@ -554,18 +550,19 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Native-corpus accuracy (MRR) vs. per-query time across a 24-query session, log scale, as a Pareto frontier. The frontier runs fuzzysort, uFuzzy (all opts), Ekrina (indexed), Ekrina (fuzzier): Ekrina (fuzzier) tops MRR at 0.90 at 0.88 ms per query, and fast-fuzzy (0.81 at 4.8 ms) and Fuse.js (tuned, 0.76 at 11.5 ms) are dominated." src="./pareto-query-light.svg">
+  <img alt="Native-corpus accuracy (MRR) vs. per-query time across a 24-query session, log scale, as a Pareto frontier. The frontier runs fuzzysort, uFuzzy (all opts), Ekrina: Ekrina tops MRR at 0.91 at 1.06 ms per query, and fast-fuzzy (0.81 at 6.20 ms) and Fuse.js (tuned, 0.76 at 12.21 ms) are dominated." src="./pareto-query-light.svg">
 </picture>
 
-Its x-axis is the batch's per-query time, how long a query takes once the searcher has answered twenty-three real ones, and its frontier runs fuzzysort → uFuzzy (all opts) → Ekrina (indexed) → Ekrina (fuzzier).
-fuzzysort owns the fast end, 0.46 MRR at 0.26 ms with bare output; uFuzzy (all opts) and Ekrina (indexed) sit together at 0.62–0.64 ms with 0.66 and 0.70 MRR, and Ekrina (fuzzier) reaches 0.90 at 0.88 ms.
-fast-fuzzy and Fuse.js (tuned), the next rows on quality, take 4.8 ms and 11.5 ms per query.
+Its x-axis is the batch's per-query time, how long a query takes once the searcher has answered twenty-three real ones, and its frontier runs fuzzysort → uFuzzy (all opts) → Ekrina.
+fuzzysort owns the fast end, 0.46 MRR at 0.41 ms with bare output; uFuzzy (all opts) follows at 0.66 MRR and 0.64 ms, and Ekrina reaches 0.91 at 1.06 ms.
+Ekrina (acronym) and Ekrina (indexed) score the same 0.91 at 1.07 ms and 1.11 ms, inside the tie band of Ekrina and just off the frontier.
+fast-fuzzy and Fuse.js (tuned), the next rows on quality, take 6.20 ms and 12.21 ms per query.
 
 **Backend one-shot workload** (a fresh process runs constructor + first answer): the chart lives in the README's Comparison section, deliberately the less flattering of the two there.
-Its frontier runs `fuzzy` → Ekrina → Ekrina (fuzzier): a no-index substring scan at 0.30 MRR owns the fast end (1.96 ms), and base Ekrina (5.06 ms) and the opt-in (5.32 ms) take the rest.
-This is where base Ekrina's lazy preparation shows up, against a 0.17 ms constructor.
+Its frontier runs `fuzzy` → match-sorter → Ekrina (indexed): a no-index substring scan at 0.30 MRR owns the fast end (1.98 ms), match-sorter follows at 0.39 MRR (6.01 ms), and Ekrina (indexed) reaches 0.91 at 6.02 ms, with Ekrina and Ekrina (acronym) inside the tie band at 6.31 ms.
+This is where Ekrina's lazy preparation shows up, against a 0.18 ms constructor.
 A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings.
-The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the one-edit rescue, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
+The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the typo rescue, one the second pass reads over the whole list because nothing matches it literally, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
 The per-query cells are in [`bench/results.json`](../bench/results.json).
 
 _Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
@@ -582,7 +579,7 @@ The two corpora are described in "The corpus and the query families"; they're be
 The native table only lists configurations that fold diacritics, i.e. actually do that corpus's task (cross-checked per query by [`bench/hits.test.ts`](../bench/hits.test.ts)); a fast non-folding row would be fast at a different, easier job, so those are omitted and named below the table.
 The **_all libraries_** row is the corpus-wide view: the geometric mean of every shown configuration at that size.
 **(all opts)** rows switch on every opt-in the library has: diacritic folding, multi-word, highlight/ranges output, and typo modes; base rows are stock defaults, and [Libraries](#libraries) itemises which opt-in is which.
-Typo modes are included because Ekrina's one-edit matching is always on and cannot be disabled, so holding another engine's typo mode off would time two engines doing different jobs.
+Typo modes are included because Ekrina's typo matching is always on and cannot be disabled, so holding another engine's typo mode off would time two engines doing different jobs.
 Only uFuzzy is affected in practice.
 Fuse.js (Bitap) and fast-fuzzy (edit distance) are typo-tolerant in every configuration here.
 Every child consumes its result counts, the runner asserts they are identical across a cell's processes, and [`bench/hits.test.ts`](../bench/hits.test.ts) records per-library match counts for every query, so the timings above are known to be timing comparable work.
@@ -594,18 +591,17 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 <!-- bench:speed-en -->
 | Library                   |     index | cold query |     total | total rel |
 |---------------------------|----------:|-----------:|----------:|----------:|
-| **Ekrina**                |   0.39 ms |   10.12 ms |  10.45 ms |  **100%** |
-| Ekrina (acronym)          |   0.34 ms |   10.77 ms |  11.11 ms |      106% |
-| Ekrina (fuzzier)          |   0.43 ms |   10.74 ms |  11.17 ms |      107% |
-| Ekrina (indexed)          |   9.71 ms |    2.71 ms |  12.42 ms |      119% |
-| @nozbe/microfuzz          |  52.57 ms |   17.41 ms |  68.95 ms |      660% |
-| fast-fuzzy                | 237.15 ms |   98.99 ms | 338.67 ms |     3241% |
-| Fuse.js (tuned)           |   5.17 ms |  102.81 ms | 107.85 ms |     1032% |
-| fuzzy                     |   0.04 ms |   13.93 ms |  13.97 ms |      134% |
-| fuzzysort                 |   0.04 ms |   60.64 ms |  60.68 ms |      581% |
-| match-sorter              |   0.03 ms |   25.48 ms |  25.51 ms |      244% |
-| uFuzzy (all opts)         |   8.26 ms |    3.33 ms |  11.77 ms |      113% |
-| _all libraries (geomean)_ |   1.28 ms |   17.25 ms |  28.56 ms |      273% |
+| **Ekrina**                |   0.42 ms |   14.55 ms |  15.42 ms |  **100%** |
+| Ekrina (acronym)          |   0.44 ms |   12.12 ms |  12.59 ms |       82% |
+| Ekrina (indexed)          |   9.72 ms |    4.79 ms |  15.39 ms |      100% |
+| @nozbe/microfuzz          |  58.14 ms |   19.07 ms |  80.38 ms |      521% |
+| fast-fuzzy                | 250.45 ms |  136.46 ms | 408.73 ms |     2651% |
+| Fuse.js (tuned)           |   5.05 ms |  112.40 ms | 117.98 ms |      765% |
+| fuzzy                     |   0.04 ms |   15.13 ms |  15.18 ms |       98% |
+| fuzzysort                 |   0.03 ms |   66.41 ms |  66.45 ms |      431% |
+| match-sorter              |   0.04 ms |   26.51 ms |  26.55 ms |      172% |
+| uFuzzy (all opts)         |   8.73 ms |    3.61 ms |  13.40 ms |       87% |
+| _all libraries (geomean)_ |   1.51 ms |   21.75 ms |  36.46 ms |      236% |
 <!-- bench:end -->
 
 **The session batch** (one process: a warmup match, then every family's representative query once):
@@ -613,18 +609,17 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 <!-- bench:batch-en -->
 | Library                   | batch/query | batch total | batch rel |
 |---------------------------|------------:|------------:|----------:|
-| **Ekrina**                |     1.99 ms |    53.66 ms |  **100%** |
-| Ekrina (acronym)          |     2.01 ms |    55.64 ms |      104% |
-| Ekrina (fuzzier)          |     2.75 ms |    71.76 ms |      134% |
-| Ekrina (indexed)          |     1.38 ms |    36.16 ms |       67% |
-| @nozbe/microfuzz          |    15.01 ms |   380.04 ms |      708% |
-| fast-fuzzy                |    39.68 ms |  1031.13 ms |     1922% |
-| Fuse.js (tuned)           |    97.57 ms |  2448.24 ms |     4563% |
-| fuzzy                     |    13.35 ms |   337.05 ms |      628% |
-| fuzzysort                 |     2.34 ms |   115.43 ms |      215% |
-| match-sorter              |    18.58 ms |   473.96 ms |      883% |
-| uFuzzy (all opts)         |     2.18 ms |    55.78 ms |      104% |
-| _all libraries (geomean)_ |     6.64 ms |   182.86 ms |      341% |
+| **Ekrina**                |     3.14 ms |    81.24 ms |  **100%** |
+| Ekrina (acronym)          |     2.84 ms |    75.60 ms |       93% |
+| Ekrina (indexed)          |     2.38 ms |    60.30 ms |       74% |
+| @nozbe/microfuzz          |    15.99 ms |   404.20 ms |      498% |
+| fast-fuzzy                |    42.87 ms |  1170.46 ms |     1441% |
+| Fuse.js (tuned)           |   102.09 ms |  2565.04 ms |     3157% |
+| fuzzy                     |    13.96 ms |   351.98 ms |      433% |
+| fuzzysort                 |     2.44 ms |   120.16 ms |      148% |
+| match-sorter              |    18.87 ms |   481.26 ms |      592% |
+| uFuzzy (all opts)         |     2.22 ms |    56.95 ms |       70% |
+| _all libraries (geomean)_ |     8.56 ms |   235.33 ms |      290% |
 <!-- bench:end -->
 
 ### native corpus
@@ -632,16 +627,15 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 <!-- bench:speed-native -->
 | Library                   |    index | cold query |     total | total rel |
 |---------------------------|---------:|-----------:|----------:|----------:|
-| **Ekrina**                |  0.35 ms |   14.18 ms |  14.52 ms |  **100%** |
-| Ekrina (acronym)          |  0.37 ms |   14.72 ms |  15.06 ms |      104% |
-| Ekrina (fuzzier)          |  0.44 ms |   14.48 ms |  14.90 ms |      103% |
-| Ekrina (indexed)          | 14.67 ms |    3.42 ms |  18.48 ms |      127% |
-| @nozbe/microfuzz          | 54.58 ms |   19.50 ms |  73.81 ms |      508% |
-| Fuse.js (tuned)           |  5.51 ms |  115.65 ms | 121.18 ms |      834% |
-| fuzzysort                 |  0.04 ms |   63.87 ms |  63.91 ms |      440% |
-| match-sorter              |  0.04 ms |   28.81 ms |  28.85 ms |      199% |
-| uFuzzy (all opts)         |  8.68 ms |    3.46 ms |  12.08 ms |       83% |
-| _all libraries (geomean)_ |  1.16 ms |   17.43 ms |  28.39 ms |      196% |
+| **Ekrina**                |  0.44 ms |   19.25 ms |  19.67 ms |  **100%** |
+| Ekrina (acronym)          |  0.40 ms |   15.90 ms |  16.35 ms |       83% |
+| Ekrina (indexed)          | 15.67 ms |    5.09 ms |  20.63 ms |      105% |
+| @nozbe/microfuzz          | 65.74 ms |   20.03 ms |  79.18 ms |      403% |
+| Fuse.js (tuned)           |  6.11 ms |  116.53 ms | 121.93 ms |      620% |
+| fuzzysort                 |  0.04 ms |   64.63 ms |  64.67 ms |      329% |
+| match-sorter              |  0.04 ms |   28.92 ms |  28.96 ms |      147% |
+| uFuzzy (all opts)         |  8.51 ms |    3.52 ms |  12.32 ms |       63% |
+| _all libraries (geomean)_ |  1.38 ms |   19.83 ms |  33.20 ms |      169% |
 <!-- bench:end -->
 
 **The session batch** (one process: a warmup match, then every family's representative query once):
@@ -649,19 +643,18 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 <!-- bench:batch-native -->
 | Library                   | batch/query | batch total | batch rel |
 |---------------------------|------------:|------------:|----------:|
-| **Ekrina**                |     2.59 ms |    68.75 ms |  **100%** |
-| Ekrina (acronym)          |     2.62 ms |    70.45 ms |      102% |
-| Ekrina (fuzzier)          |     3.27 ms |    85.05 ms |      124% |
-| Ekrina (indexed)          |     1.70 ms |    44.31 ms |       64% |
-| @nozbe/microfuzz          |    12.24 ms |   314.20 ms |      457% |
-| Fuse.js (tuned)           |   112.15 ms |  2809.94 ms |     4087% |
-| fuzzysort                 |     2.53 ms |   122.44 ms |      178% |
-| match-sorter              |    20.97 ms |   533.87 ms |      777% |
-| uFuzzy (all opts)         |     2.32 ms |    59.02 ms |       86% |
-| _all libraries (geomean)_ |     5.70 ms |   158.23 ms |      230% |
+| **Ekrina**                |     3.58 ms |    93.21 ms |  **100%** |
+| Ekrina (acronym)          |     3.46 ms |    91.04 ms |       98% |
+| Ekrina (indexed)          |     2.92 ms |    73.89 ms |       79% |
+| @nozbe/microfuzz          |    17.21 ms |   436.78 ms |      469% |
+| Fuse.js (tuned)           |   115.18 ms |  2894.62 ms |     3106% |
+| fuzzysort                 |     2.62 ms |   127.43 ms |      137% |
+| match-sorter              |    22.01 ms |   558.22 ms |      599% |
+| uFuzzy (all opts)         |     2.31 ms |    58.72 ms |       63% |
+| _all libraries (geomean)_ |     7.46 ms |   206.54 ms |      222% |
 <!-- bench:end -->
 
-The acronym and fuzzier configurations run strictly _more_ code per query, so their cells above base Ekrina's are that extra work plus load swing.
+Ekrina (acronym) runs strictly _more_ code per query than Ekrina, so wherever its cells come in under Ekrina's, the gap is load swing rather than speed.
 Read sub-15% differences as statistical ties, the tie band from here on, and larger ones as real.
 
 Configurations that can't fold diacritics are omitted rather than flagged.
@@ -673,13 +666,13 @@ Omitted: fast-fuzzy and fuzzy, which have no folding option at all, and the base
 Every cell is process-cold, so read the columns as three different workloads.
 The **batch** column is the headline: one process, 24 distinct queries, so it shows whether the amortisation each design promises actually happens.
 Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a native regex gate) cuts most items before any ladder work, and the lazy preparation happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
-_Ekrina (indexed) takes the batch at 100k among the configurations above 0.5 MRR_: 67% of base Ekrina's time on en and 64% on native.
-Folding uFuzzy ties base Ekrina on en (104%) and is faster on native (86%); bare uFuzzy, which can't fold and so is shown on en only, is faster again (72%, on [its page](./libraries/ufuzzy.md#speed-at-100k)), at 0.21 MRR bare and 0.66 folding.
-Ekrina (fuzzier) costs 24–34% over base Ekrina's batch for its 0.70 → 0.90–0.91 MRR.
-Base Ekrina's batch runs ~4.6–7× faster than microfuzz's, ~2× fuzzysort's, ~8–9× match-sorter's and ~41–46× Fuse.js (tuned)'s, and ~19× faster than fast-fuzzy's on en, the corpus it is timed on since it can't fold.
-The **cold query** column is where Ekrina's laziness shows up: 10–14 ms mean at 100k (en, native), most of it the rescue's union-and-bigram mask build (Ekrina (indexed), which builds it in its 10–15 ms constructor, answers first in 2.7–3.4 ms), done once per searcher and visible per query in the cells of [`bench/results.json`](../bench/results.json).
-An eager-index engine moves the cost the other way: fast-fuzzy's constructor runs for 237–333 ms before its first answer.
-The **index** column plus the first answer is the one-shot measurement: at 100k uFuzzy (all opts) takes it on native (12.1 ms against Ekrina's 14.5) and sits inside the tie band on en (113%), because Ekrina's first answer carries the mask build.
+_Folding uFuzzy runs the fastest batch at 100k among the configurations above 0.5 MRR_: 70% of Ekrina's time on en and 63% on native, at 0.66 MRR to Ekrina's 0.91–0.92.
+Ekrina (indexed) is the fastest of the configurations above 0.70 MRR, at 74% of Ekrina's batch on en and 79% on native.
+Bare uFuzzy, which can't fold and so is shown on en only, is faster again (51%, on [its page](./libraries/ufuzzy.md#speed-at-100k)), at 0.21 MRR.
+Ekrina's batch runs ~4.7–5× faster than microfuzz's, ~1.4–1.5× fuzzysort's, ~6× match-sorter's and ~31× Fuse.js (tuned)'s, and ~14× faster than fast-fuzzy's on en, the corpus it is timed on since it can't fold.
+The **cold query** column is where Ekrina's laziness shows up: 15–19 ms mean at 100k (en, native), most of it the rescue's union-and-bigram mask build (Ekrina (indexed), which builds it in its 10–16 ms constructor, answers first in 4.8–5.1 ms), done once per searcher and visible per query in the cells of [`bench/results.json`](../bench/results.json).
+An eager-index engine moves the cost the other way: fast-fuzzy's constructor runs for 250–348 ms before its first answer.
+The **index** column plus the first answer is the one-shot measurement: at 100k uFuzzy (all opts) takes it on native (12.32 ms against Ekrina's 19.67) and sits inside the tie band on en (87%), because Ekrina's first answer carries the mask build.
 Cross-_type_ speed isn't apples-to-apples: **typo-tolerant** libs (Fuse.js, fast-fuzzy) do far more work per query, and non-folding configurations are omitted from the native table entirely (they would be timing a different task).
 
 ## Typing `hinton` at 100k
@@ -692,16 +685,16 @@ Each step is timed at its correct cache state (the untimed reset replays the pre
 <!-- bench:session -->
 | Library            | `hin` | `hint` | `hinto` | session |
 |--------------------|------:|-------:|--------:|--------:|
-| Ekrina             |  1.45 |   0.73 |    0.44 |    2.62 |
-| @nozbe/microfuzz   | 17.50 |  15.83 |   15.62 |   48.95 |
-| fuzzysort          |  3.67 |   2.56 |    2.00 |    8.23 |
-| uFuzzy (all opts)  |  2.23 |   1.72 |    1.82 |    5.77 |
-| Fuse.js (all opts) | 86.78 | 113.48 |  124.94 |  325.20 |
+| Ekrina             |  1.53 |   0.77 |    0.44 |    2.74 |
+| @nozbe/microfuzz   | 16.85 |  15.50 |   15.71 |   48.06 |
+| fuzzysort          |  3.91 |   2.61 |    1.95 |    8.47 |
+| uFuzzy (all opts)  |  2.22 |   1.74 |    1.87 |    5.83 |
+| Fuse.js (all opts) | 92.96 | 123.20 |  127.15 |  343.31 |
 <!-- bench:end -->
 
-Ekrina's per-keystroke time falls _3.3×_ across the word (1.45 → 0.73 → 0.44) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
-Ekrina takes every step of the session, the wide opener included (1.45 vs uFuzzy's 2.23), and the session total by 2.2× (2.62 vs 5.77), against uFuzzy (all opts) at 0.66 MRR to Ekrina's 0.70.
-microfuzz stays at ~16–18 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
+Ekrina's per-keystroke time falls _3.5×_ across the word (1.53 → 0.77 → 0.44) as the survivor cache narrows: the 3-character query is the widest candidate set the session ever sees, and it is the one that does the work.
+Ekrina takes every step of the session, the wide opener included (1.53 vs uFuzzy's 2.22), and the session total by 2.1× (2.74 vs 5.83), against uFuzzy (all opts) at 0.66 MRR to Ekrina's 0.91.
+microfuzz stays at ~16–17 ms: same subsequence approach with no survivor cache, so nothing narrows between keystrokes.
 This table is a single process, like every cold cell here, so read its cells with the tie band in mind.
 All rows assume a warm process: one-time work (Ekrina's mask build, fuzzysort's lazy target prep) happens at load, not on keystroke one; the cold cells above measure it.
 Measured by [`bench/session.test.ts`](../bench/session.test.ts).
@@ -714,50 +707,49 @@ The constant was set on the bench's earlier synthetic corpora, where junk chains
 Real text is less kind: a few junk chains clear the floor, such as `mueller` across "**M**arc O**uelle**t Gensle**r**" and `andchat` across "**and** the **Cho**col**at**", where others are arguably real sparse matches (`khaj` on "**K**au**haj**").
 
 The probe: the document is the native corpus joined with spaces and sliced to graded lengths; queries are 200 real corpus words verified absent from the largest slice (no substring anywhere).
-A hit is then either the fuzzy tier assembling a chain (**fuzzy junk**) or the one-edit rescue correcting the word to a neighbouring one, such as `monster` to "Monterrey" (**corrected**), and the two are counted apart.
+A hit is then either the fuzzy tier assembling a chain (**fuzzy junk**) or the typo rescue correcting the word to a neighbouring one, such as `monster` to "Monterrey" (**corrected**), and the two are counted apart.
 
 <!-- bench:longtext -->
-| doc chars | fuzzy junk | corrected | fuzzier junk | present hits | miss ms |
-|----------:|-----------:|----------:|-------------:|-------------:|--------:|
-|        64 |       0.0% |      0.0% |         0.0% |          7/7 |   0.004 |
-|       128 |       0.0% |      0.0% |         0.0% |        14/14 |   0.005 |
-|       256 |       0.5% |      0.0% |         0.5% |        20/20 |   0.007 |
-|       512 |       1.5% |      0.5% |         1.5% |        20/20 |   0.017 |
-|      1024 |       1.5% |      1.0% |         1.5% |        20/20 |   0.029 |
-|      2048 |       2.0% |      0.5% |         2.0% |        20/20 |   0.053 |
-|      4096 |       2.0% |      2.0% |         2.0% |        20/20 |   0.099 |
-|      8192 |       2.0% |      2.5% |         2.0% |        20/20 |   0.188 |
-|     16384 |       2.0% |      3.5% |         2.0% |        20/20 |   0.381 |
+| doc chars | fuzzy junk | corrected | present hits | miss ms |
+|----------:|-----------:|----------:|-------------:|--------:|
+|        64 |       0.0% |      0.0% |          7/7 |   0.005 |
+|       128 |       0.0% |      0.0% |        14/14 |   0.006 |
+|       256 |       0.5% |      0.0% |        20/20 |   0.011 |
+|       512 |       1.5% |      0.5% |        20/20 |   0.024 |
+|      1024 |       1.5% |      1.0% |        20/20 |   0.037 |
+|      2048 |       2.0% |      0.5% |        20/20 |   0.066 |
+|      4096 |       2.0% |      2.0% |        20/20 |   0.124 |
+|      8192 |       2.0% |      2.5% |        20/20 |   0.240 |
+|     16384 |       2.0% |      3.5% |        20/20 |   0.475 |
 <!-- bench:end -->
 
-The fuzzy tier junk-matches none of the absent words up to 128 characters, rising to 2% from 2,048, and the fuzzier opt-in adds nothing at any length; every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly).
-Corrections rise with length to 3.5% at 16k, since a longer document holds more words one edit from any given query.
-The rates move with the words drawn: a separate draw of 400 absent words measured fuzzy junk at 3.5% on native and 4.3% on en from 4,096 characters up, so read the table as 2–4%.
-Miss time includes the one-edit rescues (a miss must fail those too), and it stays under 0.4 ms at 16k chars.
+The fuzzy tier junk-matches none of the absent words up to 128 characters, rising to 2% from 2,048; every genuinely present word still matches (a present word is a substring, so `contains` needs no fuzzy assembly).
+Corrections rise with length to 3.5% at 16k, since a longer document holds more words within a correction of any given query.
+The rates move with the words drawn: a separate draw of 400 absent words, not part of `results.json`, measured fuzzy junk at 3.5% on native and 4.3% on en from 4,096 characters up, so read the table as 2–4%.
+Miss time includes the typo rescue (a miss must fail it too), and it stays under 0.5 ms at 16k chars.
 Literal-only matching, for callers that want no fuzzy assemblies or corrections at all, is a one-line `tier` filter.
-[`bench/longtext.test.ts`](../bench/longtext.test.ts) keeps this table as a regression guard, failing if any of the three rates rises above 5%.
+[`bench/longtext.test.ts`](../bench/longtext.test.ts) keeps this table as a regression guard, failing if either rate rises above 5%.
 
 ## The recommendation
 
-The recommendation is to _pick Ekrina for list matching_, with `fuzzier` on when typing quality matters, and with two carve-outs the data supports.
+The recommendation is to _pick Ekrina for list matching_, with two carve-outs the data supports.
 
-- **Quality**: Ekrina (fuzzier) tops the scorecard on all three corpora (0.91 en and emoji, 0.90 native) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
-  Base Ekrina scores 0.70 on every corpus with no junk: its one-edit rescue covers the one-edit families, and the opt-in adds the two-edit, split, joined and sparse readings.
-- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (19.4 ms at native 10k, ~0.64 ms per query after the first), Ekrina (fuzzier) the fastest at 0.80 or above (29.9 ms, ~0.88 ms per query), and both run several times under every typo-tolerant or tiered alternative, with a near-zero constructor, ~6.4 kB gzip and zero deps.
-  The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 4–5 ms at 10k and 10–14 ms at 100k across the timed queries, or ~2 ms and 2.7–3.4 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
+- **Quality**: Ekrina tops the scorecard on all three corpora (0.92 en, 0.91 native and emoji) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
+- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (33.82 ms at native 10k) and Ekrina the fastest per query after the first (1.06 ms), and every Ekrina row runs that session in about a fifth of fast-fuzzy's time (167.00 ms) and about half of match-sorter's (75.33 ms), with a near-zero constructor, ~6.4 kB gzip and zero deps.
+  The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 5.6–6.1 ms at 10k and 15–19 ms at 100k across the timed queries, or ~2.8 ms and 4.8–5.1 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk to 2–4% at every measured document length, so the same engine covers documents as well as labels.
 
 The carve-outs:
 
 - **A query word the item lacks.** Ekrina requires every query word to match, so a query with an absent word returns nothing, where fast-fuzzy scores 0.80–1.00 on that family; an OR-style search needs a different engine or a query split.
-- **Raw throughput when a bare index array is enough.** Bare uFuzzy runs the 100k en batch in 72% of base Ekrina's time ([uFuzzy](./libraries/ufuzzy.md)), and folding uFuzzy runs the en and native batches in 86–104%.
-  Bare, it gives up most of the match quality to get there (0.21 MRR against Ekrina's 0.70); folded it scores 0.66, losing the joined-phrase, first-letter and two-edit families outright, and it has no ranges, tiers, or per-field config.
+- **Raw throughput when a bare index array is enough.** Bare uFuzzy runs the 100k en batch in 51% of Ekrina's time ([uFuzzy](./libraries/ufuzzy.md)), and folding uFuzzy runs the en and native batches in 63–70%.
+  Bare, it gives up most of the match quality to get there (0.21 MRR against Ekrina's 0.92); folded it scores 0.66, losing the joined-phrase, first-letter and two-edit families outright, and it has no tiers or per-field config.
 
 The rest of the field is dominated on these benchmarks:
 
-- **fast-fuzzy**: the strongest quality after Ekrina (fuzzier) at 0.80–0.84, but it answers a quarter of the queries nothing answers, scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones, and has the heaviest build (237–333 ms at 100k) and the slowest queries after Fuse.js.
-- **Fuse.js**: 0.76 tuned and 0.72 on its defaults, at ~10–12 ms per query, answering half of the queries nothing answers tuned and nearly all of them on its defaults.
-- **@nozbe/microfuzz**: Ekrina's parent; same subsequence approach, ~4.6–7× the batch at 100k, no tier output, 0.40–0.47 MRR: it scores 0.05 or less on the random-letter, inserted-key and two-word typo families.
-- **fuzzysort**: the fastest per-query time after bare uFuzzy, but its prepare-all pass lands a ~7 ms first call (61–64 ms at 100k) that stock usage absorbs inside the first `go()`, and it scores 0.10 or less on every typo family but the dropped-letter ones, which stay a subsequence (0.45–0.52 MRR).
-- **match-sorter**: tiered ranking but no ranges and no multi-word; it reaches 0.70–0.73 on acronyms and 0.91–1.00 on the dropped-letter families but 0.10 or less on the other typo families, 0.38–0.45 MRR at mid-pack speed.
-- **fuzzy**: substring-only and order-sensitive; 0 on reversed phrases, 0.13 or less on the accent families, no ranges (0.29–0.39 MRR).
+- **fast-fuzzy**: the strongest quality after Ekrina at 0.80–0.84, but it answers a quarter of the queries nothing answers, scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones, and has the heaviest build (250–348 ms at 100k) and the slowest queries after Fuse.js.
+- **Fuse.js**: 0.76 tuned and 0.72 on its defaults, at ~11–12 ms per query, answering half of the queries nothing answers tuned and nearly all of them on its defaults.
+- **@nozbe/microfuzz**: Ekrina's parent; same subsequence approach, ~4.7–5× the batch at 100k, no tier output, 0.40–0.47 MRR: on the Wikidata corpora it scores 0.05 or less on the random-letter, inserted-key and two-word typo families.
+- **fuzzysort**: the fastest per-query time after bare uFuzzy, but its prepare-all pass lands a ~7–8 ms first call (65–66 ms at 100k) that stock usage absorbs inside the first `go()`, and on the Wikidata corpora it scores 0.10 or less on every typo family but the dropped-letter ones, which stay a subsequence (0.45–0.52 MRR).
+- **match-sorter**: tiered ranking but no ranges and no multi-word; on the Wikidata corpora it reaches 0.70–0.73 on acronyms and 0.91–1.00 on the dropped-letter families but 0.10 or less on the other typo families, 0.38–0.45 MRR at mid-pack speed.
+- **fuzzy**: substring-only and order-sensitive; 0.10 or less on reversed phrases, 0.13 or less on the accent families, no ranges (0.29–0.39 MRR).

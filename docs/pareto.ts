@@ -76,7 +76,7 @@ const METRICS: Record<
 		subtitle: (families) => `MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
-		tail: "The no-index engines own the fastest cold one-shots; base Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and still comes out faster than both, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		tail: "The no-index engines own the fastest cold one-shots; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and lands level with them, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
 	},
 };
 

@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fast-fuzzy-scorecard-native -->
 | Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.81 | 0.24 |    29.44 |   14.59 |   130.44 |        4.77 |
-| fast-fuzzy (all opts) | 0.81 | 0.24 |    29.17 |   15.52 |   133.26 |        4.82 |
+| **fast-fuzzy**        | 0.81 | 0.24 |    42.28 |   18.74 |   167.00 |        6.20 |
+| fast-fuzzy (all opts) | 0.81 | 0.24 |    47.32 |   16.09 |   200.72 |        7.08 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fast-fuzzy-scorecard-en -->
 | Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.80 | 0.26 |    25.78 |   20.93 |   118.87 |        4.16 |
-| fast-fuzzy (all opts) | 0.80 | 0.26 |    25.58 |   20.33 |   119.41 |        4.13 |
+| **fast-fuzzy**        | 0.80 | 0.26 |    27.40 |   19.49 |   140.97 |        4.98 |
+| fast-fuzzy (all opts) | 0.80 | 0.26 |    28.56 |   23.31 |   132.83 |        4.69 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
@@ -40,7 +40,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with base Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
 Only the en corpus is shown, because the native tables list only configurations that fold diacritics and this library has no folding option ([native corpus](../benchmarks.md#native-corpus)); the emoji corpus is too short to time.
 
 **en corpus:**
@@ -48,17 +48,17 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:library-fast-fuzzy-speed-en -->
 | Library               |     index | cold query |     total | total rel |
 |-----------------------|----------:|-----------:|----------:|----------:|
-| **Ekrina**            |   0.39 ms |   10.12 ms |  10.45 ms |  **100%** |
-| fast-fuzzy            | 237.15 ms |   98.99 ms | 338.67 ms |     3241% |
-| fast-fuzzy (all opts) | 239.92 ms |   79.63 ms | 319.92 ms |     3062% |
+| **Ekrina**            |   0.42 ms |   14.55 ms |  15.42 ms |  **100%** |
+| fast-fuzzy            | 250.45 ms |  136.46 ms | 408.73 ms |     2651% |
+| fast-fuzzy (all opts) | 269.51 ms |  119.58 ms | 429.50 ms |     2785% |
 <!-- bench:end -->
 
 <!-- bench:library-fast-fuzzy-batch-en -->
 | Library               | batch/query | batch total | batch rel |
 |-----------------------|------------:|------------:|----------:|
-| **Ekrina**            |     1.99 ms |    53.66 ms |  **100%** |
-| fast-fuzzy            |    39.68 ms |  1031.13 ms |     1922% |
-| fast-fuzzy (all opts) |    40.75 ms |  1118.34 ms |     2084% |
+| **Ekrina**            |     3.14 ms |    81.24 ms |  **100%** |
+| fast-fuzzy            |    42.87 ms |  1170.46 ms |     1441% |
+| fast-fuzzy (all opts) |    43.96 ms |  1224.99 ms |     1508% |
 <!-- bench:end -->
 
 ## Match quality, by query family

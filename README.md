@@ -23,20 +23,27 @@
 
 A fuzzy matcher usually hands back a number.
 Ranking on it is guesswork, highlighting means re-running the match yourself, and one transposed character makes the whole thing return nothing at all.
-Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a score whose scale is pinned by tests; it also corrects single-character typos, in ~6.4 kB with zero dependencies, on any runtime with ES2022.
+Ekrina returns a categorical `tier`, the numeric `ranges` to highlight, and a score whose scale is pinned by tests; it also corrects up to two typos per query, in ~6.4 kB with zero dependencies, on any runtime with ES2022.
 
 - **Tells you how it matched.**
   Every match carries `tier`, `ranges` and `score`, so ranking, highlighting and "showing results for…" are all reads off the result.
-- **Survives a typo.**
-  A transposition, an insertion or a substitution each break the subsequence property; the one-edit tiers still take all three at rank 1.
-- **Tops the match-quality scorecard with `fuzzier` on.**
-  0.90–0.91 MRR on each of three real-world corpora at under a millisecond per query, answering none of the queries nothing answers, against seven other libraries.
+- **Survives a typo, or two.**
+  A transposition, an insertion or a substitution each break the subsequence property; Ekrina corrects up to two of them, a key held down, and a space typed or left out.
+- **Tops the match-quality scorecard.**
+  0.91–0.92 MRR on each of three real-world corpora at about a millisecond per query, answering none of the queries nothing answers, against seven other libraries.
 - **Runs anywhere.**
   No `node:` imports, no DOM, nothing above ES2022: browsers, Node, Deno, Bun and edge runtimes, ESM and CJS.
 - **Stays small.**
   ~6.4 kB gzip, zero runtime dependencies, TS-first.
 
-Corrects single-character typos, not general edit distance, which keeps it small and fast.
+What it corrects, when the query as typed matches poorly:
+
+- up to two mistakes: a wrong, missing, extra or swapped character, or a space typed inside a word or left out between two; a word takes two from eight letters, a phrase word one from five;
+- a word typed sparsely: at least four of its letters, in order, starting with its first and covering at least half of it (`hget` for "Huguette");
+- a key held down: a run of three or more of one letter is one mistake (`twaaain`);
+- two neighbouring letters swapped in a four-letter word, where the fix starts a word (`tahn` for "Than").
+
+It is not general edit distance, which keeps it small and fast.
 Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), [benchmarked](./docs/benchmarks.md) against it and six others, and there is a [migration diff](#migrating-from-nozbemicrofuzz) if you are coming from it.
 
 ## Install
@@ -87,7 +94,7 @@ Preprocessing is cached.
 Each item is prepared the first time a query matches it, and the whole-list mask index the first time a query needs it.
 
 A one-character query matches only where it starts a word (`"o"` finds "Open File", not "Folder"), since one character anywhere matches most of any list.
-Queries under five characters are corrected only when nothing matches them as typed.
+Queries under five characters are corrected only when nothing matches them as typed, except a swap in a four-letter word, which is undone whenever nothing matches it literally.
 A query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected.
 
 When only the top of the list is shown, pass `limit`:
@@ -97,7 +104,7 @@ search("ma", { limit: 10 }); // the same ten results as search("ma").slice(0, 10
 ```
 
 Once `limit` items match the query as typed, the fuzzy and corrected matches that could not outrank them are never computed, which matters most for one- and two-character queries over a large list.
-With or without `limit`, corrections are only tried while fewer than ten items match the query as typed: past that, the extra rows are one-edit guesses ranked below every literal match.
+With or without `limit`, corrections are only tried while fewer than ten items match the query as typed: past that, the extra rows are guesses ranked below every literal match.
 
 To build the mask index ahead of time instead, once the list has loaded or during idle time, call `buildIndex()`:
 
@@ -106,7 +113,7 @@ const search = createFuzzySearch(products, (p) => p.title);
 search.buildIndex();
 ```
 
-Over 100k items it takes 10–15 ms, after which a first answer averages ~3 ms instead of 10–14 ms and a 24-query session drops from 54–69 to 36–44 ms (the `Ekrina (indexed)` rows in [docs/benchmarks.md](./docs/benchmarks.md)).
+Over 100k items it takes 10–16 ms, after which a first answer averages ~5 ms instead of 15–19 ms and a 24-query session drops from 81–93 to 60–74 ms (the `Ekrina (indexed)` rows in [docs/benchmarks.md](./docs/benchmarks.md)).
 Results are identical either way.
 A searcher that answers a single query and is thrown away comes out slightly behind, so leave it lazy there.
 
@@ -176,11 +183,11 @@ So for a short query, a list can show fewer corrections than `fuzzyMatch` return
 ## Where it fits
 
 - **Command palettes and pickers**: `tier` + `ranges` rank and highlight results without reverse-engineering a score.
-- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.3× by its last letter even over 100k items.
+- **Search-as-you-type**: a keystroke that extends the query rescans only the previous one's survivors, so a word gets faster as it is typed, 3.5× by its last letter even over 100k items.
   Starting a second word, typing five or more characters that match fewer than ten items literally (a possible typo), or four that match nothing, rescans the full list instead, and the first such keystroke also builds the mask index, once per searcher, unless `buildIndex()` already has.
 - **Filter UIs that show every match**: the narrowest result sets of the subsequence engines; the exact long word `gensler` returns 1 row where the chain engines return 12 and Fuse.js 971 on its defaults.
-- **Backend one-shot lookups**: constructor + first answer takes 4–5 ms in a cold process over 10k items, so indexing per request is fine.
-- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.38 ms, and the density floor, the minimum share of its span a fuzzy chain must cover, holds false matches of absent words to 2–4%.
+- **Backend one-shot lookups**: constructor + first answer takes 6 ms in a cold process over 10k items, so indexing per request is fine.
+- **Finding a phrase inside a document**: `fuzzyMatch` scans 16,000 characters in 0.48 ms, and the density floor, the minimum share of its span a fuzzy chain must cover, holds false matches of absent words to 2–4%.
 
 ## Scores and tiers
 
@@ -198,9 +205,10 @@ Each match reports a numeric `score` (for sorting) and a categorical `tier`:
 | 1.8   | `acronym`          | word initials (opt-in via `acronym: true`) |
 | 2     | `contains`         | contains query anywhere                    |
 | > 2   | `fuzzy`            | fuzzy chain (fewer chunks = better)        |
-| +2.1  | `corrected`        | one-character typo fixed (`genric`)        |
+| +2.1  | `corrected`        | per mistake fixed (`genric`; two add 4.2)  |
 
-A `corrected` match scores as the corrected query's tier + 2.1, which puts even a corrected exact hit above `contains` (2).
+A `corrected` match scores as the corrected query's tier + 2.1 per mistake, which puts even a corrected exact hit above `contains` (2).
+A word typed sparsely is a `corrected` match too, scored just above `contains` and lower the more of the word was skipped.
 A correction is a guess at what you meant, so the literal hit always ranks first.
 `score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 
@@ -266,7 +274,7 @@ Behavioural differences:
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
   `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
 - **Typos match.**
-  On the same queries microfuzz scores 0.41 MRR, Ekrina 0.70 and Ekrina with `fuzzier` 0.90–0.91 ([the scorecard](./docs/benchmarks.md#scorecard)).
+  On the same queries microfuzz scores 0.40–0.47 MRR and Ekrina 0.91–0.92 ([the scorecard](./docs/benchmarks.md#scorecard)).
 - **`normalizeText` is `normaliseText`.**
   EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.**
@@ -277,23 +285,22 @@ Ekrina is ~6.4 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to mic
 
 ## How it compares
 
-Ekrina answers in a few milliseconds at any realistic size: a 24-query session over 100,000 items averages ~2–2.6 ms per query after the first (~0.6 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.38 ms.
+Ekrina answers in a few milliseconds at any realistic size: a 24-query session over 100,000 items averages ~3–3.6 ms per query after the first (~1 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.48 ms.
 Between the libraries, the differences are _match quality_, _what they answer that they shouldn't_, and _what you get back_.
 
 Each library at its best-scoring configuration, native corpus at 10k items, measured November 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)).
 That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on; uFuzzy's defaults score 0.21 and Fuse.js's 0.72 ([how each was configured](./docs/benchmarks.md#libraries)):
 
-| Library                     |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
-| --------------------------- | ------: | ---: | ---: | ---: | -------: | :---: | :----: | --------- |
-| **Ekrina** (`fuzzier`)      | ~6.4 kB |    0 | 0.90 | 0.00 | **0.88** |  🟢   |   🟢   | two edits |
-| fast-fuzzy                  |  ~11 kB |    1 | 0.81 | 0.24 |     4.77 |  🔴   |   🟡   | full      |
-| Fuse.js (tuned)             | ~9.3 kB |    0 | 0.76 | 0.47 |    11.53 |  🔴   |   🟡   | full      |
-| **Ekrina**                  | ~6.4 kB |    0 | 0.70 | 0.00 | **0.64** |  🟢   |   🟢   | one edit  |
-| uFuzzy (all opts)           | ~4.1 kB |    0 | 0.66 | 0.00 |     0.62 |  🔴   |   🟢   | one edit  |
-| fuzzysort                   | ~3.7 kB |    0 | 0.46 | 0.07 |     0.26 |  🔴   |   🟢   | 🔴        |
-| @nozbe/microfuzz            | ~1.7 kB |    0 | 0.41 | 0.07 |     1.38 |  🔴   |   🟢   | 🔴        |
-| match-sorter                | ~3.4 kB |    2 | 0.39 | 0.07 |     2.21 |  🟢   |   🔴   | 🔴        |
-| fuzzy                       | ~0.8 kB |    0 | 0.30 | 0.07 |     1.54 |  🔴   |   🟡   | 🔴        |
+| Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
+| ----------------- | ------: | ---: | ---: | ---: | -------: | :---: | :----: | --------- |
+| **Ekrina**        | ~6.4 kB |    0 | 0.91 | 0.00 | **1.06** |  🟢   |   🟢   | two edits |
+| fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
+| Fuse.js (tuned)   | ~9.3 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
+| uFuzzy (all opts) | ~4.1 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
+| fuzzysort         | ~3.7 kB |    0 | 0.46 | 0.07 |     0.41 |  🔴   |   🟢   | 🔴        |
+| @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 | 0.07 |     2.10 |  🔴   |   🟢   | 🔴        |
+| match-sorter      | ~3.4 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
+| fuzzy             | ~0.8 kB |    0 | 0.30 | 0.07 |     2.10 |  🔴   |   🟡   | 🔴        |
 
 The corpora are 100,000 real Wikidata names, under their English labels and under their native ones, plus an emoji picker's labels and tags, and the ranking is the same on all three ([the corpora](./docs/benchmarks.md#the-corpora-and-the-query-families)).
 **MRR** is the mean reciprocal rank of the first right answer over 33 query families of ten sampled queries each (typos, phonetic and real misspellings, partial words, query shapes and noise, weighted by group before anything was measured), each query one that at most three items could answer, top-10 cutoff; any item the query could have meant counts ([how](./docs/benchmarks.md#match-quality-by-query-family)).
@@ -307,7 +314,7 @@ Accuracy against one whole cold search (index + one query) is the least flatteri
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/pareto-total-dark.svg">
-  <img alt="Native-corpus accuracy (MRR) vs. cold one-shot time (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then Ekrina, then Ekrina (fuzzier): Ekrina scores 0.70 at ~5.1 ms one-shot and Ekrina (fuzzier) 0.90 at ~5.3 ms, and everything else, including fast-fuzzy at 0.81 and ~44 ms and Fuse.js (tuned) at 0.76 and ~17 ms, is dominated." src="./docs/pareto-total-light.svg">
+  <img alt="Native-corpus accuracy (MRR) vs. cold one-shot time (constructor plus first answer in a fresh process, log scale) as a Pareto frontier. The frontier is fuzzy, then match-sorter, then Ekrina (indexed): Ekrina (indexed) scores 0.91 at ~6.0 ms one-shot and lazy Ekrina 0.91 at ~6.3 ms, and everything else, including fast-fuzzy at 0.81 and ~50 ms and Fuse.js (tuned) at 0.76 and ~17 ms, is dominated." src="./docs/pareto-total-light.svg">
 </picture>
 
 Ekrina is the only library that by default:
@@ -323,28 +330,27 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
-- **Match quality**: with `fuzzier` on, Ekrina scores 0.79–1.00 on every typo family, one edit or two, and 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), which no other library matches across the board.
+- **Match quality**: Ekrina scores 0.79–1.00 on every typo family, one edit or two, and 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), which no other library matches across the board.
   fast-fuzzy, the nearest, scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones.
-  Without `fuzzier`, the always-on one-edit rescue scores 0.80–1.00 on the one-edit families and 0–0.10 on the two-edit, split and joined ones, which is the gap between 0.70 and 0.90–0.91.
   Ekrina requires every query word, so a query holding a word the item lacks returns nothing, where fast-fuzzy scores 0.80–1.00 on that family.
-- **Junk**: no Ekrina configuration answers any of the queries nothing answers, on any corpus, at any distance from the corpus; fast-fuzzy answers a quarter of them and Fuse.js (tuned) nearly half.
-- **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 20–24 ms at 10k and 54–69 ms at 100k, ~0.6–2.6 ms per query after the first; `fuzzier` adds 24–34%, and `buildIndex()` brings the default to 17–19 and 36–44 ms.
-  Every typo-tolerant or tiered alternative is several times slower, from fast-fuzzy at ~5–19× to Fuse.js at ~12–46×.
+- **Junk**: Ekrina answers none of the queries nothing answers, on any corpus, at any distance from the corpus; fast-fuzzy answers a quarter of them and Fuse.js (tuned) nearly half.
+- **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 30–36 ms at 10k and 81–93 ms at 100k, ~1–3.6 ms per query after the first, and `buildIndex()` brings it to 27–34 and 60–74 ms.
+  Every typo-tolerant alternative is several times slower per query: fast-fuzzy ~5–6× and Fuse.js (tuned) ~11–12× at 10k.
   Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
-  A first answer averages 4–5 ms at 10k and 10–14 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
+  A first answer averages ~6 ms at 10k and 15–19 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
   Of the other libraries, fuzzysort and uFuzzy (all opts) run the 10k session faster, at 0.46 and 0.66 MRR ([uFuzzy's configurations](./docs/libraries/ufuzzy.md)).
   A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
   Results are identical in any script, but the mask index cannot tell non-Latin letters apart, so on non-Latin text it admits every item and each query scans the whole list (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
 
 ### What to pick
 
-Pick Ekrina, with `fuzzier` on wherever people type queries by hand.
+Pick Ekrina.
 It tops the quality scorecard on all three benchmark corpora, answers nothing it shouldn't, and runs its session several times faster than the two libraries closest to it on quality.
-At ~6.4 kB gzip it is the third-largest of the eight, and the rescue machinery is both where the size goes and where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
+At ~6.4 kB gzip it is the third-largest of the eight, and the correction machinery is both where the size goes and where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
 Only Fuse.js and fast-fuzzy are larger, at 1.5–1.7×.
 The exception:
 
-- **A query word the item lacks must still match** (an OR-style search): Ekrina requires every word, so pick `fast-fuzzy` there, at 1.7× the bundle and ~5 ms queries, or split the query yourself.
+- **A query word the item lacks must still match** (an OR-style search): Ekrina requires every word, so pick `fast-fuzzy` there, at 1.7× the bundle and ~6 ms queries, or split the query yourself.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./docs/benchmarks.md#the-recommendation).
 

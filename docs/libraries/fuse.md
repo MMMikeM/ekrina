@@ -29,9 +29,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-native -->
 | Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 | 0.47 |     1.10 |   15.59 |   293.11 |       11.53 |
-| Fuse.js (all opts)  | 0.75 | 0.91 |     1.13 |   18.35 |   363.24 |       14.32 |
-| Fuse.js             | 0.72 | 0.99 |     1.09 |   15.97 |   410.73 |       16.49 |
+| **Fuse.js (tuned)** | 0.76 | 0.47 |     1.16 |   16.02 |   309.48 |       12.21 |
+| Fuse.js (all opts)  | 0.75 | 0.91 |     1.11 |   19.00 |   462.38 |       18.31 |
+| Fuse.js             | 0.72 | 0.99 |     1.17 |   16.78 |   436.65 |       17.54 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -39,9 +39,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-en -->
 | Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 | 0.46 |     1.10 |   14.13 |   255.32 |        9.99 |
-| Fuse.js (all opts)  | 0.76 | 0.95 |     1.11 |   19.56 |   320.57 |       12.57 |
-| Fuse.js             | 0.72 | 1.00 |     1.11 |   13.95 |   340.79 |       13.63 |
+| **Fuse.js (tuned)** | 0.76 | 0.46 |     1.14 |   15.64 |   275.27 |       10.83 |
+| Fuse.js (all opts)  | 0.76 | 0.95 |     1.09 |   18.85 |   323.75 |       12.70 |
+| Fuse.js             | 0.72 | 1.00 |     1.10 |   16.17 |   361.95 |       14.49 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
@@ -56,7 +56,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with base Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
 The native tables list only the configurations that fold diacritics, so base Fuse.js, which doesn't, is timed on en only; the emoji corpus is too short to time.
 
 **en corpus:**
@@ -64,19 +64,19 @@ The native tables list only the configurations that fold diacritics, so base Fus
 <!-- bench:library-fuse-speed-en -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
-| **Ekrina**         | 0.39 ms |   10.12 ms |  10.45 ms |  **100%** |
-| Fuse.js            | 4.98 ms |  112.65 ms | 117.72 ms |     1127% |
-| Fuse.js (all opts) | 5.15 ms |  129.74 ms | 134.83 ms |     1290% |
-| Fuse.js (tuned)    | 5.17 ms |  102.81 ms | 107.85 ms |     1032% |
+| **Ekrina**         | 0.42 ms |   14.55 ms |  15.42 ms |  **100%** |
+| Fuse.js            | 5.85 ms |  126.70 ms | 132.34 ms |      858% |
+| Fuse.js (all opts) | 4.97 ms |  138.46 ms | 143.76 ms |      932% |
+| Fuse.js (tuned)    | 5.05 ms |  112.40 ms | 117.98 ms |      765% |
 <!-- bench:end -->
 
 <!-- bench:library-fuse-batch-en -->
 | Library            | batch/query | batch total | batch rel |
 |--------------------|------------:|------------:|----------:|
-| **Ekrina**         |     1.99 ms |    53.66 ms |  **100%** |
-| Fuse.js            |   137.07 ms |  3387.53 ms |     6313% |
-| Fuse.js (all opts) |   125.69 ms |  3155.00 ms |     5880% |
-| Fuse.js (tuned)    |    97.57 ms |  2448.24 ms |     4563% |
+| **Ekrina**         |     3.14 ms |    81.24 ms |  **100%** |
+| Fuse.js            |   138.24 ms |  3423.32 ms |     4214% |
+| Fuse.js (all opts) |   125.83 ms |  3153.89 ms |     3882% |
+| Fuse.js (tuned)    |   102.09 ms |  2565.04 ms |     3157% |
 <!-- bench:end -->
 
 **native corpus:**
@@ -84,17 +84,17 @@ The native tables list only the configurations that fold diacritics, so base Fus
 <!-- bench:library-fuse-speed-native -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
-| **Ekrina**         | 0.35 ms |   14.18 ms |  14.52 ms |  **100%** |
-| Fuse.js (all opts) | 5.37 ms |  146.17 ms | 151.59 ms |     1044% |
-| Fuse.js (tuned)    | 5.51 ms |  115.65 ms | 121.18 ms |      834% |
+| **Ekrina**         | 0.44 ms |   19.25 ms |  19.67 ms |  **100%** |
+| Fuse.js (all opts) | 5.55 ms |  150.83 ms | 156.27 ms |      794% |
+| Fuse.js (tuned)    | 6.11 ms |  116.53 ms | 121.93 ms |      620% |
 <!-- bench:end -->
 
 <!-- bench:library-fuse-batch-native -->
 | Library            | batch/query | batch total | batch rel |
 |--------------------|------------:|------------:|----------:|
-| **Ekrina**         |     2.59 ms |    68.75 ms |  **100%** |
-| Fuse.js (all opts) |   144.63 ms |  3618.07 ms |     5263% |
-| Fuse.js (tuned)    |   112.15 ms |  2809.94 ms |     4087% |
+| **Ekrina**         |     3.58 ms |    93.21 ms |  **100%** |
+| Fuse.js (all opts) |   142.52 ms |  3568.73 ms |     3829% |
+| Fuse.js (tuned)    |   115.18 ms |  2894.62 ms |     3106% |
 <!-- bench:end -->
 
 ## Match quality, by query family
