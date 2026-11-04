@@ -9,8 +9,11 @@
  */
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
-import { createFuzzySearch, fuzzyMatch, normaliseText, splitWords } from "../src/index";
+import { charMask } from "../src/gates";
+import { createFuzzySearch, fuzzier, fuzzyMatch, normaliseText, splitWords } from "../src/index";
+import { prepareBoundedQuery } from "../src/match";
 import { isShortQuery } from "../src/rescue";
+import { strategyOf } from "../src/strategy";
 import { CORPORA } from "./corpus";
 
 it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 600_000 }, () => {
@@ -58,6 +61,44 @@ it("an indexed searcher answers every bench query as a fresh lazy one does", { t
 					createFuzzySearch(list)(query),
 				);
 			}
+		}
+	}
+});
+
+// The fuzzier pass, without its gates and without scanning only the literal
+// pass's survivors: what the searcher must return, item for item.
+const withFuzzierReading = (
+	list: string[],
+	query: string,
+	plain: Map<string, number>,
+): Map<string, number> => {
+	const prepared = prepareBoundedQuery(query);
+	const reading = prepared && strategyOf(fuzzier).prepare(prepared, plain.size > 0);
+	const expected = new Map(plain);
+	if (!reading) return expected;
+	for (const item of list) {
+		const held = plain.get(item);
+		if (held !== undefined && held <= SCORES.CONTAINS) continue;
+		const field = item.trim();
+		const normalisedField = normaliseText(field);
+		if (!reading.admitsMask(charMask(normalisedField)) || !reading.admitsText(field)) continue;
+		const score = reading.match(field, normalisedField)?.score;
+		if (score !== undefined && score < (held ?? Infinity)) expected.set(item, score);
+	}
+	return expected;
+};
+
+it("a fuzzier searcher returns exactly what its reading admits", { timeout: 600_000 }, () => {
+	for (const { name, build, queries, samples } of CORPORA) {
+		const list = build(10_000);
+		for (const query of [...queries, ...samples.map((s) => s.query)]) {
+			const plainResults = createFuzzySearch(list)(query);
+			if (plainResults.filter((r) => r.score <= SCORES.CONTAINS).length >= 10) continue;
+			const scores = (results: { item: string; score: number }[]) =>
+				new Map(results.map((r) => [r.item, r.score]));
+			const got = scores(createFuzzySearch(list, [{ text: (s) => s, fuzzier }])(query));
+			const expected = withFuzzierReading(list, query, scores(plainResults));
+			expect(got, `[${name}-10000] "${query}"`).toEqual(expected);
 		}
 	}
 });

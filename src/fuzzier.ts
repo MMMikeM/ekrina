@@ -1,3 +1,4 @@
+import { WORD_CHARS } from "./boundaries";
 import type { PreparedQuery } from "./match";
 import { charMask } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
@@ -15,7 +16,7 @@ const MAX_WORD_LENGTH = 64;
 // probes junked once at 1,024 characters and never up to 512.
 const MAX_FIELD_LENGTH = 512;
 
-const wordRun = /[\p{L}\p{N}_]+/gu;
+const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 
 let rows = new Int32Array(0);
 
@@ -145,7 +146,7 @@ const holdsInOrder = (word: string, text: string): boolean => {
 
 type FieldWord = { word: string; at: number };
 
-// Normalised text holds no ASCII capitals.
+// The ASCII part of WORD_CHARS; normalised text holds no ASCII capitals.
 const isAsciiWordUnit = (unit: number): boolean =>
 	(unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57) || unit === 95;
 
@@ -173,8 +174,12 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 	return words;
 };
 
+// Normalised text lines up with NFC(field) unit for unit, whatever its length.
+const composed = (text: string, normalised: string): string =>
+	text.length === normalised.length ? text : text.normalize("NFC");
+
 const spelling = (field: string, normalisedField: string, { word, at }: FieldWord): string =>
-	field.length === normalisedField.length ? field.slice(at, at + word.length) : word;
+	composed(field, normalisedField).slice(at, at + word.length);
 
 const correction = (
 	edits: number,
@@ -334,7 +339,7 @@ const correctPhrase = (
 		placements.set(word, [...(placements.get(word) ?? []), placement]);
 	}
 	const { query, normalisedQuery, queryWords } = prepared;
-	const typed = query.length === normalisedQuery.length ? query : normalisedQuery;
+	const typed = composed(query, normalisedQuery);
 	let corrected = "";
 	let from = 0;
 	const ranges: Range[] = [];
@@ -392,7 +397,7 @@ const editGates = (letters: string): Gates => {
 // Edit distance over every field word is what makes a reading expensive, so
 // beside other matches only the sparse reading competes; edits stand in only
 // for a query that matched nothing.
-const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
+const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
 	const { queryWords } = prepared;
 	if (queryWords.length === 0 || queryWords.some((word) => word.length > MAX_WORD_LENGTH)) {
 		return null;
@@ -426,6 +431,19 @@ const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy 
 				: matchWord(queryWords[0], field, normalisedField, words);
 		},
 	};
+};
+
+type Reading = { query: string; competing: boolean; strategy: PreparedStrategy | null };
+
+// fuzzyMatch prepares its query per call, and a list matched one call per row
+// would otherwise rebuild the same gates for every row.
+let lastReading: Reading | null = null;
+
+const prepare = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
+	if (lastReading?.query !== prepared.query || lastReading.competing !== competing) {
+		lastReading = { query: prepared.query, competing, strategy: prepareReading(prepared, competing) };
+	}
+	return lastReading.strategy;
 };
 
 const fuzzierStrategy: Strategy = { prepare };

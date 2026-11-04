@@ -1,7 +1,7 @@
 /**
  * The tier ladder as named constants. Lower = better. Any score greater than
- * CONTAINS is a fuzzy-fallback match (see fuzzy.ts) or a one-edit typo rescue
- * (see TYPO_PENALTY) — every genuine tier is at or below CONTAINS, so that
+ * CONTAINS is a fuzzy-fallback match (see fuzzy.ts) or a correction (see
+ * TYPO_PENALTY) — every genuine tier is at or below CONTAINS, so that
  * constant is the dividing line between a literal match and a speculative one.
  * Exported so callers can filter or re-rank by tier without hardcoding magic
  * numbers.
@@ -30,7 +30,8 @@ export const SCORES = {
  * displaced it.
  *
  * Rescued scores therefore land at 2.1 and up, overlapping the fuzzy band
- * numerically; the `tier` field is what tells them apart. One penalty for
+ * numerically, and a sparse `fuzzier` match, which fixes no typo, scores just
+ * above CONTAINS: the `tier` field is what tells them apart. One penalty for
  * every kind of edit: they are the same edit distance, and scoring them
  * differently would rank a swapped keystroke above a dropped one on no
  * evidence.

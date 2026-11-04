@@ -11,8 +11,7 @@ export type HighlightRanges = Range[];
 /**
  * Which tier a match came from. Lower on this list is a weaker match. Every
  * genuine tier scores at or below `SCORES.CONTAINS`; anything above it is a
- * fuzzy chain or a one-edit typo rescue, and the tier is what tells those
- * apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
+ * fuzzy chain or a correction, and the tier is what tells those apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
  * actually appears here", and filtering to it is how you opt out of guessing.
  *
  * `corrected` names a fix the *query* needed, not the field: one character by
@@ -59,7 +58,7 @@ export type Fuzzier = { readonly [fuzzierBrand]: true };
 export type MatchOptions = {
 	/** Enable the acronym (word-initials) tier (default: false). */
 	acronym?: boolean;
-	/** Matching to try when the string matches nothing else: pass `fuzzier`. */
+	/** More matching, tried when the string holds no match as typed: pass `fuzzier`. */
 	fuzzier?: Fuzzier;
 };
 
@@ -71,8 +70,8 @@ export type FieldSpec<T = unknown> = {
 	text: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** Matching to try on this field when no item matches the query
-	 *  otherwise: pass `fuzzier`. */
+	/** More matching for this field, tried while fewer than ten items match the
+	 *  query as typed: pass `fuzzier`. */
 	fuzzier?: Fuzzier;
 	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
 	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */

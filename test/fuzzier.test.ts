@@ -63,9 +63,9 @@ describe("two edits inside one word", () => {
 		expect(fuzzyMatch("Ørsted Ergonomic", "ergxnomiq", opt)?.ranges).toEqual([[7, 15]]);
 	});
 
-		it("spells a decomposed field's word in its composed form", () => {
-		const r = fuzzyMatch("Café Ergonomic", "ergxnomiq", opt);
-		expect(r?.corrected).toBe("ergonomic");
+	it("spells a decomposed field's word in its composed form", () => {
+		expect(fuzzyMatch("Cafe\u0301 Ergonomic", "ergxnomiq", opt)?.corrected).toBe("Ergonomic");
+		expect(fuzzyMatch("Re\u0301sume\u0301", "rsme", opt)?.corrected).toBe("Résumé");
 	});
 
 	it("holds a word over 64 characters to no correction", () => {
@@ -329,6 +329,15 @@ describe("in a searcher", () => {
 		const [result] = search("hget");
 		expect(result.fields.map((field) => field?.corrected)).toEqual(["Hxgxextx", "Hagueta"]);
 		expect(result.score).toBe(result.fields[1]?.score);
+		const [reversed] = createFuzzySearch(
+			[{ title: "Hagueta", body: "Hxgxextx" }],
+			[
+				{ text: (r) => r.title, fuzzier },
+				{ text: (r) => r.body, fuzzier },
+			],
+		)("hget");
+		expect(reversed.score).toBe(reversed.fields[0]?.score);
+		expect(reversed.fields[1]?.corrected).toBe("Hxgxextx");
 	});
 
 	it("corrects a list that matches nothing", () => {
@@ -336,6 +345,41 @@ describe("in a searcher", () => {
 		expect(search("ergxnomiq").map((r) => r.item)).toEqual(["Ergonomic Chair", "Ergonomic Desk"]);
 		expect(search("rustix stexl")[0].fields[0]?.corrected).toBe("Rustic Steel");
 		expect(search("pizza").map((r) => r.fields[0]?.tier)).toEqual(["boundary"]);
+	});
+
+	it("breaks a tie between its matches by list order", () => {
+		for (const items of [
+			["Hxgxet", "Hgueet"],
+			["Hgueet", "Hxgxet"],
+		]) {
+			expect(searcher(items)("hget").map((r) => r.item)).toEqual(items);
+		}
+	});
+
+	it("ranks an item by where its best field's match ends", () => {
+		const bodies = (items: { title: string; body: string }[]) =>
+			createFuzzySearch(items, [
+				{ text: (r) => r.title, fuzzier },
+				{ text: (r) => r.body, fuzzier },
+			])("hget").map((r) => r.item.body);
+		const beaten = [
+			{ title: "Hxgxet", body: "Hgueetx" },
+			{ title: "Hxgxet", body: "zzz" },
+		];
+		expect(bodies(beaten)).toEqual(["Hgueetx", "zzz"]);
+		const tied = [
+			{ title: "Hxgxetx", body: "Hxgxxet" },
+			{ title: "Hxgxxet", body: "zzz" },
+		];
+		expect(bodies(tied)).toEqual(["Hxgxxet", "zzz"]);
+	});
+
+	it("is off when a caller passes `false` or `null` for it", () => {
+		const off = [false, null] as unknown as undefined[];
+		for (const fuzzier of off) {
+			expect(fuzzyMatch("Ergonomic", "ergxnomiq", { fuzzier })).toBeNull();
+			expect(createFuzzySearch(["Ergonomic"], [{ text: (s) => s, fuzzier }])("ergo")).toHaveLength(1);
+		}
 	});
 
 	it("is off unless a field opts in", () => {

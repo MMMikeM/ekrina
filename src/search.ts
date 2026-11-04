@@ -63,7 +63,7 @@ export const fuzzyMatch = (
 	const fieldMask = charMask(normalisedField);
 
 	let result = matchField(field, normalisedField, fieldMask, q, acronym);
-	if (fuzzier !== undefined && (result === null || result.score > SCORES.CONTAINS)) {
+	if (fuzzier && (result === null || result.score > SCORES.CONTAINS)) {
 		const strategy = strategyOf(fuzzier).prepare(q, result !== null);
 		const fallback =
 			strategy?.admitsMask(fieldMask) && strategy.admitsText(field)
@@ -99,7 +99,7 @@ const resolveFieldSpecs = <T>(
 	return specs.map((spec) => ({
 		text: spec.text,
 		acronym: spec.acronym ?? false,
-		fuzzier: spec.fuzzier === undefined ? null : strategyOf(spec.fuzzier),
+		fuzzier: spec.fuzzier ? strategyOf(spec.fuzzier) : null,
 		atBest: spec.atBest ?? 0,
 	}));
 };
@@ -113,6 +113,7 @@ const resolveFieldSpecs = <T>(
  * matches most of any real collection and ranks none of it.
  * A query under five characters is corrected only when no item matches it as
  * typed, and no correction is tried once ten items match literally.
+ * A field that opts in to `fuzzier` can also return a sparse match beside them.
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
  * An empty spec array is honoured as written: the searcher has no searchable
@@ -154,11 +155,11 @@ export function createFuzzySearch<T>(
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
 	// Which result each item holds in the current query, so a fuzzier match can
-	// replace a weaker one; a stamp from an earlier query means none.
+	// replace a weaker one. Emptied before the query returns.
 	// oxlint-disable-next-line unicorn/no-new-array
 	const heldResults: (FuzzyResult<T> | undefined)[] | null = hasFuzzier ? new Array(count) : null;
-	const heldStamps = hasFuzzier ? new Int32Array(count) : null;
-	let generation = 0;
+	const heldEndsWord = hasFuzzier ? new Uint8Array(count) : null;
+	let heldItems: number[] = [];
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -242,7 +243,6 @@ export function createFuzzySearch<T>(
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
-		generation++;
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -262,6 +262,7 @@ export function createFuzzySearch<T>(
 		// the page — the rescue becomes provably invisible work. Fuzzy hits score
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
+		let fuzzierRescored = false;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
 		// objects per call, so the atBest shift can mutate.
@@ -279,8 +280,17 @@ export function createFuzzySearch<T>(
 			(endsWord ? boundaryEndMatches : midWordMatches).push(entry);
 			if (heldResults !== null) {
 				heldResults[i] = entry;
-				(heldStamps as Int32Array)[i] = generation;
+				(heldEndsWord as Uint8Array)[i] = endsWord ? 1 : 0;
+				heldItems.push(i);
 			}
+		};
+
+		const forgetMatches = (): void => {
+			boundaryEndMatches = [];
+			midWordMatches = [];
+			if (heldResults === null) return;
+			for (const i of heldItems) heldResults[i] = undefined;
+			heldItems = [];
 		};
 
 		const scoreItem = (
@@ -386,8 +396,7 @@ export function createFuzzySearch<T>(
 		const relaxedPass = (): void => {
 			const { masks, bigramsLo, bigramsHi } = (unionIndex ??= buildUnionIndex());
 			const bigramGate = buildRescueBigramGate(normalisedQuery);
-			boundaryEndMatches = [];
-			midWordMatches = [];
+			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
 				if (missingClasses & (missingClasses - 1)) continue;
@@ -433,11 +442,26 @@ export function createFuzzySearch<T>(
 					fields[f] = result;
 					entry = { item: list[i], score: result.score, fields };
 					record(i, entry, endsWord);
+					fuzzierRescored = true;
 				} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
 					entry.fields[f] = result;
+					const endsWords = heldEndsWord as Uint8Array;
+					if (result.score < entry.score) endsWords[i] = endsWord ? 1 : 0;
+					else if (result.score === entry.score && endsWord) endsWords[i] = 1;
 					entry.score = Math.min(entry.score, result.score);
+					fuzzierRescored = true;
 				}
 			}
+		};
+
+		// The order the two lists and the stable sort give, rebuilt for the items
+		// the fuzzier pass added or rescored.
+		const heldInOrder = (): FuzzyResult<T>[] => {
+			const results = heldResults as FuzzyResult<T>[];
+			const endsWords = heldEndsWord as Uint8Array;
+			return heldItems
+				.sort((a, b) => results[a].score - results[b].score || endsWords[b] - endsWords[a] || a - b)
+				.map((i) => results[i]);
 		};
 
 		const fuzzierPass = (): void => {
@@ -451,7 +475,7 @@ export function createFuzzySearch<T>(
 			const scanned = survivorsOnly ? survivorCount : count;
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
-				const held = (heldStamps as Int32Array)[i] === generation ? heldResults?.[i] : undefined;
+				const held = (heldResults as (FuzzyResult<T> | undefined)[])[i];
 				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
 				offerFallbacks(i, held, fallbacks);
 			}
@@ -473,8 +497,7 @@ export function createFuzzySearch<T>(
 		// items match literally none of them can reach the page.
 		literalPass(limit !== undefined);
 		if (limit !== undefined && literalHits < limit) {
-			boundaryEndMatches = [];
-			midWordMatches = [];
+			forgetMatches();
 			literalHits = 0;
 			for (let k = 0; k < survivorCount; k++) scoreItem(survivors[k], false, false, false);
 		}
@@ -496,7 +519,10 @@ export function createFuzzySearch<T>(
 		if (offeringFuzzier) fuzzierPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
-		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
+		const results = fuzzierRescored
+			? heldInOrder()
+			: boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
+		forgetMatches();
 		if (limit !== undefined && results.length > limit) results.length = limit;
 		return results;
 	};
