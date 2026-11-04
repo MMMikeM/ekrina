@@ -322,7 +322,8 @@ Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
 
 - **Match quality**: Ekrina scores 0.97–1.00 on every phrase family (reversed, half-typed, and with either word mistyped), and 0.98–1.00 on the plain words and single-edit typos, which no other library matches across the board.
   A transposition, an insertion and a substitution each break the subsequence property, so the subsequence engines score 0.10 or less there; Ekrina's one-edit tiers correct them, and inside a phrase the words that do occur pin the field so only the failing word is rescued.
-  Ekrina refuses sparse chains on purpose, so it scores 0 on the two deeper scatter families against up to 0.95 for the chain engines, and long-text junk stays at 0%; two or more edits in one query remain the edit-distance engines' edge.
+  By default Ekrina refuses sparse chains on purpose, so it scores 0 on the two deeper scatter families against up to 0.95 for the chain engines, and long-text junk stays at 0%.
+  Two or more edits in one query, and a word typed sparsely, are the edit-distance and chain engines' edge unless a field opts in to `fuzzier`.
 - **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 18 ms at 10k and 63 ms at 100k, ~0.7–2.5 ms per query after the first, level with uFuzzy (all opts) and ~3–55× under every typo-tolerant or tiered alternative; `buildIndex()` brings it to 14 and 31 ms, the fastest of anything above 0.7 MRR.
   Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
   A first answer averages ~3.7 ms at 10k and 12–19 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).

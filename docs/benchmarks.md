@@ -159,7 +159,7 @@ The families, each with the representative query the speed tables time and the b
 | 8     | two words, first mistyped     | `handcxafted wooden`           | a typo inside a phrase; word-level rescue             |
 | 9     | two words, second mistyped    | `handcrafted wooxen`           | the rescue must find the failing word                 |
 | 10    | reversed phrase, one mistyped | `wooden handcxafted`           | the correction must survive order-independence        |
-| 11    | two words, both mistyped      | `handcxafted wooxen`           | two edits: 0 rows is correct (unscored)               |
+| 11    | two words, both mistyped      | `handcxafted wooxen`           | two edits: 0 rows unless `fuzzier` (unscored)         |
 | 12    | plural typed, singular stored | `romanowskis`                  | a trailing `-s` the corpus lacks, one deletion        |
 | 13    | four-character typo           | `anxe`                         | corrected only when nothing matches as typed          |
 | 14    | prefix / partial word         | `auxen`                        | a word not yet finished                               |
