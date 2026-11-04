@@ -1,5 +1,6 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
+import { bigramBit, bigramClass } from "./normalise";
 import { charMask } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
 import type { PreparedStrategy, Strategy } from "./strategy";
@@ -379,6 +380,9 @@ const correctPhrase = (
 	);
 };
 
+const mayBeOneWord = (queryWords: string[]): boolean =>
+	queryWords.length === 2 && queryWords[0].length + queryWords[1].length >= MIN_TWO_EDIT_WORD_LENGTH;
+
 // A two-word query is also read as one word with a stray space in it.
 const correctSplitWord = (
 	queryWords: string[],
@@ -387,9 +391,54 @@ const correctSplitWord = (
 	words: FieldWord[],
 ): MatchResult | null => {
 	const joined = queryWords.join("");
-	return queryWords.length === 2 && joined.length >= MIN_TWO_EDIT_WORD_LENGTH
-		? correctWord(joined, field, normalisedField, words, 1)
-		: null;
+	return mayBeOneWord(queryWords) ? correctWord(joined, field, normalisedField, words, 1) : null;
+};
+
+// An adjacent swap breaks the three letter pairs around it; every other edit
+// breaks fewer.
+const PAIRS_ONE_EDIT_BREAKS = 3;
+
+type Pairs = { lo: number; hi: number };
+
+// Only pairs of ASCII letters and digits, where a field's bigram set and the
+// normalised query are sure to agree.
+const pairsOf = (words: string[]): Pairs => {
+	const pairs = { lo: 0, hi: 0 };
+	for (const word of words) {
+		for (let at = 1; at < word.length; at++) {
+			const before = word.charCodeAt(at - 1);
+			const unit = word.charCodeAt(at);
+			if (before > 127 || unit > 127) continue;
+			const beforeClass = bigramClass(before);
+			const unitClass = bigramClass(unit);
+			if (beforeClass === 0 || unitClass === 0) continue;
+			const bit = bigramBit(beforeClass, unitClass);
+			if (bit < 32) pairs.lo |= 1 << bit;
+			else pairs.hi |= 1 << (bit - 32);
+		}
+	}
+	return pairs;
+};
+
+const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number): boolean => {
+	let missing = 0;
+	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
+	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
+	return true;
+};
+
+// A phrase word under five letters is never corrected, so its pairs all occur;
+// the rest lose at most what the edits break. Read as one word, the joined
+// query has one edit to spare beside the space.
+const phrasePairs = (queryWords: string[]): NonNullable<PreparedStrategy["admitsPairs"]> => {
+	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
+	const all = pairsOf(queryWords);
+	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
+	return (lo, hi) =>
+		(lacksPairsAtMost(short, lo, hi, 0) &&
+			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
+		(joined !== null &&
+			lacksPairsAtMost(joined, lo, hi, (MAX_EDITS - 1) * PAIRS_ONE_EDIT_BREAKS));
 };
 
 type Gates = Pick<PreparedStrategy, "admitsMask" | "admitsText">;
@@ -402,12 +451,14 @@ const scatterGates = (letters: string): Gates => {
 	};
 };
 
-const editGates = (letters: string): Gates => {
+// `unmatched` is how many of the query's letters the edits can leave without a
+// counterpart in the field.
+const editGates = (letters: string, unmatched: number): Gates => {
 	const lettersMask = charMask(letters);
 	const counts = classCounts(letters);
-	const gate = letterGate(letters, letters.length - MAX_EDITS);
+	const gate = letterGate(letters, letters.length - unmatched);
 	return {
-		admitsMask: (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, MAX_EDITS),
+		admitsMask: (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched),
 		admitsText: (text) => holdsLetters(gate, text),
 	};
 };
@@ -434,12 +485,18 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 			editable ? correctWord(word, field, normalisedField, words, 0) : null,
 			scatterWord(word, field, normalisedField, words),
 		);
+	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
 	const matchable = phrase
-		? queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH)
+		? correctable || mayBeOneWord(queryWords)
 		: letters.length >= MIN_SCATTER_LENGTH;
+	// With no word long enough to correct, only the one edit beside a stray
+	// space can leave a letter unmatched.
+	const unmatched = phrase && !correctable ? MAX_EDITS - 1 : MAX_EDITS;
 	if (!matchable) return null;
 	return {
-		...(editable ? editGates(letters) : scatterGates(letters)),
+		...(editable ? editGates(letters, unmatched) : scatterGates(letters)),
+		// A sparse reading keeps no pairs of a word together.
+		admitsPairs: phrase ? phrasePairs(queryWords) : null,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
 			const words = fieldWords(normalisedField);

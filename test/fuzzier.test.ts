@@ -242,6 +242,19 @@ describe("a space counts as one edit", () => {
 		});
 	});
 
+	it("a space typed between two short halves of a word", () => {
+		expect(fuzzyMatch("Hillside", "hill side", opt)).toEqual({
+			score: TYPO_PENALTY + SCORES.NORMALISED_EXACT,
+			tier: "corrected",
+			corrected: "Hillside",
+			ranges: [[0, 7]],
+		});
+		expect(fuzzyMatch("Hillside Road", "hill sdie", opt)?.corrected).toBe("Hillside");
+		expect(searcher(["Database Admin", "Data Lake"])("data base").map((r) => r.item)).toEqual([
+			"Database Admin",
+		]);
+	});
+
 	it("a space typed inside a word, and one more mistake", () => {
 		expect(fuzzyMatch("Catonsville", "cato nsvxlle", opt)?.corrected).toBe("Catonsville");
 	});
@@ -377,6 +390,30 @@ describe("in a searcher", () => {
 			{ title: "Hxgxxet", body: "zzz" },
 		];
 		expect(bodies(tied)).toEqual(["Hxgxxet", "zzz"]);
+	});
+
+	it("corrects a phrase in whichever field holds it", () => {
+		const search = createFuzzySearch(
+			[
+				{ title: "Steel Desk", body: "Handcrafted Wooden Chair" },
+				{ title: "Handcrafted Wooden Table", body: "Steel" },
+			],
+			[
+				{ text: (r) => r.title, fuzzier },
+				{ text: (r) => r.body, fuzzier },
+			],
+		);
+		expect(search("handcxafted wooxen").map((r) => r.item.title)).toEqual([
+			"Steel Desk",
+			"Handcrafted Wooden Table",
+		]);
+	});
+
+	it("corrects a phrase holding a letter outside ASCII or an underscore", () => {
+		const tiers = (list: string[], query: string) =>
+			searcher(list)(query).map((r) => r.fields[0]?.tier);
+		expect(tiers(["Søndergaard ApS Holding"], "søndrgaard holdixg")).toEqual(["corrected"]);
+		expect(tiers(["snake_case helper"], "snake_cse helpxr")).toEqual(["corrected"]);
 	});
 
 	it("keeps a one-edit fix the literal pass never reached", () => {

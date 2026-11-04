@@ -4,11 +4,14 @@ import type { Fuzzier, MatchResult } from "./types";
 // What one query admits under a strategy, prepared once and tried against
 // fields that matched nothing else.
 export type PreparedStrategy = {
-	// Both may only false-pass: a field either rejects must have no match.
-	// `admitsText` reads the caller's own string, before normalisation. `match`
-	// is only called on a field both admit.
+	// All three may only false-pass: a field any rejects must have no match.
+	// `admitsText` reads the caller's own string, before normalisation;
+	// `admitsPairs`, absent when it could reject nothing, reads an item's bigram
+	// set (see rawFieldScan) when the searcher has one. `match` is only called
+	// on a field they admit.
 	admitsMask: (fieldMask: number) => boolean;
 	admitsText: (text: string) => boolean;
+	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
 };
 

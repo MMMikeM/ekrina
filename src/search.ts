@@ -86,6 +86,22 @@ type ResolvedSpec<T> = {
 // The whole-corpus rescue index: per-item union masks and bigram sets.
 type UnionIndex = { masks: Int32Array; bigramsLo: Int32Array; bigramsHi: Int32Array };
 
+// An item's union mask and bigram set span all its fields, so it is skipped
+// only when no field's reading admits both. Null when some reading reads no
+// pairs, leaving every item to the per-field gates.
+const itemGateOf = (
+	fallbacks: (PreparedStrategy | null)[],
+	{ masks, bigramsLo, bigramsHi }: UnionIndex,
+): ((i: number) => boolean) | null => {
+	const readings = fallbacks.filter((fallback) => fallback !== null);
+	if (readings.some((reading) => reading.admitsPairs === null)) return null;
+	return (i) =>
+		readings.some(
+			(reading) =>
+				reading.admitsMask(masks[i]) && reading.admitsPairs!(bigramsLo[i], bigramsHi[i]),
+		);
+};
+
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
 const resolveFieldSpecs = <T>(
@@ -487,6 +503,7 @@ export function createFuzzySearch<T>(
 			if (fallbacks.every((fallback) => fallback === null)) return;
 			const survivorsOnly = competing && normalisedQuery === prepared.queryWords[0];
 			if (!survivorsOnly) unionIndex ??= buildUnionIndex();
+			const admitsItem = unionIndex === null ? null : itemGateOf(fallbacks, unionIndex);
 			const scanned = survivorsOnly ? survivorCount : count;
 			const seen: number[] = [];
 			for (let k = 0; k < scanned; k++) {
@@ -494,6 +511,7 @@ export function createFuzzySearch<T>(
 				const held = (heldStamps as Float64Array)[i] === generation ? heldResults?.[i] : undefined;
 				if (held !== undefined) seen.push(i);
 				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
+				if (admitsItem !== null && !admitsItem(i)) continue;
 				if (!offerFallbacks(i, held, fallbacks)) continue;
 				fuzzierRescored = true;
 				if (held === undefined) seen.push(i);
