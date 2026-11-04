@@ -11,102 +11,176 @@ That row is in bold in the scorecard below.
 
 The columns are [the scorecard's](../benchmarks.md#scorecard).
 
-**mixed corpus:**
+**native corpus:**
 
 <!-- bench:library-fast-fuzzy-scorecard-native -->
-| Library               |  MRR | index ms | cold ms | batch ms | batch/query |
-|-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.71 |    27.04 |   14.94 |   170.83 |        6.40 |
-| fast-fuzzy (all opts) | 0.71 |    26.39 |   16.66 |   151.85 |        5.60 |
+| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **fast-fuzzy**        | 0.81 | 0.24 |    29.44 |   14.59 |   130.44 |        4.77 |
+| fast-fuzzy (all opts) | 0.81 | 0.24 |    29.17 |   15.52 |   133.26 |        4.82 |
 <!-- bench:end -->
 
-**ascii corpus:**
+**en corpus:**
 
 <!-- bench:library-fast-fuzzy-scorecard-en -->
-| Library               |  MRR | index ms | cold ms | batch ms | batch/query |
-|-----------------------|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.70 |    25.42 |   15.21 |   135.02 |        4.99 |
-| fast-fuzzy (all opts) | 0.70 |    24.79 |   15.21 |   137.47 |        5.09 |
+| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **fast-fuzzy**        | 0.80 | 0.26 |    25.78 |   20.93 |   118.87 |        4.16 |
+| fast-fuzzy (all opts) | 0.80 | 0.26 |    25.58 |   20.33 |   119.41 |        4.13 |
+<!-- bench:end -->
+
+**emoji corpus** (quality only; the list is too short for the timing cells):
+
+<!-- bench:library-fast-fuzzy-scorecard-emoji -->
+| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **fast-fuzzy**        | 0.84 | 0.26 |        — |       — |        — |           — |
+| fast-fuzzy (all opts) | 0.84 | 0.26 |        — |       — |        — |           — |
 <!-- bench:end -->
 
 ## Speed at 100k
 
 The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with base Ekrina as the 100% row.
-Only the ascii corpus is shown, because the mixed tables list only configurations that fold diacritics, and at most one of this library's does.
+Only the en corpus is shown, because the native tables list only configurations that fold diacritics and this library has no folding option ([native corpus](../benchmarks.md#native-corpus)); the emoji corpus is too short to time.
 
-**ascii corpus:**
+**en corpus:**
 
 <!-- bench:library-fast-fuzzy-speed-en -->
 | Library               |     index | cold query |     total | total rel |
 |-----------------------|----------:|-----------:|----------:|----------:|
-| **Ekrina**            |   0.36 ms |   12.41 ms |  12.74 ms |  **100%** |
-| fast-fuzzy            | 267.26 ms |   51.96 ms | 322.45 ms |     2531% |
-| fast-fuzzy (all opts) | 265.17 ms |   55.47 ms | 323.66 ms |     2540% |
+| **Ekrina**            |   0.39 ms |   10.12 ms |  10.45 ms |  **100%** |
+| fast-fuzzy            | 237.15 ms |   98.99 ms | 338.67 ms |     3241% |
+| fast-fuzzy (all opts) | 239.92 ms |   79.63 ms | 319.92 ms |     3062% |
 <!-- bench:end -->
 
 <!-- bench:library-fast-fuzzy-batch-en -->
 | Library               | batch/query | batch total | batch rel |
 |-----------------------|------------:|------------:|----------:|
-| **Ekrina**            |     2.51 ms |    64.52 ms |  **100%** |
-| fast-fuzzy            |    43.67 ms |  1097.99 ms |     1702% |
-| fast-fuzzy (all opts) |    44.02 ms |  1105.36 ms |     1713% |
+| **Ekrina**            |     1.99 ms |    53.66 ms |  **100%** |
+| fast-fuzzy            |    39.68 ms |  1031.13 ms |     1922% |
+| fast-fuzzy (all opts) |    40.75 ms |  1118.34 ms |     2084% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
 MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
 
-**mixed corpus:**
+**native corpus:**
 
 <!-- bench:library-fast-fuzzy-families-native -->
-| Family                     | fast-fuzzy | fast-fuzzy (all opts) |
-|----------------------------|-----------:|----------------------:|
-| long-word                  |       0.93 |                  0.93 |
-| short-word                 |       1.00 |                  1.00 |
-| two-words                  |       1.00 |                  1.00 |
-| two-words-reversed         |       0.14 |                  0.14 |
-| two-words-partial-reversed |       0.28 |                  0.28 |
-| two-words-joined           |       1.00 |                  1.00 |
-| two-words-typo             |       1.00 |                  1.00 |
-| two-words-typo-second      |       1.00 |                  1.00 |
-| two-words-typo-reversed    |       0.00 |                  0.00 |
-| plural-to-singular         |       0.93 |                  0.93 |
-| short-word-typo            |       0.95 |                  0.95 |
-| prefix                     |       1.00 |                  1.00 |
-| infix                      |       1.00 |                  1.00 |
-| scatter-light              |       0.90 |                  0.90 |
-| scatter-medium             |       0.08 |                  0.08 |
-| scatter-heavy              |       0.01 |                  0.01 |
-| transposition              |       1.00 |                  1.00 |
-| insertion                  |       0.97 |                  0.97 |
-| substitution               |       1.00 |                  1.00 |
-| acronym                    |       0.00 |                  0.00 |
-| accent-stripped            |       0.76 |                  0.76 |
+| Group         | Family                        | fast-fuzzy | fast-fuzzy (all opts) |
+|---------------|-------------------------------|-----------:|----------------------:|
+| typos         | neighbouring key              |       1.00 |                  1.00 |
+| typos         | two neighbouring keys         |       1.00 |                  1.00 |
+| typos         | random letter                 |       0.93 |                  0.93 |
+| typos         | dropped letter                |       0.63 |                  0.63 |
+| typos         | two dropped letters           |       0.43 |                  0.43 |
+| typos         | inserted neighbouring key     |       1.00 |                  1.00 |
+| typos         | swapped neighbours            |       0.79 |                  0.79 |
+| typos         | stuck key                     |       1.00 |                  1.00 |
+| typos         | first letter wrong            |       0.85 |                  0.85 |
+| typos         | typo in each of two words     |       1.00 |                  1.00 |
+| typos         | typo then a half-typed word   |       1.00 |                  1.00 |
+| typos         | two words joined, with a typo |       0.97 |                  0.97 |
+| phonetic      | consonant spelt another way   |       0.93 |                  0.93 |
+| phonetic      | letter doubled or singled     |       0.82 |                  0.82 |
+| phonetic      | silent letters dropped        |       0.60 |                  0.60 |
+| phonetic      | vowel sound spelt another way |       0.95 |                  0.95 |
+| partial words | prefix of 3                   |       0.90 |                  0.90 |
+| partial words | prefix of 5                   |       1.00 |                  1.00 |
+| partial words | infix of 5                    |       1.00 |                  1.00 |
+| partial words | two words half typed          |       0.14 |                  0.14 |
+| partial words | a vowel dropped               |       0.71 |                  0.71 |
+| partial words | 2 vowels dropped              |       0.37 |                  0.37 |
+| query shape   | two words                     |       1.00 |                  1.00 |
+| query shape   | two words reversed            |       0.07 |                  0.07 |
+| query shape   | two words joined              |       1.00 |                  1.00 |
+| query shape   | an absent word added          |       0.80 |                  0.80 |
+| noise         | space inside a word           |       0.91 |                  0.91 |
+| noise         | punctuation inside a word     |       0.95 |                  0.95 |
+| noise         | accents stripped              |       0.62 |                  0.62 |
+| noise         | accents added                 |       0.93 |                  0.93 |
+| reported only | acronym                       |       0.00 |                  0.00 |
+| reported only | plural for a singular         |       1.00 |                  1.00 |
+| phonetic      | real misspelling              |       0.74 |                  0.74 |
 <!-- bench:end -->
 
-**ascii corpus:**
+**en corpus:**
 
 <!-- bench:library-fast-fuzzy-families-en -->
-| Family                     | fast-fuzzy | fast-fuzzy (all opts) |
-|----------------------------|-----------:|----------------------:|
-| long-word                  |       1.00 |                  1.00 |
-| short-word                 |       1.00 |                  1.00 |
-| two-words                  |       1.00 |                  1.00 |
-| two-words-reversed         |       0.10 |                  0.10 |
-| two-words-partial-reversed |       0.23 |                  0.23 |
-| two-words-joined           |       1.00 |                  1.00 |
-| two-words-typo             |       1.00 |                  1.00 |
-| two-words-typo-second      |       1.00 |                  1.00 |
-| two-words-typo-reversed    |       0.13 |                  0.13 |
-| plural-to-singular         |       0.95 |                  0.95 |
-| short-word-typo            |       0.73 |                  0.73 |
-| prefix                     |       1.00 |                  1.00 |
-| infix                      |       1.00 |                  1.00 |
-| scatter-light              |       0.84 |                  0.84 |
-| scatter-medium             |       0.07 |                  0.07 |
-| scatter-heavy              |       0.00 |                  0.00 |
-| transposition              |       1.00 |                  1.00 |
-| insertion                  |       1.00 |                  1.00 |
-| substitution               |       0.95 |                  0.95 |
-| acronym                    |       0.00 |                  0.00 |
+| Group         | Family                        | fast-fuzzy | fast-fuzzy (all opts) |
+|---------------|-------------------------------|-----------:|----------------------:|
+| typos         | neighbouring key              |       1.00 |                  1.00 |
+| typos         | two neighbouring keys         |       1.00 |                  1.00 |
+| typos         | random letter                 |       0.93 |                  0.93 |
+| typos         | dropped letter                |       0.64 |                  0.64 |
+| typos         | two dropped letters           |       0.46 |                  0.46 |
+| typos         | inserted neighbouring key     |       1.00 |                  1.00 |
+| typos         | swapped neighbours            |       0.78 |                  0.78 |
+| typos         | stuck key                     |       1.00 |                  1.00 |
+| typos         | first letter wrong            |       0.90 |                  0.90 |
+| typos         | typo in each of two words     |       1.00 |                  1.00 |
+| typos         | typo then a half-typed word   |       1.00 |                  1.00 |
+| typos         | two words joined, with a typo |       0.97 |                  0.97 |
+| phonetic      | consonant spelt another way   |       0.93 |                  0.93 |
+| phonetic      | letter doubled or singled     |       0.93 |                  0.93 |
+| phonetic      | silent letters dropped        |       0.53 |                  0.53 |
+| phonetic      | vowel sound spelt another way |       0.81 |                  0.81 |
+| partial words | prefix of 3                   |       0.90 |                  0.90 |
+| partial words | prefix of 5                   |       1.00 |                  1.00 |
+| partial words | infix of 5                    |       1.00 |                  1.00 |
+| partial words | two words half typed          |       0.14 |                  0.14 |
+| partial words | a vowel dropped               |       0.76 |                  0.76 |
+| partial words | 2 vowels dropped              |       0.28 |                  0.28 |
+| query shape   | two words                     |       1.00 |                  1.00 |
+| query shape   | two words reversed            |       0.07 |                  0.07 |
+| query shape   | two words joined              |       1.00 |                  1.00 |
+| query shape   | an absent word added          |       0.80 |                  0.80 |
+| noise         | space inside a word           |       0.91 |                  0.91 |
+| noise         | punctuation inside a word     |       0.95 |                  0.95 |
+| noise         | accents stripped              |       0.65 |                  0.65 |
+| noise         | accents added                 |       0.93 |                  0.93 |
+| reported only | acronym                       |       0.05 |                  0.05 |
+| reported only | plural for a singular         |       1.00 |                  1.00 |
+| phonetic      | real misspelling              |       0.57 |                  0.57 |
+<!-- bench:end -->
+
+**emoji corpus:**
+
+<!-- bench:library-fast-fuzzy-families-emoji -->
+| Group         | Family                        | fast-fuzzy | fast-fuzzy (all opts) |
+|---------------|-------------------------------|-----------:|----------------------:|
+| typos         | neighbouring key              |       1.00 |                  1.00 |
+| typos         | two neighbouring keys         |       1.00 |                  1.00 |
+| typos         | random letter                 |       0.95 |                  0.95 |
+| typos         | dropped letter                |       0.75 |                  0.75 |
+| typos         | two dropped letters           |       0.74 |                  0.74 |
+| typos         | inserted neighbouring key     |       1.00 |                  1.00 |
+| typos         | swapped neighbours            |       1.00 |                  1.00 |
+| typos         | stuck key                     |       0.88 |                  0.88 |
+| typos         | first letter wrong            |       0.90 |                  0.90 |
+| typos         | typo in each of two words     |       1.00 |                  1.00 |
+| typos         | typo then a half-typed word   |       0.95 |                  0.95 |
+| typos         | two words joined, with a typo |       0.85 |                  0.85 |
+| phonetic      | consonant spelt another way   |       1.00 |                  1.00 |
+| phonetic      | letter doubled or singled     |       0.83 |                  0.83 |
+| phonetic      | silent letters dropped        |       0.56 |                  0.56 |
+| phonetic      | vowel sound spelt another way |       0.95 |                  0.95 |
+| partial words | prefix of 3                   |       0.65 |                  0.65 |
+| partial words | prefix of 5                   |       1.00 |                  1.00 |
+| partial words | infix of 5                    |       1.00 |                  1.00 |
+| partial words | two words half typed          |       0.13 |                  0.13 |
+| partial words | a vowel dropped               |       0.80 |                  0.80 |
+| partial words | 2 vowels dropped              |       0.49 |                  0.49 |
+| query shape   | two words                     |       1.00 |                  1.00 |
+| query shape   | two words reversed            |       0.23 |                  0.23 |
+| query shape   | two words joined              |       0.88 |                  0.88 |
+| query shape   | an absent word added          |       1.00 |                  1.00 |
+| noise         | space inside a word           |       1.00 |                  1.00 |
+| noise         | punctuation inside a word     |       1.00 |                  1.00 |
+| noise         | accents stripped              |       0.80 |                  0.80 |
+| noise         | accents added                 |       0.97 |                  0.97 |
+| reported only | acronym                       |       0.02 |                  0.02 |
+| reported only | plural for a singular         |       1.00 |                  1.00 |
+| phonetic      | real misspelling              |       0.70 |                  0.70 |
 <!-- bench:end -->
