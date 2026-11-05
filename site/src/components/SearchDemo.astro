@@ -1,0 +1,377 @@
+---
+import corpus from "../../../bench/corpus-emoji.json";
+import glyphs from "./emoji-glyphs.json";
+
+if (glyphs.length !== corpus.length) {
+	throw new Error(
+		`emoji-glyphs.json has ${glyphs.length} glyphs for ${corpus.length} corpus items: run node scripts/emoji-glyphs.ts`,
+	);
+}
+
+const examples = ["rainb", "partypop", "rcoket", "tears joy"];
+---
+
+<div class="search-demo not-content decoration" data-search-demo>
+	<label class="field">
+		<span class="field-label">Search {corpus.length.toLocaleString("en")} emoji by name or tag</span>
+		<input
+			type="search"
+			autocomplete="off"
+			autocapitalize="off"
+			spellcheck="false"
+			enterkeyhint="search"
+			placeholder="Try a typo"
+		/>
+	</label>
+	<div class="examples" role="group" aria-label="Example queries">
+		<span class="examples-label" aria-hidden="true">Try</span>
+		{examples.map((query) => <button type="button" data-query={query}>{query}</button>)}
+	</div>
+	<div class="panel">
+		<div aria-live="polite">
+			<p class="status"></p>
+			<p class="corrected" hidden>Showing results for <strong></strong></p>
+		</div>
+		<ol class="results"></ol>
+	</div>
+</div>
+
+<script>
+	import type { FuzzyResult, MatchResult, Range } from "../../../src/index.ts";
+
+	type Emoji = { glyph: string; label: string; tags: string | null };
+	type Searcher = (query: string) => FuzzyResult<Emoji>[];
+
+	const LIMIT = 8;
+	const LABEL_FIELD = 0;
+	const TAGS_SEPARATOR = " — ";
+
+	let searcher: Promise<Searcher> | undefined;
+	let ready = false;
+
+	const loadSearcher = (): Promise<Searcher> =>
+		(searcher ??= Promise.all([
+			import("../../../src/index.ts"),
+			import("../../../bench/corpus-emoji.json"),
+			import("./emoji-glyphs.json"),
+		]).then(([{ createFuzzySearch, SCORES }, { default: corpus }, { default: glyphs }]) => {
+			const items = corpus.map((item, i): Emoji => {
+				const at = item.indexOf(TAGS_SEPARATOR);
+				return at < 0
+					? { glyph: glyphs[i]!, label: item, tags: null }
+					: {
+							glyph: glyphs[i]!,
+							label: item.slice(0, at),
+							tags: item.slice(at + TAGS_SEPARATOR.length),
+						};
+			});
+			// A tag hit ranks level with a contains in a name, so a name that starts with the query comes first.
+			const search = createFuzzySearch(items, [
+				{ selectField: (emoji) => emoji.label },
+				{ selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS },
+			]);
+			search.buildIndex();
+			ready = true;
+			return (query: string) => search(query, { limit: LIMIT });
+		}).catch((error: unknown) => {
+			searcher = undefined;
+			throw error;
+		}));
+
+	const warmUp = (): void => {
+		loadSearcher().catch(() => {});
+	};
+
+	const bestField = ({ fields }: FuzzyResult<Emoji>): { index: number; match: MatchResult } => {
+		let index = fields.findIndex((match) => match !== null);
+		fields.forEach((match, i) => {
+			if (match && match.score < fields[index]!.score) index = i;
+		});
+		return { index, match: fields[index]! };
+	};
+
+	// Ranges are inclusive at both ends; only the part inside [from, to) is drawn.
+	const appendHighlighted = (
+		parent: HTMLElement,
+		text: string,
+		ranges: Range[],
+		from = 0,
+		to = text.length,
+	): void => {
+		let at = from;
+		for (const [start, end] of ranges) {
+			const markStart = Math.max(start, at);
+			const markEnd = Math.min(end + 1, to);
+			if (markEnd <= markStart) continue;
+			if (markStart > at) parent.append(text.slice(at, markStart));
+			const mark = document.createElement("mark");
+			mark.textContent = text.slice(markStart, markEnd);
+			parent.append(mark);
+			at = markEnd;
+		}
+		if (at < to) parent.append(text.slice(at, to));
+	};
+
+	const matchedTags = (tags: string, ranges: Range[]): HTMLElement => {
+		const line = document.createElement("span");
+		line.className = "tags";
+		let start = 0;
+		for (const tag of tags.split(", ")) {
+			const end = start + tag.length;
+			if (ranges.some(([from, to]) => from < end && to >= start)) {
+				if (line.childNodes.length) line.append(", ");
+				appendHighlighted(line, tags, ranges, start, end);
+			}
+			start = end + 2;
+		}
+		return line;
+	};
+
+	const row = (result: FuzzyResult<Emoji>): HTMLLIElement => {
+		const { glyph, label, tags } = result.item;
+		const { index, match } = bestField(result);
+		const item = document.createElement("li");
+
+		const emoji = document.createElement("span");
+		emoji.className = "glyph";
+		emoji.setAttribute("aria-hidden", "true");
+		emoji.textContent = glyph;
+
+		const text = document.createElement("span");
+		text.className = "text";
+		const name = document.createElement("span");
+		name.className = "label";
+		appendHighlighted(name, label, result.fields[LABEL_FIELD]?.ranges ?? []);
+		text.append(name);
+		if (index !== LABEL_FIELD && tags) text.append(matchedTags(tags, match.ranges));
+
+		const tier = document.createElement("span");
+		tier.className = "tier";
+		tier.dataset.tier = match.tier;
+		tier.textContent = match.tier;
+
+		item.append(emoji, text, tier);
+		return item;
+	};
+
+	const countText = (query: string, count: number): string =>
+		count === 0
+			? `No emoji match “${query}”`
+			: count === LIMIT
+				? `Best ${LIMIT} matches`
+				: count === 1
+					? "1 match"
+					: `${count} matches`;
+
+	const setUp = (root: HTMLElement): void => {
+		const input = root.querySelector("input")!;
+		const status = root.querySelector<HTMLElement>(".status")!;
+		const corrected = root.querySelector<HTMLElement>(".corrected")!;
+		const correctedQuery = corrected.querySelector("strong")!;
+		const list = root.querySelector<HTMLOListElement>(".results")!;
+
+		const render = (query: string, results: FuzzyResult<Emoji>[]): void => {
+			const top = results[0] && bestField(results[0]).match;
+			const correction = top?.tier === "corrected" ? top.corrected : undefined;
+			corrected.hidden = !correction;
+			correctedQuery.textContent = correction ?? "";
+			list.replaceChildren(...results.map(row));
+			root.toggleAttribute("data-empty", query !== "" && results.length === 0);
+			status.textContent = query === "" ? "" : countText(query, results.length);
+		};
+
+		const update = async (): Promise<void> => {
+			const query = input.value.trim();
+			if (query === "") return render("", []);
+			root.setAttribute("data-used", "");
+			if (!ready) status.textContent = "Loading the emoji…";
+			let search: Searcher;
+			try {
+				search = await loadSearcher();
+			} catch {
+				status.textContent = "The emoji didn’t load. Type again to retry.";
+				return;
+			}
+			if (input.value.trim() === query) render(query, search(query));
+		};
+
+		root.addEventListener("focusin", warmUp, { once: true });
+		root.addEventListener("pointerenter", warmUp, { once: true });
+		input.addEventListener("input", update);
+		for (const button of root.querySelectorAll<HTMLButtonElement>("[data-query]")) {
+			button.addEventListener("click", () => {
+				input.value = button.dataset.query!;
+				input.dispatchEvent(new Event("input"));
+			});
+		}
+	};
+
+	for (const root of document.querySelectorAll<HTMLElement>("[data-search-demo]")) setUp(root);
+</script>
+
+<style>
+	.search-demo {
+		display: grid;
+		gap: var(--space-xs);
+		max-width: 40rem;
+	}
+
+	.field {
+		display: grid;
+		gap: var(--space-2xs);
+	}
+
+	.field-label {
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+	}
+
+	input {
+		width: 100%;
+		min-height: var(--tap-target);
+		padding: var(--space-2xs) var(--space-xs);
+		border: 1px solid var(--line-strong);
+		border-bottom: 2px solid var(--chart-ekrina);
+		border-radius: var(--radius-control) var(--radius-control) 0 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xl);
+	}
+
+	input::placeholder {
+		color: var(--ink-muted);
+		opacity: 1;
+	}
+
+	input:focus-visible,
+	button:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: var(--focus-ring-offset);
+	}
+
+	.examples {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2xs);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+	}
+
+	.examples-label {
+		color: var(--ink-muted);
+	}
+
+	button {
+		min-height: 2.25rem;
+		padding: 0 var(--space-xs);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-control);
+		background: none;
+		color: var(--ink);
+		font: inherit;
+		cursor: pointer;
+	}
+
+	button:hover {
+		background: color-mix(in srgb, var(--ink) 8%, transparent);
+	}
+
+	/* Once in use, a full list's height whatever the result count, so the page below doesn't jump as you type. */
+	[data-used] .panel {
+		min-height: calc(var(--space-l) + 8 * var(--tap-target));
+	}
+
+	.status {
+		min-height: 1lh;
+		margin: 0;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+	}
+
+	[data-empty] .status {
+		color: var(--ink);
+	}
+
+	.corrected {
+		margin: var(--space-3xs) 0 0;
+		color: var(--ink-muted);
+		font-size: var(--text-base);
+	}
+
+	.corrected strong {
+		color: var(--ink);
+		font-family: var(--__sl-font-mono);
+		font-weight: 500;
+	}
+
+	.results {
+		margin: var(--space-2xs) 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	/* The script builds the rows, and scoped styles only reach what the template renders. */
+	.results :global(li) {
+		display: grid;
+		grid-template-columns: 2rem minmax(0, 1fr) auto;
+		align-items: center;
+		gap: var(--space-xs);
+		min-height: var(--tap-target);
+		padding-block: var(--space-3xs);
+		border-bottom: 1px solid var(--line);
+	}
+
+	.results :global(li:first-child) {
+		border-top: 1px solid var(--line);
+	}
+
+	.results :global(.glyph) {
+		font-size: var(--text-2xl);
+		line-height: 1;
+		text-align: center;
+	}
+
+	.results :global(.text) {
+		display: grid;
+		min-width: 0;
+	}
+
+	.results :global(.label) {
+		color: var(--ink);
+		font-size: var(--text-base);
+		line-height: var(--leading-snug);
+		overflow-wrap: anywhere;
+	}
+
+	.results :global(.tags) {
+		overflow: hidden;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.results :global(mark) {
+		padding-inline: 0;
+	}
+
+	.results :global(.tier) {
+		padding: 0.0625rem var(--space-2xs);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-control);
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+		white-space: nowrap;
+	}
+
+	/* A guess about what was meant, not text that appears in the name. */
+	.results :global(.tier:is([data-tier="fuzzy"], [data-tier="corrected"])) {
+		border-style: dashed;
+	}
+</style>
