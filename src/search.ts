@@ -10,8 +10,7 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
-import { readings } from "./readings";
-import type { Competition, PreparedStrategy } from "./strategy";
+import { type Competition, type PreparedReading, readings } from "./readings";
 import type {
 	FieldSpec,
 	FuzzyResult,
@@ -97,7 +96,7 @@ type UnionIndex = { masks: Int32Array; bigramsLo: Int32Array; bigramsHi: Int32Ar
 // only when no field's reading admits both. Null when some reading reads no
 // pairs, leaving every item to the per-field gates.
 const itemGateOf = (
-	fallbacks: (PreparedStrategy | null)[],
+	fallbacks: (PreparedReading | null)[],
 	{ masks, bigramsLo, bigramsHi }: UnionIndex,
 ): ((i: number) => boolean) | null => {
 	const readings = fallbacks.filter((fallback) => fallback !== null);
@@ -444,7 +443,7 @@ export function createFuzzySearch<T>(
 		const offerFallbacks = (
 			i: number,
 			held: FuzzyResult<T> | undefined,
-			fallbacks: (PreparedStrategy | null)[],
+			fallbacks: (PreparedReading | null)[],
 		): boolean => {
 			const base = i * specCount;
 			let entry = held;

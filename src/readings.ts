@@ -3,8 +3,31 @@ import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
 import { bigramBit, bigramClass } from "./normalise";
 import { charMask } from "./gates";
 import { SCORES, TYPO_PENALTY } from "./scores";
-import type { Competition, PreparedStrategy, Strategy } from "./strategy";
 import type { MatchResult, Range } from "./types";
+
+// What one query admits under a reading, prepared once and tried against
+// fields that matched nothing else.
+export type PreparedReading = {
+	// All three may only false-pass: a field any rejects must have no match.
+	// `admitsText` reads the caller's own string, before normalisation;
+	// `admitsPairs`, absent when it could reject nothing, reads an item's bigram
+	// set (see rawFieldScan) when the searcher has one. `match` is only called
+	// on a field they admit.
+	admitsMask: (fieldMask: number) => boolean;
+	admitsText: (text: string) => boolean;
+	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
+	match: (field: string, normalisedField: string) => MatchResult | null;
+	// The reading may match fields the literal pass rejected, so every item is
+	// tried rather than its survivors. One that is not `wholeList` must match
+	// only fields the literal pass lets through (`buildFuzzyGate` for one word,
+	// every word character present for a phrase): the searcher tries just those.
+	wholeList: boolean;
+};
+
+// What the query already matched: nothing, only fuzzy chains, or literally.
+// Beside other matches only readings cheap enough to run beside them are
+// prepared.
+export type Competition = "none" | "fuzzy" | "literal";
 
 const MAX_EDITS = 2;
 // Below this a second edit reaches too many other words: unanswerable 7-letter
@@ -453,7 +476,7 @@ const phrasePairs = (
 	queryWords: string[],
 	asPhrase: boolean,
 	spare: number,
-): NonNullable<PreparedStrategy["admitsPairs"]> => {
+): NonNullable<PreparedReading["admitsPairs"]> => {
 	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
 	const all = pairsOf(queryWords);
 	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
@@ -464,7 +487,7 @@ const phrasePairs = (
 		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
 };
 
-type Gates = Pick<PreparedStrategy, "admitsMask" | "admitsText">;
+type Gates = Pick<PreparedReading, "admitsMask" | "admitsText">;
 
 const scatterGates = (letters: string): Gates => {
 	const lettersMask = charMask(letters);
@@ -534,7 +557,7 @@ const editGates = (letters: string, unmatched: number): Gates => {
 // Edit distance over every field word is what makes a reading expensive, so
 // beside other matches only the sparse reading competes; edits stand in only
 // for a query that matched nothing.
-const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedStrategy | null => {
+const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedReading | null => {
 	const { queryWords } = prepared;
 	if (queryWords.length === 0 || queryWords.some((word) => word.length > MAX_WORD_LENGTH)) {
 		return null;
@@ -603,7 +626,7 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedSt
 };
 
 // Indexed by `competing`; undefined until that reading is first prepared.
-type Readings = { query: string; byCompeting: (PreparedStrategy | null | undefined)[] };
+type Readings = { query: string; byCompeting: (PreparedReading | null | undefined)[] };
 
 // fuzzyMatch prepares its query per call, and a list matched one call per row
 // would otherwise rebuild the same gates for every row, competing or not.
@@ -615,7 +638,7 @@ let lastReadings: Readings | null = null;
 const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 	queryWords.length === 1 && queryWords[0].length === SWAP_ONLY_LENGTH;
 
-const prepare = (prepared: PreparedQuery, competition: Competition): PreparedStrategy | null => {
+const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
 	if (lastReadings?.query !== prepared.query) {
 		lastReadings = { query: prepared.query, byCompeting: [undefined, undefined] };
@@ -629,4 +652,8 @@ const prepare = (prepared: PreparedQuery, competition: Competition): PreparedStr
 // alone, competes while fewer than ten items match the query as typed, and a
 // swap in a four-letter word while none matches it literally; other mistakes
 // are corrected only when nothing matches it otherwise.
-export const readings: Strategy = { prepare };
+// An object rather than the bare function so bench/ladder.ts can swap the
+// second pass out.
+export const readings: {
+	prepare: (prepared: PreparedQuery, competition: Competition) => PreparedReading | null;
+} = { prepare };

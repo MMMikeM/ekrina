@@ -29,6 +29,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `relaxed`                  | the mask gate tolerating exactly one missing class (what a substitution typo looks like from a mask)                                                | `relaxedPass`, `isRescuableQuery`            |
 | `rescue`                   | the one-edit correction machinery; `rescueState` and `wordRescueStates` are its per-query gate caches, `RescueContext` the per-field call state                              | `rescue.ts`                                  |
 | `variant`                  | one enumerated one-edit correction candidate (swap or drop)                                                                                         | `RescueVariant`                              |
+| `reading`                  | a second-pass interpretation of a query the ladder and rescue missed: two edits, a held key, a stray or missing space, a sparse word, a short swap   | `readings`, `PreparedReading`                |
 | `subject`                  | what a rescue corrects, the whole query, or a phrase's one absent word                                                                             | `CorrectionSubject`                          |
 | `window`                   | a field slice exactly one substitution away from the subject                                                                                        | `substitutedWindows`                         |
 | `correction` / `corrected` | the fixed query a rescue scores; `MatchResult.corrected` carries it in the caller's casing                                                          | `prepareCorrection`, tier `"corrected"`      |
@@ -76,4 +77,5 @@ One concern per file.
 | match.ts      | the tier ladder                                                      |
 | fuzzy.ts      | the fuzzy chain tier                                                 |
 | rescue.ts     | the one-edit typo rescue                                             |
+| readings.ts   | the second pass: corrections the one-edit rescue cannot make         |
 | search.ts     | the two entry points and the collection cache                        |
