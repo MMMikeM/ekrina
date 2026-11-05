@@ -375,11 +375,25 @@ const strips = Object.fromEntries(
 	}
 
 	.controls {
+		container-type: scroll-state;
+		position: sticky;
+		top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
+		z-index: 2;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-s) var(--space-m);
+		padding-block: var(--space-xs);
+		border-bottom: 1px solid var(--line);
+		background: var(--sl-color-bg);
+	}
+
+	/* Stuck, the headline shrinks so the bar doesn't take a phone's screen. */
+	@container scroll-state(stuck: top) {
+		.headline {
+			font-size: var(--text-xl);
+		}
 	}
 
 	.headline {
