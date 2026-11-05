@@ -1,6 +1,6 @@
 import * as Plot from "@observablehq/plot";
 import { geoCircle } from "d3-geo";
-import { scalePoint } from "d3-scale";
+import { scaleLinear, scalePoint } from "d3-scale";
 import { JSDOM } from "jsdom";
 
 export type CorpusView = "all" | "en" | "native" | "emoji";
@@ -222,6 +222,26 @@ export const radarSvg = (data: ExplorerData, view: CorpusView): string => {
 
 const STRIP_DOMAIN: [number, number] = [0.07, 300];
 const STRIP_TICKS = [0.1, 1, 10, 100];
+// Log paper's 2–9 lines in every decade, bunching towards each power of ten.
+const STRIP_MINOR_TICKS = [0.01, 0.1, 1, 10, 100]
+	.flatMap((decade) => [2, 3, 4, 5, 6, 7, 8, 9].map((k) => k * decade))
+	.filter((ms) => ms >= STRIP_DOMAIN[0] && ms <= STRIP_DOMAIN[1]);
+
+type StripAxis = { domain: [number, number]; ticks: number[]; minorTicks: number[] };
+
+const logAxis: StripAxis = { domain: STRIP_DOMAIN, ticks: STRIP_TICKS, minorTicks: STRIP_MINOR_TICKS };
+
+// Shared by both list sizes, like the log axis, so 10k and 100k read against each other.
+const linearAxis = (data: ExplorerData, corpus: TimedCorpus, libraries: ExplorerLibrary[]): StripAxis => {
+	const slowest = Math.max(
+		data.frameMs,
+		...libraries.flatMap((library) =>
+			Object.values(library.timing[corpus].sizes).flatMap((size) => size.perQueryMs),
+		),
+	);
+	const axis = scaleLinear().domain([0, slowest]).nice(5);
+	return { domain: axis.domain() as [number, number], ticks: axis.ticks(5), minorTicks: [] };
+};
 
 const SIZE_LABEL: Record<ListSize, string> = { "10000": "10k items", "100000": "100k items" };
 
@@ -325,6 +345,23 @@ export const scoreline = (
 
 type QueryTime = { query: string; ms: number; library: ExplorerLibrary; row: string };
 
+const quantile = (sorted: number[], p: number) => {
+	const at = (sorted.length - 1) * p;
+	const lo = Math.floor(at);
+	return sorted[lo]! + (sorted[Math.ceil(at)]! - sorted[lo]!) * (at - lo);
+};
+
+const candleOf = (times: number[]) => {
+	const sorted = [...times].sort((a, b) => a - b);
+	return {
+		min: sorted[0]!,
+		q1: quantile(sorted, 0.25),
+		median: quantile(sorted, 0.5),
+		q3: quantile(sorted, 0.75),
+		max: sorted.at(-1)!,
+	};
+};
+
 const rowKey = (size: ListSize, isEkrina: boolean) => `${size}-${isEkrina ? "ekrina" : "picked"}`;
 
 const queryTimes = (data: ExplorerData, library: ExplorerLibrary, corpus: TimedCorpus, size: ListSize) =>
@@ -338,45 +375,79 @@ const queryTimes = (data: ExplorerData, library: ExplorerLibrary, corpus: TimedC
 	);
 
 /**
- * Every timed query at one list size as a dot, Ekrina's row above the picked
- * library's, on the time axis every size shares, with a line at one frame.
- * Each library's marks carry `data-lib` for the page's CSS to show one.
+ * The timed queries at one list size as a candle per library, Ekrina's row
+ * above the picked library's, on the time axis every size shares, with a line
+ * at one frame.
+ * Each library's marks carry `data-lib` for the page's CSS to show one. A
+ * linear chart holds one library beside Ekrina, since an axis shared with
+ * every library would stretch to the slowest and flatten the rest.
  */
 export const stripSvg = (
 	data: ExplorerData,
 	corpus: TimedCorpus,
 	size: ListSize,
 	layout: "wide" | "narrow",
+	scale: { type: "log" } | { type: "linear"; picked: ExplorerLibrary } = { type: "log" },
 ): string => {
 	const document = new JSDOM("").window.document;
 	const wide = layout === "wide";
 	const first = size === "10000";
 	const rows = [rowKey(size, true), rowKey(size, false)];
 	const ekrina = data.libraries.find((library) => library.config === EKRINA)!;
-	const others = data.libraries.filter((library) => library !== ekrina);
+	const others =
+		scale.type === "linear" ? [scale.picked] : data.libraries.filter((library) => library !== ekrina);
+	const x = scale.type === "log" ? logAxis : linearAxis(data, corpus, [ekrina, ...others]);
 	const colour = (library: ExplorerLibrary) =>
 		library === ekrina ? "var(--chart-ekrina)" : "var(--chart-subject)";
 	const tag = (library: ExplorerLibrary) => () => `${LIBRARY_LABEL}${library.slug}`;
 
-	const dotsFor = (library: ExplorerLibrary): Plot.Markish =>
-		Plot.dot(
-			queryTimes(data, library, corpus, size),
-			Plot.dodgeY("middle", {
-				x: "ms",
-				fy: "row",
-				r: wide ? 2.75 : 2.5,
+	// The y scale only places a candle's parts around its row's centre line.
+	const BODY = 0.45;
+	const candleFor = (library: ExplorerLibrary): Plot.Markish[] => {
+		const times = queryTimes(data, library, corpus, size);
+		const c = { ...candleOf(times.map((t) => t.ms)), row: rowKey(size, library === ekrina) };
+		const slowest = times.reduce((a, b) => (b.ms > a.ms ? b : a));
+		const fastest = times.reduce((a, b) => (b.ms < a.ms ? b : a));
+		const common = { fy: "row", ariaLabel: tag(library) } as const;
+		const label = { ...common, fill: "var(--ink)", fontSize: 12 } as const;
+		return [
+			Plot.ruleY([c], { ...common, x1: "min", x2: "max", y: () => 0, stroke: colour(library), strokeWidth: 2 }),
+			Plot.rect([c], {
+				...common,
+				x1: "q1",
+				x2: "q3",
+				y1: () => -BODY,
+				y2: () => BODY,
 				fill: colour(library),
-				title: (d: QueryTime) => `${d.library.name}, ${SIZE_LABEL[size]}\n${d.query}: ${d.ms.toFixed(2)} ms`,
-				ariaLabel: tag(library),
+				rx: 3,
+				title: () =>
+					`${library.name}, ${SIZE_LABEL[size]}: median ${formatMs(c.median)} ms, ` +
+					`half the queries ${formatMs(c.q1)}–${formatMs(c.q3)} ms\n` +
+					`fastest ${fastest.query} (${formatMs(fastest.ms)} ms), slowest ${slowest.query} (${formatMs(slowest.ms)} ms)`,
 			}),
-		);
+			Plot.ruleX([c], { ...common, x: "median", y1: () => -BODY, y2: () => BODY, stroke: "var(--paper)", strokeWidth: 2 }),
+			Plot.text([c], { ...label, x: "min", y: () => 0, textAnchor: "end", dx: -6, text: (d) => formatMs(d.min) }),
+			Plot.text([c], { ...label, x: "max", y: () => 0, textAnchor: "start", dx: 6, text: (d) => formatMs(d.max) }),
+			Plot.text([c], {
+				...label,
+				x: "median",
+				y: () => BODY,
+				lineAnchor: "bottom",
+				dy: -4,
+				fontWeight: 600,
+				text: (d) => `${formatMs(d.median)} ms`,
+			}),
+		];
+	};
 
 	const rowLabel = (library: ExplorerLibrary): Plot.Markish =>
 		Plot.text([library.name], {
 			fy: () => rowKey(size, library === ekrina),
-			frameAnchor: "left",
-			textAnchor: "end",
-			dx: -10,
+			// A narrow chart has no margin to spare, so the name takes a line above its candle.
+			...(wide
+				? // Clear of the fastest time's label, which a linear axis puts at the frame's edge.
+					{ y: () => 0, frameAnchor: "left", textAnchor: "end", dx: -48 }
+				: { frameAnchor: "top-left", textAnchor: "start", lineAnchor: "top" }),
 			fill: "var(--ink)",
 			ariaLabel: tag(library),
 		});
@@ -384,10 +455,9 @@ export const stripSvg = (
 	const svg = Plot.plot({
 		document,
 		width: wide ? 760 : 360,
-		// A narrow strip has less room to spread a cluster sideways, so it piles higher.
-		height: wide ? 200 : 280,
-		marginLeft: wide ? 128 : 112,
-		marginRight: 12,
+		height: wide ? 150 : 210,
+		marginLeft: wide ? 166 : 40,
+		marginRight: wide ? 12 : 40,
 		marginTop: first ? 26 : 6,
 		marginBottom: first ? 6 : 28,
 		style: {
@@ -398,16 +468,19 @@ export const stripSvg = (
 			overflow: "visible",
 		},
 		x: {
-			type: "log",
-			domain: STRIP_DOMAIN,
-			ticks: STRIP_TICKS,
-			tickFormat: (ms: number) => (ms === STRIP_TICKS.at(-1) ? `${ms} ms` : `${ms}`),
+			type: scale.type,
+			domain: x.domain,
+			ticks: x.ticks,
+			tickFormat: (ms: number) => (ms === x.ticks.at(-1) ? `${ms} ms` : `${ms}`),
 			tickSize: 0,
 			label: null,
 			axis: first ? null : "bottom",
 		},
+		y: { domain: [-1, wide ? 1.6 : 2.8], axis: null },
 		fy: { domain: rows, axis: null, padding: 0.08 },
 		marks: [
+			Plot.ruleX(x.minorTicks, { stroke: "var(--line)", strokeOpacity: 0.6 }),
+			Plot.ruleX(x.ticks, { stroke: "var(--line-strong)" }),
 			Plot.ruleX([data.frameMs], { stroke: "var(--ink-muted)" }),
 			...(first
 				? [
@@ -422,8 +495,8 @@ export const stripSvg = (
 					]
 				: []),
 			rowLabel(ekrina),
-			dotsFor(ekrina),
-			...others.flatMap((library) => [rowLabel(library), dotsFor(library)]),
+			...candleFor(ekrina),
+			...others.flatMap((library) => [rowLabel(library), ...candleFor(library)]),
 		],
 	}) as SVGSVGElement;
 
@@ -434,7 +507,7 @@ export const stripSvg = (
 	svg.setAttribute("role", "img");
 	svg.setAttribute(
 		"aria-label",
-		`Each timed query's time for Ekrina and the picked library at ${SIZE_LABEL[size]}, ${corpus} corpus, with a line at one frame`,
+		`Each timed query's time for Ekrina and the picked library at ${SIZE_LABEL[size]}, ${corpus} corpus, on a ${scale.type} axis with a line at one frame`,
 	);
 	return svg.outerHTML;
 };
