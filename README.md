@@ -294,6 +294,8 @@ Behavioural differences:
 
 Ekrina is ~6.4 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
 
+Coming from another library: [Fuse.js](./docs/migrating/fuse.md), [match-sorter](./docs/migrating/match-sorter.md), [fast-fuzzy](./docs/migrating/fast-fuzzy.md).
+
 ## How it compares
 
 Ekrina answers in a few milliseconds at any realistic size: a 24-query session over 100,000 items averages ~3–3.6 ms per query after the first (~1 ms at 10k), every number measured in a fresh, cold process, and `fuzzyMatch` over a 16,000-character document takes 0.48 ms.
