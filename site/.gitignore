@@ -1,8 +1,11 @@
 node_modules/
 dist/
 .astro/
-# Synced from README.md and docs/, or generated from src/, by `pnpm content`.
-src/content/docs/
+# Synced from docs/, or generated from src/, by `pnpm content`.
+src/content/docs/benchmarks.md
+src/content/docs/compare.md
+src/content/docs/libraries/
+src/content/docs/reference/
 src/data/
 public/charts/
 .wrangler/

@@ -1,4 +1,9 @@
-# Migrating from @nozbe/microfuzz
+---
+title: Migrate from @nozbe/microfuzz
+description: "Migrate from @nozbe/microfuzz to ekrina: the constructor and result diff, how each option maps or why it has none, and what behaves differently."
+sidebar:
+  order: 20
+---
 
 ```diff
 - import createFuzzySearch from "@nozbe/microfuzz";
@@ -10,11 +15,16 @@
 
   // several fields
 - const search = createFuzzySearch(items, { getText: (i) => [i.title, i.body] });
-+ const search = createFuzzySearch(items, [{ selectField: (i) => i.title }, { selectField: (i) => i.body }]);
++ const search = createFuzzySearch(items, [
++   { selectField: (i) => i.title },
++   { selectField: (i) => i.body },
++ ]);
 
   // reading a result
-- for (const { item, matches } of search(query)) highlight(item.title, matches[0]);
-+ for (const { item, fields } of search(query)) highlight(item.title, fields[0]?.ranges);
+- for (const { item, matches } of search(query))
+-   highlight(item.title, matches[0]);
++ for (const { item, fields } of search(query))
++   highlight(item.title, fields[0]?.ranges);
 ```
 
 Behavioural differences:
@@ -31,7 +41,7 @@ Behavioural differences:
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
   `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
 - **Typos match.**
-  On the same queries microfuzz scores 0.40–0.47 MRR and Ekrina 0.91–0.92 ([the scorecard](../benchmarks.md#scorecard)).
+  On the same queries microfuzz scores 0.40–0.47 MRR and Ekrina 0.91–0.92 ([the scorecard](/benchmarks/#scorecard)).
 - **`normalizeText` is `normaliseText`.**
   EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.**

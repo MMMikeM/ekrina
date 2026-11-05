@@ -1,0 +1,109 @@
+---
+title: Ekrina, fuzzy search for TypeScript that forgives typos
+description: Fuzzy search for TypeScript that corrects up to two mistakes per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.
+template: splash
+heroHighlight: Lazy
+hero:
+  title: Lazy where it counts.
+  tagline: Ekrina forgives typos, correcting up to two mistakes per query and telling you when it did. It does only the work each query needs, and only guesses when the query as typed comes up short. Nonsense gets nothing back.
+  actions:
+    - text: Get started
+      link: /getting-started/
+    - text: How it compares
+      link: /compare/
+      variant: secondary
+    - text: API reference
+      link: /reference/
+      variant: minimal
+---
+
+import SearchDemo from "../../components/SearchDemo.astro";
+import { bench } from "../../bench.ts";
+
+## 1. Try it
+
+The search below runs this library in your browser over the {bench.emoji} emoji of an emoji picker, searching each one's name and then its tags.
+
+<SearchDemo />
+
+## 2. What comes back
+
+```ts
+import { createFuzzySearch } from "ekrina";
+
+const search = createFuzzySearch(["Open File…", "Open Recent", "Close Editor"]);
+
+search("recnet");
+// [{
+//   item: "Open Recent",
+//   score: 3.1,
+//   fields: [
+//     { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] },
+//   ],
+// }]
+
+search("qxzwkv");
+// []
+```
+
+Every match says how it matched.
+`tier` names the kind of match, from `exact` down to `fuzzy` and `corrected`, so you can rank, filter or label results without decoding a number.
+`ranges` are the characters to highlight, indexed into the string you passed in, accents and casing included.
+A correction carries the query it fixed, which is your "Showing results for recent" in one line.
+
+Scores run the other way to most libraries: lower is better, and anything at or below `SCORES.CONTAINS` is the query as typed.
+A correction always scores above that line, so a real match is never outranked by a guess.
+
+## 3. What it forgives
+
+| Typed         | Finds                | How                                         |
+| ------------- | -------------------- | ------------------------------------------- |
+| `recnet`      | Open **Recent**      | two letters swapped                         |
+| `trian`       | **Train** timetable  | two letters swapped                         |
+| `kyebaord`    | **Keyboard** Shortcuts | two swaps in one word                     |
+| `keybord shrotcuts` | **Keyboard Shortcuts** | a mistake in each word           |
+| `twaaain`     | Mark **Twain**       | a key held down                             |
+| `hget`        | **H**u**g**u**et**te | a word typed with letters missing           |
+| `tahn`        | **Than**             | a swap in a four-letter word                |
+| `vsc`         | **V**isual **S**tudio **C**ode | the letters in order, in pieces    |
+| `user open`   | Preferences: **Open User** Settings | every word, in any order     |
+
+Every word of the query has to match.
+A query with one word the item lacks returns nothing, so for an OR-style search, split the query yourself.
+
+[What it corrects](/how-it-works/corrections/) has every rule, and [the fuzzy tier](/how-it-works/fuzzy-tier/) says which pieces count.
+
+## 4. Only the work a query needs
+
+Creating a searcher reads nothing.
+Each item is prepared the first time a query matches it, and the index over the whole list is built the first time a query needs it.
+Each keystroke that extends the last one rescans only the previous keystroke's survivors, so a word gets faster as it is typed.
+Corrections are tried only while fewer than ten items match the query as typed, since past that a guess could never reach the top of the list.
+
+Over 10,000 items a query takes about {bench.ekrina.msPerQuery} ms once the searcher has answered its first, and about {bench.ekrina.msPerQuery100k} ms over 100,000.
+The first query that needs the index pays to build it; [search as you type](/guides/search-as-you-type/) shows how to build it ahead of time instead.
+
+## 5. How it compares
+
+Against {bench.libraries} other libraries on three real-world lists, Ekrina ranks the right item higher than any of them: it scores {bench.ekrina.mrr} on mean reciprocal rank, where 1 means the right item always comes first, against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
+On queries that no item answers, it returns nothing on all three lists, where on the list of native names {bench.runnerUp.name} answers {bench.runnerUp.junk} of them and {bench.fuse.name} {bench.fuse.junk}.
+
+It isn't the smallest.
+At {bench.ekrina.gzip} gzipped it is {bench.size}, and only Fuse.js at {bench.fuse.gzip} and fast-fuzzy at {bench.fastFuzzy.gzip} are larger.
+It loses some query families outright, and [the benchmarks](/benchmarks/) say which, alongside every number on this page.
+[Compare two libraries](/explorer/) puts any one of them beside Ekrina.
+
+## 6. Runs anywhere
+
+It uses nothing outside ES2022: no `node:` imports, no DOM, nothing to polyfill.
+Browsers, Node, Deno, Bun and edge runtimes all run the same build, as ESM or CommonJS, with types for each, and it has no dependencies.
+
+## Appendix A. Coming from another library
+
+Each migration guide has the diff and every behavioural difference: [from @nozbe/microfuzz](/guides/migrate-from-microfuzz/), [from Fuse.js](/guides/migrate-from-fuse/), [from match-sorter](/guides/migrate-from-match-sorter/) and [from fast-fuzzy](/guides/migrate-from-fast-fuzzy/).
+
+## Acknowledgements
+
+Ekrina is inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), and keeps its subsequence approach to matching.
+
+The name is Ancient Greek, ἔκρινα, eh-KREE-na: "I sifted, I judged", from the root of criterion and critic.

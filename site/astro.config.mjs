@@ -20,9 +20,9 @@ export default defineConfig({
 	site,
 	integrations: [
 		starlight({
-			title: "ekrina",
+			title: "Ekrina",
 			description:
-				"Zero-dependency fuzzy matching for TypeScript: tiered scores, highlight ranges and typo rescue, in browsers, Node, Deno, Bun and edge runtimes.",
+				"Fuzzy search for TypeScript that corrects up to two mistakes per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.",
 			customCss: [
 				"@fontsource-variable/source-serif-4/opsz.css",
 				"@fontsource-variable/source-serif-4/opsz-italic.css",
@@ -79,13 +79,22 @@ export default defineConfig({
 						"Install with `npm install ekrina`. `createFuzzySearch(list, selectField)` builds a searcher over a list of strings or objects; `fuzzyMatch(text, query)` scores one string. Scores are lower-is-better, and `score <= SCORES.CONTAINS` means the query text appears in the field.",
 						"Every page is also served as Markdown, at its URL with `.md` in place of the trailing slash (the home page at `index.md`). The key pages:",
 						[
-							["getting-started", "Install, search a list, highlight the matches"],
-							["scores", "Score values, tiers, and what each one guarantees"],
+							["getting-started", "Install, search a list, read how it matched, highlight it, show corrections"],
+							["ai-agents", "Rules for coding agents, also shipped in the package as dist/AGENTS.md"],
 							["compare", "Ekrina against seven libraries, and which to pick"],
-							["migrate-from-microfuzz", "Migrate from @nozbe/microfuzz"],
-							["migrate-from-fuse", "Migrate from Fuse.js"],
-							["migrate-from-match-sorter", "Migrate from match-sorter"],
-							["migrate-from-fast-fuzzy", "Migrate from fast-fuzzy"],
+							["guides/several-fields", "Search several fields, demote one with demoteBy, acronyms per field"],
+							["guides/highlight", "Highlight from ranges, as segments, React elements or escaped HTML"],
+							["guides/corrections", "Show \"Showing results for\", label corrected rows, or leave them out"],
+							["guides/literal-matches", "Keep only matches of the query as typed, by score or by tier"],
+							["guides/search-as-you-type", "One searcher per list, limit, buildIndex, and which keystrokes rescan"],
+							["guides/long-text", "fuzzyMatch over a document, and how false matches are held down"],
+							["guides/migrate-from-microfuzz", "Migrate from @nozbe/microfuzz"],
+							["guides/migrate-from-fuse", "Migrate from Fuse.js"],
+							["guides/migrate-from-match-sorter", "Migrate from match-sorter"],
+							["guides/migrate-from-fast-fuzzy", "Migrate from fast-fuzzy"],
+							["how-it-works/scores", "Score values, tiers, and what each one guarantees"],
+							["how-it-works/corrections", "Every correction rule: what counts as a mistake, when it tries, the limits"],
+							["how-it-works/fuzzy-tier", "Which letter-by-letter matches the fuzzy tier accepts, and the density floor"],
 							["benchmarks", "Match quality (MRR by query family), junk, speed and memory against seven libraries"],
 							["explorer", "Ekrina against any one library, query group by query group"],
 							["libraries/ekrina", "Every Ekrina configuration the bench runs"],
@@ -108,20 +117,13 @@ export default defineConfig({
 				{
 					label: "Start here",
 					items: [
-						{ label: "Getting started", slug: "getting-started" },
-						{ label: "Scores and tiers", slug: "scores" },
+						{ label: "Quickstart", slug: "getting-started" },
 						{ label: "How it compares", slug: "compare" },
-						{
-							label: "Migrating",
-							items: [
-								{ label: "From microfuzz", slug: "migrate-from-microfuzz" },
-								{ label: "From Fuse.js", slug: "migrate-from-fuse" },
-								{ label: "From match-sorter", slug: "migrate-from-match-sorter" },
-								{ label: "From fast-fuzzy", slug: "migrate-from-fast-fuzzy" },
-							],
-						},
+						{ label: "For AI coding agents", slug: "ai-agents" },
 					],
 				},
+				{ label: "Recipes", items: [{ autogenerate: { directory: "guides" } }] },
+				{ label: "How it works", items: [{ autogenerate: { directory: "how-it-works" } }] },
 				{
 					label: "Benchmarks",
 					items: [

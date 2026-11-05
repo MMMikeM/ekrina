@@ -1,4 +1,9 @@
-# Migrating from fast-fuzzy
+---
+title: Migrate from fast-fuzzy
+description: "Migrate from fast-fuzzy to ekrina: the constructor and result diff, how each option maps or why it has none, and what behaves differently."
+sidebar:
+  order: 23
+---
 
 Both build a searcher once over a list and take a function that picks each item's text, so the constructor carries over as it is.
 Results change shape: fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
@@ -33,14 +38,14 @@ Results change shape: fast-fuzzy returns the items, and Ekrina returns `{ item, 
 Behavioural differences:
 
 - **Higher is better there, lower is better here.**
-  fast-fuzzy scores 1 for a perfect match; Ekrina scores 0, and every match of the text as typed is at or below `SCORES.CONTAINS` (2) ([Scores and tiers](../../README.md#scores-and-tiers)).
+  fast-fuzzy scores 1 for a perfect match; Ekrina scores 0, and every match of the text as typed is at or below `SCORES.CONTAINS` (2) ([Scores and tiers](/how-it-works/scores/)).
   There is no `threshold`: filter on `score` or `tier` instead.
 - **One span becomes a list of ranges.**
   fast-fuzzy's `match` is the single stretch of the text closest to the query, which can hold letters the query doesn't: `oen` on "Open Recent" is `{ index: 1, length: 3 }`, the "pen".
   Ekrina returns the letters that matched, one range per piece: `[[0, 0], [2, 3]]`.
 - **Fewer loose matches.**
   Over "Café menu", "Open Recent" and "Toggle Terminal", fast-fuzzy answers `oen` with "Open Recent" and "Café menu", and Ekrina with "Open Recent" alone.
-  The junk column on [the fast-fuzzy page](../libraries/fast-fuzzy.md#scorecard) measures this over the bench's corpora.
+  The junk column on [the fast-fuzzy page](/libraries/fast-fuzzy/#scorecard) measures this over the bench's corpora.
 - **Words match in any order.**
   `code visual` finds nothing in fast-fuzzy; Ekrina finds "Visual Studio Code".
 - **Corrections say what they fixed.**
@@ -50,6 +55,6 @@ Behavioural differences:
   There is no `sortBy` either; results always come best first.
 - **No `add`.**
   When the list changes, create a new searcher.
-  The constructor does no work up front, so a new searcher costs little until its first query ([build time](../benchmarks.md#build-time)).
+  The constructor does no work up front, so a new searcher costs little until its first query ([build time](/benchmarks/#build-time)).
 - **No one-shot `search(query, items)`.**
   `createFuzzySearch(items, selectField)(query)` does the same, and `fuzzyMatch(text, query)` scores a single string.

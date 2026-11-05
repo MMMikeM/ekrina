@@ -1,7 +1,7 @@
 {
 	"name": "ekrina",
 	"version": "2.0.0",
-	"description": "Zero-dependency fuzzy matching with tiered scoring, highlight ranges, and one-edit typo rescue",
+	"description": "Fuzzy search that corrects up to two typos per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.",
 	"keywords": [
 		"autocomplete",
 		"filter",
