@@ -44,7 +44,7 @@ What it corrects, when the query as typed matches poorly:
 - two neighbouring letters swapped in a four-letter word, where the fix starts a word (`tahn` for "Than").
 
 It is not general edit distance, which keeps it small and fast.
-Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), [benchmarked](./docs/benchmarks.md) against it and six others, and there is a [migration diff](#migrating-from-nozbemicrofuzz) if you are coming from it.
+Inspired by [@nozbe/microfuzz](https://github.com/Nozbe/microfuzz), [benchmarked](./docs/benchmarks.md) against it and six others, and there is a [migration diff](./docs/migrating/microfuzz.md) if you are coming from it.
 
 ## Install
 
@@ -252,49 +252,9 @@ The fuzzy tier is always on, with no strategy knob, and it only accepts pieces t
 Anything the fuzzy tier refuses either matched a better tier already or wasn't worth showing.
 To keep only matches of the text as typed, filter to `score <= SCORES.CONTAINS`.
 
-## Migrating from `@nozbe/microfuzz`
+## Migrating
 
-```diff
-- import createFuzzySearch from "@nozbe/microfuzz";
-+ import { createFuzzySearch } from "ekrina";
-
-  // one field
-- const search = createFuzzySearch(items, { key: "title" });
-+ const search = createFuzzySearch(items, (item) => item.title);
-
-  // several fields
-- const search = createFuzzySearch(items, { getText: (i) => [i.title, i.body] });
-+ const search = createFuzzySearch(items, [{ selectField: (i) => i.title }, { selectField: (i) => i.body }]);
-
-  // reading a result
-- for (const { item, matches } of search(query)) highlight(item.title, matches[0]);
-+ for (const { item, fields } of search(query)) highlight(item.title, fields[0]?.ranges);
-```
-
-Behavioural differences:
-
-- **`matches` became `fields`, and carries more than ranges.**
-  microfuzz returns `Array<HighlightRanges | null>`, one entry per `getText` string.
-  Ekrina returns `Array<MatchResult | null>`, with the ranges at `fields[i].ranges` next to that field's own `score` and `tier`.
-  The `[start, end]` inclusive convention is unchanged, so an existing highlight helper keeps working once it reads `.ranges`.
-- **The scores are an API contract here.**
-  microfuzz documents its values as "not an API contract, can change between releases"; the shared tiers happen to agree today.
-  Ekrina exports them as `SCORES`, pins them in `test/tier-constants.test.ts`, and treats a changed score as a breaking change with a CHANGELOG entry.
-- **There is no `strategy` option.**
-  `'smart'` is the always-on behaviour.
-  `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
-  `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
-- **Typos match.**
-  On the same queries microfuzz scores 0.40–0.47 MRR and Ekrina 0.91–0.92 ([the scorecard](./docs/benchmarks.md#scorecard)).
-- **`normalizeText` is `normaliseText`.**
-  EU spelling across the public surface, `splitWords` and `normaliseText` included.
-- **No React hook.**
-  microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary.
-  `useMemo(() => createFuzzySearch(list, selectField), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
-
-Ekrina is ~6.4 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
-
-Coming from another library: [Fuse.js](./docs/migrating/fuse.md), [match-sorter](./docs/migrating/match-sorter.md), [fast-fuzzy](./docs/migrating/fast-fuzzy.md).
+Each guide has the diff and every behavioural difference: [from @nozbe/microfuzz](./docs/migrating/microfuzz.md), [from Fuse.js](./docs/migrating/fuse.md), [from match-sorter](./docs/migrating/match-sorter.md) and [from fast-fuzzy](./docs/migrating/fast-fuzzy.md).
 
 ## How it compares
 
@@ -341,22 +301,6 @@ Ekrina is the only library that by default:
 
 It is built for matching in-memory lists on the client, and the cold-process numbers hold up for serverside work too.
 
-### The evidence
-
-Full method and data live in [docs/benchmarks.md](./docs/benchmarks.md).
-
-- **Match quality**: Ekrina scores 0.79–1.00 on every typo family, one edit or two, and 1.00 on every phrase family (reversed, half-typed, and with either word mistyped), which no other library matches across the board.
-  fast-fuzzy, the nearest, scores 0.07–0.23 on reversed phrases and 0.13–0.14 on half-typed ones.
-  Ekrina requires every query word, so a query holding a word the item lacks returns nothing, where fast-fuzzy scores 0.80–1.00 on that family.
-- **Junk**: Ekrina answers none of the queries nothing answers, on any corpus, at any distance from the corpus; fast-fuzzy answers a quarter of them and Fuse.js (tuned) nearly half.
-- **Speed, measured cold**: a 24-query session (one searcher, 24 distinct queries, fresh process) runs 30–36 ms at 10k and 81–93 ms at 100k, ~1–3.6 ms per query after the first, and `buildIndex()` brings it to 27–34 and 60–74 ms.
-  Every typo-tolerant alternative is several times slower per query: fast-fuzzy ~5–6× and Fuse.js (tuned) ~11–12× at 10k.
-  Preparation is lazy: the first query prepares only the items it matches, and the first multi-word query or possible typo builds the mask index over the whole list, or `buildIndex()` builds it up front.
-  A first answer averages ~6 ms at 10k and 15–19 ms at 100k across the timed queries, the cold columns in [docs/benchmarks.md](./docs/benchmarks.md).
-  Of the other libraries, fuzzysort and uFuzzy (all opts) run the 10k session faster, at 0.46 and 0.66 MRR ([uFuzzy's configurations](./docs/libraries/ufuzzy.md)).
-  A prefix-narrowing cache makes each keystroke that extends a word faster than the last.
-  Results are identical in any script, but the mask index cannot tell non-Latin letters apart, so on non-Latin text it admits every item and each query scans the whole list (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
-
 ### What to pick
 
 Pick Ekrina.
@@ -378,44 +322,7 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 
 ## Types
 
-```typescript
-type Range = [number, number]; // [start, end] inclusive
-type HighlightRanges = Range[];
-type Tier =
-	| "exact"
-	| "normalised-exact"
-	| "prefix"
-	| "boundary-cased"
-	| "boundary"
-	| "multi-word"
-	| "acronym"
-	| "contains"
-	| "fuzzy"
-	| "corrected";
-
-type MatchResult = {
-	score: number;
-	tier: Tier;
-	corrected?: string; // the fixed query, when tier is "corrected"
-	ranges: HighlightRanges;
-};
-
-type FieldSpec<T> = {
-	selectField: (item: T) => string | null;
-	acronym?: boolean; // default false
-	demoteBy?: number; // added to every score this field produces
-};
-
-type FuzzyResult<T> = {
-	item: T;
-	score: number; // min effective score across fields
-	fields: (MatchResult | null)[]; // one per field spec
-};
-
-type SearchOptions = {
-	limit?: number; // a positive integer; at most this many results, best first
-};
-```
+Every exported type, with each field documented, is in [`src/types.ts`](./src/types.ts).
 
 ## The name
 

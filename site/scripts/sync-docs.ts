@@ -120,15 +120,6 @@ const pages: Page[] = [
 		body: fromReadme(["How it compares"]).replace(/^## How it compares\n+/, ""),
 		order: 2,
 	},
-	{
-		route: "migrate-from-microfuzz",
-		source: "README.md",
-		title: "Migrating from @nozbe/microfuzz",
-		description:
-			"Move from @nozbe/microfuzz to ekrina: the import and option diff, and every behavioural difference, from fields to scores to typo matching.",
-		body: fromReadme(["Migrating from `@nozbe/microfuzz`"]).replace(/^## .+\n+/, ""),
-		order: 3,
-	},
 	docsPage(
 		"docs/benchmarks.md",
 		"benchmarks",
