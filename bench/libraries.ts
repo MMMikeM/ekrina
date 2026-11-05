@@ -18,6 +18,8 @@ export type LibraryMeta = {
 	module: "esm" | "cjs" | "dual";
 	updated: string | null;
 	features: Features;
+	/** How far its typo correction reaches, as README.md's comparison says it; null when it corrects none. */
+	typoReach: "two edits" | "one edit" | "full" | null;
 };
 
 export const META: Record<string, LibraryMeta> = {
@@ -35,6 +37,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "partial",
 		},
+		typoReach: "two edits",
 	},
 	"@nozbe/microfuzz": {
 		gzipKB: 1.7,
@@ -50,6 +53,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "no",
 		},
+		typoReach: null,
 	},
 	fuzzysort: {
 		gzipKB: 3.7,
@@ -65,6 +69,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "no",
 		},
+		typoReach: null,
 	},
 	"match-sorter": {
 		gzipKB: 3.4,
@@ -80,6 +85,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "no",
 		},
+		typoReach: null,
 	},
 	uFuzzy: {
 		gzipKB: 4.1,
@@ -95,6 +101,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "no",
 			typos: "opt-in",
 		},
+		typoReach: "one edit",
 	},
 	fuzzy: {
 		gzipKB: 0.8,
@@ -110,6 +117,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "no",
 			typos: "no",
 		},
+		typoReach: null,
 	},
 	"fuse.js": {
 		gzipKB: 9.3,
@@ -125,6 +133,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
+		typoReach: "full",
 	},
 	"fast-fuzzy": {
 		gzipKB: 11,
@@ -140,6 +149,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
+		typoReach: "full",
 	},
 };
 

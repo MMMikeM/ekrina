@@ -53,7 +53,7 @@ const FUSE_ALL: IFuseOptions<string> = {
 
 const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.45 };
 
-// SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
+// SingleError with all four edits: uFuzzy's closest config to ekrina's typo correction.
 const UFUZZY_ALL: uFuzzy.Options = {
 	intraMode: 1,
 	intraIns: 1,

@@ -302,9 +302,10 @@ Between the libraries, the differences are _match quality_, _what they answer th
 Each library at its best-scoring configuration, native corpus at 10k items, measured November 2026 (the exact versions are the devDependencies in [`bench/package.json`](./bench/package.json)).
 That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on; uFuzzy's defaults score 0.21 and Fuse.js's 0.72 ([how each was configured](./docs/benchmarks.md#libraries)):
 
+<!-- bench:compare -->
 | Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
-| ----------------- | ------: | ---: | ---: | ---: | -------: | :---: | :----: | --------- |
-| **Ekrina**        | ~6.4 kB |    0 | 0.91 | 0.00 | **1.06** |  🟢   |   🟢   | two edits |
+|-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:------:|-----------|
+| **Ekrina**        | ~6.4 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
 | fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
 | Fuse.js (tuned)   | ~9.3 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
 | uFuzzy (all opts) | ~4.1 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
@@ -312,6 +313,7 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 | @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 | 0.07 |     2.10 |  🔴   |   🟢   | 🔴        |
 | match-sorter      | ~3.4 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
 | fuzzy             | ~0.8 kB |    0 | 0.30 | 0.07 |     2.10 |  🔴   |   🟡   | 🔴        |
+<!-- bench:end -->
 
 The corpora are 100,000 real Wikidata names, under their English labels and under their native ones, plus an emoji picker's labels and tags, and the ranking is the same on all three ([the corpora](./docs/benchmarks.md#the-corpora-and-the-query-families)).
 **MRR** is the mean reciprocal rank of the first right answer over 33 query families of ten sampled queries each (typos, phonetic and real misspellings, partial words, query shapes and noise, weighted by group before anything was measured), each query one that at most three items could answer, top-10 cutoff; any item the query could have meant counts ([how](./docs/benchmarks.md#match-quality-by-query-family)).

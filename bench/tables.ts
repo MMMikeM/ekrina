@@ -3,16 +3,24 @@ import { PUBLISHED_SIZE } from "./artifact.ts";
 import { META, bySize, displayName, foldsFor } from "./libraries.ts";
 import { headlineMrr } from "./mrr.ts";
 
-type Align = "left" | "right";
+type Align = "left" | "right" | "center";
 
 const mdTable = (header: string[], rows: string[][], align: Align[]): string => {
 	const width = header.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
-	const pad = (cell: string, i: number): string =>
-		align[i] === "right" ? cell.padStart(width[i]) : cell.padEnd(width[i]);
+	const pad = (cell: string, i: number): string => {
+		if (align[i] === "right") return cell.padStart(width[i]);
+		if (align[i] === "left") return cell.padEnd(width[i]);
+		const before = Math.floor((width[i] - cell.length) / 2);
+		return cell.padStart(cell.length + before).padEnd(width[i]);
+	};
 	const line = (cells: string[]): string => `| ${cells.map(pad).join(" | ")} |`;
-	const rule = width
-		.map((w, i) => (align[i] === "right" ? `${"-".repeat(w + 1)}:` : "-".repeat(w + 2)))
-		.join("|");
+	const ruleOf = (w: number, i: number): string =>
+		align[i] === "right"
+			? `${"-".repeat(w + 1)}:`
+			: align[i] === "center"
+				? `:${"-".repeat(w)}:`
+				: "-".repeat(w + 2);
+	const rule = width.map(ruleOf).join("|");
 	return [line(header), `|${rule}|`, ...rows.map(line)].join("\n");
 };
 
@@ -158,6 +166,44 @@ const librariesTable = (): string =>
 			}),
 		["left", "left", "left", "left"],
 	);
+
+const isEkrinaVariant = (config: string): boolean =>
+	libraryOf(config) === "ekrina" && config !== "ekrina";
+
+const mark = (support: "yes" | "opt-in" | "partial" | "no"): string =>
+	support === "yes" ? "🟢" : support === "no" ? "🔴" : "🟡";
+
+// README.md's comparison: each library once, at its headline configuration,
+// on the corpus and list size the per-probe tables use. ms/query is the batch
+// cell's per-query time after the warm-up, the search-as-you-type number.
+const compareTable = (a: Artifact): string => {
+	const rows = a.scorecard.corpora[PROBE_CORPUS];
+	if (!rows) throw new Error(`no scorecard for corpus '${PROBE_CORPUS}' — run the quality stage first`);
+	const headline = headlineConfigs(a);
+	const shown = rows
+		.filter((r) => headline.has(r.library) && !isEkrinaVariant(r.library))
+		.sort((x, y) => Number(y.library === "ekrina") - Number(x.library === "ekrina") || y.mrr - x.mrr);
+	return mdTable(
+		["Library", "Gzip", "Deps", "MRR", "junk", "ms/query", "Tiers", "Ranges", "Typos"],
+		shown.map((r) => {
+			const meta = META[libraryOf(r.library)];
+			if (!meta) throw new Error(`no metadata for '${r.library}' in bench/libraries.ts`);
+			const batch = cellOf(a, PROBE_CORPUS, "batch", PROBE_SIZE, r.library);
+			return [
+				r.library === "ekrina" ? "**Ekrina**" : displayName(r.library),
+				`~${meta.gzipKB} kB`,
+				String(meta.deps),
+				r.mrr.toFixed(2),
+				r.junk === undefined ? "—" : r.junk.toFixed(2),
+				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
+				mark(meta.features.tier),
+				mark(meta.features.ranges),
+				meta.typoReach ?? "🔴",
+			];
+		}),
+		["left", "right", "right", "right", "right", "right", "center", "center", "left"],
+	);
+};
 
 const speedRowsOf = (a: Artifact, corpus: string, configs: Set<string>): string[] =>
 	variantsOf(a, corpus)
@@ -410,6 +456,7 @@ export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
 	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
 	out.libraries = librariesTable();
+	if (a.scorecard.corpora[PROBE_CORPUS]) out.compare = compareTable(a);
 	const headline = headlineConfigs(a);
 	for (const corpus of Object.keys(a.coldMatrix)) {
 		out[`speed-${corpus}`] = scaleTable(a, corpus, headline);
