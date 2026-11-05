@@ -237,9 +237,20 @@ All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) with
 
 ## The fuzzy tier
 
-Ekrina ships one opinionated fuzzy mode, always on, with no strategy knob.
-Chunks must start at a word boundary or run 3+ characters (the query's last 1-2 characters are exempt, since a short tail could never satisfy the run rule), and the whole assembly must cover at least 18% of the span it stretches across (the density floor that keeps long-text junk to 2–4%).
-Anything it refuses either matched a higher tier already or wasn't worth showing; keep only `score <= SCORES.CONTAINS` if you want literal matches only.
+When a query doesn't appear as typed, Ekrina looks for its letters in order, in a few pieces: `vsc` matches "**V**isual **S**tudio **C**ode", and `sualdio` matches "Vi**sual** Stu**dio** Code".
+These matches have `tier: "fuzzy"` and score above `SCORES.CONTAINS`, so they rank below every match of the text as typed.
+The fuzzy tier is always on, with no strategy knob, and it only accepts pieces that follow these rules:
+
+- **Each piece starts a word or is at least three letters long.**
+  `iuo` matches nothing in "Visual Studio Code", though its letters are all there in order, because each would be a single letter from the middle of a word.
+  `ogerm` fails on "Toggle Terminal" for the same reason: `og` would be two letters from the middle of "Toggle".
+- **The query's last one or two letters are exempt**, since a short tail could never be three letters long: `togrm` matches "**Tog**gle Te**rm**inal".
+- **The pieces must cover at least 18% of the text they stretch across.**
+  In "Open the command palette", `oc` matches "**O**pen the **c**ommand", 2 letters in a stretch of 10, but `ocp` doesn't, since "**O**pen the **c**ommand **p**" is 3 letters in 18.
+  A long enough document holds the letters of almost any word somewhere, and this floor is what holds false matches of absent words to 2–4% on real text.
+
+Anything the fuzzy tier refuses either matched a better tier already or wasn't worth showing.
+To keep only matches of the text as typed, filter to `score <= SCORES.CONTAINS`.
 
 ## Migrating from `@nozbe/microfuzz`
 
