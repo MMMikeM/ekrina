@@ -44,12 +44,19 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 };
 
 /**
- * Score one string against a query. Returns { score, tier, ranges } or null.
+ * Score one string against a query, or null when it doesn't match.
  *
  * Judges the string on its own: a searcher over a list can return fewer
  * corrections than this does per item (see createFuzzySearch).
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
+ *
+ * @example
+ * fuzzyMatch('banana', 'ban'); // { score: 0.5, tier: 'prefix', ranges: [[0, 2]] }
+ *
+ * @example
+ * // A typo, corrected: the boundary tier's 1 plus TYPO_PENALTY
+ * fuzzyMatch('Open Recent', 'recnet'); // { score: 3.1, tier: 'corrected', corrected: 'recent', ranges: [[5, 10]] }
  */
 export const fuzzyMatch = (
 	text: string,

@@ -359,7 +359,7 @@ The rest of the field is dominated on these benchmarks; the full argument, per-l
 - `normaliseText(text)`: lowercase, strip diacritics.
 - `splitWords(text)`: tokenise on any non-alphanumeric run (keeps `_`).
 - `SCORES`: the tier constants.
-- `TYPO_PENALTY`: the 2.1 every `corrected` score adds to its corrected tier.
+- `TYPO_PENALTY`: the 2.1 a `corrected` score adds to its corrected tier for each typo fixed.
 
 ## Types
 

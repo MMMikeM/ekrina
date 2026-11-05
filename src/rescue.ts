@@ -41,7 +41,7 @@ const MAX_RESCUE_WORD_LENGTH = 64;
 
 // Chance corrections are a multiple-comparisons problem scaling with the
 // field's window count, while a high floor hurts the short queries that
-// dominate label search (@see docs/benchmarks.md).
+// dominate label search (@see docs/performance.md).
 const minTypoQueryLength = (fieldLength: number): number =>
 	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
 

@@ -62,9 +62,8 @@ const subsequenceGate = (positions: GatePosition[]): Gate => {
 /**
  * The fuzzy tier's pre-gate, and for single-word queries the whole ladder's:
  * every earlier tier implies an admissible subsequence too. Requiring the
- * anchor cuts a third of the fields that reach the ladder and cannot
- * false-reject — a field with no admissible first placement has no chain to
- * assemble (@see docs/benchmarks.md).
+ * anchor cannot false-reject: a field with no admissible first placement has
+ * no chain to assemble.
  *
  * Monotone under query extension, which is what lets the survivor cache in
  * search.ts reuse the previous keystroke's survivors: extending the query

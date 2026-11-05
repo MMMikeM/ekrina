@@ -1,10 +1,10 @@
 /**
- * Range of indices in a string: [start, end] (inclusive)
+ * Start and end indices into the caller's own string, both inclusive.
  */
 export type Range = [number, number];
 
 /**
- * List of character ranges that should be highlighted
+ * The ranges of the caller's string that matched, to highlight.
  */
 export type HighlightRanges = Range[];
 
