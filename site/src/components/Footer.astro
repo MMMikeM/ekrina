@@ -1,0 +1,35 @@
+---
+import Default from "@astrojs/starlight/components/Footer.astro";
+import { project } from "../project.ts";
+---
+
+<Default />
+<p class="project-meta" data-pagefind-ignore>
+	<a href={project.licenseFileUrl}>{project.license} licensed</a>
+	<span aria-hidden="true">·</span>
+	<a href={project.npmUrl}>npm</a>
+	<span aria-hidden="true">·</span>
+	<a href={project.changelogUrl}>Changelog</a>
+	<span aria-hidden="true">·</span>
+	<a href="https://thelazyweb.dev">thelazyweb.dev</a>
+</p>
+<style>
+	.project-meta {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.25rem 0.5rem;
+		margin-top: var(--space-l);
+		font-size: var(--text-xs);
+		color: var(--sl-color-gray-3);
+	}
+
+	.project-meta a {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.project-meta a:hover {
+		color: var(--sl-color-white);
+	}
+</style>

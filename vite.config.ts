@@ -6,14 +6,21 @@ export default defineConfig({
 		// The bench pipeline owns results.json, the frozen corpora, and every
 		// marked region in docs/benchmarks.md — formatting them fights the
 		// generator and `pnpm bench --check`.
-		ignorePatterns: ["dist", "bench/results.json", "bench/corpus-*.json", "docs/benchmarks.md"],
+		ignorePatterns: [
+			"dist",
+			"bench/results.json",
+			"bench/corpus-*.json",
+			"docs/benchmarks.md",
+			"site",
+		],
 	},
 	lint: {
 		plugins: ["typescript", "unicorn", "oxc"],
 		categories: { correctness: "error" },
 		rules: {},
 		env: { builtin: true },
-		ignorePatterns: [],
+		// The site is its own pnpm root, linted and typechecked by its own toolchain.
+		ignorePatterns: ["site"],
 	},
 	pack: {
 		entry: ["./src/index.ts"],

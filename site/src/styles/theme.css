@@ -1,0 +1,177 @@
+/* The scales every size and gap on the site comes from. */
+:root {
+	--text-xs: 0.8125rem;
+	--text-sm: 0.875rem;
+	--text-base: 1rem;
+	--text-lg: 1.125rem;
+	--text-xl: 1.25rem;
+	--text-2xl: 1.5rem;
+	--text-3xl: 2rem;
+	--text-4xl: 2.5rem;
+	--text-display: clamp(2.5rem, 1.25rem + 4vw, 4.25rem);
+
+	--leading-tight: 1.1;
+	--leading-snug: 1.35;
+	--leading-body: 1.65;
+
+	--space-3xs: 0.25rem;
+	--space-2xs: 0.5rem;
+	--space-xs: 0.75rem;
+	--space-s: 1rem;
+	--space-m: 1.5rem;
+	--space-l: 2rem;
+	--space-xl: 3rem;
+	--space-2xl: 4rem;
+	--space-3xl: 6rem;
+
+	--tap-target: 2.75rem;
+	--radius-control: 8px;
+	--radius-panel: 12px;
+	--focus-ring: 2px solid var(--sl-color-text-accent);
+	--focus-ring-offset: 2px;
+
+	--sl-text-2xs: var(--text-xs);
+	--sl-text-xs: var(--text-xs);
+	--sl-text-sm: var(--text-sm);
+	--sl-text-base: var(--text-base);
+	--sl-text-lg: var(--text-lg);
+	--sl-text-xl: var(--text-xl);
+	--sl-text-2xl: var(--text-2xl);
+	--sl-text-3xl: var(--text-3xl);
+	--sl-text-4xl: var(--text-4xl);
+	--sl-text-body: var(--text-lg);
+	--sl-line-height: var(--leading-body);
+	--sl-text-h1: var(--text-3xl);
+	--sl-text-h2: var(--text-2xl);
+	--sl-text-h3: var(--text-xl);
+	--sl-text-h4: var(--text-lg);
+	--sl-text-h5: var(--text-base);
+}
+
+@media (min-width: 50em) {
+	:root {
+		--sl-text-h1: var(--text-4xl);
+	}
+}
+
+/*
+ * Starlight declares its variables inside cascade layers, and these unlayered
+ * rules beat them whatever the selector. So every variable set for dark mode
+ * on :root has to be set again for light mode, or dark's value wins there too.
+ */
+
+:root {
+	--paper: hsl(230 20% 10%);
+	--paper-alt: hsl(230 18% 13%);
+	--line: hsl(229 15% 22%);
+	--line-strong: hsl(229 12% 38%);
+	--ink: hsl(225 25% 93%);
+	--ink-muted: hsl(228 12% 70%);
+	--pen: hsl(226 100% 78%);
+	--button: hsl(231 75% 55%);
+	--button-text: hsl(0 0% 100%);
+	--highlight: hsl(50 100% 62%);
+	--highlight-ink: hsl(229 20% 14%);
+	--notif-bg: hsl(229 18% 15%);
+
+	--sl-color-white: hsl(225 25% 97%);
+	--sl-color-gray-1: var(--ink);
+	--sl-color-gray-2: hsl(226 18% 84%);
+	--sl-color-gray-3: var(--ink-muted);
+	--sl-color-gray-4: var(--line-strong);
+	--sl-color-gray-5: var(--line);
+	--sl-color-gray-6: var(--paper-alt);
+	--sl-color-black: var(--paper);
+	--sl-color-accent-low: hsl(231 45% 22%);
+	--sl-color-accent: var(--button);
+	--sl-color-accent-high: var(--pen);
+	--sl-color-text: var(--ink);
+	--sl-color-bg-nav: var(--paper);
+	--sl-color-bg-sidebar: var(--paper);
+
+	--sl-font: "Source Serif 4 Variable", Georgia, serif;
+	--sl-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root[data-theme="light"] {
+	--paper: hsl(0 0% 100%);
+	--paper-alt: hsl(225 14% 97%);
+	--line: hsl(225 12% 88%);
+	--line-strong: hsl(226 10% 72%);
+	--ink: hsl(229 20% 14%);
+	--ink-muted: hsl(229 10% 38%);
+	--pen: hsl(231 75% 51%);
+	--button: hsl(231 75% 51%);
+	--notif-bg: hsl(0 0% 100%);
+
+	--sl-color-white: var(--ink);
+	--sl-color-gray-1: hsl(229 18% 20%);
+	--sl-color-gray-2: hsl(229 14% 28%);
+	--sl-color-gray-3: var(--ink-muted);
+	--sl-color-gray-4: var(--line-strong);
+	--sl-color-gray-5: var(--line);
+	--sl-color-gray-6: hsl(225 14% 94%);
+	--sl-color-gray-7: var(--paper-alt);
+	--sl-color-black: var(--paper);
+	--sl-color-accent-low: hsl(231 80% 93%);
+	--sl-color-accent: var(--pen);
+	--sl-color-accent-high: hsl(231 70% 32%);
+}
+
+h1 {
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+}
+
+/* No word left alone on a paragraph's last line, where the browser supports it. */
+:is(p, li, dd, td, th, blockquote, figcaption) {
+	text-wrap: pretty;
+}
+
+.sl-markdown-content :is(h2, h3, h4, h5, h6) {
+	font-family: var(--__sl-font-mono);
+	font-weight: 500;
+}
+
+:is(.header, .sidebar, .right-sidebar-panel, mobile-starlight-toc, .pagination-links, footer),
+:is([role="tab"], .starlight-aside__title) {
+	font-family: var(--__sl-font-mono);
+}
+
+.sidebar a[aria-current="page"] {
+	background: var(--highlight);
+	color: var(--highlight-ink);
+}
+
+/* Yellow is only ever a background, with dark ink on it in both modes. */
+mark {
+	background: var(--highlight);
+	color: var(--highlight-ink);
+	padding-inline: 0.15em;
+	box-decoration-break: clone;
+	-webkit-box-decoration-break: clone;
+}
+
+.sl-link-button {
+	border-radius: var(--radius-control);
+	font-family: var(--__sl-font-mono);
+	font-weight: 500;
+}
+
+.sl-link-button.primary,
+.sl-link-button.primary:hover {
+	background: var(--button);
+	border-color: var(--button);
+	color: var(--button-text);
+}
+
+.sl-link-button.secondary {
+	border-color: var(--line-strong);
+	color: var(--ink);
+}
+
+.sl-link-button.minimal {
+	color: var(--pen);
+	text-decoration: underline;
+}
+

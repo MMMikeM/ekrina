@@ -1,0 +1,69 @@
+---
+import Default from "@astrojs/starlight/components/Header.astro";
+
+// Starlight moves the social links and theme menu into the sidebar's mobile menu,
+// and a splash page has no sidebar, so a phone would have no way to reach them.
+const splash = !Astro.locals.starlightRoute.hasSidebar;
+---
+
+<div class:list={["header-root", { splash }]}><Default /></div>
+
+<style>
+	.header-root {
+		height: 100%;
+	}
+
+	@media (max-width: 49.99rem) {
+		.splash :global(.right-group) {
+			display: flex;
+			gap: 0;
+		}
+
+		.splash :global(.social-icons::after) {
+			display: none;
+		}
+
+		.splash :global(site-search button[data-open-modal]) {
+			justify-content: center;
+			width: var(--tap-target);
+			height: var(--tap-target);
+		}
+
+		.splash :global(.social-icons a) {
+			color: var(--sl-color-gray-1);
+			justify-content: center;
+			align-items: center;
+			width: var(--tap-target);
+			height: var(--tap-target);
+			margin: 0;
+			padding: 0;
+		}
+
+		/* Only the icon shows; the menu still opens on the current choice. */
+		.splash :global(starlight-theme-select label) {
+			width: var(--tap-target);
+			height: var(--tap-target);
+			justify-content: center;
+		}
+
+		.splash :global(starlight-theme-select select) {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			margin: 0;
+			padding: 0;
+			color: transparent;
+		}
+
+		.splash :global(starlight-theme-select .label-icon) {
+			position: static;
+			transform: none;
+			width: 1.25rem;
+			height: 1.25rem;
+		}
+
+		.splash :global(starlight-theme-select .caret) {
+			display: none;
+		}
+	}
+</style>

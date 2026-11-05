@@ -1,0 +1,765 @@
+---
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import data from "../data/explorer.json";
+import {
+	chartStylesheet,
+	formatMrr,
+	formatMs,
+	type CorpusView,
+	type ExplorerData,
+	type ListSize,
+	radarSvg,
+	SPEED_TIE,
+	scoreline,
+	type TimedCorpus,
+	stripSvg,
+} from "../explorer.ts";
+
+const explorer = data as ExplorerData;
+const ekrina = explorer.libraries.find((library) => library.config === "ekrina")!;
+const others = explorer.libraries
+	.filter((library) => library !== ekrina)
+	.sort((a, b) => b.headline.all - a.headline.all);
+// Opens on a library that beats Ekrina somewhere, so the first view shows a loss as well as a win.
+const picked = others.find((library) => library.config === "fuzzysort") ?? others[0]!;
+const groups = [
+	{ id: "corrects-typos", label: "Corrects typos", libraries: others.filter((library) => library.correctsTypos) },
+	{ id: "as-typed", label: "Matches as typed", libraries: others.filter((library) => !library.correctsTypos) },
+];
+
+const views: { id: CorpusView; label: string; name: string }[] = [
+	{ id: "all", label: "All three", name: "mean of the en, native and emoji corpora" },
+	{ id: "en", label: "en", name: "en corpus" },
+	{ id: "native", label: "native", name: "native corpus" },
+	{ id: "emoji", label: "emoji", name: "emoji corpus" },
+];
+const timed: TimedCorpus[] = ["en", "native"];
+const sizes: { id: ListSize; label: string }[] = [
+	{ id: "10000", label: "10k" },
+	{ id: "100000", label: "100k" },
+];
+
+// The library select and the corpus radios drive the page through :has(), with
+// no script: a selected <option> matches :checked too. A browser without :has()
+// skips the @supports block and shows every library and corpus at once.
+const chosen = (control: string, value: string) =>
+	control === "library"
+		? `select[name="library"] option[value="${value}"]:checked`
+		: `[name="${control}"][value="${value}"]:checked`;
+const hiddenUnless = (control: string, value: string, attribute: string) =>
+	`.workbench:not(:has(${chosen(control, value)})) [${attribute}="${value}"] { display: none; }`;
+const corpusChecked = (id: CorpusView) => `.workbench:has([name="corpus"][value="${id}"]:checked)`;
+const toggles = [
+	"@supports selector(:has(*)) {",
+	...others.map(({ slug }) => hiddenUnless("library", slug, "data-lib")),
+	...views.map(({ id }) => hiddenUnless("corpus", id, "data-corpus")),
+	// Only en is timed under its own name; every other view borrows native's times.
+	hiddenUnless("corpus", "en", "data-timed"),
+	`${corpusChecked("en")} [data-timed="native"] { display: none; }`,
+	`${corpusChecked("en")} [data-borrowed], ${corpusChecked("native")} [data-borrowed] { display: none; }`,
+	"}",
+].join("\n");
+
+const timedCorpusOf = (view: CorpusView): TimedCorpus => (view === "en" ? "en" : "native");
+
+
+const radars = Object.fromEntries(views.map((view) => [view.id, radarSvg(explorer, view.id)]));
+const strips = Object.fromEntries(
+	timed.map((corpus) => [
+		corpus,
+		sizes.map((size) => ({
+			size,
+			wide: stripSvg(explorer, corpus, size.id, "wide"),
+			narrow: stripSvg(explorer, corpus, size.id, "narrow"),
+		})),
+	]),
+);
+---
+
+<StarlightPage
+	frontmatter={{
+		title: "Compare two libraries",
+		description:
+			"Pick a fuzzy-search library and compare it with Ekrina on typos, phonetic misspellings, partial words, query shape, noise, junk results and speed.",
+		tableOfContents: false,
+	}}
+>
+	<div class="workbench not-content">
+		<form class="controls decoration" aria-label="What to compare">
+			<div class="headline">
+				<label for="library">Ekrina against</label>
+				<span class="select">
+					<select id="library" name="library">
+						{
+							groups.map((group) => (
+								<optgroup label={group.label}>
+									{group.libraries.map((library) => (
+										<option value={library.slug} selected={library === picked}>
+											{library.name}
+										</option>
+									))}
+								</optgroup>
+							))
+						}
+					</select>
+					<svg class="chevron" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+						<path d="M3.5 6l4.5 4.5L12.5 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+					</svg>
+				</span>
+			</div>
+			<fieldset class="corpus">
+				<legend>Corpus</legend>
+				<div class="segmented">
+					{
+						views.map((view) => (
+							<label>
+								<input type="radio" name="corpus" value={view.id} checked={view.id === "native"} />
+								<span>{view.label}</span>
+							</label>
+						))
+					}
+				</div>
+			</fieldset>
+		</form>
+
+		{
+			views.flatMap((view) =>
+				others.map((library) => {
+					const score = scoreline(explorer, library, timedCorpusOf(view.id), view.id);
+					return (
+						<div class="scoreline table-scroll decoration" data-lib={library.slug} data-corpus={view.id}>
+							<table>
+								<caption class="sr-only">Ekrina against {library.name}</caption>
+								<thead>
+									<tr>
+										<th scope="col">
+											<span class="sr-only">Library</span>
+										</th>
+										{score.map((column) => (
+											<th scope="col">
+												<span class="label-long">{column.label}</span>
+												<span class="label-short" aria-hidden="true">
+													{column.shortLabel}
+												</span>
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody>
+									{(["ekrina", "picked"] as const).map((side) => (
+										<tr>
+											<th scope="row">
+												<span class:list={["key", side === "ekrina" ? "ekrina" : "subject"]} />
+												{side === "ekrina"
+													? "Ekrina"
+													: library.name.split("/").map((part, k) => (k === 0 ? part : <><wbr />/{part}</>))}
+											</th>
+											{score.map((column) => {
+												const wins = column.winner === side;
+												const noted = wins || (column.winner === null && side === "picked");
+												return (
+													<td class:list={{ wins, [side]: wins }}>
+														<span class="value">{column[side]}</span>
+														{wins && <span class="sr-only">, better: </span>}
+														{column.winner === null && <span class="sr-only">, tie </span>}
+														{noted && (
+															<span class="margin" aria-hidden={column.winner === null ? "true" : undefined}>
+																{column.margin}
+															</span>
+														)}
+													</td>
+												);
+											})}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					);
+				}),
+			)
+		}
+		<p class="note decoration">
+			The better value in each column is filled, and medians within {Math.round((SPEED_TIE - 1) * 100)}% of each
+			other count as a tie.
+		</p>
+		<p class="note" data-borrowed>
+			Times, and the MRR the speed charts plot, use the native corpus: only en and native are timed.
+		</p>
+
+		<section aria-labelledby="speed">
+			<h2 id="speed">Speed</h2>
+			{
+				timed.map((corpus) => (
+					<figure data-timed={corpus}>
+						{strips[corpus]!.map(({ size, wide, narrow }) => (
+							<div class="strip-size">
+								<p class="strip-title">{size.label} items</p>
+								<div class="strip strip-wide decoration" set:html={wide} />
+								<div class="strip strip-narrow decoration" set:html={narrow} />
+							</div>
+						))}
+						<figcaption>
+							Each dot is one of the 24 timed queries on the {corpus} corpus, at its median time across runs;
+							the line is one frame at 60 Hz. Hover a dot for its query.
+						</figcaption>
+					</figure>
+				))
+			}
+		</section>
+
+		<section aria-labelledby="quality">
+			<h2 id="quality">Match quality</h2>
+			{
+				views.map((view) => (
+					<div class="quality-view" data-corpus={view.id}>
+						<figure>
+							<div class="radar decoration" set:html={radars[view.id]} />
+							<figcaption>
+								Each axis is one query group's MRR@10 on the {view.name}, the mean over its scored families.
+								Refuses junk is the share of the queries nothing answers that a library leaves unanswered. The
+								rings mark steps of 0.25, and the outer ring is 1.
+							</figcaption>
+						</figure>
+						<div class="table-scroll">
+							<table>
+								<caption>Match quality by query group, {view.name}</caption>
+								<thead>
+									<tr>
+										<th scope="col">Query group</th>
+										<th scope="col">Ekrina</th>
+										{others.map((library) => (
+											<th scope="col" data-lib={library.slug}>
+												{library.name}
+											</th>
+										))}
+									</tr>
+								</thead>
+								<tbody>
+									{explorer.axes.map((axis, k) => (
+										<tr>
+											<th scope="row">{axis}</th>
+											<td>{formatMrr(ekrina.values[view.id][k] ?? 0)}</td>
+											{others.map((library) => (
+												<td data-lib={library.slug}>{formatMrr(library.values[view.id][k] ?? 0)}</td>
+											))}
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				))
+			}
+		</section>
+
+		<section aria-labelledby="numbers">
+			<h2 id="numbers">Timing table</h2>
+			{
+				timed.map((corpus) => (
+					<div class="timing-tables" data-timed={corpus}>
+						{sizes.map((size) => {
+							const titleId = `timing-${corpus}-${size.id}`;
+							return (
+								<div>
+									<p class="table-title" id={titleId}>
+										{size.label} items, {corpus} corpus, times in ms
+									</p>
+									<div class="table-scroll">
+										<table aria-labelledby={titleId}>
+											<thead>
+												<tr>
+													<th scope="col">Library</th>
+													<th scope="col">MRR</th>
+													<th scope="col">Median</th>
+													<th scope="col">Slowest</th>
+													<th scope="col">In a frame</th>
+													<th scope="col">Cold</th>
+												</tr>
+											</thead>
+											<tbody>
+												{[ekrina, ...others].map((library) => {
+													const timing = library.timing[corpus];
+													const cell = timing.sizes[size.id];
+													return (
+														<tr data-lib={library === ekrina ? undefined : library.slug}>
+															<th scope="row">{library.name}</th>
+															<td>{formatMrr(timing.mrr)}</td>
+															<td>{formatMs(cell.medianMs)}</td>
+															<td>{formatMs(cell.slowestMs)}</td>
+															<td>
+																{cell.withinFrame}/{cell.queries}
+															</td>
+															<td>{formatMs(cell.firstMs)}</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							);
+						})}
+					</div>
+				))
+			}
+			<p class="source">
+				Cold is the constructor plus the first answer in a fresh process; In a frame counts the timed queries answered
+				within {explorer.frameMs} ms.
+			</p>
+			<p class="source">
+				Every number comes from <a href="/benchmarks/">the benchmarks</a>, at the configuration each library's headline row
+				uses; how the times were measured is in <a href="/benchmarks/#one-measurement-model">its method</a>.
+			</p>
+		</section>
+	</div>
+</StarlightPage>
+
+<style is:global set:html={toggles}></style>
+<style is:global set:html={chartStylesheet()}></style>
+
+<style is:global>
+	:root:has(.workbench) {
+		--sl-content-width: 60rem;
+	}
+
+	/* Fades only once the reader has picked: a choice the page did not make. */
+	@media (prefers-reduced-motion: no-preference) {
+		.workbench:has(:is(input:checked:not([checked]), option:checked:not([selected]))) :is(.scoreline, svg [data-lib]) {
+			/* Opacity only: transitioning display too would hold the outgoing view on screen. */
+			transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		@starting-style {
+			.workbench:has(:is(input:checked:not([checked]), option:checked:not([selected]))) :is(.scoreline, svg [data-lib]) {
+				opacity: 0;
+			}
+		}
+	}
+</style>
+
+<style>
+	.workbench {
+		container: workbench / inline-size;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-m);
+	}
+
+	.controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-s) var(--space-m);
+	}
+
+	.headline {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--space-2xs) var(--space-xs);
+		color: var(--ink);
+		font-size: var(--text-3xl);
+		font-weight: 600;
+		line-height: var(--leading-tight);
+	}
+
+	.select {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	/* Sizes the select to the picked name rather than the longest option, where supported. */
+	select {
+		field-sizing: content;
+		appearance: none;
+		margin: 0;
+		padding: 0 1.75rem 0.125rem 0;
+		border: 0;
+		border-bottom: 2px solid var(--chart-subject);
+		border-radius: 0;
+		background: none;
+		color: var(--ink);
+		font: inherit;
+		cursor: pointer;
+	}
+
+	select:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: var(--focus-ring-offset);
+	}
+
+	.chevron {
+		position: absolute;
+		right: 0.125rem;
+		width: 1.125rem;
+		height: 1.125rem;
+		color: var(--ink-muted);
+		pointer-events: none;
+	}
+
+	.select:hover .chevron {
+		color: var(--ink);
+	}
+
+	/* Where the page can style the open list, it gets the site's own menu. */
+	@supports (appearance: base-select) {
+		select,
+		select::picker(select) {
+			appearance: base-select;
+		}
+
+		select::picker-icon {
+			display: none;
+		}
+
+		select::picker(select) {
+			margin-top: var(--space-2xs);
+			padding: var(--space-3xs);
+			border: 1px solid var(--line-strong);
+			border-radius: var(--radius-panel);
+			background: var(--paper);
+			box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.35);
+		}
+
+		select optgroup {
+			padding-top: var(--space-2xs);
+			color: var(--ink-muted);
+			font-family: var(--__sl-font-mono);
+			font-size: var(--text-xs);
+			font-weight: 400;
+		}
+
+		select optgroup::before,
+		select optgroup legend {
+			padding: 0 var(--space-xs);
+		}
+
+		select option {
+			display: flex;
+			align-items: center;
+			gap: var(--space-2xs);
+			min-height: 2.25rem;
+			padding: 0 var(--space-xs);
+			border-radius: var(--radius-control);
+			color: var(--ink);
+			font-family: var(--__sl-font-mono);
+			font-size: var(--text-sm);
+			font-weight: 400;
+			cursor: pointer;
+		}
+
+		select option:is(:hover, :focus-visible) {
+			background: color-mix(in srgb, var(--ink) 8%, transparent);
+			outline: none;
+		}
+
+		select option:checked {
+			font-weight: 600;
+		}
+
+		select option::checkmark {
+			order: 1;
+			margin-inline-start: auto;
+			color: var(--chart-subject);
+		}
+	}
+
+	/* The system menu takes the select's own font size, so keep it moderate there. */
+	@supports not (appearance: base-select) {
+		select {
+			font-family: var(--__sl-font-mono);
+			font-size: var(--text-xl);
+			font-weight: 600;
+		}
+	}
+
+	fieldset {
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	input {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.corpus {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+	}
+
+	.corpus legend {
+		float: left;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+	}
+
+	@media (forced-colors: active) {
+		select {
+			border-bottom-color: CanvasText;
+		}
+	}
+
+	.scoreline table {
+		width: 100%;
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-lg);
+	}
+
+	.scoreline th,
+	.scoreline td {
+		padding: var(--space-2xs) var(--space-s) var(--space-2xs) 0;
+		vertical-align: top;
+	}
+
+	.scoreline thead th {
+		color: var(--ink-muted);
+		font-size: var(--text-xs);
+		font-weight: 400;
+	}
+
+	.scoreline tbody th {
+		font-weight: 600;
+	}
+
+	.key {
+		display: inline-block;
+		width: 0.625rem;
+		height: 0.625rem;
+		margin-inline-end: var(--space-2xs);
+		border-radius: 50%;
+		vertical-align: 0.1em;
+	}
+
+	.key.ekrina {
+		background: var(--chart-ekrina);
+	}
+
+	.key.subject {
+		background: var(--chart-subject);
+	}
+
+	.wins.ekrina {
+		--win: var(--chart-ekrina);
+	}
+
+	.wins.picked {
+		--win: var(--chart-subject);
+	}
+
+	.wins .value {
+		/* The negative margin keeps the digits on the column's edge under the wider fill. */
+		margin-inline: -0.4em;
+		padding: 0.1em 0.4em;
+		border-radius: 0.3em;
+		background: color-mix(in oklab, var(--win) 24%, transparent);
+		box-shadow: inset 0 -2px 0 var(--win);
+		color: var(--ink);
+		font-weight: 600;
+	}
+
+	@media (forced-colors: active) {
+		.wins .value {
+			outline: 1px solid CanvasText;
+		}
+	}
+
+	.margin {
+		display: block;
+		margin-top: var(--space-3xs);
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+	}
+
+	.label-short {
+		display: none;
+	}
+
+	@container workbench (max-width: 34rem) {
+		.scoreline table {
+			font-size: var(--text-sm);
+		}
+
+		.label-long {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+
+		.label-short {
+			display: inline;
+		}
+
+		.scoreline tbody th {
+			white-space: normal;
+		}
+
+		/* The cell padding is too narrow here for the fill to overhang it. */
+		.wins .value {
+			margin-inline: 0;
+			padding-inline: 0.2em;
+		}
+
+		.scoreline th,
+		.scoreline td {
+			padding-inline-end: var(--space-2xs);
+		}
+
+		.margin {
+			font-size: var(--text-xs);
+		}
+	}
+
+	.note,
+	figcaption,
+	.source {
+		max-width: 44em;
+		margin: 0;
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+		line-height: var(--leading-body);
+	}
+
+	.note {
+		margin-top: calc(-1 * var(--space-xs));
+	}
+
+	h2 {
+		margin: var(--space-l) 0 var(--space-s);
+		color: var(--ink);
+		font-size: var(--text-xl);
+	}
+
+	figure {
+		display: grid;
+		gap: var(--space-xs);
+		margin: 0;
+	}
+
+	.strip :global(svg),
+	.radar :global(svg) {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	/* Caps the scale so chart text stays near its design size on wide screens. */
+	.strip-wide :global(svg) {
+		max-width: 860px;
+	}
+
+	.strip-narrow {
+		display: none;
+	}
+
+	.strip-title {
+		margin: 0;
+		color: var(--ink);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+	}
+
+	@container workbench (max-width: 40rem) {
+		.strip-wide {
+			display: none;
+		}
+
+		.strip-narrow {
+			display: block;
+		}
+	}
+
+	.radar :global(svg) {
+		max-width: 440px;
+	}
+
+	@container workbench (max-width: 34rem) {
+		.radar :global(svg text) {
+			font-size: 16px;
+		}
+	}
+
+	.quality-view {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-m);
+		align-items: start;
+	}
+
+	@container workbench (min-width: 44rem) {
+		.quality-view {
+			grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+		}
+	}
+
+	.timing-tables {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+		gap: var(--space-m);
+	}
+
+	.table-title {
+		margin: 0 0 var(--space-2xs);
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+	}
+
+	.table-scroll {
+		overflow-x: auto;
+	}
+
+	table {
+		border-collapse: collapse;
+		font-size: var(--text-sm);
+		font-variant-numeric: tabular-nums;
+	}
+
+	caption {
+		padding-bottom: var(--space-2xs);
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+		text-align: start;
+	}
+
+	th,
+	td {
+		padding: var(--space-3xs) var(--space-xs) var(--space-3xs) 0;
+		border-bottom: 1px solid var(--line);
+		text-align: start;
+		white-space: nowrap;
+	}
+
+	td {
+		text-align: end;
+	}
+
+	thead th {
+		white-space: normal;
+		vertical-align: bottom;
+	}
+
+	.scoreline td,
+	.scoreline thead th:not(:first-child) {
+		text-align: end;
+	}
+
+	.scoreline thead th,
+	.scoreline .margin {
+		white-space: normal;
+	}
+
+	.source {
+		margin-top: var(--space-s);
+	}
+</style>

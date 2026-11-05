@@ -1,0 +1,25 @@
+{
+	"name": "ekrina-docs",
+	"compatibility_date": "2026-10-01",
+	"main": "worker/index.ts",
+	"routes": [{ "pattern": "ekrina.thelazyweb.dev", "custom_domain": true }],
+	"workers_dev": false,
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "404-page",
+		// The Worker only negotiates page URLs; built assets go straight to the asset server,
+		// the only responses public/_headers reaches. robots.txt and the IndexNow key
+		// (scripts/indexnow.ts) skip it so crawler fetches aren't logged as views.
+		"run_worker_first": [
+			"/*",
+			"!/_astro/*",
+			"!/pagefind/*",
+			"!/robots.txt",
+			"!/c7d40e169ebac107977cd58b290eb1b3.txt",
+		],
+	},
+	// Page and Markdown views, logged server-side. Query them with the SQL API:
+	// POST api.cloudflare.com/client/v4/accounts/<id>/analytics_engine/sql
+	"analytics_engine_datasets": [{ "binding": "VIEWS", "dataset": "ekrina_docs_views" }],
+}

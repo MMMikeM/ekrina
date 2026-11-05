@@ -1,0 +1,62 @@
+/*
+ * The type stacked under a parameter or field name, in reference tables. The
+ * same rule spaces it in the header and the rows, so the two line up.
+ */
+.member-type {
+	display: block;
+	margin-top: 0.375rem;
+	font-size: var(--text-xs);
+	line-height: 1.5;
+}
+
+.sl-markdown-content :is(th, td):first-child {
+	line-height: 1.5;
+}
+
+.member-type code {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--sl-color-gray-3);
+}
+
+.member-type a code {
+	color: var(--sl-color-text-accent);
+}
+
+/*
+ * Starlight lays tables out as blocks, so they scroll sideways when wide but
+ * shrink to their content when not. Reference tables wrap instead of
+ * overflowing, so they span the column like the text around them.
+ */
+.sl-markdown-content table:not(:where(.not-content *)) {
+	display: table;
+	width: 100%;
+}
+
+.sl-markdown-content .table-scroll {
+	overflow-x: auto;
+}
+
+/*
+ * Parameter and field tables get a fixed name column, so it lines up from one
+ * table to the next. Prose tables keep sizing columns to their content.
+ */
+.sl-markdown-content table:has(th .member-type) {
+	table-layout: fixed;
+}
+
+.sl-markdown-content table:has(th .member-type) th:first-child {
+	width: 35%;
+}
+
+th .member-type {
+	color: var(--sl-color-gray-3);
+	font-weight: normal;
+}
+
+/* Fixed layout won't widen a column for a long name, so let it break instead. */
+.sl-markdown-content table:has(th .member-type) td:first-child {
+	overflow-wrap: anywhere;
+}
+
