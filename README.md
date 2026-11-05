@@ -120,19 +120,24 @@ A searcher that answers a single query and is thrown away comes out slightly beh
 ### Highlighting a result
 
 `ranges` are `[start, end]` pairs, both inclusive, in ascending order, and they index the string you passed in rather than a normalised copy of it.
-Slicing the original text is therefore the whole job, accents and casing included:
+Slicing the original text is therefore the whole job, accents and casing included.
+Escape each slice before it becomes HTML, since the text is whatever your list holds:
 
 ```typescript
 import { createFuzzySearch, type HighlightRanges } from "ekrina";
+
+const escapeHtml = (text: string): string =>
+	text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 const highlight = (text: string, ranges: HighlightRanges): string => {
 	let html = "";
 	let cursor = 0;
 	for (const [start, end] of ranges) {
-		html += `${text.slice(cursor, start)}<mark>${text.slice(start, end + 1)}</mark>`;
+		const before = escapeHtml(text.slice(cursor, start));
+		html += `${before}<mark>${escapeHtml(text.slice(start, end + 1))}</mark>`;
 		cursor = end + 1;
 	}
-	return html + text.slice(cursor);
+	return html + escapeHtml(text.slice(cursor));
 };
 
 const commands = [
