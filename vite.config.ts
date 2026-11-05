@@ -1,4 +1,5 @@
 import { defineConfig } from "vite-plus";
+import { agentsMd } from "./scripts/agents-md.ts";
 
 export default defineConfig({
 	fmt: {
@@ -41,6 +42,7 @@ export default defineConfig({
 				name: "strip-coverage-hints",
 				renderChunk: (code: string) => code.replace(/\/\* v8 ignore (?:next|start|stop) \*\//g, ""),
 			},
+			agentsMd(),
 		],
 	},
 	test: {
