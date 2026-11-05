@@ -415,8 +415,8 @@ describe("in a searcher", () => {
 		const search = createFuzzySearch(
 			[{ title: "Hxgxextx", body: "Hagueta" }],
 			[
-				{ text: (r) => r.title },
-				{ text: (r) => r.body },
+				{ selectField: (r) => r.title },
+				{ selectField: (r) => r.body },
 			],
 		);
 		const [result] = search("hget");
@@ -425,8 +425,8 @@ describe("in a searcher", () => {
 		const [reversed] = createFuzzySearch(
 			[{ title: "Hagueta", body: "Hxgxextx" }],
 			[
-				{ text: (r) => r.title },
-				{ text: (r) => r.body },
+				{ selectField: (r) => r.title },
+				{ selectField: (r) => r.body },
 			],
 		)("hget");
 		expect(reversed.score).toBe(reversed.fields[0]?.score);
@@ -460,8 +460,8 @@ describe("in a searcher", () => {
 	it("ranks an item by where its best field's match ends", () => {
 		const bodies = (items: { title: string; body: string }[]) =>
 			createFuzzySearch(items, [
-				{ text: (r) => r.title },
-				{ text: (r) => r.body },
+				{ selectField: (r) => r.title },
+				{ selectField: (r) => r.body },
 			])("hget").map((r) => r.item.body);
 		const beaten = [
 			{ title: "Hxgxet", body: "Hgueetx" },
@@ -482,8 +482,8 @@ describe("in a searcher", () => {
 				{ title: "Handcrafted Wooden Table", body: "Steel" },
 			],
 			[
-				{ text: (r) => r.title },
-				{ text: (r) => r.body },
+				{ selectField: (r) => r.title },
+				{ selectField: (r) => r.body },
 			],
 		);
 		expect(search("handcxafted wooxen").map((r) => r.item.title)).toEqual([
@@ -510,7 +510,7 @@ describe("in a searcher", () => {
 			["Hget Lane", "Huguette Brown"],
 			[
 				{
-					text: (s) => {
+					selectField: (s) => {
 						if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
 						return s;
 					},
@@ -534,7 +534,7 @@ describe("in a searcher", () => {
 	it("skips an item whose field is missing", () => {
 		const search = createFuzzySearch(
 			[{ name: null }, { name: "Ergonomic" }],
-			[{ text: (r) => r.name }],
+			[{ selectField: (r) => r.name }],
 		);
 		expect(search("ergxnomiq").map((r) => r.item.name)).toEqual(["Ergonomic"]);
 		expect(search("________")).toEqual([]);

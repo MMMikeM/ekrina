@@ -68,7 +68,7 @@ describe("scorer honours the same word boundaries as the matcher", () => {
 		it("the boundary tiers fire across every separator splitWords honours", () => {
 			for (const sep of ["?", "&", "!", "+", "@", "#", "*", "\t"]) {
 				expect(fuzzyMatch(`foo${sep}bar`, "bar")?.tier, `sep ${JSON.stringify(sep)}`).toBe(
-					"boundary-exact",
+					"boundary-cased",
 				);
 				expect(fuzzyMatch(`FOO${sep}BAR`, "bar")?.tier, `sep ${JSON.stringify(sep)}`).toBe(
 					"boundary",

@@ -174,7 +174,7 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "ekrina (acronym)",
 		make: () => {
-			const spec = [{ text: (x: string) => x, acronym: true }];
+			const spec = [{ selectField: (x: string) => x, acronym: true }];
 			const acronym = createFuzzySearch(list, spec);
 			return {
 				count: (q) => acronym(q).length,

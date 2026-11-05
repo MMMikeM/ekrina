@@ -2,8 +2,17 @@
 
 ## 2.0.0 (unreleased)
 
-One matcher, which corrects far more than one character.
-`SCORES`, `TYPO_PENALTY` and the `Tier` strings are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did.
+One matcher, which corrects far more than one character, and three renames.
+Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the three names below.
+
+- **`FieldSpec.text` is `selectField`.**
+  It was the one function on the public surface named like a value, and `text` is also the string `fuzzyMatch(text, query)` takes; the single-field form's parameter is `selectField` too.
+  Rename `text:` to `selectField:` in each field spec.
+- **`FieldSpec.atBest` is `demoteBy`.**
+  The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
+- **The `boundary-exact` tier is `boundary-cased`, and `SCORES.BOUNDARY_EXACT` is `SCORES.BOUNDARY_CASED`.**
+  Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`); this tier means a word starts with the query in the same case.
+  Its score, 0.9, is unchanged.
 
 - **Corrections reach further, when the query as typed matches poorly.**
   As well as one wrong, missing, extra or swapped character:

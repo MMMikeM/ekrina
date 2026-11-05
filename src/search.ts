@@ -84,9 +84,9 @@ export const fuzzyMatch = (
 };
 
 type ResolvedSpec<T> = {
-	text: (item: T) => string | null;
+	selectField: (item: T) => string | null;
 	acronym: boolean;
-	atBest: number;
+	demoteBy: number;
 };
 
 // The whole-corpus rescue index: per-item union masks and bigram sets.
@@ -111,17 +111,17 @@ const itemGateOf = (
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
 const resolveFieldSpecs = <T>(
-	extract?: ((item: T) => string | null) | FieldSpec<T>[],
+	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): ResolvedSpec<T>[] => {
-	const specs: FieldSpec<T>[] = !extract
-		? [{ text: (item) => item as unknown as string }]
-		: typeof extract === "function"
-			? [{ text: extract }]
-			: extract;
+	const specs: FieldSpec<T>[] = !selection
+		? [{ selectField: (item) => item as unknown as string }]
+		: typeof selection === "function"
+			? [{ selectField: selection }]
+			: selection;
 	return specs.map((spec) => ({
-		text: spec.text,
+		selectField: spec.selectField,
 		acronym: spec.acronym ?? false,
-		atBest: spec.atBest ?? 0,
+		demoteBy: spec.demoteBy ?? 0,
 	}));
 };
 
@@ -151,23 +151,23 @@ const resolveFieldSpecs = <T>(
  * const search = createFuzzySearch(users, (u) => u.name);
  *
  * @example
- * // Multiple fields, per-field config (body never outranks title)
+ * // Multiple fields, per-field config (a body hit ranks like a title contains)
  * const search = createFuzzySearch(posts, [
- *   { text: (p) => p.title },
- *   { text: (p) => p.body, atBest: SCORES.CONTAINS },
+ *   { selectField: (p) => p.title },
+ *   { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
  * ]);
  */
 export function createFuzzySearch(list: string[]): FuzzySearcher<string>;
 export function createFuzzySearch<T>(
 	list: T[],
-	getText: (item: T) => string | null,
+	selectField: (item: T) => string | null,
 ): FuzzySearcher<T>;
 export function createFuzzySearch<T>(list: T[], specs: FieldSpec<T>[]): FuzzySearcher<T>;
 export function createFuzzySearch<T>(
 	list: T[],
-	extract?: ((item: T) => string | null) | FieldSpec<T>[],
+	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): FuzzySearcher<T> {
-	const resolvedSpecs = resolveFieldSpecs(extract);
+	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
 	// Which result each item holds in the current matches, so a second-pass
@@ -215,7 +215,7 @@ export function createFuzzySearch<T>(
 			bigrams.lo = 0;
 			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const raw = resolvedSpecs[f].text(item) || "";
+				const raw = resolvedSpecs[f].selectField(item) || "";
 				const mask = rawFieldScan(raw, bigrams);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
@@ -232,7 +232,7 @@ export function createFuzzySearch<T>(
 		if (normalisedFields[base] !== undefined) return;
 		const item = list[i];
 		for (let f = 0; f < specCount; f++) {
-			const raw = resolvedSpecs[f].text(item) || "";
+			const raw = resolvedSpecs[f].selectField(item) || "";
 			const lead = raw.length - raw.trimStart().length;
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
 			const field = raw.trim();
@@ -291,10 +291,10 @@ export function createFuzzySearch<T>(
 		let heldInListOrder: number[] | null = null;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
-		// objects per call, so the atBest shift can mutate.
+		// objects per call, so the demoteBy shift can mutate.
 		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
 			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
-			result.score += resolvedSpecs[f].atBest;
+			result.score += resolvedSpecs[f].demoteBy;
 			if (leads !== null) {
 				const lead = leads[at];
 				if (lead) shiftRanges(result.ranges, lead);
@@ -405,7 +405,7 @@ export function createFuzzySearch<T>(
 				const item = list[i];
 				let admitted = false;
 				for (let f = 0; f < specCount && !admitted; f++) {
-					admitted = gate.test(resolvedSpecs[f].text(item) || "");
+					admitted = gate.test(resolvedSpecs[f].selectField(item) || "");
 				}
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
@@ -451,7 +451,7 @@ export function createFuzzySearch<T>(
 			for (let f = 0; f < specCount; f++) {
 				const fallback = fallbacks[f];
 				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
-				if (!fallback.admitsText(resolvedSpecs[f].text(list[i]) || "")) continue;
+				if (!fallback.admitsText(resolvedSpecs[f].selectField(list[i]) || "")) continue;
 				materialise(i);
 				const result = fallback.match(
 					trimmedFields[base + f] as string,

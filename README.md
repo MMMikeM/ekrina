@@ -77,15 +77,15 @@ const posts = [
 	{ title: "Release notes", body: "banana picker shipped" },
 ];
 const byField = createFuzzySearch(posts, [
-	{ text: (p) => p.title },
-	{ text: (p) => p.body, atBest: SCORES.CONTAINS }, // body's best hit ranks like a bare contains
+	{ selectField: (p) => p.title },
+	{ selectField: (p) => p.body, demoteBy: SCORES.CONTAINS }, // body's best hit ranks like a bare contains
 ]);
 byField("ban");
 // [
 //   { item: posts[0], score: 0.5, fields: [{ score: 0.5, tier: "prefix", ranges: [[0, 2]] }, null] },
 //   { item: posts[1], score: 2.5, fields: [null, { score: 2.5, tier: "prefix", ranges: [[0, 2]] }] },
 // ]
-// item score = the best field score; body scores are shifted by atBest (0.5 + 2 = 2.5),
+// item score = the best field score; body scores are demoted by 2 (0.5 + 2 = 2.5),
 // so the title hit leads even though both are prefix matches.
 ```
 
@@ -199,7 +199,7 @@ Each match reports a numeric `score` (for sorting) and a categorical `tier`:
 | 0     | `exact`            | exact match                                |
 | 0.1   | `normalised-exact` | case / diacritics-insensitive exact        |
 | 0.5   | `prefix`           | starts with query                          |
-| 0.9   | `boundary-exact`   | at a word boundary, exact case             |
+| 0.9   | `boundary-cased`   | at a word boundary, exact case             |
 | 1     | `boundary`         | at a word boundary                         |
 | 1.5   | `multi-word`       | every query word starts a word, any order  |
 | 1.8   | `acronym`          | word initials (opt-in via `acronym: true`) |
@@ -212,7 +212,7 @@ A word typed sparsely is a `corrected` match too, scored just above `contains` a
 A correction is a guess at what you meant, so the literal hit always ranks first.
 `score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 
-Import `SCORES` for thresholds and `atBest` values; or read `tier` directly:
+Import `SCORES` for thresholds and `demoteBy` values; or read `tier` directly:
 
 ```typescript
 results.filter((r) => r.score <= SCORES.CONTAINS); // drop fuzzy chains and deep rescues
@@ -226,7 +226,7 @@ const top = results[0]?.fields[0];
 if (top?.tier === "corrected") notice(`Showing results for ${top.corrected}`);
 ```
 
-`atBest` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
+`demoteBy` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
 All four typo tiers also score above `CONTAINS` (a rescued contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.
 
 > **Long text:** a fuzzy chain assembled from chunks scattered across a document is junk, since a long enough text holds the letters of almost any word somewhere.
@@ -253,7 +253,7 @@ Anything it refuses either matched a higher tier already or wasn't worth showing
 
   // several fields
 - const search = createFuzzySearch(items, { getText: (i) => [i.title, i.body] });
-+ const search = createFuzzySearch(items, [{ text: (i) => i.title }, { text: (i) => i.body }]);
++ const search = createFuzzySearch(items, [{ selectField: (i) => i.title }, { selectField: (i) => i.body }]);
 
   // reading a result
 - for (const { item, matches } of search(query)) highlight(item.title, matches[0]);
@@ -279,7 +279,7 @@ Behavioural differences:
   EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.**
   microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary.
-  `useMemo(() => createFuzzySearch(list, getText), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
+  `useMemo(() => createFuzzySearch(list, selectField), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
 
 Ekrina is ~6.4 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
 
@@ -370,7 +370,7 @@ type Tier =
 	| "exact"
 	| "normalised-exact"
 	| "prefix"
-	| "boundary-exact"
+	| "boundary-cased"
 	| "boundary"
 	| "multi-word"
 	| "acronym"
@@ -386,9 +386,9 @@ type MatchResult = {
 };
 
 type FieldSpec<T> = {
-	text: (item: T) => string | null;
+	selectField: (item: T) => string | null;
 	acronym?: boolean; // default false
-	atBest?: number; // shifts this field's scores; its best possible hit ranks here
+	demoteBy?: number; // added to every score this field produces
 };
 
 type FuzzyResult<T> = {

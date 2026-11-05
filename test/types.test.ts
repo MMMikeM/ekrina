@@ -14,18 +14,18 @@ describe("types", () => {
 		expect(r === undefined || typeof r.item === "string").toBe(true);
 	});
 
-	it("getText overload infers the item type without a cast", () => {
+	it("selectField overload infers the item type without a cast", () => {
 		const users: User[] = [{ name: "Ada", email: "a@x.com" }];
 		// If T weren't inferred as User, u.name would not typecheck.
 		const r: FuzzyResult<User> | undefined = createFuzzySearch(users, (u) => u.name)("ada")[0];
 		expect(r?.item.name ?? "Ada").toBe("Ada");
 	});
 
-	it("field-spec overload typechecks acronym/atBest", () => {
+	it("field-spec overload typechecks acronym/demoteBy", () => {
 		const users: User[] = [{ name: "United States", email: "us@x.com" }];
 		const fields: FieldSpec<User>[] = [
-			{ text: (u) => u.name, acronym: true, atBest: SCORES.CONTAINS },
-			{ text: (u) => u.email },
+			{ selectField: (u) => u.name, acronym: true, demoteBy: SCORES.CONTAINS },
+			{ selectField: (u) => u.email },
 		];
 		const first: MatchResult | null | undefined = createFuzzySearch(users, fields)("us")[0]
 			?.fields[0];

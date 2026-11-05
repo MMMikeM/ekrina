@@ -15,8 +15,8 @@ const products: Product[] = [
 ];
 
 const fields: FieldSpec<Product>[] = [
-	{ text: (p) => p.title, acronym: true },
-	{ text: (p) => p.tags, atBest: SCORES.CONTAINS },
+	{ selectField: (p) => p.title, acronym: true },
+	{ selectField: (p) => p.tags, demoteBy: SCORES.CONTAINS },
 ];
 
 const queries = [
