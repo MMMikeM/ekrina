@@ -168,6 +168,11 @@ const rawSections = memoize((symbol: Symbol) => {
 const description = (symbol: Symbol) =>
 	rawSections(symbol)?.text ?? checker.getDocumentationCommentOfSymbol(symbol);
 
+const linksMdn = (text: string) =>
+	[...text.matchAll(/\]\(([^)\s]+)\)/g)].some(
+		([, url = ""]) => URL.canParse(url) && new URL(url).hostname === "developer.mozilla.org",
+	);
+
 const tableCell = (text: string) => text.replaceAll("|", "\\|").replaceAll("\n", " ");
 
 // A row typed by one of the library's own types, and with no doc of its own,
@@ -613,7 +618,7 @@ const renderDomType = (name: string) => {
 		"",
 		...(values ? [fenced(`type ${name} = ${values};`), ""] : []),
 		...(text ? [text, ""] : []),
-		...(!values && !text.includes("developer.mozilla.org") ? [`[MDN reference](${mdn})`, ""] : []),
+		...(!values && !linksMdn(text) ? [`[MDN reference](${mdn})`, ""] : []),
 	];
 };
 
