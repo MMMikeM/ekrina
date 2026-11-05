@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.0.0 (unreleased)
+
+One matcher, which corrects far more than one character, and three renames.
+Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the three names below.
+
+- **`FieldSpec.text` is `selectField`.**
+  It was the one function on the public surface named like a value, and `text` is also the string `fuzzyMatch(text, query)` takes; the single-field form's parameter is `selectField` too.
+  Rename `text:` to `selectField:` in each field spec.
+- **`FieldSpec.atBest` is `demoteBy`.**
+  The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
+- **The `boundary-exact` tier is `boundary-cased`, and `SCORES.BOUNDARY_EXACT` is `SCORES.BOUNDARY_CASED`.**
+  Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`); this tier means a word starts with the query in the same case.
+  Its score, 0.9, is unchanged.
+
+- **Corrections reach further, when the query as typed matches poorly.**
+  As well as one wrong, missing, extra or swapped character:
+  - two mistakes in a word of eight letters or more, or one in each phrase word of five or more, at 2.1 each;
+  - a space typed inside a word or left out between two, as one mistake;
+  - a word typed sparsely, at least four of its letters in order from its first and covering half of it (`hget` for "Huguette"), scored just above `contains`;
+  - a key held down, a run of three or more of one letter, as one mistake (`twaaain`);
+  - two neighbouring letters swapped in a four-letter word, undone where the fix starts a word (`tahn` for "Than"), even beside a fuzzy chain that keeps other short corrections from running.
+
+  A word read any of these ways reports `corrected` spelt as the field spells it.
+  On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
+  The cost is about a third more per query once a searcher is warm (0.54–0.64 → 0.74–0.88 ms at 10k), 24–34% more per 100k session, about the same first answer, and 1.6 MB more held at 100k; literal hits take no longer, since the second pass runs only while fewer than ten items match literally (docs/benchmarks.md, docs/performance.md).
+- **The benchmark measures real data.**
+  The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.
+  Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
+  On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
+
 ## 1.1.2 (2026-11-02)
 
 - **A query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected.**

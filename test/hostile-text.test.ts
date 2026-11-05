@@ -34,7 +34,7 @@ const hostile: [string, (scale: number) => string, string][] = [
 	],
 ];
 
-describe("matching long text an attacker controls", () => {
+describe(`matching long text an attacker controls`, () => {
 	for (const [label, textAtScale, query] of hostile) {
 		it(`answers in linear time: ${label}`, () => {
 			const text = { 1: textAtScale(1), 2: textAtScale(2) };
@@ -53,11 +53,16 @@ describe("long text still matches the way short text does", () => {
 	const short = "Handcrafted Wooden Chair";
 	const long = "lorem ipsum dolor sit amet ".repeat(20) + short;
 
-	for (const query of ["wooden", "craft", "chair wooden", "hcrafted", "handcrafed", "woodn chair"]) {
+	for (const query of ["wooden", "craft", "chair wooden", "handcrafed", "woodn chair"]) {
 		it(`\`${query}\` reaches the same tier past the long-text gate`, () => {
 			expect(fuzzyMatch(long, query)?.tier).toBe(fuzzyMatch(short, query)?.tier);
 		});
 	}
+
+	it("a word typed sparsely is read as that word only up to 512 characters", () => {
+		expect(fuzzyMatch(short, "hcrafted")?.tier).toBe("corrected");
+		expect(fuzzyMatch(long, "hcrafted")?.tier).toBe("fuzzy");
+	});
 
 	it("a searcher finds a phrase in a long field", () => {
 		const search = createFuzzySearch([long, "Steel Table"]);
@@ -75,26 +80,6 @@ const alphabet = "abcdefghijklmnopqrstuvwxyz ";
 
 // Each of these threw, hung, or ran for seconds while queries had no length bound.
 describe("a query an attacker controls", () => {
-	const longField = alphabet.repeat(12);
-	const hostileQueries: [string, string, string][] = [
-		["a single word of 16,000 characters", alphabet, mixedWord(16_000)],
-		["a single word of 16,000 characters, against a long field", longField, mixedWord(16_000)],
-		["a phrase with an absent word of 16,385 characters", longField, `hello ${mixedWord(16_385)}`],
-		["a word repeated 4,000 times", "the cat sat on the mat ".repeat(2_700), Array(4_000).fill("the").join(" ")],
-		[
-			"a phrase of 4,900 distinct characters",
-			"Blue Wooden Chair — Oak",
-			Array.from({ length: 4_900 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join("") + " blue",
-		],
-	];
-
-	for (const [label, text, query] of hostileQueries) {
-		it(`answers quickly without throwing: ${label}`, () => {
-			expect(msToRun(() => fuzzyMatch(text, query))).toBeLessThan(250);
-			expect(msToRun(() => createFuzzySearch([text, "Red Sofa"])(query))).toBeLessThan(250);
-		});
-	}
-
 	it("is matched on its first 256 characters", () => {
 		const field = "a".repeat(256) + "zzz";
 		expect(fuzzyMatch(field, "a".repeat(300))?.tier).toBe("prefix");
@@ -124,6 +109,42 @@ describe("a query an attacker controls", () => {
 		expect(fuzzyMatch(`hello ${word}`, `hello ${dropped}`)?.tier).not.toBe("corrected");
 	});
 
+	it("matches regular-expression syntax literally", () => {
+		expect(fuzzyMatch("price (USD) [net]", "(usd) [net]")?.tier).toBe("boundary");
+		expect(createFuzzySearch(["a.b", "axb"])("a.b").map((result) => result.item)).toEqual(["a.b"]);
+		expect(createFuzzySearch(["plain"])("^$|\\*+?{}")).toEqual([]);
+	});
+
+	it("can name any number of rare characters and still be folded correctly", () => {
+		for (let batch = 0; batch < 300; batch++) {
+			const start = 0x4e00 + batch * 256;
+			normaliseText(Array.from({ length: 256 }, (_, i) => String.fromCodePoint(start + i)).join(""));
+		}
+		expect(normaliseText("Ärger ПРИВЕТ Ḁ")).toBe("arger привет a");
+	});
+});
+
+const longField = alphabet.repeat(12);
+const hostileQueries: [string, string, string][] = [
+	["a single word of 16,000 characters", alphabet, mixedWord(16_000)],
+	["a single word of 16,000 characters, against a long field", longField, mixedWord(16_000)],
+	["a phrase with an absent word of 16,385 characters", longField, `hello ${mixedWord(16_385)}`],
+	["a word repeated 4,000 times", "the cat sat on the mat ".repeat(2_700), Array(4_000).fill("the").join(" ")],
+	[
+		"a phrase of 4,900 distinct characters",
+		"Blue Wooden Chair — Oak",
+		Array.from({ length: 4_900 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join("") + " blue",
+	],
+];
+
+describe(`a query an attacker controls`, () => {
+	for (const [label, text, query] of hostileQueries) {
+		it(`answers quickly without throwing: ${label}`, () => {
+			expect(msToRun(() => fuzzyMatch(text, query))).toBeLessThan(250);
+			expect(msToRun(() => createFuzzySearch([text, "Red Sofa"])(query))).toBeLessThan(250);
+		});
+	}
+
 	it("costs no more than a short query when matched against every row of a list", () => {
 		const rows = Array.from({ length: 10_000 }, (_, i) => `Blue Wooden Chair ${i}`);
 		const matchEveryRow = (query: string) => () => rows.map((row) => fuzzyMatch(row, query));
@@ -138,19 +159,5 @@ describe("a query an attacker controls", () => {
 		};
 		const twoCopies = fastestMsToRun(copiesOfThe(2));
 		expect(fastestMsToRun(copiesOfThe(64))).toBeLessThan(twoCopies * 4);
-	});
-
-	it("matches regular-expression syntax literally", () => {
-		expect(fuzzyMatch("price (USD) [net]", "(usd) [net]")?.tier).toBe("boundary");
-		expect(createFuzzySearch(["a.b", "axb"])("a.b").map((result) => result.item)).toEqual(["a.b"]);
-		expect(createFuzzySearch(["plain"])("^$|\\*+?{}")).toEqual([]);
-	});
-
-	it("can name any number of rare characters and still be folded correctly", () => {
-		for (let batch = 0; batch < 300; batch++) {
-			const start = 0x4e00 + batch * 256;
-			normaliseText(Array.from({ length: 256 }, (_, i) => String.fromCodePoint(start + i)).join(""));
-		}
-		expect(normaliseText("Ärger ПРИВЕТ Ḁ")).toBe("arger привет a");
 	});
 });

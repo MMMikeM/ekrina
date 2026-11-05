@@ -39,7 +39,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 
 		it("the dead ends below really match nothing", () => {
 			const search = createFuzzySearch(list);
-			expect(search("statsu reportqz")).toEqual([]);
+			expect(search("statsu reportqzx")).toEqual([]);
 			expect(search("qqzz")).toEqual([]);
 		});
 
@@ -48,7 +48,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 			{ name: "the same query twice", queries: ["statsu report", "statsu report"] },
 			{
 				name: "backspacing out of a dead end",
-				queries: ["statsu reportqz", ...backspacing("statsu reportqz", "statsu report")],
+				queries: ["statsu reportqzx", ...backspacing("statsu reportqzx", "statsu report")],
 			},
 			{ name: "after a query with no matches", queries: ["qqzz", "statsu report"] },
 			{

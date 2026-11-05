@@ -20,15 +20,15 @@ const toCyrillic = (s: string): string =>
 		return ch === ch.toLowerCase() ? mapped : mapped.toUpperCase();
 	});
 
-// The ascii corpus still carries a few accented letters, which would stay Latin
-// on the Cyrillic side and fold onto a letter the Cyrillic query never contains.
+// The en corpus carries accented letters, which would stay Latin on the
+// Cyrillic side and fold onto a letter the Cyrillic query never contains.
 const stripAccents = (s: string): string => s.normalize("NFD").replace(/\p{M}+/gu, "");
 
-const ascii = CORPORA.find((c) => c.name === "ascii");
-if (!ascii) throw new Error("ascii corpus missing");
-const latin = ascii.build(SIZE).map(stripAccents);
+const en = CORPORA.find((c) => c.name === "en");
+if (!en) throw new Error("en corpus missing");
+const latin = en.build(SIZE).map(stripAccents);
 const cyrillic = latin.map(toCyrillic);
-const queries = ascii.queries.map(stripAccents);
+const queries = en.queries.map(stripAccents);
 
 const SCRIPTS = [
 	{ list: latin, queries },

@@ -35,7 +35,7 @@ describe("the adjacent-swap rescue", () => {
 		// "trail" genuinely fuzzy-matches... or misses; either way the result
 		// must not silently become a rescued "trial" swap when a real tier hit
 		// exists. Contains here: "geenric" inside the field verbatim.
-		expect(fuzzyMatch("the geenric one", "geenric")?.tier).toBe("boundary-exact");
+		expect(fuzzyMatch("the geenric one", "geenric")?.tier).toBe("boundary-cased");
 	});
 
 	it("stays out of short queries", () => {

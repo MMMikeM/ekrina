@@ -15,17 +15,16 @@ let table: Record<string, string> | null = null;
 
 /**
  * For each ASCII letter and digit, every code point that `normaliseText` folds
- * to it — so a gate built from a normalised query can run against the caller's
+ * to it, so a gate built from a normalised query can run against the caller's
  * own un-normalised strings. A query character outside the table gets no raw
  * gate and takes the mask path: slower, never wrong.
  *
- * Generated on first use rather than shipped (the fold logic already ships;
- * the precomputed inverse was ~1 kB of redundant bytes), and folded in bulk —
- * one `toLowerCase` and one NFD pass over the separator-joined range,
- * mirroring `computeFold`'s rules — because per-character folding measured
- * ~0.7 ms where this is ~0.2. Never per query character: the classes gate the
- * FIELD side, so a class missing any rare source would false-reject a field
- * that carries it. test/unfold.test.ts pins equivalence with `normaliseText`.
+ * Built on first use from the fold logic, which ships anyway, and in bulk: one
+ * `toLowerCase` and one NFD pass over the separator-joined ranges, mirroring
+ * `computeFold`'s rules, since folding per character is several times slower.
+ * Never per query character: the classes gate the field side, so a class
+ * missing any source would false-reject a field that carries it.
+ * test/unfold.test.ts pins equivalence with `normaliseText`.
  */
 export const unfoldTable = (): Record<string, string> => {
 	if (table !== null) return table;

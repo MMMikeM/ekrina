@@ -85,7 +85,7 @@ if (cell) {
 	const self = fileURLToPath(import.meta.url);
 	const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1];
 
-	for (const corpus of ["ascii", "mixed"]) {
+	for (const corpus of ["en", "native"]) {
 		for (const [label, keys] of SEQUENCES) {
 			process.stderr.write(`\n${corpus} ${SIZE / 1000}k  ${label}: ${keys.join(" -> ")}\n`);
 			for (const library of LIBRARIES) {

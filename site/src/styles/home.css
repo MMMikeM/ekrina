@@ -1,0 +1,113 @@
+/* The home page is the only one with a hero. */
+
+[data-has-hero] {
+	--sl-main-pad: 0;
+}
+
+[data-has-hero] .page {
+	overflow-x: clip;
+}
+
+/* From tablet width up, more room at the sides than a phone gets. */
+@media (min-width: 48rem) {
+	[data-has-hero] {
+		--sl-content-pad-x: var(--space-xl);
+	}
+}
+
+[data-has-hero] .sl-container {
+	margin-inline: auto;
+}
+
+@media (min-width: 384px) {
+	:root[data-has-hero] {
+		--sl-content-width: 352px;
+	}
+}
+
+@media (min-width: 608px) {
+	:root[data-has-hero] {
+		--sl-content-width: 576px;
+	}
+}
+
+@media (min-width: 768px) {
+	:root[data-has-hero] {
+		--sl-content-width: 672px;
+	}
+}
+
+@media (min-width: 1024px) {
+	:root[data-has-hero] {
+		--sl-content-width: 928px;
+	}
+}
+
+@media (min-width: 1136px) {
+	:root[data-has-hero] {
+		--sl-content-width: 1040px;
+	}
+}
+
+@media (min-width: 1440px) {
+	:root[data-has-hero] {
+		--sl-content-width: 1080px;
+	}
+}
+
+[data-has-hero] .sl-markdown-content {
+	font-size: var(--text-lg);
+}
+
+[data-has-hero] .sl-markdown-content .level-h2 {
+	margin-top: var(--space-m);
+	padding-top: var(--space-l);
+	border-top: 1px solid var(--line);
+}
+
+[data-has-hero] .sl-markdown-content h2 {
+	font-size: var(--text-xl);
+	line-height: var(--leading-snug);
+}
+
+[data-has-hero] .sl-markdown-content .level-h2 + * {
+	margin-top: var(--space-s);
+}
+
+@media (min-width: 40rem) {
+	[data-has-hero] .sl-markdown-content .level-h2 {
+		margin-top: var(--space-xl);
+		padding-top: var(--space-xl);
+	}
+
+	[data-has-hero] .sl-markdown-content h2 {
+		font-size: var(--text-2xl);
+	}
+
+	[data-has-hero] .sl-markdown-content .level-h2 + * {
+		margin-top: var(--space-l);
+	}
+}
+
+[data-has-hero] :is(.sl-markdown-content, .annotated) > :is(p, ul:not(.chips)) {
+	max-width: 36em;
+}
+
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2xs);
+	padding: 0;
+	list-style: none;
+	font-family: var(--__sl-font-mono);
+	font-size: var(--text-sm);
+}
+
+.chips li {
+	margin: 0;
+	padding: var(--space-2xs) var(--space-xs);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-control);
+}
+

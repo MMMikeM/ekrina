@@ -26,7 +26,8 @@ export type ColdCell = {
 /** corpus → test kind (probe kinds + "batch") → list size → variant → cell. */
 export type ColdMatrix = Record<string, Record<string, Record<string, Record<string, ColdCell>>>>;
 
-export type ScorecardRow = { library: string; mrr: number };
+/** `mrr` is the group-weighted headline; `junk` the share of unanswerable queries answered at all. */
+export type ScorecardRow = { library: string; mrr: number; junk?: number };
 // `tiedRanks` spans the ranks the source shares with items the library scored
 // the same, which only list order puts in any sequence.
 export type ProbeCell = { count: number; rank: number | null; tiedRanks?: [number, number] };
@@ -36,19 +37,24 @@ export type ProbeTable = {
 	source: string | null;
 	cells: Record<string, ProbeCell>;
 };
-// One sampled query family: its MRR per library (scored families only) and
-// the median rows each returned.
+// One sampled query family: its MRR per library (scored families only), the
+// median rows each returned, and for a refusal row the share of its queries
+// each library answered at all.
 export type FamilyRow = {
 	kind: string;
 	scored: boolean;
 	queries: string[];
 	mrr: Record<string, number>;
 	medianRows: Record<string, number>;
+	group?: string;
+	answered?: Record<string, number>;
 };
 export type SessionRow = { library: string; stepMs: number[]; sessionMs: number };
 export type LongtextRow = {
 	docChars: number;
+	/** Absent words the fuzzy tier matched; corrections to a neighbouring word are counted apart. */
 	junkRate: number;
+	correctedRate: number;
 	presentHits: number;
 	presentProbes: number;
 	missMs: number;
@@ -94,10 +100,12 @@ const METHOD = {
 	size: "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
 	timing:
 		"process-cold (bench/run.ts): every sample is a fresh node process; index = the constructor call, query = the first answer per probe, batch = all probes once in one process; medians across processes, min kept; no warm-loop sampling anywhere",
-	quality: "MRR@10 over the scored probes; ranks are deterministic and measured untimed",
+	quality:
+		"MRR@10 over catalogue.ts's sampled families, weighted by group (typos 0.35, phonetic 0.25, partial words 0.15, query shape 0.15, noise 0.10); junk = share of queries nothing answers that a library answers anyway; ranks are deterministic and measured untimed",
 	corpora: {
-		ascii: "en faker locale — effectively no diacritics",
-		mixed: "mostly en with fr/pl every 7th item — ~5% of items carry a diacritic",
+		en: "English labels of the best-known Wikidata people, places, works, organisations and products — 8.9% of items carry a non-ASCII letter",
+		native: "the same items under their Wikidata native name where one exists — 20% non-ASCII, 10% in a non-Latin script",
+		emoji: "every emojibase-data emoji as label then tags, 1,923 items — scored for quality only",
 	},
 };
 

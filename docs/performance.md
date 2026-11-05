@@ -183,6 +183,65 @@ Only four-character queries that match nothing get slower (median first answer i
 A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
 `fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
 
+### Sparse matches are priced by what they skip
+
+The second pass scores a word typed sparsely inside a longer one at `CONTAINS + 0.05` plus a weight times the share of the longer word left untyped.
+At a weight of 0.5 the reading ranked "constatn" on "Constantine" (2.19) and "diea" on "Daniela" (2.26) above the one-edit corrections that finish a word ("Constant Djakpa", 2.60), so on real misspellings the two-edit matcher scored 0.57 on en and 0.65 on native where the one-edit matcher it replaced scored 0.73.
+Moving the base score instead traded the misspellings for the deletion families, which rely on the reading ranking high, and the headline did not move (−0.002 to +0.005 on every set).
+The skip weight separates the two, since a dropped letter skips 10–25% of a word and the regressions 27–43%. Headline MRR, by weight:
+
+| Set             |   0.5 |     1 |   1.5 |     2 |   2.5 |
+| --------------- | ----: | ----: | ----: | ----: | ----: |
+| en              | 0.899 | 0.899 | 0.906 | 0.906 | 0.908 |
+| native          | 0.895 | 0.895 | 0.898 | 0.900 | 0.897 |
+| emoji           | 0.901 | 0.901 | 0.904 | 0.906 | 0.905 |
+| en held-out     | 0.858 | 0.858 | 0.862 | 0.862 | 0.857 |
+| native held-out | 0.845 | 0.845 | 0.849 | 0.849 | 0.844 |
+
+At 1.5 every set rises and no family on any set falls by 0.05 or more: real misspellings on en go 0.57 → 0.65, random letter 0.78–0.88 → 0.88–0.95, and first letter wrong 0.80 → 0.90.
+From 2 the deletion families start to lose (two vowels dropped 1.00 → 0.95 held out, and up to 0.15 at 2.5), so the weight stops at 1.5.
+The reading changes only order, never which items match, so the junk and long-text rates are unchanged.
+
+### A held key is one edit
+
+A two-edit correction needs eight letters, since below that a second edit reaches too many other words, so the second pass could not undo `twaaain` or `cleeean`: a key held down adds two letters to a five-letter word.
+A run of three or more of one letter now counts as one edit, cut to two letters and corrected with the one edit left, once per word, when the cut word has five letters or more and nothing matches as typed.
+The reading is gated on the cut form, since a gate on the letters as typed refuses `twaaaaaain` on "Twain"; a fuzz of 157,030 matches with runs of three to eight letters found no false reject.
+Headline MRR, before → after:
+
+| Set             | Before | After |
+| --------------- | -----: | ----: |
+| en              |  0.906 | 0.909 |
+| native          |  0.898 | 0.904 |
+| emoji           |  0.904 | 0.907 |
+| en held-out     |  0.862 | 0.876 |
+| native held-out |  0.849 | 0.863 |
+
+Only the stuck-key family moved (0.50–0.90 → 0.98–1.00); the held-out draw uses the same generator as the published one, so it shows fresh queries, not other shapes of held key.
+The junk probes stay at 0 of 100 on every corpus, the long-text rates are unchanged, and five interleaved rounds of the 10k session put the two builds level outside two load spikes, one on each build.
+
+### Real misspellings: four-letter swaps and skipped letters
+
+On real misspellings the two-edit matcher scored 0.65 on en and native against the one-edit matcher's 0.73, and the two queries behind the gap were both sparse readings: `constatn` read as "Constan**t**i**n**" (2.40) above the one-edit "Constant" (2.60), and `rela` as "Ra**f**a**ela**" above "Real".
+Two changes close it and pass it.
+A sparse reading costs 0.15 more for each letter it skips past the first, so a reading that needs several insertions falls below a correction that finishes a word, while one dropped letter keeps its place.
+And a four-letter word with two neighbouring letters swapped is corrected wherever the fix starts a field word, even beside fuzzy chains: `tahn`, `htis`, `tehy` and `suop` all had a chain such as "Taha Hussein" matching as typed, which kept the one-edit rescue's short correction from running, and the fix's targets never pass the literal gates, so this reading alone scans the whole list.
+A swap keeps every letter, which is why it is safe this short where a drop or a substitution was not ("Short corrections are a fallback").
+Real-misspelling MRR, one-edit matcher → two-edit matcher before → after:
+
+| Set             | One-edit | Before | After |
+| --------------- | -------: | -----: | ----: |
+| en              |     0.73 |   0.65 |  0.78 |
+| native          |     0.73 |   0.65 |  0.78 |
+| emoji           |     0.75 |   0.80 |  0.90 |
+| en held-out     |     0.59 |   0.59 |  0.69 |
+| native held-out |     0.50 |   0.50 |  0.60 |
+
+The skip penalty was swept from 0 to 0.35: 0.15 gives the best mean headline (0.8952 → 0.8972), and from 0.25 two dropped vowels lose up to 0.13 held out for no further gain held out.
+At 0.15 the cost is two dropped vowels at 0.90–0.95 held out, from 1.00.
+Letting every query with only fuzzy chains read in full, rather than just the four-letter ones, scored the same and ran 8–30% slower, so only the swap reading reaches the whole list; three interleaved rounds put that build level with the one before it.
+The junk probes stay at 0 of 100 on every corpus and the long-text rates are unchanged.
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.

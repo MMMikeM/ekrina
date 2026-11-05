@@ -115,11 +115,11 @@ const boundaryOccurrence = (haystack: string, needle: string): number => {
 const boundaryTier = (
 	haystack: string,
 	needle: string,
-	tier: "boundary-exact" | "boundary",
+	tier: "boundary-cased" | "boundary",
 ): MatchResult | null => {
 	const at = boundaryOccurrence(haystack, needle);
 	if (at === -1) return null;
-	const score = tier === "boundary-exact" ? SCORES.BOUNDARY_EXACT : SCORES.BOUNDARY;
+	const score = tier === "boundary-cased" ? SCORES.BOUNDARY_CASED : SCORES.BOUNDARY;
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
 };
 
@@ -203,7 +203,7 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 // contains (2), so it must be tried first — a field matching both ways must
 // get the better tier, or cross-item ordering inverts. Initials never contain
 // a separator, so a multi-word query can never acronym-match.
-const literalTiers = (
+export const literalTiers = (
 	field: string,
 	normalisedField: string,
 	prepared: PreparedQuery,
@@ -225,7 +225,7 @@ const literalTiers = (
 		return { score: SCORES.PREFIX, tier: "prefix", ranges: [[0, normalisedQuery.length - 1]] };
 	}
 	const boundary =
-		boundaryTier(field, query, "boundary-exact") ??
+		boundaryTier(field, query, "boundary-cased") ??
 		boundaryTier(normalisedField, normalisedQuery, "boundary");
 	if (boundary) return boundary;
 

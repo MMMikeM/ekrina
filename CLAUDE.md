@@ -42,8 +42,8 @@ Adding a table means adding a region to `regions()` in `bench/tables.ts` and a m
 Guards to respect rather than route around:
 
 - The pipeline exits nonzero on a contaminated run — base ekrina measuring more than 10% slower than `ekrina (acronym)`, summed over every cold cell, even though the acronym row runs strictly more code per query. That means garbage collection or thermal throttling disturbed the run. Rerun on a quiet machine; do not publish it.
-- `bench/corpus-*.json` is frozen, and regeneration is gated behind `GEN_CORPUS=1` because every published rank and MRR derives from those exact sequences. Regenerating also changes the sampled query families and the representative queries, so the hand-written prose around the family tables needs rewriting with them.
-- `pnpm bench --scope=mixed-10k` scopes a dev run: it measures a partial matrix, so it prints and stops without touching `results.json` or the docs. `BENCH=` still works as an alias.
+- `bench/corpus-*.json` and `bench/misspellings.json` are frozen, and regeneration is gated behind `GEN_WIKIDATA=1` (the `en` and `native` corpora and the misspellings) and `GEN_EMOJI=1` (the emoji corpus) because every published rank and MRR derives from those exact sequences. Wikidata changes daily, so regenerating redraws items as well as the sampled families and representative queries, and the hand-written prose around the family tables needs rewriting with them.
+- `pnpm bench --scope=native-10k` scopes a dev run: it measures a partial matrix, so it prints and stops without touching `results.json` or the docs. `BENCH=` still works as an alias.
 
 ## Documentation
 
@@ -85,7 +85,7 @@ Keep them to a sentence or two. If a comment needs a paragraph, that's usually a
 
 Never narrate a change (`// now retries four placements`, `// fixed to handle hyphens`). That belongs in the commit message and CHANGELOG.md; the code is the current state. Same for history — "this used to be an allowlist that diverged", "earlier versions did per-variant work" — git has it.
 
-A file header is a comment, held to the same test. "What is this file" is the filename's job and "what does it export" is the exports' job; neither justifies a header, so `fuzzy.ts` restating the chunk rules its code already implements should go. Write one only for what reading the file cannot tell you — that `bench/funnel.test.ts` imports `../src` internals on purpose, that `bench/corpus-gen.test.ts` rewrites every published rank if run. Most files should open on their first import.
+A file header is a comment, held to the same test. "What is this file" is the filename's job and "what does it export" is the exports' job; neither justifies a header, so `fuzzy.ts` restating the chunk rules its code already implements should go. Write one only for what reading the file cannot tell you — that `bench/funnel.test.ts` imports `../src` internals on purpose, that `bench/corpus-wikidata-gen.test.ts` rewrites every published rank if run. Most files should open on their first import.
 
 ## Tests
 
@@ -95,7 +95,7 @@ Name tests as behaviour, not method — `"a dropped keystroke in an otherwise ex
 
 A tier with its own semantics gets its own file (`fuzzy-tier`, `adjacent-swap`, `typo-rescue`, `acronym`), and regression tests keep their provenance — `known-issues.test.ts` pins the six v0.x bugs and says so.
 
-Statistical claims live in `bench/`, where the corpora and the measurement do: the long-text junk rate is asserted by `bench/longtext.test.ts`, gate soundness by `bench/funnel.test.ts`, ranks and result-set sizes by `bench/hits.test.ts`, which scores MRR over sampled query families, each query by its first relevant result (`bench/corpus.ts` defines relevance), so no library is credited for how it breaks a tie. `test/` pins behaviour and the published constants. `bench/funnel.test.ts` reaches into `../src/gates` on purpose — `dist` doesn't export the gates and shouldn't.
+Statistical claims live in `bench/`, where the corpora and the measurement do: the long-text junk rate is measured and held under a ceiling by `bench/longtext.test.ts`, gate soundness by `bench/funnel.test.ts`, ranks and result-set sizes by `bench/hits.test.ts`, which scores MRR over sampled query families, each query by its first relevant result (`bench/corpus.ts` defines relevance), so no library is credited for how it breaks a tie. `test/` pins behaviour and the published constants. `bench/funnel.test.ts` reaches into `../src/gates` on purpose — `dist` doesn't export the gates and shouldn't.
 
 ## Prose
 

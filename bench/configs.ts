@@ -53,7 +53,7 @@ const FUSE_ALL: IFuseOptions<string> = {
 
 const FUSE_TUNED: IFuseOptions<string> = { ...FUSE_ALL, threshold: 0.45 };
 
-// SingleError with all four edits — uFuzzy's closest config to ekrina's one-edit rescue.
+// SingleError with all four edits: uFuzzy's closest config to ekrina's typo correction.
 const UFUZZY_ALL: uFuzzy.Options = {
 	intraMode: 1,
 	intraIns: 1,
@@ -174,7 +174,7 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "ekrina (acronym)",
 		make: () => {
-			const spec = [{ text: (x: string) => x, acronym: true }];
+			const spec = [{ selectField: (x: string) => x, acronym: true }];
 			const acronym = createFuzzySearch(list, spec);
 			return {
 				count: (q) => acronym(q).length,
@@ -306,8 +306,8 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js (tuned)",
 		make: () => {
-			// Swept over 0.2–0.6 with and without ignoreLocation: 0.45 scores the best
-			// MRR, from a median 33 rows against the default's 560 (docs/libraries/fuse.md).
+			// Swept over 0.2–0.6 with and without ignoreLocation on the bench's earlier
+			// corpora, where 0.45 scored the best MRR (docs/libraries/fuse.md).
 			const fuseTuned = new Fuse(list, FUSE_TUNED);
 			return {
 				count: (q) => fuseTuned.search(q).length,

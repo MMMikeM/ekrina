@@ -1,0 +1,26 @@
+---
+import Default from "@astrojs/starlight/components/MarkdownContent.astro";
+import rehypeParse from "rehype-parse";
+import rehypeStringify from "rehype-stringify";
+import { unified } from "unified";
+import { corpusSwitch } from "../corpus-switch.ts";
+
+// Starlight scrolls a wide table by making it a block, which also stops it
+// spanning the column; a wrapper scrolls instead, so the table can stay a table.
+const wrapTables = (html: string) =>
+	html
+		.replaceAll(/<table(?=[\s>])/g, '<div class="table-scroll"><table')
+		.replaceAll("</table>", "</table></div>");
+
+// Astro's default Markdown processor runs no rehype plugins, so the switch is applied to the rendered HTML.
+const switchCorpora = async (html: string) =>
+	/<strong>\S+ corpus/.test(html)
+		? String(await unified().use(rehypeParse, { fragment: true }).use(corpusSwitch).use(rehypeStringify).process(html))
+		: html;
+
+const content = wrapTables(await switchCorpora(await Astro.slots.render("default")));
+---
+
+<Default>
+	<Fragment set:html={content} />
+</Default>

@@ -1,17 +1,26 @@
 import type { Artifact, ColdCell, ProbeTable } from "./artifact.ts";
 import { PUBLISHED_SIZE } from "./artifact.ts";
 import { META, bySize, displayName, foldsFor } from "./libraries.ts";
+import { headlineMrr } from "./mrr.ts";
 
-type Align = "left" | "right";
+type Align = "left" | "right" | "center";
 
 const mdTable = (header: string[], rows: string[][], align: Align[]): string => {
 	const width = header.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
-	const pad = (cell: string, i: number): string =>
-		align[i] === "right" ? cell.padStart(width[i]) : cell.padEnd(width[i]);
+	const pad = (cell: string, i: number): string => {
+		if (align[i] === "right") return cell.padStart(width[i]);
+		if (align[i] === "left") return cell.padEnd(width[i]);
+		const before = Math.floor((width[i] - cell.length) / 2);
+		return cell.padStart(cell.length + before).padEnd(width[i]);
+	};
 	const line = (cells: string[]): string => `| ${cells.map(pad).join(" | ")} |`;
-	const rule = width
-		.map((w, i) => (align[i] === "right" ? `${"-".repeat(w + 1)}:` : "-".repeat(w + 2)))
-		.join("|");
+	const ruleOf = (w: number, i: number): string =>
+		align[i] === "right"
+			? `${"-".repeat(w + 1)}:`
+			: align[i] === "center"
+				? `:${"-".repeat(w)}:`
+				: "-".repeat(w + 2);
+	const rule = width.map(ruleOf).join("|");
 	return [line(header), `|${rule}|`, ...rows.map(line)].join("\n");
 };
 
@@ -44,11 +53,7 @@ export const libraryOf = (config: string): string =>
 // Unrounded, from the families: the scorecard's two decimals tie configurations
 // that the families tell apart.
 const mrrOf = (a: Artifact, config: string): number =>
-	mean(
-		Object.values(a.families ?? {}).map((families) =>
-			mean(families.filter((f) => f.scored).map((f) => f.mrr[config] ?? 0)),
-		),
-	);
+	mean(Object.values(a.families ?? {}).map((families) => headlineMrr(families, config)));
 
 /**
  * The configurations the main pages show: each library at its best-scoring
@@ -86,7 +91,7 @@ export const librarySlug = (library: string): string =>
 	library.replace(/^@nozbe\//, "").replace(/\.js$/, "").toLowerCase();
 
 /** Corpus the per-probe tables are drawn from; the docs say so in prose. */
-const PROBE_CORPUS = "mixed";
+const PROBE_CORPUS = "native";
 const PROBE_SIZE = "10000";
 
 const cellOf = (
@@ -161,6 +166,44 @@ const librariesTable = (): string =>
 			}),
 		["left", "left", "left", "left"],
 	);
+
+const isEkrinaVariant = (config: string): boolean =>
+	libraryOf(config) === "ekrina" && config !== "ekrina";
+
+const mark = (support: "yes" | "opt-in" | "partial" | "no"): string =>
+	support === "yes" ? "🟢" : support === "no" ? "🔴" : "🟡";
+
+// README.md's comparison: each library once, at its headline configuration,
+// on the corpus and list size the per-probe tables use. ms/query is the batch
+// cell's per-query time after the warm-up, the search-as-you-type number.
+const compareTable = (a: Artifact): string => {
+	const rows = a.scorecard.corpora[PROBE_CORPUS];
+	if (!rows) throw new Error(`no scorecard for corpus '${PROBE_CORPUS}' — run the quality stage first`);
+	const headline = headlineConfigs(a);
+	const shown = rows
+		.filter((r) => headline.has(r.library) && !isEkrinaVariant(r.library))
+		.sort((x, y) => Number(y.library === "ekrina") - Number(x.library === "ekrina") || y.mrr - x.mrr);
+	return mdTable(
+		["Library", "Gzip", "Deps", "MRR", "junk", "ms/query", "Tiers", "Ranges", "Typos"],
+		shown.map((r) => {
+			const meta = META[libraryOf(r.library)];
+			if (!meta) throw new Error(`no metadata for '${r.library}' in bench/libraries.ts`);
+			const batch = cellOf(a, PROBE_CORPUS, "batch", PROBE_SIZE, r.library);
+			return [
+				r.library === "ekrina" ? "**Ekrina**" : displayName(r.library),
+				`~${meta.gzipKB} kB`,
+				String(meta.deps),
+				r.mrr.toFixed(2),
+				r.junk === undefined ? "—" : r.junk.toFixed(2),
+				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
+				mark(meta.features.tier),
+				mark(meta.features.ranges),
+				meta.typoReach ?? "🔴",
+			];
+		}),
+		["left", "right", "right", "right", "right", "right", "center", "center", "left"],
+	);
+};
 
 const speedRowsOf = (a: Artifact, corpus: string, configs: Set<string>): string[] =>
 	variantsOf(a, corpus)
@@ -272,7 +315,7 @@ const scorecardTable = (
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
-		["Library", "MRR", "index ms", "cold ms", "batch ms", "batch/query"],
+		["Library", "MRR", "junk", "index ms", "cold ms", "batch ms", "batch/query"],
 		rows.filter((r) => shown.has(r.library)).map((r) => {
 			const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
 			const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
@@ -280,13 +323,14 @@ const scorecardTable = (
 			return [
 				emphasised.has(r.library) ? `**${name}**` : name,
 				r.mrr.toFixed(2),
+				r.junk === undefined ? "—" : r.junk.toFixed(2),
 				batch ? ms(batch.indexMs) : "—",
 				cold == null ? "—" : ms(cold),
 				batch ? ms(batch.queryMs) : "—",
 				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
 			];
 		}),
-		["left", "right", "right", "right", "right", "right"],
+		["left", "right", "right", "right", "right", "right", "right"],
 	);
 };
 
@@ -302,17 +346,21 @@ const familyColumns = (a: Artifact): string[] =>
 				mrrOf(a, y) - mrrOf(a, x),
 		);
 
+// Scored families show MRR@10 under their group; refusal rows show the share
+// of their queries each library answered at all, which a result cap cannot
+// shrink the way it shrinks a row count.
 const familyTable = (a: Artifact, corpus: string, scored: boolean, columns: string[]): string => {
 	const families = (a.families?.[corpus] ?? []).filter((family) => family.scored === scored);
+	const cell = (family: (typeof families)[number], lib: string): string =>
+		scored ? (family.mrr[lib] ?? 0).toFixed(2) : (family.answered?.[lib]?.toFixed(2) ?? "—");
 	return mdTable(
-		["Family", ...columns.map(displayName)],
+		[...(scored ? ["Group"] : []), scored ? "Family" : "Query nothing answers", ...columns.map(displayName)],
 		families.map((family) => [
+			...(scored ? [family.group ?? ""] : []),
 			family.kind,
-			...columns.map((lib) =>
-				scored ? (family.mrr[lib] ?? 0).toFixed(2) : String(family.medianRows[lib] ?? "—"),
-			),
+			...columns.map((lib) => cell(family, lib)),
 		]),
-		["left", ...columns.map((): Align => "right")],
+		[...(scored ? ["left" as Align] : []), "left", ...columns.map((): Align => "right")],
 	);
 };
 
@@ -357,14 +405,15 @@ const longtextTable = (a: Artifact): string => {
 	const longtext = a.longtext;
 	if (!longtext) throw new Error("no long-text data — run the quality stage first");
 	return mdTable(
-		["doc chars", "junk rate", "present hits", "miss ms"],
+		["doc chars", "fuzzy junk", "corrected", "present hits", "miss ms"],
 		longtext.rows.map((r) => [
 			String(r.docChars),
-			`${(100 * r.junkRate).toFixed(0)}%`,
+			`${(100 * r.junkRate).toFixed(1)}%`,
+			`${(100 * r.correctedRate).toFixed(1)}%`,
 			`${r.presentHits}/${r.presentProbes}`,
 			r.missMs.toFixed(3),
 		]),
-		["right", "right", "right", "right"],
+		["right", "right", "right", "right", "right"],
 	);
 };
 
@@ -407,6 +456,7 @@ export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
 	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
 	out.libraries = librariesTable();
+	if (a.scorecard.corpora[PROBE_CORPUS]) out.compare = compareTable(a);
 	const headline = headlineConfigs(a);
 	for (const corpus of Object.keys(a.coldMatrix)) {
 		out[`speed-${corpus}`] = scaleTable(a, corpus, headline);

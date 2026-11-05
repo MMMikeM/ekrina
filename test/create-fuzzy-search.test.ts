@@ -1,6 +1,6 @@
 /**
- * createFuzzySearch: string arrays, the getText overload, sort order, stability.
- * (Per-field specs + atBest live in fields.test.ts.)
+ * createFuzzySearch: string arrays, the selectField overload, sort order, stability.
+ * (Per-field specs + demoteBy live in fields.test.ts.)
  */
 import { describe, expect, it } from "vite-plus/test";
 import { createFuzzySearch, fuzzyMatch } from "../src/index";
@@ -90,7 +90,7 @@ describe("limit", () => {
 	});
 });
 
-describe("getText overload", () => {
+describe("selectField overload", () => {
 	const users = [
 		{ id: 1, name: "John Doe" },
 		{ id: 2, name: "Jane Smith" },
@@ -122,7 +122,7 @@ describe("sort order — full tier ladder in one search", () => {
 		"iced Green Tea", // boundary (1)
 		"green tea ice cream", // prefix (0.5)
 		"Green Tea", // normalised-exact (0.1)
-		"matcha green tea", // boundary-exact (0.9)
+		"matcha green tea", // boundary-cased (0.9)
 	];
 	const results = createFuzzySearch(collection)("green tea");
 

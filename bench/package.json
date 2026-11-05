@@ -11,7 +11,6 @@
 		"ekrina": "workspace:*"
 	},
 	"devDependencies": {
-		"@faker-js/faker": "^10.5.0",
 		"@leeoniya/ufuzzy": "^1.0.19",
 		"@nozbe/microfuzz": "^1.0.0",
 		"@types/node": "^26.1.1",

@@ -1,0 +1,137 @@
+.segmented {
+	display: flex;
+	border: 1px solid var(--line-strong);
+	border-radius: var(--radius-control);
+	overflow: hidden;
+}
+
+.segmented label {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: var(--tap-target);
+	min-height: var(--tap-target);
+	padding: 0 var(--space-xs);
+	color: var(--ink);
+	font-family: var(--__sl-font-mono);
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.segmented label + label {
+	border-inline-start: 1px solid var(--line-strong);
+}
+
+.segmented label:has(input:checked) {
+	background: var(--ink);
+	color: var(--paper);
+	font-weight: 600;
+}
+
+.segmented label:has(input:focus-visible) {
+	outline: var(--focus-ring);
+	outline-offset: -2px;
+	z-index: 1;
+}
+
+.segmented input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+@media (forced-colors: active) {
+	.segmented label:has(input:checked) {
+		forced-color-adjust: none;
+		background: Highlight;
+		color: HighlightText;
+	}
+}
+
+.corpus-bar,
+.group-control,
+.corpus-note {
+	display: none;
+}
+
+/* Without :has() the controls could not hide anything, so every corpus and group shows. */
+@supports selector(:has(*)) {
+	.sl-markdown-content .corpus-bar {
+		position: sticky;
+		top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+		min-width: 0;
+		margin-inline: 0;
+		padding: var(--space-xs) 0;
+		border: 0;
+		border-bottom: 1px solid var(--line);
+		background: var(--sl-color-bg);
+	}
+
+	.corpus-bar legend {
+		float: left;
+		padding: 0;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+	}
+
+	.sl-markdown-content .group-control {
+		display: flex;
+		min-width: 0;
+		max-width: 100%;
+		margin: 0;
+		padding: 0;
+		overflow-x: auto;
+	}
+
+	.corpus-bar label,
+	.group-control label {
+		flex: none;
+		white-space: nowrap;
+	}
+
+	/*
+	 * A table that has the picked corpus shows only that panel, with the bar
+	 * naming it; one that lacks it shows all its panels under their labels.
+	 */
+	.corpus-scope:has(.corpus-bar label:nth-of-type(1) input:checked) .corpus-switch:has(> [data-corpus-index="1"]) > .corpus-panel:not([data-corpus-index="1"]),
+	.corpus-scope:has(.corpus-bar label:nth-of-type(2) input:checked) .corpus-switch:has(> [data-corpus-index="2"]) > .corpus-panel:not([data-corpus-index="2"]),
+	.corpus-scope:has(.corpus-bar label:nth-of-type(3) input:checked) .corpus-switch:has(> [data-corpus-index="3"]) > .corpus-panel:not([data-corpus-index="3"]),
+	.corpus-scope:has(.corpus-bar label:nth-of-type(4) input:checked) .corpus-switch:has(> [data-corpus-index="4"]) > .corpus-panel:not([data-corpus-index="4"]),
+	.corpus-scope:has(.corpus-bar label:nth-of-type(1) input:checked) .corpus-switch:has(> [data-corpus-index="1"]) .corpus-label,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(2) input:checked) .corpus-switch:has(> [data-corpus-index="2"]) .corpus-label,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(3) input:checked) .corpus-switch:has(> [data-corpus-index="3"]) .corpus-label,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(4) input:checked) .corpus-switch:has(> [data-corpus-index="4"]) .corpus-label {
+		display: none;
+	}
+
+	.corpus-scope:has(.corpus-bar label:nth-of-type(1) input:checked) .corpus-switch:has(> [data-corpus-index="1"]) .corpus-note,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(2) input:checked) .corpus-switch:has(> [data-corpus-index="2"]) .corpus-note,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(3) input:checked) .corpus-switch:has(> [data-corpus-index="3"]) .corpus-note,
+	.corpus-scope:has(.corpus-bar label:nth-of-type(4) input:checked) .corpus-switch:has(> [data-corpus-index="4"]) .corpus-note {
+		display: block;
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+	}
+
+	/* The buttons name the group, so the column would only repeat it. */
+	.corpus-switch:has(.group-control) .grouped :is(th, td):first-child {
+		display: none;
+	}
+
+	.corpus-switch:has(.group-control label:nth-of-type(1) input:checked) tr[data-group]:not([data-group="1"]),
+	.corpus-switch:has(.group-control label:nth-of-type(2) input:checked) tr[data-group]:not([data-group="2"]),
+	.corpus-switch:has(.group-control label:nth-of-type(3) input:checked) tr[data-group]:not([data-group="3"]),
+	.corpus-switch:has(.group-control label:nth-of-type(4) input:checked) tr[data-group]:not([data-group="4"]),
+	.corpus-switch:has(.group-control label:nth-of-type(5) input:checked) tr[data-group]:not([data-group="5"]),
+	.corpus-switch:has(.group-control label:nth-of-type(6) input:checked) tr[data-group]:not([data-group="6"]),
+	.corpus-switch:has(.group-control label:nth-of-type(7) input:checked) tr[data-group]:not([data-group="7"]),
+	.corpus-switch:has(.group-control label:nth-of-type(8) input:checked) tr[data-group]:not([data-group="8"]) {
+		display: none;
+	}
+}

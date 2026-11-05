@@ -11,7 +11,7 @@
  *           never repetition.
  *
  *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
- *   node bench/run.ts ekrina mixed/garbage 10
+ *   node bench/run.ts ekrina native/miss 10
  *   node bench/run.ts all batch 5 --size=10k
  *
  * Variants match by case-insensitive substring; tests by `corpus/kind`, bare
@@ -22,8 +22,9 @@
  */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { junkProbes } from "./catalogue.ts";
 import { CONFIG_NAMES, configs } from "./configs.ts";
-import { CORPORA, TIMED_KINDS } from "./corpus.ts";
+import { CORPORA, SAMPLE_SIZE, TIMED_KINDS } from "./corpus.ts";
 
 type ChildOut = {
 	indexMs: number;
@@ -85,6 +86,19 @@ const tests: Test[] = CORPORA.flatMap((c) => {
 	];
 });
 
+// Every catalogue query and junk probe in one batch, behind the same warmup.
+// Not part of `all`: the published matrix times the representative queries.
+const catalogueTests = (): Test[] =>
+	CORPORA.map((c) => {
+		const items = c.build(SAMPLE_SIZE);
+		const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
+		const queries = [
+			...c.samples.map((s) => s.query),
+			...junkProbes(items).flatMap((p) => p.queries),
+		];
+		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [warmup, ...queries] };
+	});
+
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const flags = process.argv.slice(2).filter((a) => a.startsWith("--"));
 const sizeFlag = flags.find((f) => f.startsWith("--size="))?.slice(7);
@@ -99,7 +113,7 @@ const variants = CONFIG_NAMES.filter(
 	(n) => variantSel === "all" || n.toLowerCase().includes(variantSel.toLowerCase()),
 );
 if (!variants.length) throw new Error(`no variant matches '${variantSel}'`);
-const chosen = tests.filter(
+const chosen = (testSel.endsWith("catalogue") ? catalogueTests() : tests).filter(
 	(t) =>
 		testSel === "all" || t.id === testSel || t.id.endsWith(`/${testSel}`) || t.corpus === testSel,
 );

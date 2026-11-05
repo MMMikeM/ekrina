@@ -10,6 +10,7 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { SCORES } from "./scores";
+import { type Competition, type PreparedReading, readings } from "./readings";
 import type {
 	FieldSpec,
 	FuzzyResult,
@@ -42,12 +43,19 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 };
 
 /**
- * Score one string against a query. Returns { score, tier, ranges } or null.
+ * Score one string against a query, or null when it doesn't match.
  *
  * Judges the string on its own: a searcher over a list can return fewer
  * corrections than this does per item (see createFuzzySearch).
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
+ *
+ * @example
+ * fuzzyMatch('banana', 'ban'); // { score: 0.5, tier: 'prefix', ranges: [[0, 2]] }
+ *
+ * @example
+ * // A typo, corrected: the boundary tier's 1 plus TYPO_PENALTY
+ * fuzzyMatch('Open Recent', 'recnet'); // { score: 3.1, tier: 'corrected', corrected: 'recent', ranges: [[5, 10]] }
  */
 export const fuzzyMatch = (
 	text: string,
@@ -59,32 +67,61 @@ export const fuzzyMatch = (
 	if (q === null) return null;
 	const field = text.trim();
 	const normalisedField = normaliseText(field);
+	const fieldMask = charMask(normalisedField);
 
-	const result = matchField(field, normalisedField, charMask(normalisedField), q, acronym);
+	let result = matchField(field, normalisedField, fieldMask, q, acronym);
+	if (result === null || result.score > SCORES.CONTAINS) {
+		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
+		const fallback =
+			reading?.admitsMask(fieldMask) && reading.admitsText(field)
+				? reading.match(field, normalisedField)
+				: null;
+		if (fallback && (result === null || fallback.score < result.score)) result = fallback;
+	}
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);
 	return result;
 };
 
-type ResolvedSpec<T> = { text: (item: T) => string | null; acronym: boolean; atBest: number };
+type ResolvedSpec<T> = {
+	selectField: (item: T) => string | null;
+	acronym: boolean;
+	demoteBy: number;
+};
 
 // The whole-corpus rescue index: per-item union masks and bigram sets.
 type UnionIndex = { masks: Int32Array; bigramsLo: Int32Array; bigramsHi: Int32Array };
 
+// An item's union mask and bigram set span all its fields, so it is skipped
+// only when no field's reading admits both. Null when some reading reads no
+// pairs, leaving every item to the per-field gates.
+const itemGateOf = (
+	fallbacks: (PreparedReading | null)[],
+	{ masks, bigramsLo, bigramsHi }: UnionIndex,
+): ((i: number) => boolean) | null => {
+	const readings = fallbacks.filter((fallback) => fallback !== null);
+	if (readings.some((reading) => reading.admitsPairs === null)) return null;
+	return (i) =>
+		readings.some(
+			(reading) =>
+				reading.admitsMask(masks[i]) && reading.admitsPairs!(bigramsLo[i], bigramsHi[i]),
+		);
+};
+
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
 const resolveFieldSpecs = <T>(
-	extract?: ((item: T) => string | null) | FieldSpec<T>[],
+	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): ResolvedSpec<T>[] => {
-	const specs: FieldSpec<T>[] = !extract
-		? [{ text: (item) => item as unknown as string }]
-		: typeof extract === "function"
-			? [{ text: extract }]
-			: extract;
+	const specs: FieldSpec<T>[] = !selection
+		? [{ selectField: (item) => item as unknown as string }]
+		: typeof selection === "function"
+			? [{ selectField: selection }]
+			: selection;
 	return specs.map((spec) => ({
-		text: spec.text,
+		selectField: spec.selectField,
 		acronym: spec.acronym ?? false,
-		atBest: spec.atBest ?? 0,
+		demoteBy: spec.demoteBy ?? 0,
 	}));
 };
 
@@ -97,6 +134,8 @@ const resolveFieldSpecs = <T>(
  * matches most of any real collection and ranks none of it.
  * A query under five characters is corrected only when no item matches it as
  * typed, and no correction is tried once ten items match literally.
+ * A sparse word, or a four-letter word with two letters swapped, can still
+ * match beside them.
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
  * An empty spec array is honoured as written: the searcher has no searchable
@@ -112,25 +151,38 @@ const resolveFieldSpecs = <T>(
  * const search = createFuzzySearch(users, (u) => u.name);
  *
  * @example
- * // Multiple fields, per-field config (body never outranks title)
+ * // Multiple fields, per-field config (a body hit ranks like a title contains)
  * const search = createFuzzySearch(posts, [
- *   { text: (p) => p.title },
- *   { text: (p) => p.body, atBest: SCORES.CONTAINS },
+ *   { selectField: (p) => p.title },
+ *   { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
  * ]);
  */
 export function createFuzzySearch(list: string[]): FuzzySearcher<string>;
 export function createFuzzySearch<T>(
 	list: T[],
-	getText: (item: T) => string | null,
+	selectField: (item: T) => string | null,
 ): FuzzySearcher<T>;
 export function createFuzzySearch<T>(list: T[], specs: FieldSpec<T>[]): FuzzySearcher<T>;
 export function createFuzzySearch<T>(
 	list: T[],
-	extract?: ((item: T) => string | null) | FieldSpec<T>[],
+	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): FuzzySearcher<T> {
-	const resolvedSpecs = resolveFieldSpecs(extract);
+	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
+	// Which result each item holds in the current matches, so a second-pass
+	// match can replace a weaker one; a stamp from an earlier generation means
+	// none. Float64 so the generation count never wraps.
+	// oxlint-disable-next-line unicorn/no-new-array
+	const heldResults: (FuzzyResult<T> | undefined)[] = new Array(count);
+	const heldStamps = new Float64Array(count);
+	const heldEndsWord = new Uint8Array(count);
+	let generation = 0;
+	// Where an item's best match ends follows its best field, as scoreItem sets it.
+	const regroupHeld = (i: number, score: number, bestScore: number, endsWord: boolean): void => {
+		if (score < bestScore) heldEndsWord[i] = endsWord ? 1 : 0;
+		else if (score === bestScore && endsWord) heldEndsWord[i] = 1;
+	};
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -163,7 +215,7 @@ export function createFuzzySearch<T>(
 			bigrams.lo = 0;
 			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const raw = resolvedSpecs[f].text(item) || "";
+				const raw = resolvedSpecs[f].selectField(item) || "";
 				const mask = rawFieldScan(raw, bigrams);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
@@ -180,7 +232,7 @@ export function createFuzzySearch<T>(
 		if (normalisedFields[base] !== undefined) return;
 		const item = list[i];
 		for (let f = 0; f < specCount; f++) {
-			const raw = resolvedSpecs[f].text(item) || "";
+			const raw = resolvedSpecs[f].selectField(item) || "";
 			const lead = raw.length - raw.trimStart().length;
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
 			const field = raw.trim();
@@ -214,6 +266,7 @@ export function createFuzzySearch<T>(
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
+		generation++;
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -233,6 +286,34 @@ export function createFuzzySearch<T>(
 		// the page — the rescue becomes provably invisible work. Fuzzy hits score
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
+		let secondPassRescored = false;
+		// The held items in list order, when the second pass saw every one.
+		let heldInListOrder: number[] | null = null;
+
+		// Returns whether the match ends on a word boundary. Results are fresh
+		// objects per call, so the demoteBy shift can mutate.
+		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
+			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
+			result.score += resolvedSpecs[f].demoteBy;
+			if (leads !== null) {
+				const lead = leads[at];
+				if (lead) shiftRanges(result.ranges, lead);
+			}
+			return endsWord;
+		};
+
+		const record = (i: number, entry: FuzzyResult<T>, endsWord: boolean): void => {
+			(endsWord ? boundaryEndMatches : midWordMatches).push(entry);
+			heldResults[i] = entry;
+			heldStamps[i] = generation;
+			heldEndsWord[i] = endsWord ? 1 : 0;
+		};
+
+		const forgetMatches = (): void => {
+			boundaryEndMatches = [];
+			midWordMatches = [];
+			generation++;
+		};
 
 		const scoreItem = (
 			i: number,
@@ -247,25 +328,18 @@ export function createFuzzySearch<T>(
 			let fields: (MatchResult | null)[] | null = null;
 
 			for (let f = 0; f < specCount; f++) {
-				const spec = resolvedSpecs[f];
 				const result = matchField(
 					trimmedFields[base + f] as string,
 					normalisedFields[base + f] as string,
 					fieldMasks[base + f],
 					prepared,
-					spec.acronym,
+					resolvedSpecs[f].acronym,
 					mayRescue,
 					preGated,
 					literalOnly,
 				);
 				if (result) {
-					const endsWord = endsOnWordBoundary(normalisedFields[base + f] as string, result.ranges);
-					// Fresh object per matchField call, so the atBest shift can mutate.
-					result.score += spec.atBest;
-					if (leads !== null) {
-						const lead = leads[base + f];
-						if (lead) shiftRanges(result.ranges, lead);
-					}
+					const endsWord = placeFieldResult(result, base + f, f);
 					if (result.score < bestScore) bestEndsWord = endsWord;
 					else if (result.score === bestScore) bestEndsWord ||= endsWord;
 					bestScore = Math.min(bestScore, result.score);
@@ -278,7 +352,7 @@ export function createFuzzySearch<T>(
 
 			if (fields) {
 				if (bestScore <= SCORES.CONTAINS) literalHits++;
-				(bestEndsWord ? boundaryEndMatches : midWordMatches).push({ item: list[i], score: bestScore, fields });
+				record(i, { item: list[i], score: bestScore, fields }, bestEndsWord);
 			}
 		};
 
@@ -331,7 +405,7 @@ export function createFuzzySearch<T>(
 				const item = list[i];
 				let admitted = false;
 				for (let f = 0; f < specCount && !admitted; f++) {
-					admitted = gate.test(resolvedSpecs[f].text(item) || "");
+					admitted = gate.test(resolvedSpecs[f].selectField(item) || "");
 				}
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
@@ -344,8 +418,7 @@ export function createFuzzySearch<T>(
 		const relaxedPass = (): void => {
 			const { masks, bigramsLo, bigramsHi } = (unionIndex ??= buildUnionIndex());
 			const bigramGate = buildRescueBigramGate(normalisedQuery);
-			boundaryEndMatches = [];
-			midWordMatches = [];
+			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
 				if (missingClasses & (missingClasses - 1)) continue;
@@ -365,6 +438,89 @@ export function createFuzzySearch<T>(
 			}
 		};
 
+		// A fallback match joins the item's results, or replaces a weaker fuzzy or
+		// corrected one; a literal match is never touched. Returns whether it did.
+		const offerFallbacks = (
+			i: number,
+			held: FuzzyResult<T> | undefined,
+			fallbacks: (PreparedReading | null)[],
+		): boolean => {
+			const base = i * specCount;
+			let entry = held;
+			let offered = false;
+			for (let f = 0; f < specCount; f++) {
+				const fallback = fallbacks[f];
+				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
+				if (!fallback.admitsText(resolvedSpecs[f].selectField(list[i]) || "")) continue;
+				materialise(i);
+				const result = fallback.match(
+					trimmedFields[base + f] as string,
+					normalisedFields[base + f] as string,
+				);
+				if (!result) continue;
+				const endsWord = placeFieldResult(result, base + f, f);
+				if (entry === undefined) {
+					// oxlint-disable-next-line unicorn/no-new-array
+					const fields: (MatchResult | null)[] = new Array(specCount).fill(null);
+					fields[f] = result;
+					entry = { item: list[i], score: result.score, fields };
+					record(i, entry, endsWord);
+					offered = true;
+				} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
+					entry.fields[f] = result;
+					regroupHeld(i, result.score, entry.score, endsWord);
+					entry.score = Math.min(entry.score, result.score);
+					offered = true;
+				}
+			}
+			return offered;
+		};
+
+		// The order the two lists and the stable sort give, rebuilt for the items
+		// the second pass added or rescored.
+		const heldInOrder = (): FuzzyResult<T>[] => {
+			const results = heldResults as FuzzyResult<T>[];
+			const stamps = heldStamps;
+			const endsWords = heldEndsWord;
+			let held = heldInListOrder;
+			if (held === null) {
+				held = [];
+				for (let i = 0; i < count; i++) if (stamps[i] === generation) held.push(i);
+			}
+			return held
+				.sort((a, b) => results[a].score - results[b].score || endsWords[b] - endsWords[a])
+				.map((i) => results[i]);
+		};
+
+		const secondPass = (): void => {
+			const competition: Competition =
+				literalHits > 0 ? "literal" : boundaryEndMatches.length + midWordMatches.length > 0 ? "fuzzy" : "none";
+			const reading = readings.prepare(prepared, competition);
+			if (reading === null) return;
+			const fallbacks = resolvedSpecs.map(() => reading);
+			// A phrase's literal gates read only its words' characters; a single
+			// word's read its punctuation too, which no second-pass reading needs.
+			const survivorsOnly =
+				fallbacks.every((fallback) => fallback === null || !fallback.wholeList) &&
+				(multiWord || normalisedQuery === prepared.queryWords[0]);
+			if (!survivorsOnly) unionIndex ??= buildUnionIndex();
+			const admitsItem = unionIndex === null ? null : itemGateOf(fallbacks, unionIndex);
+			const scanned = survivorsOnly ? survivorCount : count;
+			const seen: number[] = [];
+			for (let k = 0; k < scanned; k++) {
+				const i = survivorsOnly ? survivors[k] : k;
+				const held = heldStamps[i] === generation ? heldResults[i] : undefined;
+				if (held !== undefined) seen.push(i);
+				if (held !== undefined && held.score <= SCORES.CONTAINS) continue;
+				if (admitsItem !== null && !admitsItem(i)) continue;
+				if (!offerFallbacks(i, held, fallbacks)) continue;
+				secondPassRescored = true;
+				if (held === undefined) seen.push(i);
+			}
+			// The relaxed pass matches items outside the survivors.
+			if (!survivorsOnly || !rescuing) heldInListOrder = seen;
+		};
+
 		const commitSurvivorCache = (seedNextQuery: boolean): void => {
 			survivorCache.query = normalisedQuery;
 			survivorCache.multiWord = multiWord;
@@ -381,8 +537,7 @@ export function createFuzzySearch<T>(
 		// items match literally none of them can reach the page.
 		literalPass(limit !== undefined);
 		if (limit !== undefined && literalHits < limit) {
-			boundaryEndMatches = [];
-			midWordMatches = [];
+			forgetMatches();
 			literalHits = 0;
 			for (let k = 0; k < survivorCount; k++) scoreItem(survivors[k], false, false, false);
 		}
@@ -397,10 +552,16 @@ export function createFuzzySearch<T>(
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
+		// Taken before the relaxed pass, which rescores the literal hits.
+		const offeringSecondPass =
+			literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		if (rescuing) relaxedPass();
+		if (offeringSecondPass) secondPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
-		const results = boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
+		const results = secondPassRescored
+			? heldInOrder()
+			: boundaryEndMatches.concat(midWordMatches).sort(sortByScore);
 		if (limit !== undefined && results.length > limit) results.length = limit;
 		return results;
 	};

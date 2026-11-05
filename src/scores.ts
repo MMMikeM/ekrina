@@ -1,16 +1,15 @@
 /**
- * The tier ladder as named constants. Lower = better. Any score greater than
- * CONTAINS is a fuzzy-fallback match (see fuzzy.ts) or a one-edit typo rescue
- * (see TYPO_PENALTY) — every genuine tier is at or below CONTAINS, so that
- * constant is the dividing line between a literal match and a speculative one.
- * Exported so callers can filter or re-rank by tier without hardcoding magic
- * numbers.
+ * The tier ladder as named constants. Lower = better. Every genuine tier
+ * scores at or below CONTAINS, and anything above it is a `fuzzy` chain or a
+ * correction (see {@link TYPO_PENALTY}), so CONTAINS is the dividing line
+ * between a literal match and a speculative one. Exported so callers can
+ * filter or re-rank by tier without hardcoding magic numbers.
  */
 export const SCORES = {
 	EXACT: 0,
 	NORMALISED_EXACT: 0.1,
 	PREFIX: 0.5,
-	BOUNDARY_EXACT: 0.9,
+	BOUNDARY_CASED: 0.9,
 	BOUNDARY: 1,
 	MULTI_WORD: 1.5,
 	ACRONYM: 1.8,
@@ -18,21 +17,19 @@ export const SCORES = {
 } as const;
 
 /**
- * Added to the corrected query's score when a one-edit typo rescue fires
- * (tier `"corrected"`).
+ * Added to a corrected match's score once per typo fixed (tier `"corrected"`):
+ * 2.1 for one typo, 4.2 for two.
  *
- * Sized so the BEST possible correction — a corrected exact hit, 0 + 2.1 —
- * still sorts below the WEAKEST genuine tier, CONTAINS (2). A correction is a
- * guess about what the user meant; a substring match is something they
- * actually typed, so the literal hit wins every time. Sizing this below 2
- * inverts that, and it is measurable: at 0.9 an infix query's intended item
- * fell from MRR 0.973 to 0.906, because other items' typo corrections
- * displaced it.
+ * Sized so even a corrected exact hit, 0 + 2.1, sorts below the weakest
+ * genuine tier, `SCORES.CONTAINS` (2). A correction is a guess about what the
+ * user meant and a substring match is something they actually typed, so the
+ * literal hit wins every time. Below 2 that inverts, and MRR measurably drops
+ * (the CHANGELOG's 1.0.0 section records the measurement).
  *
- * Rescued scores therefore land at 2.1 and up, overlapping the fuzzy band
- * numerically; the `tier` field is what tells them apart. One penalty for
- * every kind of edit: they are the same edit distance, and scoring them
- * differently would rank a swapped keystroke above a dropped one on no
- * evidence.
+ * Corrected scores therefore land at 2.1 and up, overlapping the fuzzy band,
+ * and a word typed sparsely, which fixes no typo, scores just above CONTAINS:
+ * `tier` is what tells them apart. One penalty for every kind of edit: they
+ * are the same edit distance, and scoring them differently would rank a
+ * swapped keystroke above a dropped one on no evidence.
  */
 export const TYPO_PENALTY = 2.1;

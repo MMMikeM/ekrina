@@ -1,0 +1,237 @@
+---
+import { LinkButton } from "@astrojs/starlight/components";
+import { project } from "../project.ts";
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero ?? {};
+const highlight = data.heroHighlight;
+const [beforeHighlight, afterHighlight] =
+	highlight && title.includes(highlight) ? title.split(highlight) : [title];
+
+const install = `npm install ${project.name}`;
+---
+
+<div class="lead">
+	<div class="hero">
+		<h1 id="_top" data-page-title>
+			{beforeHighlight}{afterHighlight !== undefined && <mark>{highlight}</mark>}{afterHighlight}
+		</h1>
+		{
+			tagline && (
+				<div class="tagline">
+					<p>{tagline}</p>
+				</div>
+			)
+		}
+		<div class="actions">
+			{actions.map(({ link, text, variant, icon }) => (
+				<LinkButton href={link} variant={variant} icon={icon?.name}>
+					{text}
+				</LinkButton>
+			))}
+		</div>
+		<div class="install">
+			<code><span class="prompt decoration" aria-hidden="true">$ </span>{install}</code>
+			<button type="button" class="decoration" aria-label="Copy the install command" data-copy={install}>
+				<svg
+					class="copy-icon"
+					aria-hidden="true"
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.8"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<rect x="9" y="9" width="12" height="12" rx="2"></rect>
+					<path d="M5 15V5a2 2 0 0 1 2-2h8"></path>
+				</svg>
+				<svg
+					class="tick"
+					aria-hidden="true"
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1"></path>
+				</svg>
+			</button>
+			<span class="sr-only" role="status" data-copy-status></span>
+		</div>
+	</div>
+</div>
+
+<script>
+	for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+		button.addEventListener("click", async () => {
+			await navigator.clipboard.writeText(button.dataset.copy ?? "");
+			const status = button.parentElement?.querySelector("[data-copy-status]");
+			button.dataset.copied = "";
+			if (status) {
+				status.textContent = "Copied";
+			}
+			setTimeout(() => {
+				delete button.dataset.copied;
+				if (status) {
+					status.textContent = "";
+				}
+			}, 1500);
+		});
+	}
+</script>
+
+<style>
+	.lead {
+		container: page / inline-size;
+	}
+
+	.hero {
+		display: grid;
+		padding-block: var(--space-l) var(--space-s);
+		--after-title: var(--space-m);
+		--after-tagline: var(--space-l);
+	}
+
+	h1 {
+		margin: 0;
+		color: var(--ink);
+		font-size: var(--text-display);
+		font-weight: 600;
+		line-height: var(--leading-tight);
+	}
+
+	/*
+	 * Source Serif's inline box is 1.38em tall, more than the heading's line height,
+	 * so the yellow runs from just above the ascenders to just below the descenders
+	 * and clears the line above.
+	 */
+	h1 mark {
+		background: linear-gradient(transparent 19%, var(--highlight) 19% 97%, transparent 97%);
+	}
+
+	.tagline {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		max-width: 34em;
+		margin-top: var(--after-title);
+		color: var(--ink-muted);
+		font-size: var(--text-xl);
+		line-height: var(--leading-body);
+	}
+
+	.tagline p {
+		margin: 0;
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-xs) var(--space-s);
+		margin-top: var(--after-tagline);
+	}
+
+	.actions :global(.sl-link-button) {
+		min-height: var(--tap-target);
+		align-items: center;
+	}
+
+	/*
+	 * Tight enough that both buttons share a line on a 360px phone. The link goes
+	 * below, close under them; its tap target is the gap.
+	 */
+	@media (max-width: 39.99rem) {
+		.actions {
+			gap: var(--space-2xs);
+		}
+
+		.actions :global(.sl-link-button:not(.minimal)) {
+			padding-inline: var(--space-xs);
+		}
+	}
+
+	.install {
+		justify-self: start;
+		display: flex;
+		align-items: center;
+		gap: var(--space-3xs);
+		max-width: 100%;
+		box-sizing: border-box;
+		margin-top: var(--space-m);
+		padding: var(--space-3xs) var(--space-3xs) var(--space-3xs) var(--space-s);
+		border: 1px solid var(--line);
+		border-radius: var(--radius-control);
+		font-size: var(--text-sm);
+	}
+
+	.install code {
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+
+	.prompt {
+		color: var(--ink-muted);
+	}
+
+	.install button {
+		display: flex;
+		flex: none;
+		align-items: center;
+		justify-content: center;
+		width: var(--tap-target);
+		height: var(--tap-target);
+		border: 0;
+		border-radius: 6px;
+		background: none;
+		color: var(--ink-muted);
+		cursor: pointer;
+	}
+
+	.install button:hover {
+		color: var(--ink);
+	}
+
+	/* Copied: a pen tick replaces the copy icon. */
+	.install .tick,
+	.install button[data-copied] .copy-icon {
+		display: none;
+	}
+
+	.install button[data-copied] .tick {
+		display: block;
+		color: var(--pen);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.install button[data-copied] .tick path {
+			stroke-dasharray: 1;
+			animation: tick-stroke 0.3s cubic-bezier(0.45, 0, 0.6, 0.95) both;
+		}
+	}
+
+	@keyframes tick-stroke {
+		from {
+			stroke-dashoffset: 1;
+		}
+
+		to {
+			stroke-dashoffset: 0;
+		}
+	}
+
+	@container page (min-width: 52rem) {
+		.hero {
+			padding-block: var(--space-xl) var(--space-l);
+			--after-title: var(--space-l);
+			--after-tagline: var(--space-xl);
+		}
+	}
+</style>

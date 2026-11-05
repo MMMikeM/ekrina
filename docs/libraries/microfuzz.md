@@ -11,119 +11,193 @@ That row is in bold in the scorecard below.
 
 The columns are [the scorecard's](../benchmarks.md#scorecard).
 
-**mixed corpus:**
+**native corpus:**
 
-<!-- bench:library-microfuzz-scorecard-mixed -->
-| Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
-|-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.47 |     3.71 |    1.41 |    30.06 |        1.19 |
-| @nozbe/microfuzz (all opts) | 0.47 |     3.77 |    1.43 |    30.05 |        1.19 |
+<!-- bench:library-microfuzz-scorecard-native -->
+| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **@nozbe/microfuzz**        | 0.41 | 0.07 |     7.74 |    3.53 |    56.01 |        2.10 |
+| @nozbe/microfuzz (all opts) | 0.41 | 0.07 |     6.43 |    3.45 |    52.25 |        1.95 |
 <!-- bench:end -->
 
-**ascii corpus:**
+**en corpus:**
 
-<!-- bench:library-microfuzz-scorecard-ascii -->
-| Library                     |  MRR | index ms | cold ms | batch ms | batch/query |
-|-----------------------------|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.47 |     3.49 |    1.35 |    28.39 |        1.13 |
-| @nozbe/microfuzz (all opts) | 0.47 |     3.66 |    1.32 |    28.59 |        1.13 |
+<!-- bench:library-microfuzz-scorecard-en -->
+| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **@nozbe/microfuzz**        | 0.40 | 0.03 |     4.99 |    3.61 |    40.30 |        1.49 |
+| @nozbe/microfuzz (all opts) | 0.40 | 0.03 |     4.53 |    3.30 |    36.92 |        1.39 |
+<!-- bench:end -->
+
+**emoji corpus** (quality only; the list is too short for the timing cells):
+
+<!-- bench:library-microfuzz-scorecard-emoji -->
+| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
+| **@nozbe/microfuzz**        | 0.47 | 0.24 |        — |       — |        — |           — |
+| @nozbe/microfuzz (all opts) | 0.47 | 0.24 |        — |       — |        — |           — |
 <!-- bench:end -->
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with base Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
 
-**ascii corpus:**
+**en corpus:**
 
-<!-- bench:library-microfuzz-speed-ascii -->
+<!-- bench:library-microfuzz-speed-en -->
 | Library                     |    index | cold query |    total | total rel |
 |-----------------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**                  |  0.36 ms |   12.41 ms | 12.74 ms |  **100%** |
-| @nozbe/microfuzz            | 41.49 ms |   19.23 ms | 61.74 ms |      485% |
-| @nozbe/microfuzz (all opts) | 40.83 ms |   19.72 ms | 62.79 ms |      493% |
+| **Ekrina**                  |  0.42 ms |   14.55 ms | 15.42 ms |  **100%** |
+| @nozbe/microfuzz            | 58.14 ms |   19.07 ms | 80.38 ms |      521% |
+| @nozbe/microfuzz (all opts) | 52.28 ms |   19.19 ms | 79.59 ms |      516% |
 <!-- bench:end -->
 
-<!-- bench:library-microfuzz-batch-ascii -->
+<!-- bench:library-microfuzz-batch-en -->
 | Library                     | batch/query | batch total | batch rel |
 |-----------------------------|------------:|------------:|----------:|
-| **Ekrina**                  |     2.51 ms |    64.52 ms |  **100%** |
-| @nozbe/microfuzz            |     8.39 ms |   217.56 ms |      337% |
-| @nozbe/microfuzz (all opts) |     8.47 ms |   219.38 ms |      340% |
+| **Ekrina**                  |     3.14 ms |    81.24 ms |  **100%** |
+| @nozbe/microfuzz            |    15.99 ms |   404.20 ms |      498% |
+| @nozbe/microfuzz (all opts) |    15.89 ms |   399.71 ms |      492% |
 <!-- bench:end -->
 
-**mixed corpus:**
+**native corpus:**
 
-<!-- bench:library-microfuzz-speed-mixed -->
+<!-- bench:library-microfuzz-speed-native -->
 | Library                     |    index | cold query |    total | total rel |
 |-----------------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**                  |  0.35 ms |   19.22 ms | 19.57 ms |  **100%** |
-| @nozbe/microfuzz            | 42.18 ms |   20.89 ms | 62.86 ms |      321% |
-| @nozbe/microfuzz (all opts) | 41.60 ms |   19.04 ms | 61.32 ms |      313% |
+| **Ekrina**                  |  0.44 ms |   19.25 ms | 19.67 ms |  **100%** |
+| @nozbe/microfuzz            | 65.74 ms |   20.03 ms | 79.18 ms |      403% |
+| @nozbe/microfuzz (all opts) | 94.11 ms |   19.88 ms | 80.89 ms |      411% |
 <!-- bench:end -->
 
-<!-- bench:library-microfuzz-batch-mixed -->
+<!-- bench:library-microfuzz-batch-native -->
 | Library                     | batch/query | batch total | batch rel |
 |-----------------------------|------------:|------------:|----------:|
-| **Ekrina**                  |     2.43 ms |    63.47 ms |  **100%** |
-| @nozbe/microfuzz            |    13.81 ms |   351.99 ms |      555% |
-| @nozbe/microfuzz (all opts) |    13.80 ms |   351.90 ms |      554% |
+| **Ekrina**                  |     3.58 ms |    93.21 ms |  **100%** |
+| @nozbe/microfuzz            |    17.21 ms |   436.78 ms |      469% |
+| @nozbe/microfuzz (all opts) |    15.15 ms |   386.60 ms |      415% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
 MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
 
-**mixed corpus:**
+**native corpus:**
 
-<!-- bench:library-microfuzz-families-mixed -->
-| Family                     | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
-|----------------------------|-----------------:|----------------------------:|
-| long-word                  |             0.94 |                        0.94 |
-| short-word                 |             0.81 |                        0.81 |
-| two-words                  |             0.90 |                        0.90 |
-| two-words-reversed         |             0.40 |                        0.40 |
-| two-words-partial-reversed |             0.00 |                        0.00 |
-| two-words-joined           |             1.00 |                        1.00 |
-| two-words-typo             |             0.00 |                        0.00 |
-| two-words-typo-second      |             0.00 |                        0.00 |
-| two-words-typo-reversed    |             0.00 |                        0.00 |
-| plural-to-singular         |             0.40 |                        0.40 |
-| short-word-typo            |             0.00 |                        0.00 |
-| prefix                     |             1.00 |                        1.00 |
-| infix                      |             1.00 |                        1.00 |
-| scatter-light              |             0.95 |                        0.95 |
-| scatter-medium             |             0.67 |                        0.67 |
-| scatter-heavy              |             0.23 |                        0.23 |
-| transposition              |             0.00 |                        0.00 |
-| insertion                  |             0.00 |                        0.00 |
-| substitution               |             0.00 |                        0.00 |
-| acronym                    |             0.52 |                        0.52 |
-| accent-stripped            |             0.97 |                        0.97 |
+<!-- bench:library-microfuzz-families-native -->
+| Group         | Family                        | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
+|---------------|-------------------------------|-----------------:|----------------------------:|
+| typos         | neighbouring key              |             0.00 |                        0.00 |
+| typos         | two neighbouring keys         |             0.00 |                        0.00 |
+| typos         | random letter                 |             0.00 |                        0.00 |
+| typos         | dropped letter                |             0.77 |                        0.77 |
+| typos         | two dropped letters           |             0.89 |                        0.89 |
+| typos         | inserted neighbouring key     |             0.05 |                        0.05 |
+| typos         | swapped neighbours            |             0.04 |                        0.04 |
+| typos         | stuck key                     |             0.00 |                        0.00 |
+| typos         | first letter wrong            |             0.10 |                        0.10 |
+| typos         | typo in each of two words     |             0.00 |                        0.00 |
+| typos         | typo then a half-typed word   |             0.00 |                        0.00 |
+| typos         | two words joined, with a typo |             0.00 |                        0.00 |
+| phonetic      | consonant spelt another way   |             0.10 |                        0.10 |
+| phonetic      | letter doubled or singled     |             0.20 |                        0.20 |
+| phonetic      | silent letters dropped        |             0.56 |                        0.56 |
+| phonetic      | vowel sound spelt another way |             0.00 |                        0.00 |
+| partial words | prefix of 3                   |             1.00 |                        1.00 |
+| partial words | prefix of 5                   |             1.00 |                        1.00 |
+| partial words | infix of 5                    |             1.00 |                        1.00 |
+| partial words | two words half typed          |             1.00 |                        1.00 |
+| partial words | a vowel dropped               |             0.87 |                        0.87 |
+| partial words | 2 vowels dropped              |             0.80 |                        0.80 |
+| query shape   | two words                     |             0.88 |                        0.88 |
+| query shape   | two words reversed            |             0.90 |                        0.90 |
+| query shape   | two words joined              |             1.00 |                        1.00 |
+| query shape   | an absent word added          |             0.00 |                        0.00 |
+| noise         | space inside a word           |             0.00 |                        0.00 |
+| noise         | punctuation inside a word     |             0.00 |                        0.00 |
+| noise         | accents stripped              |             0.96 |                        0.96 |
+| noise         | accents added                 |             0.96 |                        0.96 |
+| reported only | acronym                       |             0.44 |                        0.44 |
+| reported only | plural for a singular         |             0.20 |                        0.20 |
+| phonetic      | real misspelling              |             0.30 |                        0.30 |
 <!-- bench:end -->
 
-**ascii corpus:**
+**en corpus:**
 
-<!-- bench:library-microfuzz-families-ascii -->
-| Family                     | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
-|----------------------------|-----------------:|----------------------------:|
-| long-word                  |             0.96 |                        0.96 |
-| short-word                 |             0.93 |                        0.93 |
-| two-words                  |             1.00 |                        1.00 |
-| two-words-reversed         |             0.50 |                        0.50 |
-| two-words-partial-reversed |             0.10 |                        0.10 |
-| two-words-joined           |             1.00 |                        1.00 |
-| two-words-typo             |             0.00 |                        0.00 |
-| two-words-typo-second      |             0.00 |                        0.00 |
-| two-words-typo-reversed    |             0.00 |                        0.00 |
-| plural-to-singular         |             0.40 |                        0.40 |
-| short-word-typo            |             0.00 |                        0.00 |
-| prefix                     |             1.00 |                        1.00 |
-| infix                      |             1.00 |                        1.00 |
-| scatter-light              |             0.93 |                        0.93 |
-| scatter-medium             |             0.73 |                        0.73 |
-| scatter-heavy              |             0.07 |                        0.07 |
-| transposition              |             0.00 |                        0.00 |
-| insertion                  |             0.10 |                        0.10 |
-| substitution               |             0.00 |                        0.00 |
-| acronym                    |             0.60 |                        0.60 |
+<!-- bench:library-microfuzz-families-en -->
+| Group         | Family                        | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
+|---------------|-------------------------------|-----------------:|----------------------------:|
+| typos         | neighbouring key              |             0.00 |                        0.00 |
+| typos         | two neighbouring keys         |             0.00 |                        0.00 |
+| typos         | random letter                 |             0.00 |                        0.00 |
+| typos         | dropped letter                |             0.77 |                        0.77 |
+| typos         | two dropped letters           |             1.00 |                        1.00 |
+| typos         | inserted neighbouring key     |             0.00 |                        0.00 |
+| typos         | swapped neighbours            |             0.04 |                        0.04 |
+| typos         | stuck key                     |             0.00 |                        0.00 |
+| typos         | first letter wrong            |             0.10 |                        0.10 |
+| typos         | typo in each of two words     |             0.00 |                        0.00 |
+| typos         | typo then a half-typed word   |             0.00 |                        0.00 |
+| typos         | two words joined, with a typo |             0.00 |                        0.00 |
+| phonetic      | consonant spelt another way   |             0.10 |                        0.10 |
+| phonetic      | letter doubled or singled     |             0.20 |                        0.20 |
+| phonetic      | silent letters dropped        |             0.54 |                        0.54 |
+| phonetic      | vowel sound spelt another way |             0.00 |                        0.00 |
+| partial words | prefix of 3                   |             1.00 |                        1.00 |
+| partial words | prefix of 5                   |             1.00 |                        1.00 |
+| partial words | infix of 5                    |             1.00 |                        1.00 |
+| partial words | two words half typed          |             1.00 |                        1.00 |
+| partial words | a vowel dropped               |             0.85 |                        0.85 |
+| partial words | 2 vowels dropped              |             0.80 |                        0.80 |
+| query shape   | two words                     |             0.88 |                        0.88 |
+| query shape   | two words reversed            |             0.90 |                        0.90 |
+| query shape   | two words joined              |             1.00 |                        1.00 |
+| query shape   | an absent word added          |             0.00 |                        0.00 |
+| noise         | space inside a word           |             0.00 |                        0.00 |
+| noise         | punctuation inside a word     |             0.00 |                        0.00 |
+| noise         | accents stripped              |             0.96 |                        0.96 |
+| noise         | accents added                 |             0.95 |                        0.95 |
+| reported only | acronym                       |             0.47 |                        0.47 |
+| reported only | plural for a singular         |             0.30 |                        0.30 |
+| phonetic      | real misspelling              |             0.20 |                        0.20 |
+<!-- bench:end -->
+
+**emoji corpus:**
+
+<!-- bench:library-microfuzz-families-emoji -->
+| Group         | Family                        | @nozbe/microfuzz | @nozbe/microfuzz (all opts) |
+|---------------|-------------------------------|-----------------:|----------------------------:|
+| typos         | neighbouring key              |             0.13 |                        0.13 |
+| typos         | two neighbouring keys         |             0.00 |                        0.00 |
+| typos         | random letter                 |             0.20 |                        0.20 |
+| typos         | dropped letter                |             0.78 |                        0.78 |
+| typos         | two dropped letters           |             0.68 |                        0.68 |
+| typos         | inserted neighbouring key     |             0.20 |                        0.20 |
+| typos         | swapped neighbours            |             0.29 |                        0.29 |
+| typos         | stuck key                     |             0.23 |                        0.23 |
+| typos         | first letter wrong            |             0.35 |                        0.35 |
+| typos         | typo in each of two words     |             0.00 |                        0.00 |
+| typos         | typo then a half-typed word   |             0.10 |                        0.10 |
+| typos         | two words joined, with a typo |             0.05 |                        0.05 |
+| phonetic      | consonant spelt another way   |             0.00 |                        0.00 |
+| phonetic      | letter doubled or singled     |             0.55 |                        0.55 |
+| phonetic      | silent letters dropped        |             0.60 |                        0.60 |
+| phonetic      | vowel sound spelt another way |             0.28 |                        0.28 |
+| partial words | prefix of 3                   |             1.00 |                        1.00 |
+| partial words | prefix of 5                   |             1.00 |                        1.00 |
+| partial words | infix of 5                    |             1.00 |                        1.00 |
+| partial words | two words half typed          |             1.00 |                        1.00 |
+| partial words | a vowel dropped               |             0.97 |                        0.97 |
+| partial words | 2 vowels dropped              |             0.77 |                        0.77 |
+| query shape   | two words                     |             1.00 |                        1.00 |
+| query shape   | two words reversed            |             0.70 |                        0.70 |
+| query shape   | two words joined              |             1.00 |                        1.00 |
+| query shape   | an absent word added          |             0.00 |                        0.00 |
+| noise         | space inside a word           |             0.10 |                        0.10 |
+| noise         | punctuation inside a word     |             0.10 |                        0.10 |
+| noise         | accents stripped              |             0.95 |                        0.95 |
+| noise         | accents added                 |             1.00 |                        1.00 |
+| reported only | acronym                       |             0.62 |                        0.62 |
+| reported only | plural for a singular         |             0.70 |                        0.70 |
+| phonetic      | real misspelling              |             0.23 |                        0.23 |
 <!-- bench:end -->

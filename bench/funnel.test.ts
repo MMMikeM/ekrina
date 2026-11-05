@@ -9,12 +9,13 @@
  * export the gates.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { fuzzyMatch } from "ekrina";
+import { fuzzyMatch } from "../src/index";
 import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
 import { isRescuableQuery } from "../src/rescue";
 import { splitWords } from "../src/boundaries";
 import { normaliseText, rawFieldScan } from "../src/normalise";
 import { CORPORA } from "./corpus";
+import { withoutSecondPass } from "./ladder";
 
 type FunnelRow = {
 	query: string;
@@ -99,7 +100,7 @@ describe("pre-filter funnel", () => {
 									(bigramGate.requiredHi[b] & ~bigrams[i].hi)) ===
 								0;
 						}
-						const result = fuzzyMatch(list[i], query);
+						const result = withoutSecondPass(() => fuzzyMatch(list[i], query));
 						if (result) {
 							// A one-edit rescue matches a *corrected* query, so its hits
 							// legitimately bypass the original query's gates.

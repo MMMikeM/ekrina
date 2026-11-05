@@ -25,6 +25,18 @@ describe("ranges index the caller's string", () => {
 			expect(results[0]?.fields[0]?.ranges).toEqual([[2, 4]]);
 		});
 
+		it("shifts two-edit and sparse ranges too", () => {
+			expect(fuzzyMatch("  Ergonomic", "ergxnomiq")?.ranges).toEqual([[2, 10]]);
+			const sparse = [
+				[2, 2],
+				[4, 4],
+				[6, 7],
+			];
+			expect(fuzzyMatch("  Huguette", "hget")?.ranges).toEqual(sparse);
+			const search = createFuzzySearch(["  Huguette"]);
+			expect(search("hget")[0]?.fields[0]?.ranges).toEqual(sparse);
+		});
+
 		it("treats padding as insignificant for the exact tier", () => {
 			// Content-identical modulo padding = exact; range spans the trimmed
 			// content's position in the raw string.

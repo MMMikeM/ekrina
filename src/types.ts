@@ -1,28 +1,30 @@
 /**
- * Range of indices in a string: [start, end] (inclusive)
+ * Start and end indices into the caller's own string, both inclusive.
  */
 export type Range = [number, number];
 
 /**
- * List of character ranges that should be highlighted
+ * The ranges of the caller's string that matched, to highlight.
  */
 export type HighlightRanges = Range[];
 
 /**
  * Which tier a match came from. Lower on this list is a weaker match. Every
- * genuine tier scores at or below `SCORES.CONTAINS`; anything above it is a
- * fuzzy chain or a one-edit typo rescue, and the tier is what tells those
- * apart — so `score <= SCORES.CONTAINS` is the test for "the user's text
- * actually appears here", and filtering to it is how you opt out of guessing.
+ * genuine tier scores at or below `SCORES.CONTAINS`, and anything above it is a
+ * fuzzy chain or a correction, which only the tier tells apart. So
+ * `score <= SCORES.CONTAINS` is the test for "the user's text actually appears
+ * here", and filtering to it is how you opt out of guessing. A field with
+ * `demoteBy` has its scores shifted, so test its tier instead.
  *
- * `corrected` names a single-character fix the *query* needed, not the field;
- * `MatchResult.corrected` carries the fixed query.
+ * `corrected` names a fix the *query* needed, not the field: up to two
+ * mistakes, a key held down, a stray or missing space, or a word typed
+ * sparsely. `MatchResult.corrected` carries the fixed query.
  */
 export type Tier =
 	| "exact"
 	| "normalised-exact"
 	| "prefix"
-	| "boundary-exact"
+	| "boundary-cased"
 	| "boundary"
 	| "multi-word"
 	| "acronym"
@@ -37,8 +39,9 @@ export type Tier =
 export type MatchResult = {
 	score: number;
 	tier: Tier;
-	/** The query with its one mistyped character fixed, in the caller's own
-	 *  casing. Present only when `tier` is `"corrected"`. */
+	/** The query with its mistyped characters fixed. Present only when `tier`
+	 *  is `"corrected"`. A single mistyped character fixed keeps the caller's
+	 *  own casing; a word read any other way is spelt as the field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };
@@ -55,13 +58,16 @@ export type MatchOptions = {
  * One searchable field of an item, with its matching configuration.
  */
 export type FieldSpec<T = unknown> = {
-	/** Extract this field's text from an item (null → this field is skipped). */
-	text: (item: T) => string | null;
+	/** Returns this field's string for an item; null skips the field for that item. */
+	selectField: (item: T) => string | null;
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
-	/** Added to this field's score; higher demotes it (default: 0, keep >= 0).
-	 *  e.g. `atBest: SCORES.CONTAINS` keeps this field below better tiers elsewhere. */
-	atBest?: number;
+	/** Added to every score this field produces, those in `fields` included, so
+	 *  a higher value demotes it (default: 0, keep >= 0). With
+	 *  `demoteBy: SCORES.CONTAINS`, this field's best hit ranks level with a
+	 *  contains match elsewhere. The shift never changes `tier`, so filter a
+	 *  demoted field by tier rather than by score. */
+	demoteBy?: number;
 };
 
 /**

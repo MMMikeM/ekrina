@@ -1,0 +1,25 @@
+/* The validated chart accents: dark on :root, as theme.css sets its tokens. */
+:root {
+	--chart-ekrina: #3987e5;
+	--chart-subject: #e06a35;
+	--chart-field: #6f6e68;
+	--chart-band: rgb(255 255 255 / 0.045);
+}
+
+:root[data-theme="light"] {
+	--chart-ekrina: #2a78d6;
+	--chart-subject: #d4622a;
+	--chart-field: #94928b;
+	--chart-band: rgb(0 0 0 / 0.04);
+}
+
+.sl-markdown-content img.chart {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+:root[data-theme="light"] .sl-markdown-content img.chart-dark,
+:root[data-theme="dark"] .sl-markdown-content img.chart-light {
+	display: none;
+}

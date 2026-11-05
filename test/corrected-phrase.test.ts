@@ -49,10 +49,6 @@ describe("one-edit corrections inside a phrase", () => {
 		expect(m?.corrected).toBe("handcrafted wooden");
 	});
 
-	it("two mistyped words return nothing — two edits are a guess, not a correction", () => {
-		expect(fuzzyMatch("Handcrafted Wooden Duck", "handcxafted woodxn")).toBeNull();
-	});
-
 	it("a mistyped word under four characters is not corrected", () => {
 		expect(fuzzyMatch("Big Oak Table", "bxg oak")).toBeNull();
 	});

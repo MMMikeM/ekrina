@@ -21,10 +21,10 @@ describe("tier ladder", () => {
 		["Apple", "apple", 0.1, "normalised-exact", [[0, 4]]],
 		["Café", "cafe", 0.1, "normalised-exact", [[0, 3]]],
 		["banana", "ban", 0.5, "prefix", [[0, 2]]],
-		["Hello World", "World", 0.9, "boundary-exact", [[6, 10]]],
+		["Hello World", "World", 0.9, "boundary-cased", [[6, 10]]],
 		["Hello World", "world", 1, "boundary", [[6, 10]]],
 		["Hello World", "wor", 1, "boundary", [[6, 8]]],
-		["well-known", "known", 0.9, "boundary-exact", [[5, 9]]],
+		["well-known", "known", 0.9, "boundary-cased", [[5, 9]]],
 		["concatenate", "cat", 2, "contains", [[3, 5]]],
 	] as const)("%j / %j → %s (%s)", (text, query, score, tier, ranges) => {
 		const r = fuzzyMatch(text, query);

@@ -57,8 +57,8 @@ export const foldChar = (char: string): string => {
 /**
  * Normalises text for fuzzy comparison:
  * - Lowercase
- * - Remove diacritics (é → e, ü → u)
- * - Handle special characters (ł → l, ñ → n, ς → σ)
+ * - Remove diacritics (é → e, ü → u, ñ → n)
+ * - Fold the characters NFD leaves whole (ł → l, ς → σ)
  * - Trim whitespace
  *
  * Offset-preserving by construction: the result has exactly one code unit per

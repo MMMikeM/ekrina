@@ -1,0 +1,51 @@
+---
+import EkrinaMark from "./EkrinaMark.astro";
+
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+const [scope, name] = siteTitle.includes("/") ? siteTitle.split("/") : ["", siteTitle];
+---
+
+<a href={siteTitleHref} class="site-title" translate="no">
+	<EkrinaMark />
+	<span>{scope && <span class="scope">{scope}/</span>}{name}</span>
+</a>
+
+<style>
+	.site-title {
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
+		min-width: 0;
+		min-height: var(--tap-target);
+		color: var(--ink);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-lg);
+		font-weight: 500;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	span {
+		overflow: hidden;
+	}
+
+	.scope {
+		color: var(--ink-muted);
+		font-weight: 400;
+	}
+
+
+	/* Leaves room for the search, GitHub and theme buttons beside it on a phone. */
+	@media (max-width: 49.99rem) {
+		.site-title {
+			gap: var(--space-2xs);
+			font-size: var(--text-sm);
+		}
+	}
+
+	@media (max-width: 24.99rem) {
+		.scope {
+			display: none;
+		}
+	}
+</style>
