@@ -200,6 +200,7 @@ Dark values sit on `:root`; every `-light` key is the same role under `[data-the
 
 A single reading column inside Starlight's docs frame (nav, left sidebar, right table of contents).
 The landing page drops the sidebar and widens its container in steps (352, 576, 672, 928, 1040, 1080px at 384 to 1440px viewports), with `--space-xl` side padding from 48rem up; its sections are separated by a hairline rule and `--space-xl` above it from 40rem.
+Its hero puts the live search demo in a right-hand column of up to 27rem once the hero's container is 56rem wide, so the proof shares the first screen with the pitch; narrower, the demo stacks under the install line.
 The explorer widens the content column to 60rem and lays out by container queries on itself (`workbench`): charts swap to a narrow form under 40rem, the quality view goes two-column from 44rem, labels shorten under 34rem.
 
 Spacing is a fixed nine-step scale from `--space-3xs` (0.25rem) to `--space-3xl` (6rem); gaps between related controls are `2xs`/`xs`, between blocks `m`/`l`.
@@ -249,6 +250,7 @@ Quiet, ruled, mono.
 A row of mono options in one Strong Rule outline (8px), each option 2.75rem tall and divided by a Strong Rule.
 The checked option inverts to an Ink fill with Paper text; focus draws the ring inset (-2px); forced colours swap in Highlight / HighlightText.
 Works with no JavaScript: the corpus bar and explorer drive their panels through `:has()` on radio inputs.
+The exception is the explorer's Log/Linear switch, which stays hidden until its script runs, because the linear charts are fetched per library when Linear is picked.
 
 ### Inputs / Fields
 - **Search input (landing demo):** Paper fill, Strong Rule 1px outline with a 2px Ekrina Series Blue underline, top corners 8px, mono at 1.25rem, 2.75rem tall; placeholder in Muted Ink.

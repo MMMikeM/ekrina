@@ -34,6 +34,7 @@ The site deploys when a stable release is published, or when the maintainer runs
 ## Capabilities and Constraints
 
 Static Astro Starlight site, rendered at build time; interactive controls work without JavaScript where possible, and the two live demos load the library only on first use.
+The explorer's linear-scale speed charts are the one control that needs script: they load per library when Linear is picked, rather than shipping 56 hidden charts in every page.
 Timings exist for the en and native corpora at 10k and 100k items; the emoji corpus is scored for quality only.
 
 ## Brand Commitments
