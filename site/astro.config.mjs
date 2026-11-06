@@ -14,7 +14,7 @@ const site = "https://ekrina.thelazyweb.dev";
 const socialImage = {
 	url: `${site}/og.png`,
 	squareUrl: `${site}/og-square.png`,
-	alt: "ekrina: tiny, typed fuzzy matching. $ npm install ekrina",
+	alt: "Ekrina. Lazy where it counts. Fuzzy search that forgives typos. $ npm install ekrina",
 };
 
 export default defineConfig({
