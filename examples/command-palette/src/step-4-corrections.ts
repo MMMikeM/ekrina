@@ -1,5 +1,5 @@
 import { createFuzzySearch, SCORES } from "ekrina";
-import type { FuzzyResult, HighlightRanges } from "ekrina";
+import type { FuzzyResult, HighlightRanges, MatchResult } from "ekrina";
 import type { Command } from "./commands";
 
 const LIMIT = 8;
@@ -12,6 +12,9 @@ const createSearch = (commands: Command[]) => {
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
+
+const bestField = (result: FuzzyResult<Command>): MatchResult =>
+	result.fields.find((field) => field?.score === result.score)!;
 
 const highlighted = (text: string, ranges: HighlightRanges): (string | HTMLElement)[] => {
 	const nodes: (string | HTMLElement)[] = [];
@@ -38,17 +41,14 @@ const element = <K extends keyof HTMLElementTagNameMap>(
 	return node;
 };
 
-const option = (result: FuzzyResult<Command>, id: string): HTMLLIElement => {
+const option = (result: FuzzyResult<Command>): HTMLLIElement => {
 	const { title, category, keywords } = result.item;
 	const [titleMatch, keywordMatch] = result.fields;
 	const text = element("span", "text", element("span", "title", ...highlighted(title, titleMatch?.ranges ?? [])));
 	if (!titleMatch && keywordMatch && keywords) {
 		text.append(element("span", "keywords", ...highlighted(keywords, keywordMatch.ranges)));
 	}
-	const row = element("li", "option", text, element("span", "category", category));
-	row.id = id;
-	row.setAttribute("role", "option");
-	return row;
+	return element("li", "option", text, element("span", "category", category));
 };
 
 export const createPalette = (
@@ -57,45 +57,38 @@ export const createPalette = (
 	run: (command: Command) => void,
 ): void => {
 	const search = createSearch(commands);
-	const listId = `${root.id || "palette"}-options`;
 
 	const input = element("input", "query");
 	input.type = "text";
 	input.placeholder = "Type a command";
 	input.autocomplete = "off";
 	input.spellcheck = false;
-	input.setAttribute("role", "combobox");
 	input.setAttribute("aria-label", "Command");
-	input.setAttribute("aria-controls", listId);
-	input.setAttribute("aria-autocomplete", "list");
-	input.setAttribute("aria-expanded", "false");
+
+	const notice = element("p", "notice");
+	notice.setAttribute("aria-live", "polite");
 
 	const list = element("ul", "options");
-	list.id = listId;
-	list.setAttribute("role", "listbox");
 	list.setAttribute("aria-label", "Commands");
 
 	root.classList.add("palette");
-	root.append(input, list);
+	root.append(input, notice, list);
 
 	let results: FuzzyResult<Command>[] = [];
-	let active = 0;
 
-	const highlightActive = (): void => {
-		[...list.children].forEach((row, i) => row.setAttribute("aria-selected", String(i === active)));
-		const row = list.children[active];
-		if (row) input.setAttribute("aria-activedescendant", row.id);
-		else input.removeAttribute("aria-activedescendant");
-		row?.scrollIntoView({ block: "nearest" });
+	const noticeText = (query: string): string => {
+		if (query === "") return "";
+		const top = results[0];
+		if (!top) return `No commands match “${query}”`;
+		const match = bestField(top);
+		return match.tier === "corrected" ? `Showing results for “${match.corrected}”` : "";
 	};
 
 	const update = (): void => {
 		const query = input.value.trim();
 		results = query === "" ? [] : search(query);
-		active = 0;
-		list.replaceChildren(...results.map((result, i) => option(result, `${listId}-${i}`)));
-		input.setAttribute("aria-expanded", String(results.length > 0));
-		highlightActive();
+		list.replaceChildren(...results.map((result) => option(result)));
+		notice.textContent = noticeText(query);
 	};
 
 	const choose = (index: number): void => {
@@ -108,22 +101,8 @@ export const createPalette = (
 
 	input.addEventListener("input", update);
 	input.addEventListener("keydown", (event) => {
-		const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
-		const move = moves[event.key];
-		if (move && results.length > 0) {
-			event.preventDefault();
-			active = (active + move + results.length) % results.length;
-			highlightActive();
-		} else if (event.key === "Enter") {
-			event.preventDefault();
-			choose(active);
-		} else if (event.key === "Escape") {
-			input.value = "";
-			update();
-		}
+		if (event.key === "Enter") choose(0);
 	});
-	// Keeps focus in the input, so typing carries on after a click.
-	list.addEventListener("mousedown", (event) => event.preventDefault());
 	list.addEventListener("click", (event) => {
 		const row = (event.target as Element).closest("li");
 		if (row) choose([...list.children].indexOf(row));

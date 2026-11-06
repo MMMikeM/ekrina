@@ -1,6 +1,6 @@
 ---
 title: Build a command palette
-description: Build a command palette in TypeScript or React that searches titles and keywords, highlights each match, moves with the arrow keys and names a corrected typo.
+description: Build a command palette in TypeScript or React that searches titles and keywords, highlights each match, names a corrected typo and moves with the arrow keys.
 ---
 
 import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
@@ -10,7 +10,7 @@ import commandsTs from "../../../../examples/command-palette/src/commands.ts?raw
 import step1 from "../../../../examples/command-palette/src/step-1-search.ts?raw";
 import step2 from "../../../../examples/command-palette/src/step-2-keywords.ts?raw";
 import step3 from "../../../../examples/command-palette/src/step-3-highlight.ts?raw";
-import step4 from "../../../../examples/command-palette/src/step-4-keyboard.ts?raw";
+import step4 from "../../../../examples/command-palette/src/step-4-corrections.ts?raw";
 import paletteTs from "../../../../examples/command-palette/src/palette.ts?raw";
 import mainTs from "../../../../examples/command-palette/src/main.ts?raw";
 import paletteCss from "../../../../examples/command-palette/src/palette.css?raw";
@@ -18,7 +18,7 @@ import indexHtml from "../../../../examples/command-palette/index.html?raw";
 import reactStep1 from "../../../../examples/command-palette/src/react/step-1-search.tsx?raw";
 import reactStep2 from "../../../../examples/command-palette/src/react/step-2-keywords.tsx?raw";
 import reactStep3 from "../../../../examples/command-palette/src/react/step-3-highlight.tsx?raw";
-import reactStep4 from "../../../../examples/command-palette/src/react/step-4-keyboard.tsx?raw";
+import reactStep4 from "../../../../examples/command-palette/src/react/step-4-corrections.tsx?raw";
 import reactPalette from "../../../../examples/command-palette/src/react/palette.tsx?raw";
 import reactMain from "../../../../examples/command-palette/src/react/main.tsx?raw";
 import reactHtml from "../../../../examples/command-palette/react.html?raw";
@@ -139,29 +139,32 @@ Each match carries `ranges`, the characters that matched, indexed into the comma
 	</TabItem>
 </Tabs>
 
-## 4. Move with the keyboard
+## 4. Say when it corrected a typo
 
-The input becomes an ARIA combobox, with the list as its listbox:
+This step adds a notice above the list:
 
 <Tabs syncKey="framework">
 	<TabItem label="Vanilla">
-		<Code code={step4} lang="ts" title="src/step-4-keyboard.ts" ins={addedLines(step3, step4)} wrap />
+		<Code code={step4} lang="ts" title="src/step-4-corrections.ts" ins={addedLines(step3, step4)} wrap />
 		<CommandPalette step={4} />
 	</TabItem>
 	<TabItem label="React">
-		<Code code={reactStep4} lang="tsx" title="src/react/step-4-keyboard.tsx" ins={addedLines(reactStep3, reactStep4)} wrap />
+		<Code code={reactStep4} lang="tsx" title="src/react/step-4-corrections.tsx" ins={addedLines(reactStep3, reactStep4)} wrap />
 		<CommandPalette step={4} framework="react" />
 	</TabItem>
 </Tabs>
 
-In a combobox, focus stays in the input, and `aria-activedescendant` names the row a screen reader should announce as active.
-The input has the `combobox` role, the list `listbox` and each row `option`, and `aria-controls` ties the input to the list.
-The arrow keys move the active row, wrapping at either end, and Enter now runs the active command rather than the top one.
-Escape clears the input without running anything, and a click no longer takes focus from the input.
+`bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
+It says when that result is a correction, as in Showing results for “terminal”, or that nothing matched.
+`corrected` keeps your casing when it fixed a mistyped character, such as two swapped letters, and takes the command's spelling for other corrections, such as a missing letter, so `termnial` shows “terminal” and `comit` shows “Commit”.
+The library has corrected typos since the first step, as `termnial` shows in every palette above, and this step only adds the notice.
+`noticeText` reads only the top result, so the notice appears when the best match is a correction, even if a fuzzy match sits below it.
+The notice is a live region, so a screen reader announces it as it changes.
 
-## 5. Say when it corrected a typo
+## 5. Move with the keyboard
 
-The last step adds a notice above the list:
+This step uses nothing from Ekrina, so skip it if your framework already gives you a combobox.
+The input becomes an ARIA combobox, with the list as its listbox:
 
 <Tabs syncKey="framework">
 	<TabItem label="Vanilla">
@@ -172,12 +175,11 @@ The last step adds a notice above the list:
 	</TabItem>
 </Tabs>
 
-`bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
-It says when that result is a correction, as in Showing results for “terminal”, or that nothing matched.
-`corrected` keeps your casing when it fixed a mistyped character, such as two swapped letters, and takes the command's spelling for other corrections, such as a missing letter, so `termnial` shows “terminal” and `comit` shows “Commit”.
-The library has corrected typos since the first step, as `termnial` shows in every palette above, and this step only adds the notice.
-`noticeText` reads only the top result, so the notice appears when the best match is a correction, even if a fuzzy match sits below it.
-The notice is a live region, so a screen reader announces it as it changes.
+In a combobox, focus stays in the input, and `aria-activedescendant` names the row a screen reader should announce as active.
+The input has the `combobox` role, the list `listbox` and each row `option`, and `aria-controls` ties the input to the list.
+The arrow keys move the active row, wrapping at either end, and Enter now runs the active command rather than the top one.
+Escape clears the input without running anything, and a click no longer takes focus from the input.
+This is the finished palette at the top of the page.
 
 ## Put it on a page
 
