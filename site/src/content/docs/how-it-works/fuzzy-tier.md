@@ -15,7 +15,7 @@ The fuzzy tier is always on, with no strategy knob, and it only accepts pieces t
 - **The query's last one or two letters are exempt**, since a short tail could never be three letters long: `togrm` matches "**Tog**gle Te**rm**inal".
 - **The pieces must cover at least 18% of the text they stretch across.**
   In "Open the command palette", `oc` matches "**O**pen the **c**ommand", 2 letters in a stretch of 10, but `ocp` doesn't, since "**O**pen the **c**ommand **p**" is 3 letters in 18.
-  A long enough document holds the letters of almost any word somewhere, and this floor is what holds false matches of absent words to 2–4% on real text.
+  A long enough document has the letters of almost any word somewhere, and this floor is what holds false matches of absent words to 2–4% on real text.
 
 Anything the fuzzy tier refuses either matched a better tier already or wasn't worth showing.
 To keep only matches of the text as typed, filter to `score <= SCORES.CONTAINS`.

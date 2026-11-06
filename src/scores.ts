@@ -3,7 +3,7 @@
  * scores at or below CONTAINS, and anything above it is a `fuzzy` chain or a
  * correction (see {@link TYPO_PENALTY}), so CONTAINS is the dividing line
  * between a literal match and a speculative one. Exported so callers can
- * filter or re-rank by tier without hardcoding magic numbers.
+ * filter or re-rank by tier.
  */
 export const SCORES = {
 	EXACT: 0,
@@ -27,9 +27,9 @@ export const SCORES = {
  * (the CHANGELOG's 1.0.0 section records the measurement).
  *
  * Corrected scores therefore land at 2.1 and up, overlapping the fuzzy band,
- * and a word typed sparsely, which fixes no typo, scores just above CONTAINS:
- * `tier` is what tells them apart. One penalty for every kind of edit: they
- * are the same edit distance, and scoring them differently would rank a
- * swapped keystroke above a dropped one on no evidence.
+ * and a word typed sparsely, which fixes no typo, scores just above CONTAINS.
+ * Only `tier` tells them apart. Every kind of edit takes the same penalty,
+ * because they are the same edit distance. Scoring them differently would
+ * rank a swapped keystroke above a dropped one on no evidence.
  */
 export const TYPO_PENALTY = 2.1;

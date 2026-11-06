@@ -41,4 +41,4 @@ search(query).filter((result) => result.fields.some(isLiteral));
 ## Why there's no switch
 
 There is no option to turn the fuzzy tier or corrections off, since a filter afterwards gives the same results.
-Corrections are only tried while fewer than ten items match the query as typed, so a query that matches plenty never pays for them.
+Corrections are only tried while fewer than ten items match the query as typed, or fewer than `limit` when you pass one, so they take no time on a query that matches plenty.

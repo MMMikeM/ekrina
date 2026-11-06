@@ -17,9 +17,9 @@ input.addEventListener("input", () =>
 );
 ```
 
-Creating it reads nothing: over 100,000 items it takes about {bench.at100k.createMs} ms.
+Creating it reads nothing, so over 100,000 items it takes about {bench.at100k.createMs} ms.
 Each item is prepared the first time a query matches it, so the work spreads over the first few keystrokes and is never repeated.
-When the list changes, create a new searcher; it costs as little as the first one.
+When the list changes, create a new searcher; it takes as little time as the first one.
 
 ## Pass `limit`
 
@@ -45,7 +45,7 @@ The first of those also builds the searcher's index over the whole list, once.
 
 ## Build the index ahead of time
 
-To pay for the index before anyone types, once the list has loaded or while the page is idle, call `buildIndex()`:
+To build the index before anyone types, once the list has loaded or while the page is idle, call `buildIndex()`:
 
 ```ts
 const search = createFuzzySearch(products, (product) => product.title);
@@ -54,9 +54,9 @@ requestIdleCallback(() => search.buildIndex());
 
 Over 100,000 items it takes {bench.at100k.buildIndexMs} ms, and a session of 24 queries then takes {bench.at100k.sessionIndexedMs} ms instead of {bench.at100k.sessionMs}.
 Results are identical either way.
-A searcher that answers one query and is thrown away comes out slightly behind, so leave that one lazy.
+A searcher that answers one query and is thrown away is slightly slower with `buildIndex()`, so leave that one lazy.
 
 ## Text in other scripts
 
 Results are the same in any script, but the index can't tell non-Latin letters apart.
-On Greek, Cyrillic or CJK text it lets every item through, so each query scans the whole list, which is slower over a large list but never wrong.
+On Greek, Cyrillic or CJK text it lets every item through, so each query scans the whole list, which is slower over a large list.

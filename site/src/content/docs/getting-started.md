@@ -51,9 +51,9 @@ search("settings");
 
 - **`tier`** says what kind of match it was: `boundary` here, for the start of a later word, `prefix` for the start of the text, `fuzzy` for letters in order, `corrected` for a typo fixed, and [a few more](/how-it-works/scores/).
 - **`ranges`** are the characters that matched, as `[start, end]` pairs with both ends included, indexed into your own string.
-- **`score`** sorts the results, and **lower is better**: `0` is an exact match.
+- **`score`** sorts the results, and _lower is better_, with `0` for an exact match.
 
-Results come back sorted best first, so most code only reads `tier` and `ranges`.
+Results come back sorted best first, so `tier` and `ranges` are usually all there is to read.
 
 ## 3. Highlight the match
 
@@ -97,7 +97,7 @@ if (top?.fields[0]?.tier === "corrected") {
 }
 ```
 
-A correction always ranks below every match of the query as typed, so it only reaches the top when nothing typed matched better.
+A correction always ranks below every match of the query as typed, so it only reaches the top when nothing matches the query as typed.
 And a query nothing in the list could mean returns `[]`.
 
 ## Next
@@ -105,4 +105,4 @@ And a query nothing in the list could mean returns `[]`.
 - [Search several fields](/guides/several-fields/) weights a title above a description.
 - [Search as you type](/guides/search-as-you-type/) covers `limit` and building the index ahead of time.
 - [Scores and tiers](/how-it-works/scores/) lists every tier and its score.
-- Coming from another library? There's a migration guide for [@nozbe/microfuzz](/guides/migrate-from-microfuzz/), [Fuse.js](/guides/migrate-from-fuse/), [match-sorter](/guides/migrate-from-match-sorter/) and [fast-fuzzy](/guides/migrate-from-fast-fuzzy/).
+- There's a migration guide for [@nozbe/microfuzz](/guides/migrate-from-microfuzz/), [Fuse.js](/guides/migrate-from-fuse/), [match-sorter](/guides/migrate-from-match-sorter/) and [fast-fuzzy](/guides/migrate-from-fast-fuzzy/).

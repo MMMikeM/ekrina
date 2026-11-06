@@ -45,7 +45,7 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
 /**
  * Score one string against a query, or null when it doesn't match.
  *
- * Judges the string on its own: a searcher over a list can return fewer
+ * Judges the string on its own. A searcher over a list can return fewer
  * corrections than this does per item (see createFuzzySearch).
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
@@ -130,16 +130,16 @@ const resolveFieldSpecs = <T>(
  *
  * Results are sorted best first; within a score, a match that ends on a word
  * boundary comes first, then list order.
- * A one-character query matches only where it starts a word: anywhere, it
- * matches most of any real collection and ranks none of it.
+ * A one-character query matches only where it starts a word, since anywhere it
+ * would hit most of any real collection, in no useful order.
  * A query under five characters is corrected only when no item matches it as
  * typed, and no correction is tried once ten items match literally.
  * A sparse word, or a four-letter word with two letters swapped, can still
  * match beside them.
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
- * An empty spec array is honoured as written: the searcher has no searchable
- * fields and every query returns no results.
+ * An empty spec array leaves the searcher with no searchable fields, so every
+ * query returns no results.
  *
  * @example
  * // Array of strings

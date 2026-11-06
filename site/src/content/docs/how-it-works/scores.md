@@ -1,6 +1,6 @@
 ---
 title: Scores and tiers
-description: What each ekrina tier means and scores, why lower is better, how corrections are priced, and how to keep only matches of the query as typed.
+description: What each ekrina tier means and scores, why lower is better, how corrections rank, and how to keep only matches of the query as typed.
 sidebar:
   order: 1
 ---
@@ -45,7 +45,7 @@ Corrected matches also score above `CONTAINS` (a corrected contains is 4.1) with
 
 ## Acronyms
 
-apostrophes are word-internal, so `People's` contributes one initial, `p`, and `lpdr` matches `Lao People's Democratic Republic`.
+Apostrophes are word-internal, so `People's` contributes one initial, `p`, and `lpdr` matches `Lao People's Democratic Republic`.
 Stopwords count too: `Democratic Republic of the Congo` is `drotc`, and `drc` matches nothing (the density floor rejects so sparse a chain).
 
 The acronym tier is off by default; turn it on per field with `acronym: true`, or per call with `fuzzyMatch(text, query, { acronym: true })`.

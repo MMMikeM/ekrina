@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Ekrina corrects a query only when the query as typed comes up short.
-A correction is a guess at what was meant, so it is the fallback, never the default.
+A correction is a guess at what was meant, so it is the fallback.
 
 ## What counts as a mistake
 
@@ -32,9 +32,14 @@ It is not general edit distance, which keeps it small and fast.
 
 ## When it tries
 
-- **Only while few items match as typed.** Corrections are tried while fewer than ten items match the query as typed, or fewer than `limit` when you pass one. Past that, a correction could never reach the top of the list, so none is computed.
-- **Short queries only when nothing matches.** A query under five characters is corrected only when no item matches it as typed, except a swap in a four-letter word, which is undone whenever nothing matches it literally.
-- **Never for a long word.** A query holding a word over 64 characters is never corrected, and any query is matched on its first 256 characters.
+- **Only while few items match as typed.**
+  Corrections are tried while fewer than ten items match the query as typed, or fewer than `limit` when you pass one.
+  Past that, a correction could never reach the top of the list, so none is computed.
+- **Short queries only when nothing matches.**
+  A query under five characters is corrected only when no item matches it at all, not even fuzzily.
+  The exception is a swap in a four-letter word, which is undone when no item contains it literally, even if some match it fuzzily.
+- **Never for a long word.**
+  A query holding a word over 64 characters is never corrected, and any query is matched on its first 256 characters.
 
 Separately from corrections, a one-character query matches only where it starts a word (`o` finds "Open File", not "Folder"), since one character anywhere matches most of any list.
 

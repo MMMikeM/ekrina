@@ -27,7 +27,7 @@ The ranges index the document as you passed it, so the same highlight helpers wo
 ## False matches
 
 A long enough document holds the letters of almost any word somewhere, in order.
-The fuzzy tier refuses any match whose pieces cover less than 18% of the stretch of text they span, which is what keeps an absent word from matching a whole page ([the fuzzy tier](/how-it-works/fuzzy-tier/)).
+The fuzzy tier refuses any match whose pieces cover less than 18% of the stretch of text they span, and that density floor is what keeps an absent word from matching a whole page ([the fuzzy tier](/how-it-works/fuzzy-tier/)).
 Some false matches still get through, and they rise with the length of the document; [the long-text table](/benchmarks/#matching-inside-long-text) measures them at every length up to 16,000 characters.
 
 To accept only text that appears as typed, check the score: `match && match.score <= SCORES.CONTAINS`.

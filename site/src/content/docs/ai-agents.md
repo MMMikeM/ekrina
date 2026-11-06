@@ -11,7 +11,8 @@ The file wraps them in start and end markers, so you can paste it into your proj
 ## Rules
 
 - **It isn't `@nozbe/microfuzz`.**
-  Import the named export, `import { createFuzzySearch } from "ekrina"`: there is no default export, in ESM or CJS.
+  Import the named export, `import { createFuzzySearch } from "ekrina"`.
+  There is no default export, in ESM or CJS.
   A list of objects takes a function, `createFuzzySearch(items, (item) => item.title)`, or an array of field specs, `[{ selectField: (item) => item.title }]`.
   There is no `getText`, `key` or `strategy` option, and an options object in their place throws a `TypeError`.
   A field spec's function is `selectField` and its demotion is `demoteBy`; the 1.x name `text` throws, and `atBest` is silently ignored.
