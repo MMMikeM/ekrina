@@ -9,13 +9,13 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 <!-- bench:compare -->
 | Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
 |-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:------:|-----------|
-| **Ekrina**        | ~6.4 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
+| **Ekrina**        | ~9.3 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
 | fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
-| Fuse.js (tuned)   | ~9.3 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
-| uFuzzy (all opts) | ~4.1 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
+| Fuse.js (tuned)   | ~9.6 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
+| uFuzzy (all opts) | ~4.2 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
 | fuzzysort         | ~3.7 kB |    0 | 0.46 | 0.07 |     0.41 |  🔴   |   🟢   | 🔴        |
 | @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 | 0.07 |     2.10 |  🔴   |   🟢   | 🔴        |
-| match-sorter      | ~3.4 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
+| match-sorter      | ~3.5 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
 | fuzzy             | ~0.8 kB |    0 | 0.30 | 0.07 |     2.10 |  🔴   |   🟡   | 🔴        |
 <!-- bench:end -->
 
@@ -24,7 +24,7 @@ The corpora are 100,000 real Wikidata names, under their English labels and unde
 **junk** is the share of queries with no right answer anywhere in the list that the library answers anyway.
 **ms/query** is how long one query takes once the searcher has answered twenty-three real ones, the search-as-you-type number.
 Gzip is `esbuild --bundle --minify` tree-shaken to each library's primary API.
-The size badge on the README measures the whole published package, which is why it reads higher.
+The size badge on the README measures the whole published package rather than the primary API.
 The full matrix, every feature cell verified against the library's current source, is in [the benchmarks](./benchmarks.md#libraries).
 
 Accuracy against one whole cold search (index + one query) is the least flattering way to measure Ekrina, since a library with no constructor does no work up front (the frontend chart in [the benchmarks](./benchmarks.md), query time only, has fuzzysort and uFuzzy (all opts) beside Ekrina on its frontier, at 0.46 and 0.66 MRR):
@@ -47,10 +47,10 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Pick Ekrina.
 It tops the quality scorecard on all three benchmark corpora, answers nothing it shouldn't, and runs its session several times faster than the two libraries closest to it on quality.
-At ~6.4 kB gzip it is the third-largest of the eight, and the correction machinery is both where the size goes and where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
-Only Fuse.js and fast-fuzzy are larger, at 1.5–1.7×.
+At ~9.3 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11 kB, are larger.
+That size goes on the correction machinery, which is also where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
 The exception:
 
-- **A query word the item lacks must still match** (an OR-style search): Ekrina requires every word, so pick `fast-fuzzy` there, at 1.7× the bundle and ~6 ms queries, or split the query yourself.
+- **A query word the item lacks must still match** (an OR-style search): Ekrina requires every word, so pick `fast-fuzzy` there, at 1.2× the bundle and ~6 ms queries, or split the query yourself.
 
 The rest of the field is dominated on these benchmarks; the full argument, per-library, is in [the recommendation](./benchmarks.md#the-recommendation).

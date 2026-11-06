@@ -88,8 +88,8 @@ The first query that needs the index pays to build it; [search as you type](/gui
 Against {bench.libraries} other libraries on three real-world lists, Ekrina ranks the right item higher than any of them: it scores {bench.ekrina.mrr} on mean reciprocal rank, where 1 means the right item always comes first, against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
 On queries that no item answers, it returns nothing on all three lists, where on the list of native names {bench.runnerUp.name} answers {bench.runnerUp.junk} of them and {bench.fuse.name} {bench.fuse.junk}.
 
-It isn't the smallest.
-At {bench.ekrina.gzip} gzipped it is {bench.size}, and only Fuse.js at {bench.fuse.gzip} and fast-fuzzy at {bench.fastFuzzy.gzip} are larger.
+It isn't small.
+At {bench.ekrina.gzip} gzipped it is {bench.size}.
 It loses some query families outright, and [the benchmarks](/benchmarks/) say which, alongside every number on this page.
 [Compare two libraries](/explorer/) puts any one of them beside Ekrina.
 

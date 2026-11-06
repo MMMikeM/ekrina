@@ -50,14 +50,24 @@ const percent = (share: number) => `${Math.round(share * 100)}%`;
 
 const gzipOf = (config: string) => `~${META[config]!.gzipKB} kB`;
 
-const ORDINALS = ["", "second-", "third-", "fourth-", "fifth-", "sixth-", "seventh-", "eighth-"];
 const COUNTS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
-// "the third-largest of the eight", from the bundle sizes bench/libraries.ts records.
-const sizeRank = () => {
-	const sizes = Object.values(META).map((meta) => meta.gzipKB);
-	const larger = sizes.filter((kb) => kb > META.ekrina!.gzipKB).length;
-	return `the ${ORDINALS[larger]}largest of the ${COUNTS[sizes.length]}`;
+const named = (configs: string[]) =>
+	configs.map((config) => `${displayName(config)} at ${gzipOf(config)}`).join(" and ");
+
+const ORDINALS = ["", "second-", "third-", "fourth-", "fifth-", "sixth-", "seventh-", "eighth-"];
+
+// "the third-largest of the eight, and only Fuse.js at ~9.6 kB and fast-fuzzy at
+// ~11 kB are larger", from the bundle sizes bench/libraries.ts records.
+const sizeStanding = () => {
+	const own = META.ekrina!.gzipKB;
+	const others = Object.keys(META).filter((config) => config !== "ekrina");
+	const level = others.filter((config) => META[config]!.gzipKB === own);
+	const larger = others.filter((config) => META[config]!.gzipKB > own);
+	const rank = `the ${ORDINALS[larger.length]}largest of the ${COUNTS[Object.keys(META).length]}`;
+	const above =
+		larger.length === 0 ? "" : `, and only ${named(larger)} ${larger.length === 1 ? "is" : "are"} larger`;
+	return `${level.length === 0 ? rank : `level with ${named(level)}`}${above}`;
 };
 
 export const bench = {
@@ -79,9 +89,7 @@ export const bench = {
 	fuse: {
 		name: displayName("fuse.js (tuned)"),
 		junk: percent(junkOf("fuse.js (tuned)")),
-		gzip: gzipOf("fuse.js"),
 	},
-	fastFuzzy: { gzip: gzipOf("fast-fuzzy") },
-	size: sizeRank(),
+	size: sizeStanding(),
 	at100k: at100k(),
 };

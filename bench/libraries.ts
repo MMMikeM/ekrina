@@ -1,6 +1,6 @@
 // Hand-maintained, not measured: sizes are `esbuild --bundle --minify`
-// (tree-shaken to the primary API) piped through gzip, and every `features`
-// cell is verified against that library's current source.
+// (tree-shaken to the primary API) piped through gzip, in kB of 1,000 bytes,
+// and every `features` cell is verified against that library's current source.
 
 export type Features = {
 	ranges: "yes" | "opt-in" | "partial" | "no";
@@ -24,7 +24,7 @@ export type LibraryMeta = {
 
 export const META: Record<string, LibraryMeta> = {
 	ekrina: {
-		gzipKB: 6.4,
+		gzipKB: 9.3,
 		deps: 0,
 		type: "subsequence (tiered)",
 		module: "esm",
@@ -72,7 +72,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	"match-sorter": {
-		gzipKB: 3.4,
+		gzipKB: 3.5,
 		deps: 2,
 		type: "subsequence (tiered)",
 		module: "dual",
@@ -88,7 +88,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	uFuzzy: {
-		gzipKB: 4.1,
+		gzipKB: 4.2,
 		deps: 0,
 		type: "subsequence",
 		module: "dual",
@@ -120,7 +120,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	"fuse.js": {
-		gzipKB: 9.3,
+		gzipKB: 9.6,
 		deps: 0,
 		type: "typo-tolerant",
 		module: "dual",
