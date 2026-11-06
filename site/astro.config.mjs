@@ -20,8 +20,14 @@ const socialImage = {
 
 export default defineConfig({
 	site,
-	// The tutorial runs examples/command-palette, which imports the package by name.
-	vite: { resolve: { alias: { ekrina: fileURLToPath(new URL("../src/index.ts", import.meta.url)) } } },
+	// The tutorial runs examples/command-palette, which imports the package and React by name;
+	// the docs build never installs the example, so both resolve from here.
+	vite: {
+		resolve: {
+			alias: { ekrina: fileURLToPath(new URL("../src/index.ts", import.meta.url)) },
+			dedupe: ["react", "react-dom"],
+		},
+	},
 	integrations: [
 		starlight({
 			title: "Ekrina",

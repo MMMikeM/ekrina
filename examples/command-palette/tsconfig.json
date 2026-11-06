@@ -4,10 +4,12 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"jsx": "react-jsx",
 		"strict": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		// The gate typechecks this against the source, so it needs no install or build.
+		// The gate typechecks this against the source, with React's types from the root's
+		// devDependencies, so it needs no install or build.
 		"paths": { "ekrina": ["../../src/index.ts"] }
 	},
 	"include": ["src"]
