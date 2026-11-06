@@ -14,6 +14,7 @@ import {
 	type TimedCorpus,
 	stripSvg,
 } from "../explorer.ts";
+import { STRIP_LAYOUTS } from "../linear-charts.ts";
 
 const explorer = data as ExplorerData;
 const ekrina = explorer.libraries.find((library) => library.config === "ekrina")!;
@@ -57,6 +58,8 @@ const toggles = [
 	hiddenUnless("corpus", "en", "data-timed"),
 	`${corpusChecked("en")} [data-timed="native"] { display: none; }`,
 	`${corpusChecked("en")} [data-borrowed], ${corpusChecked("native")} [data-borrowed] { display: none; }`,
+	`.workbench:has([name="scale"][value="linear"]:checked) .scale-log { display: none; }`,
+	`.workbench:not(:has([name="scale"][value="linear"]:checked)) .scale-linear { display: none; }`,
 	"}",
 ].join("\n");
 
@@ -107,7 +110,7 @@ const strips = Object.fromEntries(
 					</svg>
 				</span>
 			</div>
-			<fieldset class="corpus">
+			<fieldset class="labelled-switch">
 				<legend>Corpus</legend>
 				<div class="segmented">
 					{
@@ -184,24 +187,42 @@ const strips = Object.fromEntries(
 			other count as a tie.
 		</p>
 		<p class="note" data-borrowed>
-			Times, and the MRR the speed charts plot, use the native corpus: only en and native are timed.
+			Times, and the MRR the speed charts plot, use the native corpus, since only en and native are timed.
 		</p>
 
 		<section aria-labelledby="speed">
-			<h2 id="speed">Speed</h2>
+			<div class="section-head">
+				<h2 id="speed">Speed</h2>
+				<fieldset class="labelled-switch decoration" data-scale hidden>
+					<legend>Scale</legend>
+					<div class="segmented">
+						<label>
+							<input type="radio" name="scale" value="log" checked />
+							<span>Log</span>
+						</label>
+						<label>
+							<input type="radio" name="scale" value="linear" />
+							<span>Linear</span>
+						</label>
+					</div>
+				</fieldset>
+			</div>
 			{
 				timed.map((corpus) => (
 					<figure data-timed={corpus}>
 						{strips[corpus]!.map(({ size, wide, narrow }) => (
 							<div class="strip-size">
 								<p class="strip-title">{size.label} items</p>
-								<div class="strip strip-wide decoration" set:html={wide} />
-								<div class="strip strip-narrow decoration" set:html={narrow} />
+								<div class="strip strip-wide scale-log decoration" set:html={wide} />
+								<div class="strip strip-narrow scale-log decoration" set:html={narrow} />
+								{STRIP_LAYOUTS.map((layout) => (
+									<div class={`strip strip-${layout} scale-linear decoration`} data-linear-corpus={corpus} data-linear-size={size.id} data-linear-layout={layout} />
+								))}
 							</div>
 						))}
 						<figcaption>
-							Each dot is one of the 24 timed queries on the {corpus} corpus, at its median time across runs;
-							the line is one frame at 60 Hz. Hover a dot for its query.
+							Each candle spans the 24 timed queries on the {corpus} corpus, each at its median time across runs. The line runs from the fastest query to the slowest, the bar holds the middle half, and the bold figure is the median.
+							On the log scale each step from 0.1 to 1, 10 and 100 ms is ten times slower, and the linear scale draws the times to size; the line at 16 ms is one frame at 60 Hz.
 						</figcaption>
 					</figure>
 				))
@@ -315,6 +336,63 @@ const strips = Object.fromEntries(
 	</div>
 </StarlightPage>
 
+<script>
+	import type { ListSize, TimedCorpus } from "../explorer.ts";
+	import { linearChartName, type StripLayout } from "../linear-charts.ts";
+
+	// The linear charts are one pair per library, so they load when Linear is
+	// picked instead of shipping hidden in every page; without script, the page
+	// keeps the log charts and hides the switch.
+	const workbench = document.querySelector<HTMLElement>(".workbench")!;
+	const library = workbench.querySelector<HTMLSelectElement>('select[name="library"]')!;
+	const linear = workbench.querySelector<HTMLInputElement>('[name="scale"][value="linear"]')!;
+	const slots = [...workbench.querySelectorAll<HTMLElement>("[data-linear-layout]")];
+	const charts = new Map<string, Promise<string>>();
+
+	const load = (name: string): Promise<string> => {
+		let svg = charts.get(name);
+		if (!svg) {
+			svg = fetch(`/explorer/linear/${name}.svg`).then((response) => {
+				if (!response.ok) throw new Error(`${response.status} for ${name}`);
+				return response.text();
+			});
+			svg.catch(() => charts.delete(name));
+			charts.set(name, svg);
+		}
+		return svg;
+	};
+
+	const fill = (): void => {
+		if (!linear.checked) return;
+		const slug = library.value;
+		for (const slot of slots) {
+			const { linearCorpus, linearSize, linearLayout } = slot.dataset;
+			const name = linearChartName(
+				linearCorpus as TimedCorpus,
+				linearSize as ListSize,
+				linearLayout as StripLayout,
+				slug,
+			);
+			if (slot.dataset.chart === name) continue;
+			load(name).then(
+				(svg) => {
+					// A slow response for an earlier pick must not replace a newer one.
+					if (library.value !== slug || !linear.checked) return;
+					slot.innerHTML = svg;
+					slot.dataset.chart = name;
+				},
+				() => {
+					if (library.value === slug) slot.textContent = "The linear chart didn’t load. Pick Linear again to retry.";
+				},
+			);
+		}
+	};
+
+	workbench.querySelector<HTMLFieldSetElement>("[data-scale]")!.hidden = false;
+	workbench.addEventListener("change", fill);
+	fill();
+</script>
+
 <style is:global set:html={toggles}></style>
 <style is:global set:html={chartStylesheet()}></style>
 
@@ -347,11 +425,25 @@ const strips = Object.fromEntries(
 	}
 
 	.controls {
+		container-type: scroll-state;
+		position: sticky;
+		top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height));
+		z-index: 2;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-s) var(--space-m);
+		padding-block: var(--space-xs);
+		border-bottom: 1px solid var(--line);
+		background: var(--sl-color-bg);
+	}
+
+	/* Stuck, the headline shrinks so the bar doesn't take a phone's screen. */
+	@container scroll-state(stuck: top) {
+		.headline {
+			font-size: var(--text-xl);
+		}
 	}
 
 	.headline {
@@ -489,13 +581,17 @@ const strips = Object.fromEntries(
 		pointer-events: none;
 	}
 
-	.corpus {
+	.labelled-switch {
 		display: flex;
 		align-items: center;
 		gap: var(--space-xs);
 	}
 
-	.corpus legend {
+	.labelled-switch[hidden] {
+		display: none;
+	}
+
+	.labelled-switch legend {
 		float: left;
 		color: var(--ink-muted);
 		font-family: var(--__sl-font-mono);
@@ -661,6 +757,14 @@ const strips = Object.fromEntries(
 
 	.strip-narrow {
 		display: none;
+	}
+
+	.section-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: var(--space-xs) var(--space-m);
 	}
 
 	.strip-title {

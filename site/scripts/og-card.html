@@ -1,0 +1,95 @@
+<!doctype html>
+<!--
+	The source of public/og.png and public/og-square.png: open it at 1200×630, and with
+	?square at 800×800, and screenshot the viewport. The colours and fonts are the site's.
+-->
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<style>
+			@font-face {
+				font-family: "Source Serif 4 Variable";
+				font-weight: 200 900;
+				src: url("../node_modules/@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2");
+			}
+			@font-face {
+				font-family: "IBM Plex Mono";
+				src: url("../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2");
+			}
+			:root {
+				--paper: hsl(0 0% 100%);
+				--ink: hsl(229 20% 14%);
+				--ink-muted: hsl(229 10% 38%);
+				--pen: hsl(231 75% 51%);
+				--highlight: hsl(50 100% 62%);
+			}
+			html,
+			body {
+				height: 100%;
+				margin: 0;
+			}
+			body {
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				padding: 0 90px;
+				background: var(--paper);
+				color: var(--ink);
+				font-family: "Source Serif 4 Variable", Georgia, serif;
+			}
+			.mark {
+				width: 100px;
+				height: 100px;
+				margin-left: -10px;
+			}
+			h1 {
+				margin: 24px 0 0;
+				font-size: 128px;
+				font-weight: 700;
+				line-height: 1;
+				letter-spacing: -0.01em;
+			}
+			.pitch {
+				margin: 28px 0 0;
+				font-size: 46px;
+				font-weight: 600;
+				line-height: 1.2;
+			}
+			.pitch mark {
+				background: linear-gradient(transparent 19%, var(--highlight) 19% 97%, transparent 97%);
+				color: inherit;
+			}
+			.what {
+				margin: 10px 0 0;
+				color: var(--ink-muted);
+				font-size: 34px;
+				line-height: 1.3;
+			}
+			.install {
+				margin: 28px 0 0;
+				color: var(--pen);
+				font-family: "IBM Plex Mono", ui-monospace, monospace;
+				font-size: 30px;
+			}
+			.square body {
+				padding: 0 72px;
+			}
+			.square h1 {
+				font-size: 120px;
+			}
+		</style>
+		<script>
+			if (location.search === "?square") document.documentElement.className = "square";
+		</script>
+	</head>
+	<body>
+		<svg class="mark" viewBox="0 0 22 22" aria-hidden="true">
+			<rect x="2" y="5" width="18" height="14" rx="2" fill="var(--highlight)"></rect>
+			<path transform="translate(5.85 16.75) scale(0.02 -0.02)" fill="var(--ink)" stroke="var(--ink)" stroke-width="30" stroke-linejoin="round" d="M277 -13Q207 -13 154.5 16Q102 45 73.5 100Q45 155 45 232Q45 309 76 366.5Q107 424 159.5 456Q212 488 274 488Q327 488 369 465Q411 442 436 399.5Q461 357 461 296Q461 279 459 264.5Q457 250 454 240L84 240L84 282L313 282Q354 282 366 297Q378 312 378 334Q378 369 365.5 393Q353 417 329.5 429.5Q306 442 274 442Q240 442 207.5 422.5Q175 403 154 360Q133 317 133 244Q133 182 153 139Q173 96 210.5 74Q248 52 300 52Q347 52 382.5 67.5Q418 83 448 117L469 100Q449 66 423.5 40.5Q398 15 363 1Q328 -13 277 -13Z"></path>
+		</svg>
+		<h1>Ekrina</h1>
+		<p class="pitch"><mark>Lazy</mark> where it counts.</p>
+		<p class="what">Fuzzy search that forgives typos.</p>
+		<p class="install">$ npm install ekrina</p>
+	</body>
+</html>

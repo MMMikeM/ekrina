@@ -61,8 +61,8 @@ export const foldChar = (char: string): string => {
  * - Fold the characters NFD leaves whole (ł → l, ς → σ)
  * - Trim whitespace
  *
- * Offset-preserving by construction: the result has exactly one code unit per
- * unit of `NFC(text).trim()`, so match ranges computed against it index the
+ * The result is offset-preserving by construction, with exactly one code unit
+ * per unit of `NFC(text).trim()`, so match ranges computed against it index the
  * caller's own string whenever that string is NFC-normal and untrimmed
  * (virtually all real data; decomposed input gets offsets into the
  * visually-identical NFC form).

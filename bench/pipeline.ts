@@ -23,6 +23,7 @@ const here = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DOC = new URL("../docs/benchmarks.md", import.meta.url);
 const README = new URL("../README.md", import.meta.url);
+const COMPARE = new URL("../docs/compare.md", import.meta.url);
 const LIBRARY_DIR = new URL("../docs/libraries/", import.meta.url);
 
 const flags = new Set(process.argv.slice(2).filter((a) => !a.includes("=")));
@@ -269,11 +270,12 @@ const tables = regions(artifact);
 
 if (stages.cold || stages.quality || stages.memory) save(artifact);
 
-// docs/benchmarks.md carries the headline tables, README.md the comparison,
-// each library page its own.
+// docs/benchmarks.md carries the headline tables, README.md and
+// docs/compare.md the comparison, each library page its own.
 const docs = [
 	DOC,
 	README,
+	COMPARE,
 	...readdirSync(LIBRARY_DIR)
 		.filter((file) => file.endsWith(".md"))
 		.map((file) => new URL(file, LIBRARY_DIR)),

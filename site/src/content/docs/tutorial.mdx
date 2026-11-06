@@ -1,0 +1,142 @@
+---
+title: Build a command palette
+description: Build a command palette in plain TypeScript that searches titles and keywords, highlights each match, moves with the arrow keys and names a corrected typo.
+---
+
+import { Code } from "@astrojs/starlight/components";
+import CommandPalette from "../../components/CommandPalette.astro";
+import { addedLines } from "../../added-lines.ts";
+import commandsTs from "../../../../examples/command-palette/src/commands.ts?raw";
+import step1 from "../../../../examples/command-palette/src/step-1-search.ts?raw";
+import step2 from "../../../../examples/command-palette/src/step-2-keywords.ts?raw";
+import step3 from "../../../../examples/command-palette/src/step-3-highlight.ts?raw";
+import step4 from "../../../../examples/command-palette/src/step-4-keyboard.ts?raw";
+import paletteTs from "../../../../examples/command-palette/src/palette.ts?raw";
+import mainTs from "../../../../examples/command-palette/src/main.ts?raw";
+import paletteCss from "../../../../examples/command-palette/src/palette.css?raw";
+import indexHtml from "../../../../examples/command-palette/index.html?raw";
+
+Build the palette an editor opens on a shortcut, where you type part of a command, see the best eight and pick one.
+Each of the five steps below adds one thing to it and runs on this page as it stands after that step.
+Every file shown is in [`examples/command-palette`](https://github.com/MMMikeM/ekrina/tree/main/examples/command-palette), and the finished palette is `src/palette.ts`:
+
+<CommandPalette step={5} />
+
+Some queries to try in it:
+
+| Type        | Finds                    | Because                                          |
+| ----------- | ------------------------ | ------------------------------------------------ |
+| `gc`        | Git: Commit              | the title's initials, with acronyms turned on     |
+| `console`   | Toggle Terminal          | a keyword the title doesn't contain              |
+| `repl find` | Find and Replace         | every word of the query, in any order            |
+| `termnial`  | Toggle Terminal          | a corrected typo, which the palette says it fixed |
+| `qxzwkv`    | nothing                  | nothing in the list could mean it                |
+
+## Get the code
+
+The example takes the library from its repository, which uses pnpm, so build that first.
+In your own project, `npm install ekrina` instead.
+
+```bash
+git clone https://github.com/MMMikeM/ekrina.git
+cd ekrina && pnpm install && pnpm build
+cd examples/command-palette && pnpm install && pnpm dev
+```
+
+It has no framework.
+One TypeScript module builds the palette into any element, and Vite serves it.
+`pnpm dev` runs the finished palette; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
+
+## The commands
+
+Each command has a title to search, a category shown beside it, and sometimes keywords, the words someone might type that the title doesn't contain:
+
+<Code code={commandsTs} lang="ts" title="src/commands.ts" wrap />
+
+## 1. Search the titles
+
+The first palette searches each command's title and lists the best eight:
+
+<Code code={step1} lang="ts" title="src/step-1-search.ts" wrap />
+
+`createSearch` builds the searcher once, with the titles as its one field.
+It builds the index as soon as the palette exists, so the first keystroke doesn't wait for it.
+It passes `limit` because only eight rows are shown, and once eight commands match the query as typed, corrections that couldn't outrank them are never computed.
+Results come back best first, so the list is drawn in the order they arrive.
+Enter runs the top command and a click runs any of them, and either clears the input.
+
+<CommandPalette step={1} />
+
+Type `console` here and nothing comes back, since no title contains it.
+
+## 2. Search the keywords too
+
+A second field searches the keywords, and the title gets acronyms.
+The marked lines are the ones this step adds:
+
+<Code code={step2} lang="ts" title="src/step-2-keywords.ts" ins={addedLines(step1, step2)} wrap />
+
+With acronyms turned on for the title, `gc` finds Git: Commit and `tt` finds Toggle Terminal.
+The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked below any title that contains the query.
+
+Each result's `fields` has one entry per field, in the order the fields were given, and `null` for a field that didn't match.
+So `[titleMatch, keywordMatch]` reads them by position.
+When only the keywords matched, the row shows them under the title, to make it clear why the command is there.
+
+<CommandPalette step={2} />
+
+## 3. Highlight what matched
+
+Each match carries `ranges`, the characters that matched, indexed into the command's own text:
+
+<Code code={step3} lang="ts" title="src/step-3-highlight.ts" ins={addedLines(step2, step3)} wrap />
+
+`highlighted` turns a field's `ranges` into text and `<mark>` elements.
+It sets `textContent` rather than building HTML, so a command title is never parsed as markup.
+
+<CommandPalette step={3} />
+
+## 4. Move with the keyboard
+
+The input becomes an ARIA combobox, with the list as its listbox:
+
+<Code code={step4} lang="ts" title="src/step-4-keyboard.ts" ins={addedLines(step3, step4)} wrap />
+
+In a combobox, focus stays in the input, and `aria-activedescendant` names the row a screen reader should announce as active.
+The input has the `combobox` role, the list `listbox` and each row `option`, and `aria-controls` ties the input to the list.
+The arrow keys move the active row, wrapping at either end, and Enter now runs the active command rather than the top one.
+Escape clears the input without running anything, and a click no longer takes focus from the input.
+
+<CommandPalette step={4} />
+
+## 5. Say when it corrected a typo
+
+The last step adds a notice above the list:
+
+<Code code={paletteTs} lang="ts" title="src/palette.ts" ins={addedLines(step4, paletteTs)} wrap />
+
+`bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
+It says when that result is a correction, as in Showing results for “terminal”, or that nothing matched.
+`corrected` keeps your casing when it fixed a mistyped character, such as two swapped letters, and takes the command's spelling for other corrections, such as a missing letter, so `termnial` shows “terminal” and `comit` shows “Commit”.
+The library has corrected typos since the first step, as `termnial` shows in every palette above, and this step only adds the notice.
+`noticeText` reads only the top result, so the notice appears when the best match is a correction, even if a fuzzy match sits below it.
+The notice is a live region, so a screen reader announces it as it changes.
+
+## Put it on a page
+
+The page needs an element to build the palette in, and somewhere to show what ran:
+
+<Code code={indexHtml} lang="html" title="index.html" wrap />
+
+<Code code={mainTs} lang="ts" title="src/main.ts" wrap />
+
+The styles take their colours from the surrounding text, so the palette suits a light page or a dark one:
+
+<Code code={paletteCss} lang="css" title="src/palette.css" wrap />
+
+## Next
+
+- [Search several fields](/guides/several-fields/) covers `demoteBy` and acronyms in full.
+- [Highlight matches](/guides/highlight/) does the same highlighting in React.
+- [Handle corrections](/guides/corrections/) labels corrected rows or leaves them out.
+- [Search as you type](/guides/search-as-you-type/) says which keystrokes rescan the whole list.

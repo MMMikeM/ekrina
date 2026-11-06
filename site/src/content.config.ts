@@ -11,6 +11,10 @@ export const collections = {
 				// A phrase of the hero title to highlight. The title itself stays plain
 				// text, because llms.txt prints it as it is.
 				heroHighlight: z.string().optional(),
+				// A line above the hero title that names what the product is.
+				heroKicker: z.string().optional(),
+				// Puts the live search demo beside the hero.
+				heroDemo: z.boolean().optional(),
 			}),
 		}),
 	}),

@@ -35,8 +35,8 @@ jobs:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: site/pnpm-lock.yaml
-      # site/ is its own pnpm root; its build copies README.md and docs/ and
-      # generates the API reference from ../src before running astro build.
+      # site/ is its own pnpm root; its build copies the bench's pages from docs/
+      # and generates the API reference from ../src before running astro build.
       - run: pnpm --dir site install --frozen-lockfile
       - run: pnpm --dir site build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -1,0 +1,109 @@
+/* Colours derive from the surrounding text, so the palette fits a light or dark page. */
+.palette {
+	--line: color-mix(in srgb, currentColor 20%, transparent);
+	/* Strong enough for 3:1 against the page, since it is the input's only boundary. */
+	--edge: color-mix(in srgb, currentColor 55%, transparent);
+	--tint: color-mix(in srgb, currentColor 8%, transparent);
+	max-width: 36rem;
+	border: 1px solid var(--edge);
+	border-radius: 0.5rem;
+	font: inherit;
+}
+
+.palette .query {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	border: 0;
+	border-bottom: 1px solid var(--line);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 1.05em;
+}
+
+.palette .query::placeholder {
+	color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+/* With nothing below it, the input's own rule would double the palette's edge. */
+.palette:not(:has(.notice:not(:empty))):has(.options:empty) .query {
+	border-bottom-color: transparent;
+}
+
+.palette .query:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: -2px;
+}
+
+/* Collapsed rather than hidden, so the live region stays in the accessibility tree and is announced. */
+.palette .notice:empty {
+	padding: 0;
+	border: 0;
+}
+
+.palette .notice {
+	margin: 0;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid var(--line);
+	font-size: 0.9em;
+}
+
+.palette .options {
+	margin: 0;
+	padding: 0.25rem;
+	list-style: none;
+}
+
+.palette .options:empty {
+	display: none;
+}
+
+.palette .option {
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	align-items: baseline;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.25rem;
+	cursor: pointer;
+}
+
+.palette .option:hover {
+	background: var(--tint);
+}
+
+.palette .option[aria-selected="true"] {
+	background: var(--tint);
+	box-shadow: inset 3px 0 0 currentColor;
+}
+
+.palette .text {
+	display: flex;
+	flex-direction: column;
+}
+
+.palette mark {
+	padding: 0;
+	background: none;
+	color: inherit;
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+.palette .keywords,
+.palette .category {
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+@media (forced-colors: active) {
+	.palette .query:focus-visible {
+		outline-color: Highlight;
+	}
+
+	.palette .option[aria-selected="true"] {
+		outline: 2px solid Highlight;
+	}
+}

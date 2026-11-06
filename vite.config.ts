@@ -1,4 +1,5 @@
 import { defineConfig } from "vite-plus";
+import { agentsMd } from "./scripts/agents-md.ts";
 
 export default defineConfig({
 	fmt: {
@@ -41,6 +42,7 @@ export default defineConfig({
 				name: "strip-coverage-hints",
 				renderChunk: (code: string) => code.replace(/\/\* v8 ignore (?:next|start|stop) \*\//g, ""),
 			},
+			agentsMd(),
 		],
 	},
 	test: {
@@ -61,7 +63,11 @@ export default defineConfig({
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
 			// so a cached run would replay a pass over code it never read.
 			types: {
-				command: ["tsc --noEmit", "tsc -p bench --noEmit"],
+				command: [
+					"tsc --noEmit",
+					"tsc -p bench --noEmit",
+					"tsc -p examples/command-palette --noEmit",
+				],
 				dependsOn: ["build"],
 				cache: false,
 			},

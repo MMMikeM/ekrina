@@ -1,4 +1,9 @@
-# Migrating from match-sorter
+---
+title: Migrate from match-sorter
+description: "Migrate from match-sorter to ekrina: the constructor and result diff, how each option maps or why it has none, and what behaves differently."
+sidebar:
+  order: 22
+---
 
 match-sorter ranks with a ladder of tiers, and Ekrina's ladder is the same idea, so the rankings carry over almost one for one.
 The change is building a searcher once instead of sorting the whole list on every call.
@@ -43,14 +48,15 @@ The rankings and the tiers they become:
 
 Behavioural differences:
 
-- **Higher is better there, lower is better here.**
-  A ranking is a number that rises as the match gets closer; Ekrina's `score` falls, from `SCORES.EXACT` (0) to `SCORES.CONTAINS` (2) for every match of the text as typed ([Scores and tiers](../../README.md#scores-and-tiers)).
+- **Lower scores are better.**
+  A ranking is a number that rises as the match gets closer; Ekrina's `score` falls, from `SCORES.EXACT` (0) to `SCORES.CONTAINS` (2) for every match of the text as typed ([Scores and tiers](/how-it-works/scores/)).
 - **Acronyms are opt-in, and rank above `contains`.**
   match-sorter tries `ACRONYM` on every key and ranks it below `CONTAINS`.
   Ekrina tries it only on a field with `acronym: true`, and ranks it just above `contains`, at 1.8.
   Without it, `vsc` still finds "Visual Studio Code", as a `fuzzy` match.
 - **`maxRanking` becomes `demoteBy`.**
-  Both keep a field's best hit from outranking the others: `demoteBy` is added to every score the field produces, so with `demoteBy: SCORES.CONTAINS` an exact body hit ranks level with a title that contains the query.
+  Both keep a field's best hit from outranking the others.
+  `demoteBy` is added to every score the field produces, so with `demoteBy: SCORES.CONTAINS` an exact body hit ranks level with a title that contains the query.
   There is no `minRanking`, and no per-key `threshold`.
 - **Typos are corrected.**
   `termimal` finds nothing in match-sorter; Ekrina finds "Toggle Terminal", with `tier: "corrected"` and `corrected: "terminal"`.

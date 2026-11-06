@@ -13,11 +13,11 @@ export type HighlightRanges = Range[];
  * genuine tier scores at or below `SCORES.CONTAINS`, and anything above it is a
  * fuzzy chain or a correction, which only the tier tells apart. So
  * `score <= SCORES.CONTAINS` is the test for "the user's text actually appears
- * here", and filtering to it is how you opt out of guessing. A field with
- * `demoteBy` has its scores shifted, so test its tier instead.
+ * here". A field with `demoteBy` has its scores shifted, so test its tier
+ * instead.
  *
- * `corrected` names a fix the *query* needed, not the field: up to two
- * mistakes, a key held down, a stray or missing space, or a word typed
+ * `corrected` names a fix the _query_ needed, not the field. That covers up to
+ * two mistakes, a key held down, a stray or missing space, or a word typed
  * sparsely. `MatchResult.corrected` carries the fixed query.
  */
 export type Tier =
@@ -34,7 +34,7 @@ export type Tier =
 
 /**
  * The result of matching one string against a query.
- * Lower score = better match (think "error level").
+ * Lower score = better match.
  */
 export type MatchResult = {
 	score: number;
