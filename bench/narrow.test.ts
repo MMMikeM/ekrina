@@ -15,12 +15,14 @@ import { splitWords } from "../src/boundaries";
 import { normaliseText } from "../src/normalise";
 import { createSearcher } from "../src/search";
 import { CORPORA } from "./corpus";
+import { REPEAT } from "./passes.ts";
 
+const REPS = REPEAT ? 10 : 1;
 const time = (fn: () => void): number => {
-	for (let i = 0; i < 3; i++) fn();
+	for (let i = 0; i < (REPEAT ? 3 : 0); i++) fn();
 	const t = performance.now();
-	for (let i = 0; i < 10; i++) fn();
-	return (performance.now() - t) / 10;
+	for (let i = 0; i < REPS; i++) fn();
+	return (performance.now() - t) / REPS;
 };
 
 const classEscape = (s: string): string => s.replace(/[\^\]\\-]/g, "\\$&");

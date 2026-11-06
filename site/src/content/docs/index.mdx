@@ -88,7 +88,7 @@ Each library at its best-scoring configuration, over 10,000 Wikidata names each 
 <CompareTable />
 
 **MRR** is mean reciprocal rank, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
-The queries are families of real-world mistakes, Wikipedia's list of common misspellings among them, weighted before anything was measured, and `pnpm bench` reruns every cell from the frozen lists in the repository.
+The queries are families of real-world mistakes, Wikipedia's list of common misspellings among them, weighted before anything was measured, and `pnpm bench --all` reruns every cell from the frozen lists in the repository.
 Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
 It answers none of the queries with no right answer on any of the three lists{bench.alsoJunkFree}.
 It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.

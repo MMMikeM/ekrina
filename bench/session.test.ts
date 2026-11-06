@@ -10,7 +10,8 @@
 import { writeFileSync } from "node:fs";
 import { expect, it } from "vite-plus/test";
 import { type SessionRow, ensureRawDir, rawFile } from "./artifact.ts";
-import { configByName, configs } from "./configs.ts";
+import { configs } from "./configs.ts";
+import { REPEAT } from "./passes.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 100_000;
@@ -20,6 +21,12 @@ let sink = 0;
 
 // Same time-boxed median as hits.test.ts (see there for the rationale).
 const timeQuery = (run: () => number, reset?: () => void): number => {
+	if (!REPEAT) {
+		reset?.();
+		const t0 = performance.now();
+		sink += run();
+		return performance.now() - t0;
+	}
 	for (let i = 0; i < 3; i++) {
 		reset?.();
 		sink += run();
@@ -50,13 +57,8 @@ it("frontend session: three successive queries at 100k", { timeout: 60_000 }, ()
 	// replays the previous prefix); stateless libraries just run cold every
 	// sample.
 	const all = configs(list);
-	const libs = [
-		"ekrina",
-		"@nozbe/microfuzz",
-		"fuzzysort",
-		"uFuzzy (all opts)",
-		"fuse.js (all opts)",
-	].map((lib) => configByName(all, lib));
+	const shown = ["ekrina", "@nozbe/microfuzz", "fuzzysort", "uFuzzy (all opts)", "fuse.js (all opts)"];
+	const libs = all.filter((config) => shown.includes(config.name));
 
 	const rows: SessionRow[] = [];
 	for (const { name, count: run, stateful } of libs) {

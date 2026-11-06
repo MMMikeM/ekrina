@@ -17,24 +17,27 @@ The package is `ekrina`; the working directory is still `mikrofuzz` from before 
 
 ## Commands
 
-The gate is `pnpm gate`, and it runs before claiming done: build, then `lint:types`, lint and test with coverage, all as `vite.config.ts` tasks. Coverage of `src/` must stay at 100%; a branch that only guards a future Unicode or an unreachable caller gets a `/* v8 ignore */` with the reason, never a test that fakes reaching it. Lint and test replay from the task cache when nothing they read changed; the type checks never do, because tsc 7 is a native binary the cache can't see read. `lint:types` covers `src`/`test`, via `bench/tsconfig.json` `bench/` and `docs/pareto.ts`, and the docs tutorial's `examples/command-palette` against `src/`. `pnpm format` runs oxfmt over `src` and `test`. `pnpm build` is tsdown → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
+The gate is `pnpm gate`, and it runs before claiming done: build, then `lint:types`, lint and test with coverage, all as `vite.config.ts` tasks. Coverage of `src/` must stay at 100%; a branch that only guards a future Unicode or an unreachable caller gets a `/* v8 ignore */` with the reason, never a test that fakes reaching it. Lint and test replay from the task cache when nothing they read changed; the type checks never do, because tsc 7 is a native binary the cache can't see read. `lint:types` covers `src`/`test`, via `bench/tsconfig.json` `bench/` and `docs/pareto.ts`, and the docs tutorial's `examples/command-palette` against `src/`. `pnpm format` runs `vp fmt` over the repo, skipping the `fmt.ignorePatterns` in `vite.config.ts`. `pnpm build` is `vp pack` → minified ESM/CJS plus declarations in `dist/`; `prepublishOnly` reruns `lint:types`, `test`, `build`.
 
 A release is a `vX.Y.Z` tag pushed from `main` (`pnpm release`), after the version in `package.json` is bumped and its CHANGELOG section dated; `.github/workflows/publish.yml` refuses an undated or mismatched one, stages the version on npm with provenance through trusted publishing, and creates a draft GitHub Release with that section as notes and the tarball, its SHA-256, a Sigstore attestation and its provenance envelope (`.intoto.jsonl`) attached. The maintainer then approves the staged version on npm with 2FA (`npm stage approve`) and publishes the draft (`gh release edit vX.Y.Z --draft=false`). A prerelease version (`1.2.0-beta.0`) goes out under its own dist-tag. Never publish from a laptop: `publishConfig.provenance` makes it fail outside CI.
 
-`pnpm test` covers `test/**` only. The bench workspace has its own suite, `pnpm bench:test`, which builds first, because it imports the built `ekrina`, and replays from cache when neither `dist/` nor `bench/` changed. `pnpm bench` stays a plain script on purpose: a measurement must never be replayed from a cache.
+`pnpm test` covers `test/**` only. The bench workspace has its own suite, `pnpm bench:test`, which builds first, because it imports the built `ekrina`, and replays from cache when neither `dist/`, `bench/` nor its two opt-ins changed. `pnpm bench` stays a plain script on purpose: a measurement must never be replayed from a cache.
+
+**Defaults measure ekrina once; other libraries and repeats are opt-in.** Every bench entry point (`pnpm bench`, `pnpm bench:test`, `bench/run.ts`, `bench/memory.ts`) runs only ekrina's own rows (`ekrina`, `ekrina (indexed)`, `ekrina (acronym)`) and times each query once. `BENCH_ONLY=all` (or `pnpm bench --all`) brings in every library; `BENCH_REPEAT=1` restores warm-ups and medians in the suite's timings, and `--runs=N` / `--count=N` the processes per cold cell. Ask before running anything opt-in: a full matrix runs every library over three corpora.
 
 ## Benchmarks and published numbers
 
-Every number in README.md and docs/benchmarks.md is generated, and `pnpm bench` (`bench/pipeline.ts`) is the only thing that generates them.
+Every number in README.md and docs/benchmarks.md is generated, and `pnpm bench --all` (`bench/pipeline.ts`) is the only thing that generates them.
 docs/performance.md is the design-rationale record: decision evidence quoted from the runs that settled decisions, never current standings, and nothing in it is generated.
-`pnpm bench` measures, writes `bench/results.json`, rewrites every marked table in docs/benchmarks.md, and redraws the Pareto SVGs.
+`pnpm bench --all` builds, measures every library, writes `bench/results.json`, rewrites every marked table in docs/benchmarks.md, README.md, docs/compare.md and docs/libraries/, and redraws the Pareto SVGs, with `BENCH_REPEAT=1` set for its timings.
+Plain `pnpm bench` times ekrina's rows once in the cold stage and prints, touching neither the artifact nor the docs.
 Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run overwrites it, and `pnpm bench --check` fails in the meantime.
 
 - `pnpm bench --docs` re-emits every table from the committed `results.json` without measuring. This is the one to reach for when reworking prose around a table.
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
-- `pnpm bench --speed` / `--quality` / `--memory` run one stage; `--runs=N` sets the fresh processes per cold cell (default 1; a full run takes about four minutes).
+- `pnpm bench --speed` / `--quality` / `--memory` run one stage (ekrina only and printed, unless `--all`); `--runs=N` sets the fresh processes per cold cell (default 1; a full `--all` run takes about four minutes).
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact, guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
-- `pnpm bench:test` — the gate funnel and the other assertions. The funnel is a diagnostic, not a published table.
+- `pnpm bench:test` — the gate funnel and the other assertions, against ekrina's rows unless `BENCH_ONLY=all`. The funnel is a diagnostic, not a published table.
 
 `bench/results.json` is committed: it is the evidence for every published cell, so a number that moves is a reviewable diff.
 Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers.
@@ -43,7 +46,7 @@ Guards to respect rather than route around:
 
 - The pipeline exits nonzero on a contaminated run — base ekrina measuring more than 10% slower than `ekrina (acronym)`, summed over every cold cell, even though the acronym row runs strictly more code per query. That means garbage collection or thermal throttling disturbed the run. Rerun on a quiet machine; do not publish it.
 - `bench/corpus-*.json` and `bench/misspellings.json` are frozen, and regeneration is gated behind `GEN_WIKIDATA=1` (the `en` and `native` corpora and the misspellings) and `GEN_EMOJI=1` (the emoji corpus) because every published rank and MRR derives from those exact sequences. Wikidata changes daily, so regenerating redraws items as well as the sampled families and representative queries, and the hand-written prose around the family tables needs rewriting with them.
-- `pnpm bench --scope=native-10k` scopes a dev run: it measures a partial matrix, so it prints and stops without touching `results.json` or the docs. `BENCH=` still works as an alias.
+- `pnpm bench --scope=native-10k` scopes a dev run to one corpus or size: cold stage only, printed, never written. `BENCH=` still works as an alias.
 
 ## Documentation
 
@@ -105,6 +108,6 @@ Claims about behaviour cite the table or command that produced them, and a claim
 
 ## Style
 
-Enforced by oxfmt/oxlint, not by hand: tabs, double quotes, semicolons, 100 columns. Run `pnpm format`.
+Enforced by `vp fmt`/`vp lint`, configured in `vite.config.ts`, not by hand: tabs, double quotes, semicolons, 100 columns. Run `pnpm format`.
 
-`oxfmt.config.ts`, `oxlint.config.ts`, and the `bench/`/`docs/` scripts sit outside the format script's path — leave their existing style alone rather than reformatting them by hand.
+The generated files the formatter skips (`bench/results.json`, the corpora, `docs/benchmarks.md`) and `site/` keep whatever style they have; never reformat them by hand.

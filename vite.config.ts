@@ -80,7 +80,11 @@ export default defineConfig({
 				command: "vp test run",
 				cwd: "bench",
 				dependsOn: ["build"],
-				cache: { input: [{ auto: true }, "!bench/node_modules/.vite/**"] },
+				// Without these the task runs in a clean environment and never sees them.
+				cache: {
+					input: [{ auto: true }, "!bench/node_modules/.vite/**"],
+					env: ["BENCH_ONLY", "BENCH_REPEAT"],
+				},
 			},
 		},
 	},

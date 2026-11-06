@@ -10,13 +10,14 @@
  *           24 probes once each: warmed only by distinct real queries,
  *           never repetition.
  *
- *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
+ *   node bench/run.ts [variant|all] [test|all] [count] [--size=10k|100k] [--out=file] [--json]
+ *   node bench/run.ts                       # ekrina's rows, every test, one process per cell
  *   node bench/run.ts ekrina native/miss 10
  *   node bench/run.ts all batch 5 --size=10k
  *
  * Variants match by case-insensitive substring; tests by `corpus/kind`, bare
  * `kind` (both corpora), `batch`, or `all`. Count = fresh processes per cell
- * (median published; min and spread kept). Cells are interleaved round-robin
+ * (default 1; median published; min and spread kept). Cells are interleaved round-robin
  * across variants with a rotating start so thermal and load drift land evenly,
  * and the run re-times its first cell at the end as a drift canary.
  */
@@ -105,8 +106,8 @@ const sizeFlag = flags.find((f) => f.startsWith("--size="))?.slice(7);
 const sizes = sizeFlag ? [sizeFlag === "100k" ? 100_000 : 10_000] : [10_000, 100_000];
 const outFile = flags.find((f) => f.startsWith("--out="))?.slice(6);
 const countFlag = flags.find((f) => f.startsWith("--count="))?.slice(8);
-const [variantSel = "all", testSel = "all", countArg] = args;
-const count = Number(countFlag ?? countArg ?? "5");
+const [variantSel = "ekrina", testSel = "all", countArg] = args;
+const count = Number(countFlag ?? countArg ?? "1");
 if (!Number.isInteger(count) || count < 1) throw new Error(`bad count '${countArg ?? countFlag}'`);
 
 const variants = CONFIG_NAMES.filter(

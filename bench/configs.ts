@@ -68,20 +68,19 @@ const UFUZZY_ALL: uFuzzy.Options = {
 // configuration every rank it would otherwise have.
 const OUT_OF_ORDER = 5;
 
-// `pnpm bench --only=ekrina` narrows a run to the configurations whose name
-// contains one of these tokens, so a change to one library can be re-measured
-// without re-timing the other thirteen. Comma-separated, case-insensitive
-// substrings. Read here rather than passed down because every stage reaches its
-// configurations through `configs()`, and a stage that missed the filter would
-// silently measure the full matrix.
-const ONLY: string[] = (process.env.BENCH_ONLY ?? "")
+// The configurations whose name contains one of these comma-separated,
+// case-insensitive tokens: ekrina's own rows unless BENCH_ONLY says otherwise,
+// and every library only for BENCH_ONLY=all. Read here rather than passed down
+// because every stage reaches its configurations through `configs()`, and a
+// stage that missed the filter would silently measure the full matrix.
+const ONLY: string[] = (process.env.BENCH_ONLY || "ekrina")
 	.toLowerCase()
 	.split(",")
 	.map((t) => t.trim())
 	.filter(Boolean);
 
 const selected = (name: string): boolean =>
-	ONLY.length === 0 || ONLY.some((token) => name.toLowerCase().includes(token));
+	ONLY.includes("all") || ONLY.some((token) => name.toLowerCase().includes(token));
 
 // Consume a constructed object so creation can't be elided.
 const consume = (o: object): number => o.constructor.name.length;
@@ -331,6 +330,9 @@ const definitions = (list: string[]): Definition[] => [
 
 /** Every configuration name, in table order, without constructing anything. */
 export const CONFIG_NAMES: string[] = definitions([]).map((d) => d.name);
+
+/** The names BENCH_ONLY selects, in table order. */
+export const SELECTED_NAMES: string[] = CONFIG_NAMES.filter(selected);
 
 /**
  * Every configuration against `list`, or just the one named by `only`.

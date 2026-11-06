@@ -1,9 +1,10 @@
 # Match quality and speed benchmarks
 
 Full data behind the README's summary: what each library calls a match, where it ranks the right answer, and how long a query takes.
-Every measured table below is generated, and `pnpm bench` regenerates all of them: it measures, writes [`bench/results.json`](../bench/results.json), rewrites each table in place, and redraws the Pareto charts.
+Every measured table below is generated, and `pnpm bench --all` regenerates all of them: it measures, writes [`bench/results.json`](../bench/results.json), rewrites each table in place, and redraws the Pareto charts.
 No measured cell in this document is typed by hand.
 
+- `pnpm bench` alone times ekrina's own rows once and writes nothing.
 - `pnpm bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
 - `pnpm bench --check` exits nonzero if any table here disagrees with `results.json`.
 - `pnpm bench --speed`, `pnpm bench --quality` and `pnpm bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 1).
@@ -565,7 +566,7 @@ A fresh searcher's first answer prepares the text of every item it matches, and 
 The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the typo rescue, one the second pass reads over the whole list because nothing matches it literally, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
 The per-query cells are in [`bench/results.json`](../bench/results.json).
 
-_Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench` redraws them._
+_Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench --all` redraws them._
 
 ## Size, speed & search type
 
