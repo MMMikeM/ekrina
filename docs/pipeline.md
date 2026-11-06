@@ -57,7 +57,7 @@ Which path a query takes depends on:
 
 Every subsequence gate, raw or normalised, checks a field longer than 256 characters with one linear in-order scan instead of its regex, which would take time quadratic in the field's length on crafted text.
 
-With a `limit`, the ladder first runs its literal tiers alone, and the fuzzy chain and the corrections run only if fewer than `limit` items matched literally.
+With a `limit`, the ladder first runs its literal tiers alone; the fuzzy chain runs only if fewer than `limit` items matched literally, and the corrections only if fewer than ten did, or fewer than `limit` when that is smaller.
 
 ## Records and time per stage
 
