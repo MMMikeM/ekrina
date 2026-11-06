@@ -25,7 +25,8 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   A word read any of these ways reports `corrected` spelt as the field spells it.
   On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
   The cost is about a third more per query once a searcher is warm (0.54–0.64 → 0.74–0.88 ms at 10k), 24–34% more per 100k session, about the same first answer, and 1.6 MB more held at 100k; literal hits take no longer, since the second pass runs only while fewer than ten items match literally (docs/benchmarks.md, docs/performance.md).
-  The bundle grows from ~6.4 kB to ~9.3 kB gzipped (esbuild, tree-shaken to `createFuzzySearch`), and these corrections are where it goes.
+  The bundle grows from ~6.4 kB to ~7.9 kB gzipped (esbuild, tree-shaken to `createFuzzySearch`), and these corrections are where it goes.
+  The build mangles internal property names, and duplicated paths are merged into one; together they took the bundle from ~9.3 kB with every result unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.
   Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
