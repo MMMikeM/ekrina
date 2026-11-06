@@ -1,9 +1,11 @@
 /* Colours derive from the surrounding text, so the palette fits a light or dark page. */
 .palette {
 	--line: color-mix(in srgb, currentColor 20%, transparent);
+	/* Strong enough for 3:1 against the page, since it is the input's only boundary. */
+	--edge: color-mix(in srgb, currentColor 55%, transparent);
 	--tint: color-mix(in srgb, currentColor 8%, transparent);
 	max-width: 36rem;
-	border: 1px solid var(--line);
+	border: 1px solid var(--edge);
 	border-radius: 0.5rem;
 	font: inherit;
 }
@@ -22,6 +24,11 @@
 
 .palette .query::placeholder {
 	color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+/* With nothing below it, the input's own rule would double the palette's edge. */
+.palette:not(:has(.notice:not(:empty))):has(.options:empty) .query {
+	border-bottom-color: transparent;
 }
 
 .palette .query:focus-visible {

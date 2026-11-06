@@ -71,6 +71,9 @@ export const createPalette = (
 	};
 
 	input.addEventListener("input", update);
+	input.addEventListener("keydown", (event) => {
+		if (event.key === "Enter") choose(0);
+	});
 	list.addEventListener("click", (event) => {
 		const row = (event.target as Element).closest("li");
 		if (row) choose([...list.children].indexOf(row));

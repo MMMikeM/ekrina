@@ -5,7 +5,7 @@ description: Build a command palette in plain TypeScript that searches titles an
 
 import { Code } from "@astrojs/starlight/components";
 import CommandPalette from "../../components/CommandPalette.astro";
-import { lineDiff } from "../../line-diff.ts";
+import { addedLines } from "../../added-lines.ts";
 import commandsTs from "../../../../examples/command-palette/src/commands.ts?raw";
 import step1 from "../../../../examples/command-palette/src/step-1-search.ts?raw";
 import step2 from "../../../../examples/command-palette/src/step-2-keywords.ts?raw";
@@ -17,7 +17,7 @@ import paletteCss from "../../../../examples/command-palette/src/palette.css?raw
 import indexHtml from "../../../../examples/command-palette/index.html?raw";
 
 Build the palette an editor opens on a shortcut, where you type part of a command, see the best eight and pick one.
-Each step below adds one thing to it and runs on the page as it stands after that step.
+Each of the five steps below adds one thing to it and runs on this page as it stands after that step.
 Every file shown is in [`examples/command-palette`](https://github.com/MMMikeM/ekrina/tree/main/examples/command-palette), and the finished palette is `src/palette.ts`:
 
 <CommandPalette step={5} />
@@ -32,7 +32,7 @@ Some queries to try in it:
 | `termnial`  | Toggle Terminal          | a corrected typo, which the palette says it fixed |
 | `qxzwkv`    | nothing                  | nothing in the list could mean it                |
 
-## 1. Get the code
+## Get the code
 
 The example uses the library from its repository, which uses pnpm, so build that first.
 In your own project, `npm install ekrina` instead.
@@ -45,88 +45,94 @@ cd examples/command-palette && pnpm install && pnpm dev
 
 It has no framework.
 One TypeScript module builds the palette into any element, and Vite serves it.
+`pnpm dev` runs the finished palette; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
 
-## 2. The commands
+## The commands
 
 Each command has a title to search, a category shown beside it, and sometimes keywords, the words someone might type that the title doesn't contain:
 
-<Code code={commandsTs} lang="ts" title="src/commands.ts" />
+<Code code={commandsTs} lang="ts" title="src/commands.ts" wrap />
 
-## 3. Search the titles
+## 1. Search the titles
 
 The first palette searches each command's title and lists the best eight:
 
-<Code code={step1} lang="ts" title="src/step-1-search.ts" />
+<Code code={step1} lang="ts" title="src/step-1-search.ts" wrap />
 
 `createSearch` builds the searcher once, with the titles as its one field.
 It builds the index as soon as the palette exists, so the first keystroke doesn't wait for it.
 It passes `limit` because only eight rows are shown, and once eight commands match the query as typed, corrections that couldn't outrank them are never computed.
-Results come back best first, so the list is drawn in the order they arrive, and a click runs the command and clears the input.
+Results come back best first, so the list is drawn in the order they arrive.
+Enter runs the top command and a click runs any of them, and either clears the input.
 
 <CommandPalette step={1} />
 
 Type `console` here and nothing comes back, since no title contains it.
 
-## 4. Search the keywords too
+## 2. Search the keywords too
 
-A second field searches the keywords, and the title gets acronyms:
+A second field searches the keywords, and the title gets acronyms.
+The marked lines are the ones this step adds:
 
-<Code code={lineDiff(step1, step2)} lang="diff" meta='lang="ts"' title="src/step-2-keywords.ts" />
+<Code code={step2} lang="ts" title="src/step-2-keywords.ts" ins={addedLines(step1, step2)} wrap />
 
 With acronyms turned on for the title, `gc` finds Git: Commit and `tt` finds Toggle Terminal.
-The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked level with a title that only contains the query somewhere.
+The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked below any title that contains the query.
 
 Each result's `fields` has one entry per field, in the order the fields were given, and `null` for a field that didn't match.
 So `[titleMatch, keywordMatch]` reads them by position, and when only the keywords matched, the row shows them under the title, to make it clear why the command is there.
 
 <CommandPalette step={2} />
 
-## 5. Highlight what matched
+## 3. Highlight what matched
 
 Each match carries `ranges`, the characters that matched, indexed into the command's own text:
 
-<Code code={lineDiff(step2, step3)} lang="diff" meta='lang="ts"' title="src/step-3-highlight.ts" />
+<Code code={step3} lang="ts" title="src/step-3-highlight.ts" ins={addedLines(step2, step3)} wrap />
 
 `highlighted` turns a field's `ranges` into text and `<mark>` elements.
 It sets `textContent` rather than building HTML, so a command title is never parsed as markup.
 
 <CommandPalette step={3} />
 
-## 6. Move with the keyboard
+## 4. Move with the keyboard
 
 The input becomes an ARIA combobox, with the list as its listbox:
 
-<Code code={lineDiff(step3, step4)} lang="diff" meta='lang="ts"' title="src/step-4-keyboard.ts" />
+<Code code={step4} lang="ts" title="src/step-4-keyboard.ts" ins={addedLines(step3, step4)} wrap />
 
-The input keeps focus, and `aria-activedescendant` points at the active row as the arrow keys move it.
-Enter runs the active command, Escape clears the input without running anything, and a click no longer takes focus from the input.
+In a combobox, focus stays in the input, and `aria-activedescendant` names the row a screen reader should announce as active.
+The roles tell assistive technology which element is which: `combobox` on the input, `listbox` on the list, `option` on each row, and `aria-controls` ties the input to the list.
+The arrow keys move the active row, wrapping at either end, and Enter now runs the active command rather than the top one.
+Escape clears the input without running anything, and a click no longer takes focus from the input.
 
 <CommandPalette step={4} />
 
-## 7. Say when it corrected a typo
+## 5. Say when it corrected a typo
 
 The last step adds a notice above the list:
 
-<Code code={lineDiff(step4, paletteTs)} lang="diff" meta='lang="ts"' title="src/palette.ts" />
+<Code code={paletteTs} lang="ts" title="src/palette.ts" ins={addedLines(step4, paletteTs)} wrap />
 
 `bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
 It says when that result is a correction, "Showing results for “terminal”", or that nothing matched.
-A correction always ranks below every match of the query as typed, so the notice only appears when nothing matches the query as typed.
+The library corrected typos from the first step, as `termnial` shows in every palette above; this step only says so.
+`noticeText` reads only the top result, so the notice appears when the best match is a correction, and a weaker match of the query as typed can still sit below it.
 The notice is a live region, so a screen reader announces it as it changes.
 
 The finished palette is the one at the top of this page.
 
-## 8. Put it on a page
+## Put it on a page
 
 The page needs an element to build the palette in, and somewhere to show what ran:
 
-<Code code={indexHtml} lang="html" title="index.html" />
+<Code code={indexHtml} lang="html" title="index.html" wrap />
 
-<Code code={mainTs} lang="ts" title="src/main.ts" />
+<Code code={mainTs} lang="ts" title="src/main.ts" wrap />
 
 The styles take their colours from the surrounding text, so the palette suits a light page or a dark one:
 
-<Code code={paletteCss} lang="css" title="src/palette.css" />
+<Code code={paletteCss} lang="css" title="src/palette.css" wrap />
 
 ## Next
 

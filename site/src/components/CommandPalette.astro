@@ -7,7 +7,10 @@ interface Props {
 }
 
 const { step } = Astro.props;
-const hint = step < 4 ? "Type, then click or tap a command to run it." : "Use the arrow keys and Enter, or click or tap a command.";
+const hint =
+	step < 4
+		? "Type, then press Enter for the top command, or click or tap one."
+		: "Use the arrow keys and Enter, or click or tap a command.";
 ---
 
 <div class="command-palette not-content" data-palette-step={step}>
