@@ -1,11 +1,8 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
-import { bigramBit, bigramClass } from "./normalise";
+import { bigramBit, bigramClass, unitMask } from "./normalise";
 import { unfoldTable } from "./unfold";
 
-export const escapeRegex = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-// Inside a character class only these four are special, and `-` needs escaping
-// there while `escapeRegex` leaves it alone.
+// Inside a character class only these four are special.
 const escapeCharClass = (text: string): string => text.replace(/[\^\]\\-]/g, "\\$&");
 
 // One query position in the subsequence gate: `matcher` matches the position,
@@ -38,26 +35,30 @@ const holdsInOrder = (text: string, accepted: string[]): boolean => {
 // 16%/8% less gate time on ascii/mixed). The lookbehind beats a consuming
 // `(?:^|non-word)`: same survivors, ~11% less scan time.
 const subsequenceGate = (positions: GatePosition[]): Gate => {
-	const gap = (i: number): string => `[^${positions[i].gapBody}]*`;
-	const subsequenceFrom = (i: number): string => {
-		let out = positions[i].matcher;
-		for (let k = i + 1; k < positions.length; k++) out += `${gap(k)}${positions[k].matcher}`;
-		return out;
-	};
-	const runLength = Math.min(3, positions.length);
-	const run = positions
-		.slice(0, runLength)
-		.map((position) => position.matcher)
-		.join("");
-	const afterRun =
-		runLength < positions.length ? `${gap(runLength)}${subsequenceFrom(runLength)}` : "";
-	const regex = new RegExp(`(?:(?<![${WORD_CHARS}])${subsequenceFrom(0)}|${run}${afterRun})`, "u");
+	const step = (position: GatePosition): string => `[^${position.gapBody}]*${position.matcher}`;
+	const matchers = positions.map((position) => position.matcher);
+	const steps = positions.map(step);
+	const regex = new RegExp(
+		`(?:(?<![${WORD_CHARS}])${matchers[0]}${steps.slice(1).join("")}|${matchers.slice(0, 3).join("")}${steps.slice(3).join("")})`,
+		"u",
+	);
 	const accepted = positions.map((position) => position.accepts);
 	return {
 		test: (text) =>
 			text.length > LINEAR_SCAN_ABOVE ? holdsInOrder(text, accepted) : regex.test(text),
 	};
 };
+
+// Each query position as the class of code units that may stand at it. A
+// decomposed accent sits between letters in raw text but not after
+// normaliseText strips it, so the run steps over the same range it strips.
+const classGate = (classes: string[], combining: string): Gate =>
+	subsequenceGate(
+		classes.map((accepts) => {
+			const gapBody = escapeCharClass(accepts);
+			return { matcher: `[${gapBody}]${combining}`, gapBody, accepts };
+		}),
+	);
 
 /**
  * The fuzzy tier's pre-gate, and for single-word queries the whole ladder's:
@@ -70,14 +71,7 @@ const subsequenceGate = (positions: GatePosition[]): Gate => {
  * lengthens the subsequence and never changes the first three characters, so
  * the gate only ever admits fewer fields.
  */
-export const buildFuzzyGate = (normalisedQuery: string): Gate =>
-	subsequenceGate(
-		[...normalisedQuery].map((point) => ({
-			matcher: escapeRegex(point),
-			gapBody: escapeCharClass(point),
-			accepts: point,
-		})),
-	);
+export const buildFuzzyGate = (normalisedQuery: string): Gate => classGate([...normalisedQuery], "");
 
 /**
  * `buildFuzzyGate` for text nothing has normalised yet: each character becomes
@@ -89,16 +83,13 @@ export const buildFuzzyGate = (normalisedQuery: string): Gate =>
  */
 export const buildRawGate = (normalisedQuery: string): Gate | null => {
 	const unfold = unfoldTable();
-	const positions: GatePosition[] = [];
+	const classes: string[] = [];
 	for (const char of normalisedQuery) {
 		const sources = unfold[char];
 		if (sources === undefined) return null;
-		const gapBody = escapeCharClass(sources);
-		// A decomposed accent sits between letters in the raw text but not after
-		// normaliseText strips it, so the run steps over the same range it strips.
-		positions.push({ matcher: `[${gapBody}][\\u0300-\\u036f]*`, gapBody, accepts: sources });
+		classes.push(sources);
 	}
-	return subsequenceGate(positions);
+	return classGate(classes, "[\\u0300-\\u036f]*");
 };
 
 /**
@@ -122,13 +113,30 @@ export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null =>
  */
 export const charMask = (normalised: string): number => {
 	let mask = 0;
-	for (let i = 0; i < normalised.length; i++) {
-		const unit = normalised.charCodeAt(i);
-		if (unit >= 97 && unit <= 122) mask |= 1 << (unit - 97);
-		else if (unit >= 48 && unit <= 57) mask |= 1 << (26 + (unit & 3));
-		else if (unit > 127) mask |= 1 << (30 + (unit & 1));
-	}
+	for (let i = 0; i < normalised.length; i++) mask |= unitMask(normalised.charCodeAt(i));
 	return mask;
+};
+
+
+// True when the mask is an exact distinct-char presence check: no lossy bucket
+// bits set, so the presence-gate regex could not reject anything further.
+export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
+
+/**
+ * Order-independent presence gate: every distinct word-character of the query
+ * must appear somewhere in the field — a necessary condition for every tier.
+ * Unlike the subsequence gate it stays valid for out-of-order multi-word
+ * matches, and separators are excluded so `"foo bar"` still gates `"bar/foo"`.
+ */
+export const buildPresenceGate = (normalisedQuery: string): RegExp => {
+	const seen = new Set<string>();
+	let src = "^";
+	for (const char of normalisedQuery) {
+		if (seen.has(char) || !wordChar.test(char)) continue;
+		seen.add(char);
+		src += `(?=[^]*[${escapeCharClass(char)}])`;
+	}
+	return new RegExp(src);
 };
 
 /**
@@ -147,67 +155,28 @@ export const charMask = (normalised: string): number => {
 export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
 
 export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate => {
-	const queryLength = normalisedQuery.length;
-	const bigramClasses = new Int32Array(queryLength);
-	const classBit = new Int32Array(queryLength).fill(-1);
-	for (let at = 0; at < queryLength; at++) {
-		const unit = normalisedQuery.charCodeAt(at);
-		bigramClasses[at] = bigramClass(unit);
-		if (unit >= 97 && unit <= 122) classBit[at] = unit - 97;
-		else if (unit >= 48 && unit <= 57) classBit[at] = 26 + (unit & 3);
-		else if (unit > 127) classBit[at] = 30 + (unit & 1);
-	}
 	const requiredLo = new Int32Array(32);
 	const requiredHi = new Int32Array(32);
-	for (let b = 0; b < 32; b++) {
-		let occurrences = 0;
-		let soleAt = -1;
-		for (let at = 0; at < queryLength; at++) {
-			if (classBit[at] === b) {
-				occurrences++;
-				soleAt = at;
-			}
-		}
-		if (occurrences === 0) continue;
-		if (occurrences > 1) {
+	const occurrences = new Int32Array(32);
+	const classAt = (at: number): number => bigramClass(normalisedQuery.charCodeAt(at));
+	for (let soleAt = 0; soleAt < normalisedQuery.length; soleAt++) {
+		// A class's mask bit is its bigram class less one.
+		const b = classAt(soleAt) - 1;
+		if (b < 0) continue;
+		if (occurrences[b]++) {
 			requiredLo[b] = -1;
 			requiredHi[b] = -1;
 			continue;
 		}
-		for (let at = 1; at < queryLength; at++) {
-			if (
-				bigramClasses[at - 1] === 0 ||
-				bigramClasses[at] === 0 ||
-				at - 1 === soleAt ||
-				at === soleAt
-			) {
-				continue;
-			}
-			const bit = bigramBit(bigramClasses[at - 1], bigramClasses[at]);
+		for (let at = 1; at < normalisedQuery.length; at++) {
+			const before = classAt(at - 1);
+			const unitClass = classAt(at);
+			if (before === 0 || unitClass === 0 || at - 1 === soleAt || at === soleAt) continue;
+			// Shift counts are taken mod 32, so one shift serves both halves.
+			const bit = bigramBit(before, unitClass);
 			if (bit < 32) requiredLo[b] |= 1 << bit;
-			else requiredHi[b] |= 1 << (bit - 32);
+			else requiredHi[b] |= 1 << bit;
 		}
 	}
 	return { requiredLo, requiredHi };
-};
-
-// True when the mask is an exact distinct-char presence check: no lossy bucket
-// bits set, so the presence-gate regex could not reject anything further.
-export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
-
-/**
- * Order-independent presence gate: every distinct word-character of the query
- * must appear somewhere in the field — a necessary condition for every tier.
- * Unlike the subsequence gate it stays valid for out-of-order multi-word
- * matches, and separators are excluded so `"foo bar"` still gates `"bar/foo"`.
- */
-export const buildPresenceGate = (normalisedQuery: string): RegExp => {
-	const seen = new Set<string>();
-	let src = "^";
-	for (const char of normalisedQuery) {
-		if (seen.has(char) || !wordChar.test(char)) continue;
-		seen.add(char);
-		src += `(?=[^]*${escapeRegex(char)})`;
-	}
-	return new RegExp(src);
 };

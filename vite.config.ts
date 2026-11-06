@@ -1,5 +1,6 @@
 import { defineConfig } from "vite-plus";
 import { agentsMd } from "./scripts/agents-md.ts";
+import { INTERNAL_NAMES } from "./scripts/internal-names.ts";
 
 export default defineConfig({
 	fmt: {
@@ -29,7 +30,11 @@ export default defineConfig({
 		dts: true,
 		clean: true,
 		sourcemap: false,
-		minify: true,
+		minify: {
+			mangleProps: {
+				include: new RegExp(`^(${INTERNAL_NAMES.join("|")})$`),
+			},
+		},
 		// attw, publint and the bundler only warn by default; these make each one
 		// fail the build instead.
 		failOnWarn: true,

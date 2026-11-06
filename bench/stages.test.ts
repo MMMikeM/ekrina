@@ -12,7 +12,7 @@ import { splitWords } from "../src/boundaries";
 import { buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
 import { matchField, prepareQuery } from "../src/match";
 import { isRescuableQuery } from "../src/rescue";
-import { normaliseText, rawFieldScan } from "../src/normalise";
+import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createFuzzySearch } from "../src/search";
 import { CORPORA } from "./corpus";
@@ -43,7 +43,16 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 			bigramsHi[i] = acc.hi;
 		}
 
-		const ms = { rawGate: 0, materialise: 0, ladder: 0, full: 0, maskBuild: 0, relaxed: 0 };
+		const ms = {
+			rawGate: 0,
+			materialise: 0,
+			ladder: 0,
+			full: 0,
+			maskBuild: 0,
+			pairReads: 0,
+			relaxed: 0,
+		};
+		let pairsRead = 0;
 		let gateSurvivors = 0;
 		let relaxedSurvivors = 0;
 		let results = 0;
@@ -76,7 +85,8 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 			});
 
 			// What the rescue takes when a query needs it: the whole-corpus mask
-			// build, then a relaxed scan admitting one missing character class.
+			// build, the letter pairs of each item missing exactly one class, then a
+			// relaxed scan admitting those whose pairs fit.
 			const relax = isRescuableQuery(nq, q.queryWords);
 			const search = createFuzzySearch(list);
 			const literal = search(query).filter((r) => r.score <= SCORES.CONTAINS).length;
@@ -84,15 +94,24 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 			if (relax && literal < 10) {
 				rescuing++;
 				ms.maskBuild += time(() => {
+					for (let i = 0; i < list.length; i++) sink += rawFieldMask(list[i]);
+				});
+				const qm = q.queryMask;
+				const oneClassShort: number[] = [];
+				for (let i = 0; i < list.length; i++) {
+					const miss = qm & ~fieldMask[i];
+					if (miss !== 0 && (miss & (miss - 1)) === 0) oneClassShort.push(i);
+				}
+				pairsRead += oneClassShort.length;
+				ms.pairReads += time(() => {
 					const a = { lo: 0, hi: 0 };
-					for (let i = 0; i < list.length; i++) {
+					for (const i of oneClassShort) {
 						a.lo = 0;
 						a.hi = 0;
-						sink += rawFieldScan(list[i], a);
+						rawFieldScan(list[i], a);
 						sink += a.lo;
 					}
 				});
-				const qm = q.queryMask;
 				const gate = buildRescueBigramGate(nq);
 				const admits = (i: number): boolean => {
 					const miss = qm & ~fieldMask[i];
@@ -109,7 +128,7 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				ms.relaxed += time(() => {
 					for (let i = 0; i < list.length; i++) {
 						if (!admits(i)) continue;
-						if (matchField(raw[i], norm[i], fieldMask[i], q, false)) sink++;
+						if (matchField(raw[i], norm[i], fieldMask[i], q, false, true)) sink++;
 					}
 				});
 			}
@@ -117,6 +136,16 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				sink += search(query).length;
 			});
 		}
+
+		const indexBuild = time(() => {
+			const a = { lo: 0, hi: 0 };
+			for (let i = 0; i < list.length; i++) {
+				a.lo = 0;
+				a.hi = 0;
+				sink += rawFieldScan(list[i], a);
+				sink += a.lo;
+			}
+		});
 
 		expect(sink).not.toBe(0);
 		const n = counted;
@@ -128,8 +157,9 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				`  materialise   survivors only                       ${p(ms.materialise)} ms\n` +
 				`  ladder        -> ${(results / n).toFixed(0)} results                    ${p(ms.ladder)} ms\n` +
 				`  search()      total                                ${p(ms.full)} ms\n` +
+				`  buildIndex()  masks + letter pairs over all N      ${indexBuild.toFixed(3).padStart(7)} ms\n` +
 				(rescuing
-					? `  RESCUE ONLY: mask build ${(ms.maskBuild / rescuing).toFixed(3)} ms, relaxed scan admits ${(relaxedSurvivors / rescuing).toFixed(0)} (${((100 * relaxedSurvivors) / (rescuing * 100_000)).toFixed(1)}%) costing ${(ms.relaxed / rescuing).toFixed(3)} ms\n`
+					? `  RESCUE ONLY: mask build ${(ms.maskBuild / rescuing).toFixed(3)} ms, letter pairs for ${(pairsRead / rescuing).toFixed(0)} items one class short ${(ms.pairReads / rescuing).toFixed(3)} ms, relaxed scan admits ${(relaxedSurvivors / rescuing).toFixed(0)} (${((100 * relaxedSurvivors) / (rescuing * 100_000)).toFixed(1)}%) costing ${(ms.relaxed / rescuing).toFixed(3)} ms\n`
 					: ""),
 		);
 	}

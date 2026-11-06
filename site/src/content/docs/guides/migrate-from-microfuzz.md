@@ -48,4 +48,4 @@ Behavioural differences:
   microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary.
   `useMemo(() => createFuzzySearch(list, selectField), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
 
-Ekrina is ~9.3 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.
+Ekrina is ~7.7 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.

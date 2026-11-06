@@ -1,23 +1,18 @@
 import { isBoundaryChar } from "./boundaries";
-import type { HighlightRanges, Range } from "./types";
+import type { MatchResult, Range } from "./types";
 
 // Same shape as a highlight Range, named for what it means here: a consecutive
 // run of matched characters.
 type Chunk = Range;
 
-// A scored chain: the fuzzy tier's score plus the chunks that produced it.
-export type ChainScore = { score: number; ranges: HighlightRanges };
-
 // BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
 // true contains — but intentionally NOT the same binding: they mean different
 // things and could diverge.
-const CHUNK_SCORES = {
-	BASE: 2,
-	WHOLE_WORD: 0.2,
-	WORD_START: 0.4,
-	LONG: 0.8,
-	SCATTERED: 1.6,
-} as const;
+const CHUNK_BASE = 2;
+const CHUNK_WHOLE_WORD = 0.2;
+const CHUNK_WORD_START = 0.4;
+const CHUNK_LONG = 0.8;
+const CHUNK_SCATTERED = 1.6;
 
 // Matched chars ÷ spanned chars. Junk chains over long text measured at most
 // 0.143; the sparsest genuine match measured 0.211; 0.18 splits the gap with
@@ -25,25 +20,25 @@ const CHUNK_SCORES = {
 // is what keeps the fuzzy tier safe over document-length fields.
 const DENSITY_FLOOR = 0.18;
 
-const scoreChunks = (chunks: Chunk[], normalisedField: string): ChainScore | null => {
+const scoreChunks = (chunks: Chunk[], normalisedField: string): MatchResult | null => {
 	let matched = 0;
 	for (const [start, end] of chunks) matched += end - start + 1;
 	const span = chunks[chunks.length - 1][1] - chunks[0][0] + 1;
 	if (matched / span < DENSITY_FLOOR) return null;
 
-	let score = CHUNK_SCORES.BASE;
+	let score = CHUNK_BASE;
 	for (const [start, end] of chunks) {
 		// Same boundary definition admitsChunk used — a chunk admitted because a
 		// hyphen is a boundary must not then be scored as if it weren't.
 		const opensWord = start === 0 || isBoundaryChar(normalisedField[start - 1]);
 		const closesWord =
 			end === normalisedField.length - 1 || isBoundaryChar(normalisedField[end + 1]);
-		if (opensWord && closesWord) score += CHUNK_SCORES.WHOLE_WORD;
-		else if (opensWord) score += CHUNK_SCORES.WORD_START;
-		else if (end - start + 1 >= 3) score += CHUNK_SCORES.LONG;
-		else score += CHUNK_SCORES.SCATTERED;
+		if (opensWord && closesWord) score += CHUNK_WHOLE_WORD;
+		else if (opensWord) score += CHUNK_WORD_START;
+		else if (end - start + 1 >= 3) score += CHUNK_LONG;
+		else score += CHUNK_SCATTERED;
 	}
-	return { score, ranges: chunks };
+	return { score, tier: "fuzzy", ranges: chunks };
 };
 
 // A chunk may start mid-word only by running 3+ characters; short query tails
@@ -115,9 +110,9 @@ const MAX_CHUNK_STARTS = 4;
 export const fuzzyChainMatch = (
 	normalisedField: string,
 	normalisedQuery: string,
-): ChainScore | null => {
+): MatchResult | null => {
 	const firstChar = normalisedQuery[0];
-	let best: ChainScore | null = null;
+	let best: MatchResult | null = null;
 	let attempts = 0;
 
 	for (
