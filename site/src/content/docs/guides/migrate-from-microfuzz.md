@@ -7,15 +7,15 @@ sidebar:
 
 ```diff
 - import createFuzzySearch from "@nozbe/microfuzz";
-+ import { createFuzzySearch } from "ekrina";
++ import { createSearcher } from "ekrina";
 
   // one field
 - const search = createFuzzySearch(items, { key: "title" });
-+ const search = createFuzzySearch(items, (item) => item.title);
++ const search = createSearcher(items, (item) => item.title);
 
   // several fields
 - const search = createFuzzySearch(items, { getText: (i) => [i.title, i.body] });
-+ const search = createFuzzySearch(items, [
++ const search = createSearcher(items, [
 +   { selectField: (i) => i.title },
 +   { selectField: (i) => i.body },
 + ]);
@@ -46,6 +46,6 @@ Behavioural differences:
   EU spelling across the public surface, `splitWords` and `normaliseText` included.
 - **No React hook.**
   microfuzz ships `useFuzzySearchList`; Ekrina doesn't, because the searcher is already the memo boundary.
-  `useMemo(() => createFuzzySearch(list, selectField), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
+  `useMemo(() => createSearcher(list, selectField), [list])` gives you the same caching, and the list of results is a second `useMemo` on the query.
 
 Ekrina is ~7.7 kB gzip against microfuzz's ~1.7 kB, and adds an ESM build to microfuzz's CJS-only one.

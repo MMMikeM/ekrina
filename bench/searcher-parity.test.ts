@@ -10,7 +10,7 @@
  */
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
-import { createFuzzySearch, fuzzyMatch, normaliseText, splitWords } from "../src/index";
+import { createSearcher, fuzzyMatch, normaliseText, splitWords } from "../src/index";
 import { prepareBoundedQuery } from "../src/match";
 import { isShortQuery } from "../src/rescue";
 import { CORPORA } from "./corpus";
@@ -20,7 +20,7 @@ it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 6
 	for (const { name, build, queries } of CORPORA) {
 		for (const size of [10_000, 100_000]) {
 			const list = build(size);
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			for (const query of queries) {
 				const got = new Map<string, number>();
 				for (const r of withoutSecondPass(() => search(query))) {
@@ -54,11 +54,11 @@ it("an indexed searcher answers every bench query as a fresh lazy one does", { t
 	for (const { name, build, queries } of CORPORA) {
 		for (const size of [10_000, 100_000]) {
 			const list = build(size);
-			const indexed = createFuzzySearch(list);
+			const indexed = createSearcher(list);
 			indexed.buildIndex();
 			for (const query of queries) {
 				expect(indexed(query), `[${name}-${size}] "${query}"`).toEqual(
-					createFuzzySearch(list)(query),
+					createSearcher(list)(query),
 				);
 			}
 		}
@@ -91,11 +91,11 @@ it("a searcher's second pass returns exactly what its reading admits", { timeout
 	for (const { name, build, queries, samples } of CORPORA) {
 		const list = build(10_000);
 		for (const query of [...queries, ...samples.map((s) => s.query)]) {
-			const plainResults = withoutSecondPass(() => createFuzzySearch(list)(query));
+			const plainResults = withoutSecondPass(() => createSearcher(list)(query));
 			if (plainResults.filter((r) => r.score <= SCORES.CONTAINS).length >= 10) continue;
 			const scores = (results: { item: string; score: number }[]) =>
 				new Map(results.map((r) => [r.item, r.score]));
-			const got = scores(createFuzzySearch(list)(query));
+			const got = scores(createSearcher(list)(query));
 			const expected = withSecondPass(list, query, scores(plainResults));
 			expect(got, `[${name}-10000] "${query}"`).toEqual(expected);
 		}

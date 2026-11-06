@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch } from "../src/index";
+import { createSearcher } from "../src/index";
 
 const cities = ["Привет мир", "Москва река", "Санкт-Петербург"];
-const firstHit = (query: string): string | undefined => createFuzzySearch(cities)(query)[0]?.item;
+const firstHit = (query: string): string | undefined => createSearcher(cities)(query)[0]?.item;
 
 describe("a list in a script outside Latin", () => {
 	it("finds a word", () => {
@@ -10,7 +10,7 @@ describe("a list in a script outside Latin", () => {
 	});
 
 	it("matches one character where it starts a word", () => {
-		expect(createFuzzySearch(cities)("м").map((result) => result.item)).toEqual([
+		expect(createSearcher(cities)("м").map((result) => result.item)).toEqual([
 			"Москва река",
 			"Привет мир",
 		]);

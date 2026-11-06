@@ -3,21 +3,21 @@
  * test/**, so `pnpm lint:types` enforces these; the runtime bodies are incidental.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
-import type { FieldSpec, FuzzyResult, MatchResult } from "../src/index";
+import { createSearcher, fuzzyMatch, SCORES } from "../src/index";
+import type { FieldSpec, SearchResult, MatchResult } from "../src/index";
 
 type User = { name: string; email: string };
 
 describe("types", () => {
-	it("string overload infers FuzzyResult<string>", () => {
-		const r: FuzzyResult<string> | undefined = createFuzzySearch(["a", "b"])("a")[0];
+	it("string overload infers SearchResult<string>", () => {
+		const r: SearchResult<string> | undefined = createSearcher(["a", "b"])("a")[0];
 		expect(r === undefined || typeof r.item === "string").toBe(true);
 	});
 
 	it("selectField overload infers the item type without a cast", () => {
 		const users: User[] = [{ name: "Ada", email: "a@x.com" }];
 		// If T weren't inferred as User, u.name would not typecheck.
-		const r: FuzzyResult<User> | undefined = createFuzzySearch(users, (u) => u.name)("ada")[0];
+		const r: SearchResult<User> | undefined = createSearcher(users, (u) => u.name)("ada")[0];
 		expect(r?.item.name ?? "Ada").toBe("Ada");
 	});
 
@@ -27,7 +27,7 @@ describe("types", () => {
 			{ selectField: (u) => u.name, acronym: true, demoteBy: SCORES.CONTAINS },
 			{ selectField: (u) => u.email },
 		];
-		const first: MatchResult | null | undefined = createFuzzySearch(users, fields)("us")[0]
+		const first: MatchResult | null | undefined = createSearcher(users, fields)("us")[0]
 			?.fields[0];
 		expect(first == null || typeof first.tier === "string").toBe(true);
 	});

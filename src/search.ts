@@ -13,8 +13,8 @@ import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
 import type {
 	FieldSpec,
-	FuzzyResult,
-	FuzzySearcher,
+	SearchResult,
+	Searcher,
 	MatchOptions,
 	MatchResult,
 	SearchOptions,
@@ -32,7 +32,7 @@ const endsOnWordBoundary = (normalisedField: string, ranges: [number, number][])
 	return after >= normalisedField.length || isBoundaryChar(normalisedField[after]);
 };
 
-// matchField returns fresh Range tuples per call, so mutating in place is safe.
+// matchField returns fresh HighlightRange tuples per call, so mutating in place is safe.
 const shiftRanges = (ranges: [number, number][], lead: number): void => {
 	for (const range of ranges) {
 		range[0] += lead;
@@ -44,7 +44,7 @@ const shiftRanges = (ranges: [number, number][], lead: number): void => {
  * Score one string against a query, or null when it doesn't match.
  *
  * Judges the string on its own. A searcher over a list can return fewer
- * corrections than this does per item (see createFuzzySearch).
+ * corrections than this does per item (see createSearcher).
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
  *
@@ -90,7 +90,7 @@ const resolveFieldSpecs = <T>(
 	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): ResolvedSpec<T>[] => {
 	if (selection && typeof selection !== "function" && !Array.isArray(selection)) {
-		throw new TypeError("createFuzzySearch takes a function or an array of field specs");
+		throw new TypeError("createSearcher takes a function or an array of field specs");
 	}
 	const specs: FieldSpec<T>[] = !selection
 		? [{ selectField: (item) => item as unknown as string }]
@@ -111,12 +111,12 @@ const resolveFieldSpecs = <T>(
 };
 
 /**
- * Creates a fuzzy search function for a collection.
+ * Creates a fuzzy search function for a list.
  *
  * Results are sorted best first; within a score, a match that ends on a word
  * boundary comes first, then list order.
  * A one-character query matches only where it starts a word, since anywhere it
- * would hit most of any real collection, in no useful order.
+ * would hit most of any real list, in no useful order.
  * A query under five characters is corrected only when no item matches it as
  * typed, and no correction is tried once ten items match literally.
  * A sparse word, or a four-letter word with two letters swapped, can still
@@ -128,30 +128,30 @@ const resolveFieldSpecs = <T>(
  *
  * @example
  * // Array of strings
- * const search = createFuzzySearch(['apple', 'banana']);
+ * const search = createSearcher(['apple', 'banana']);
  * search('ban'); // [{ item: 'banana', score: 0.5, fields: [{ score: 0.5, tier: 'prefix', ranges: [[0, 2]] }] }]
  *
  * @example
  * // Objects, one field
- * const search = createFuzzySearch(users, (u) => u.name);
+ * const search = createSearcher(users, (u) => u.name);
  *
  * @example
  * // Multiple fields, per-field config (a body hit ranks like a title contains)
- * const search = createFuzzySearch(posts, [
+ * const search = createSearcher(posts, [
  *   { selectField: (p) => p.title },
  *   { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
  * ]);
  */
-export function createFuzzySearch(list: string[]): FuzzySearcher<string>;
-export function createFuzzySearch<T>(
+export function createSearcher(list: string[]): Searcher<string>;
+export function createSearcher<T>(
 	list: T[],
 	selectField: (item: T) => string | null,
-): FuzzySearcher<T>;
-export function createFuzzySearch<T>(list: T[], specs: FieldSpec<T>[]): FuzzySearcher<T>;
-export function createFuzzySearch<T>(
+): Searcher<T>;
+export function createSearcher<T>(list: T[], specs: FieldSpec<T>[]): Searcher<T>;
+export function createSearcher<T>(
 	list: T[],
 	selection?: ((item: T) => string | null) | FieldSpec<T>[],
-): FuzzySearcher<T> {
+): Searcher<T> {
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
@@ -159,7 +159,7 @@ export function createFuzzySearch<T>(
 	// match can replace a weaker one; a stamp from an earlier generation means
 	// none. Float64 so the generation count never wraps.
 	// oxlint-disable-next-line unicorn/no-new-array
-	const heldResults: (FuzzyResult<T> | undefined)[] = new Array(count);
+	const heldResults: (SearchResult<T> | undefined)[] = new Array(count);
 	const heldStamps = new Float64Array(count);
 	const heldEndsWord = new Uint8Array(count);
 	let generation = 0;
@@ -270,7 +270,7 @@ export function createFuzzySearch<T>(
 		count: 0,
 	};
 
-	const search = (query: string, { limit }: SearchOptions = {}): FuzzyResult<T>[] => {
+	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T>[] => {
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
 			throw new RangeError(`limit must be a positive integer, got ${limit}`);
 		}
@@ -306,7 +306,7 @@ export function createFuzzySearch<T>(
 			return endsWord;
 		};
 
-		const record = (i: number, entry: FuzzyResult<T>, endsWord: boolean): void => {
+		const record = (i: number, entry: SearchResult<T>, endsWord: boolean): void => {
 			matched.push(i);
 			heldResults[i] = entry;
 			heldStamps[i] = generation;
@@ -322,10 +322,10 @@ export function createFuzzySearch<T>(
 		// an item's match ends follows its best field.
 		const offerField = (
 			i: number,
-			entry: FuzzyResult<T> | undefined,
+			entry: SearchResult<T> | undefined,
 			f: number,
 			result: MatchResult,
-		): FuzzyResult<T> => {
+		): SearchResult<T> => {
 			const endsWord = placeFieldResult(result, i * specCount + f, f);
 			if (entry === undefined) {
 				// The literal is faster than new Array().fill(), and runs once per result.
@@ -351,7 +351,7 @@ export function createFuzzySearch<T>(
 		): void => {
 			materialise(i);
 			const base = i * specCount;
-			let entry: FuzzyResult<T> | undefined;
+			let entry: SearchResult<T> | undefined;
 			for (let f = 0; f < specCount; f++) {
 				const result = matchField(
 					trimmedFields[base + f] as string,
@@ -455,7 +455,7 @@ export function createFuzzySearch<T>(
 		// corrected one; a literal match is never touched.
 		const offerFallbacks = (
 			i: number,
-			held: FuzzyResult<T> | undefined,
+			held: SearchResult<T> | undefined,
 			reading: PreparedReading,
 		): void => {
 			const base = i * specCount;
@@ -548,11 +548,11 @@ export function createFuzzySearch<T>(
 		const results = matched
 			.sort(
 				(a, b) =>
-					(heldResults[a] as FuzzyResult<T>).score - (heldResults[b] as FuzzyResult<T>).score ||
+					(heldResults[a] as SearchResult<T>).score - (heldResults[b] as SearchResult<T>).score ||
 					heldEndsWord[b] - heldEndsWord[a] ||
 					a - b,
 			)
-			.map((i) => heldResults[i] as FuzzyResult<T>);
+			.map((i) => heldResults[i] as SearchResult<T>);
 		if (limit !== undefined && results.length > limit) results.length = limit;
 		return results;
 	};

@@ -16,7 +16,7 @@ It ships ESM and CommonJS with types for each, and runs on anything with ES2022:
 Pass the list and, for objects, a function that returns the text to search:
 
 ```ts
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
 const commands = [
 	{ id: "file.open", title: "Open File…" },
@@ -25,13 +25,13 @@ const commands = [
 	{ id: "editor.close", title: "Close Editor" },
 ];
 
-const search = createFuzzySearch(commands, (command) => command.title);
+const search = createSearcher(commands, (command) => command.title);
 
 search("open").map((result) => result.item.id);
 // ["file.open", "file.openRecent", "settings.open"]
 ```
 
-A list of strings needs no function: `createFuzzySearch(["apple", "banana", "cherry"])`.
+A list of strings needs no function: `createSearcher(["apple", "banana", "cherry"])`.
 
 Create the searcher once and keep it, since it reuses its work between queries.
 When the list changes, create a new one, which takes as little time as the first ([search as you type](/guides/search-as-you-type/)).

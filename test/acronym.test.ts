@@ -3,7 +3,7 @@
  * per-field toggle is in fields.test.ts.)
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
+import { createSearcher, fuzzyMatch, SCORES } from "../src/index";
 
 describe("acronym tier", () => {
 	it("does not fire when an earlier tier matches", () => {
@@ -25,7 +25,7 @@ describe("acronym tier", () => {
 	});
 
 	it("ranks an acronym match above an incidental contains", () => {
-		const results = createFuzzySearch(
+		const results = createSearcher(
 			["United States", "campus tour"],
 			[{ selectField: (s) => s, acronym: true }],
 		)("us");

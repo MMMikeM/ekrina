@@ -57,7 +57,7 @@ Create the searcher with `useMemo` on the list, and the results with a second `u
 
 ```ts
 const search = useMemo(
-	() => createFuzzySearch(commands, (command) => command.title),
+	() => createSearcher(commands, (command) => command.title),
 	[commands],
 );
 const results = useMemo(() => search(query), [search, query]);

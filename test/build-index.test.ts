@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, SCORES } from "../src/index";
-import type { FieldSpec, FuzzySearcher } from "../src/index";
+import { createSearcher, SCORES } from "../src/index";
+import type { FieldSpec, Searcher } from "../src/index";
 
 type Product = { title: string; tags: string | null };
 
@@ -33,28 +33,28 @@ const queries = [
 	"qxzwkv",
 ];
 
-const indexed = <T>(search: FuzzySearcher<T>): FuzzySearcher<T> => {
+const indexed = <T>(search: Searcher<T>): Searcher<T> => {
 	search.buildIndex();
 	return search;
 };
 
 describe("buildIndex", () => {
 	it("an indexed searcher answers every query exactly as a fresh lazy one does", () => {
-		const eager = indexed(createFuzzySearch(products, fields));
+		const eager = indexed(createSearcher(products, fields));
 		for (const query of queries) {
-			expect(eager(query), query).toEqual(createFuzzySearch(products, fields)(query));
+			expect(eager(query), query).toEqual(createSearcher(products, fields)(query));
 		}
 	});
 
 	it("holds for a plain string list, whose masks the index shares", () => {
 		const titles = products.map((p) => p.title);
-		const eager = indexed(createFuzzySearch(titles));
-		for (const query of queries) expect(eager(query), query).toEqual(createFuzzySearch(titles)(query));
+		const eager = indexed(createSearcher(titles));
+		for (const query of queries) expect(eager(query), query).toEqual(createSearcher(titles)(query));
 	});
 
 	it("typing a query keystroke by keystroke matches a lazy searcher at every step", () => {
-		const lazy = createFuzzySearch(products, fields);
-		const eager = indexed(createFuzzySearch(products, fields));
+		const lazy = createSearcher(products, fields);
+		const eager = indexed(createSearcher(products, fields));
 		const typed = "wooden chair";
 		for (let k = 1; k <= typed.length; k++) {
 			const prefix = typed.slice(0, k);
@@ -63,8 +63,8 @@ describe("buildIndex", () => {
 	});
 
 	it("building mid-session, after narrowing, leaves the answers unchanged", () => {
-		const lazy = createFuzzySearch(products, fields);
-		const search = createFuzzySearch(products, fields);
+		const lazy = createSearcher(products, fields);
+		const search = createSearcher(products, fields);
 		for (const query of ["wo", "woo", "wood"]) {
 			search(query);
 			lazy(query);
@@ -77,7 +77,7 @@ describe("buildIndex", () => {
 
 	it("a second call reads no item text", () => {
 		let reads = 0;
-		const search = createFuzzySearch(products, (p) => {
+		const search = createSearcher(products, (p) => {
 			reads++;
 			return p.title;
 		});
@@ -88,7 +88,7 @@ describe("buildIndex", () => {
 	});
 
 	it("an empty list or an empty spec array still answers nothing", () => {
-		expect(indexed(createFuzzySearch([] as string[]))("anything")).toEqual([]);
-		expect(indexed(createFuzzySearch(["apple"], []))("apple")).toEqual([]);
+		expect(indexed(createSearcher([] as string[]))("anything")).toEqual([]);
+		expect(indexed(createSearcher(["apple"], []))("apple")).toEqual([]);
 	});
 });

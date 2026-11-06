@@ -4,7 +4,7 @@ import { charMask } from "./gates";
 import { bigramBit, bigramClass } from "./normalise";
 import { swapAdjacentAt } from "./rescue";
 import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
-import type { MatchResult, Range } from "./types";
+import type { MatchResult, HighlightRange } from "./types";
 
 // What one query admits under a reading, prepared once and tried against
 // fields that matched nothing else.
@@ -206,15 +206,15 @@ const LATER_WORD_PENALTY = 0.05;
 
 // A word's start typed whole with one letter after it is that word with one
 // letter too many, which the ladder corrects at its own price.
-const isStrayLastLetter = (runs: Range[], word: string): boolean =>
+const isStrayLastLetter = (runs: HighlightRange[], word: string): boolean =>
 	runs.length === 2 && runs[0][1] === word.length - 2;
 
 // The query's letters in order inside one field word that starts with the
 // same letter, at least half of that word typed.
-const scatterRuns = (word: string, candidate: string): Range[] | null => {
+const scatterRuns = (word: string, candidate: string): HighlightRange[] | null => {
 	if (candidate[0] !== word[0] || candidate.length <= word.length) return null;
 	if (2 * word.length < candidate.length) return null;
-	const runs: Range[] = [];
+	const runs: HighlightRange[] = [];
 	let next = 0;
 	for (let at = 0; at < candidate.length && next < word.length; at++) {
 		if (candidate[at] !== word[next]) continue;

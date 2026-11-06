@@ -14,7 +14,7 @@ import { matchField, prepareQuery } from "../src/match";
 import { isRescuableQuery } from "../src/rescue";
 import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
 import { SCORES } from "../src/scores";
-import { createFuzzySearch } from "../src/search";
+import { createSearcher } from "../src/search";
 import { CORPORA } from "./corpus";
 
 const REPS = 10;
@@ -88,7 +88,7 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 			// build, the letter pairs of each item missing exactly one class, then a
 			// relaxed scan admitting those whose pairs fit.
 			const relax = isRescuableQuery(nq, q.queryWords);
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			const literal = search(query).filter((r) => r.score <= SCORES.CONTAINS).length;
 			results += search(query).length;
 			if (relax && literal < 10) {

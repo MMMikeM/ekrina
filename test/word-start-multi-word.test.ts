@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES } from "../src/index";
+import { createSearcher, fuzzyMatch, SCORES } from "../src/index";
 
 const isLiteral = (text: string, query: string) => {
 	const result = fuzzyMatch(text, query);
@@ -29,7 +29,7 @@ describe("multi-word queries match word starts, not only whole words", () => {
 	});
 
 	it("keeps a title literally matched on every keystroke once its first word is typed", () => {
-		const search = createFuzzySearch(["Northwind renewal prep", "Weekly status report"]);
+		const search = createSearcher(["Northwind renewal prep", "Weekly status report"]);
 		for (const query of ["north", "north r", "north re", "north ren", "north rene", "north renewal"]) {
 			const hit = search(query).find((result) => result.item === "Northwind renewal prep");
 			expect(hit?.score, query).toBeLessThanOrEqual(SCORES.CONTAINS);

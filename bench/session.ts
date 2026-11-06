@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import uFuzzy from "@leeoniya/ufuzzy";
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
 const SIZE = 100_000;
 const REPS = 7;
@@ -67,7 +67,7 @@ if (cell) {
 			: (
 					(s: (q: string) => unknown[]) => (q: string) =>
 						s(q).length
-				)(createFuzzySearch(list));
+				)(createSearcher(list));
 	const build = performance.now() - t0;
 
 	const t1 = performance.now();

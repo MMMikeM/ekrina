@@ -14,12 +14,12 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
 
   ```ts
   // ✗
-  import createFuzzySearch from "ekrina";
-  createFuzzySearch(items, { getText: (item) => [item.title] });
+  import createSearcher from "ekrina";
+  createSearcher(items, { getText: (item) => [item.title] });
 
   // ✓
-  import { createFuzzySearch } from "ekrina";
-  createFuzzySearch(items, (item) => item.title);
+  import { createSearcher } from "ekrina";
+  createSearcher(items, (item) => item.title);
   ```
 
   There is no default export, in ESM or CJS, and an options object throws a `TypeError`.
@@ -31,7 +31,7 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
 - **Create the searcher once and reuse it, not once per keystroke.**
   It caches each item's preparation the first time a query matches it, and a query that extends the previous one rescans only the previous one's survivors.
   Rebuild it when the list changes: an item it has already prepared keeps its old text, and an item pushed onto the array afterwards is never searched.
-  In React, `useMemo(() => createFuzzySearch(list, selectField), [list])` is the whole integration, as long as `list` keeps its identity between renders.
+  In React, `useMemo(() => createSearcher(list, selectField), [list])` is the whole integration, as long as `list` keeps its identity between renders.
   A list rebuilt on every render, such as the result of a `.filter()`, rebuilds the searcher on every keystroke too, so memoise the list as well.
   See [search as you type](/guides/search-as-you-type/).
 - **Lower score is better, and results come sorted best first.**
@@ -71,7 +71,7 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
   `limit` must be a positive integer, or the search throws a `RangeError`.
 - **`fuzzyMatch` judges one string alone, so a list can return fewer corrections than `fuzzyMatch` does item by item.**
   A searcher corrects a query under five characters only when no item matches it as typed, and tries no corrections once ten items match literally.
-  `createFuzzySearch(["form", "from", "farm", "firm"])("form")` returns only "form", where `fuzzyMatch` corrects each of the other three.
+  `createSearcher(["form", "from", "farm", "firm"])("form")` returns only "form", where `fuzzyMatch` corrects each of the other three.
   Use a searcher for a list, and `fuzzyMatch` for one string, such as finding a phrase in a document.
   See [matching inside long text](/guides/long-text/).
 - **The only options are `acronym`, `limit` and a field's `demoteBy`.**

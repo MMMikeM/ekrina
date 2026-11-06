@@ -1,12 +1,12 @@
-import { createFuzzySearch, SCORES } from "ekrina";
-import type { FuzzyResult, HighlightRanges, MatchResult } from "ekrina";
+import { createSearcher, SCORES } from "ekrina";
+import type { SearchResult, HighlightRanges, MatchResult } from "ekrina";
 import { type ReactNode, useMemo, useState } from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
 
 const createSearch = (commands: Command[]) => {
-	const search = createFuzzySearch(commands, [
+	const search = createSearcher(commands, [
 		{ selectField: (command) => command.title, acronym: true },
 		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
 	]);
@@ -14,10 +14,10 @@ const createSearch = (commands: Command[]) => {
 	return (query: string) => search(query, { limit: LIMIT });
 };
 
-const bestField = (result: FuzzyResult<Command>): MatchResult =>
+const bestField = (result: SearchResult<Command>): MatchResult =>
 	result.fields.find((field) => field?.score === result.score)!;
 
-const noticeText = (query: string, results: FuzzyResult<Command>[]): string => {
+const noticeText = (query: string, results: SearchResult<Command>[]): string => {
 	if (query === "") return "";
 	const top = results[0];
 	if (!top) return `No commands match “${query}”`;
@@ -37,7 +37,7 @@ const highlighted = (text: string, ranges: HighlightRanges): ReactNode[] => {
 	return nodes;
 };
 
-const Option = ({ result, onChoose }: { result: FuzzyResult<Command>; onChoose: () => void }) => {
+const Option = ({ result, onChoose }: { result: SearchResult<Command>; onChoose: () => void }) => {
 	const { title, category, keywords } = result.item;
 	const [titleMatch, keywordMatch] = result.fields;
 	return (

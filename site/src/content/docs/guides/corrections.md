@@ -8,7 +8,7 @@ sidebar:
 A corrected match has `tier: "corrected"`, and `corrected` holds the query as it was read:
 
 ```ts
-const search = createFuzzySearch(["Open File…", "Open Recent", "Close Editor"]);
+const search = createSearcher(["Open File…", "Open Recent", "Close Editor"]);
 
 const [top] = search("recnet");
 top?.fields[0];

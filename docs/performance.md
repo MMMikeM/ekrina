@@ -7,7 +7,7 @@ The relative ordering is the claim, and none of it is regenerated.
 
 ## No corpus index
 
-This document started from one question, whether `createFuzzySearch` should index its corpus.
+This document started from one question, whether `createSearcher` should index its corpus.
 It doesn't, and the reasoning is recorded because the pressure to index recurs whenever a trie-based library benchmarks well.
 
 ### Why fast-fuzzy looked fast
@@ -31,7 +31,7 @@ If scale far beyond the target were ever a goal, the right structures are an inv
 They stay unbuilt:
 
 - **Bundle size.** Ekrina is ~5.5 kB gzip; a real index could double that, directly against the "tiny" pitch.
-- **The API model.** `fuzzyMatch` must stay stateless; that is the point of the primitive-first design, so any index is confined to `createFuzzySearch`.
+- **The API model.** `fuzzyMatch` must stay stateless; that is the point of the primitive-first design, so any index is confined to `createSearcher`.
 - **Build and memory.** Index construction and posting-list storage grow with the corpus, and only make sense when N is large.
 - **Scope.** The scan-level design below carries the target use (command palettes, pickers, autocomplete over lists you already hold) and the published sizes without any of it; [benchmarks.md](./benchmarks.md) holds the standings.
 
@@ -63,7 +63,7 @@ Bigram hashes collide by merging bits, so a collision can only false-pass.
 
 ### Preparation is lazy
 
-`createFuzzySearch` only allocates; a field is trimmed, normalised and masked the first time it survives a gate (`materialise` in `src/search.ts`), so the caches warm to the working set rather than the corpus.
+`createSearcher` only allocates; a field is trimmed, normalised and masked the first time it survives a gate (`materialise` in `src/search.ts`), so the caches warm to the working set rather than the corpus.
 Single-word gating runs on the caller's raw strings (`buildRawGate`), and `bench/raw-mask.test.ts` sweeps both bench corpora to pin that the raw scan never drops a mask bit against the eager equivalent.
 The one structure that needs a whole-corpus pass (the union masks and bigram sets) is built by the first query that needs it: a multi-word query, one with a character the raw scan cannot fold, or one that reaches the relaxed scan; a session of single words that all match literally never builds it.
 Construction is allocation, the first query that needs the masks carries the deferred pass, and the process-cold model in benchmarks.md measures exactly that split.

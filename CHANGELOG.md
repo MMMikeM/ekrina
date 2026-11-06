@@ -2,14 +2,21 @@
 
 ## 2.0.0 (unreleased)
 
-One matcher, which corrects far more than one character, and three renames.
-Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the three names below.
+One matcher, which corrects far more than one character, and seven renames.
+Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the seven names below.
 
+- **`createFuzzySearch` is `createSearcher`, and its types are `Searcher` and `SearchResult`.**
+  The old function name is shared with another library's default export, so code written for that library looked right here and failed at runtime; `Searcher` names what the function returns.
+  `FuzzySearcher` is `Searcher` and `FuzzyResult` is `SearchResult`, because "fuzzy" is also the name of one tier, and every result, an `exact` match included, was typed as fuzzy.
+  Rename the import and the two types; the behaviour is unchanged.
+- **`Range` is `HighlightRange`.**
+  `Range` is also the DOM's global type, which is half-open where these pairs are inclusive, and in a project with the DOM library an unimported `Range` meant the DOM's.
 - **`FieldSpec.text` is `selectField`.**
   It was the one function on the public surface named like a value, and `text` is also the string `fuzzyMatch(text, query)` takes; the single-field form's parameter is `selectField` too.
   Rename `text:` to `selectField:` in each field spec.
 - **`FieldSpec.atBest` is `demoteBy`.**
   The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
+  A field spec using `text` or `atBest`, or an options object passed in place of a function or field specs, throws a `TypeError` naming the replacement; before, `atBest` was ignored and the others failed with an unreadable message.
 - **The `boundary-exact` tier is `boundary-cased`, and `SCORES.BOUNDARY_EXACT` is `SCORES.BOUNDARY_CASED`.**
   Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`); this tier means a word starts with the query in the same case.
   Its score, 0.9, is unchanged.
@@ -25,7 +32,7 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   A word read any of these ways reports `corrected` spelt as the field spells it.
   On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
   The cost is about a third more per query once a searcher is warm (0.54–0.64 → 0.74–0.88 ms at 10k), 24–34% more per 100k session, about the same first answer, and 1.6 MB more held at 100k; literal hits take no longer, since the second pass runs only while fewer than ten items match literally (docs/benchmarks.md, docs/performance.md).
-  The bundle grows from ~6.4 kB to ~7.7 kB gzipped (esbuild, tree-shaken to `createFuzzySearch`), and these corrections are where it goes.
+  The bundle grows from ~6.4 kB to ~7.7 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are where it goes.
   The build mangles internal property names, and duplicated paths are merged into one; together they took the bundle from ~9.3 kB with every result unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.

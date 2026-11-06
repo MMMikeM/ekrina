@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
+import { createSearcher, fuzzyMatch, normaliseText } from "../src/index";
 
 const msToRun = (run: () => unknown): number => {
 	const start = Date.now();
@@ -44,7 +44,7 @@ describe(`matching long text an attacker controls`, () => {
 
 	it("a searcher answers in linear time over one hostile field", () => {
 		const field = { 1: "xa b c d" + " a".repeat(32_000), 2: "xa b c d" + " a".repeat(64_000) };
-		const search = (scale: 1 | 2) => createFuzzySearch([field[scale]])("abcd");
+		const search = (scale: 1 | 2) => createSearcher([field[scale]])("abcd");
 		expect(growthWhenDoubled(search)).toBeLessThan(3);
 	});
 });
@@ -65,7 +65,7 @@ describe("long text still matches the way short text does", () => {
 	});
 
 	it("a searcher finds a phrase in a long field", () => {
-		const search = createFuzzySearch([long, "Steel Table"]);
+		const search = createSearcher([long, "Steel Table"]);
 		expect(search("wooden chair").map((result) => result.item)).toEqual([long]);
 	});
 });
@@ -83,13 +83,13 @@ describe("a query an attacker controls", () => {
 	it("is matched on its first 256 characters", () => {
 		const field = "a".repeat(256) + "zzz";
 		expect(fuzzyMatch(field, "a".repeat(300))?.tier).toBe("prefix");
-		expect(createFuzzySearch([field, "b"])("a".repeat(300))).toHaveLength(1);
+		expect(createSearcher([field, "b"])("a".repeat(300))).toHaveLength(1);
 	});
 
 	it("does not count leading spaces towards its 256 characters", () => {
 		const padded = " ".repeat(300) + "chair";
 		expect(fuzzyMatch("chair", padded)?.tier).toBe("exact");
-		expect(createFuzzySearch(["chair"])(padded)).toHaveLength(1);
+		expect(createSearcher(["chair"])(padded)).toHaveLength(1);
 	});
 
 	it("is never cut halfway through a character", () => {
@@ -111,8 +111,8 @@ describe("a query an attacker controls", () => {
 
 	it("matches regular-expression syntax literally", () => {
 		expect(fuzzyMatch("price (USD) [net]", "(usd) [net]")?.tier).toBe("boundary");
-		expect(createFuzzySearch(["a.b", "axb"])("a.b").map((result) => result.item)).toEqual(["a.b"]);
-		expect(createFuzzySearch(["plain"])("^$|\\*+?{}")).toEqual([]);
+		expect(createSearcher(["a.b", "axb"])("a.b").map((result) => result.item)).toEqual(["a.b"]);
+		expect(createSearcher(["plain"])("^$|\\*+?{}")).toEqual([]);
 	});
 
 	it("can name any number of rare characters and still be folded correctly", () => {
@@ -141,7 +141,7 @@ describe(`a query an attacker controls`, () => {
 	for (const [label, text, query] of hostileQueries) {
 		it(`answers quickly without throwing: ${label}`, () => {
 			expect(msToRun(() => fuzzyMatch(text, query))).toBeLessThan(250);
-			expect(msToRun(() => createFuzzySearch([text, "Red Sofa"])(query))).toBeLessThan(250);
+			expect(msToRun(() => createSearcher([text, "Red Sofa"])(query))).toBeLessThan(250);
 		});
 	}
 

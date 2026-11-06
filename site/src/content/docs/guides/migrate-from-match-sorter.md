@@ -10,10 +10,10 @@ The change is building a searcher once instead of sorting the whole list on ever
 
 ```diff
 - import { matchSorter, rankings } from "match-sorter";
-+ import { createFuzzySearch, SCORES } from "ekrina";
++ import { createSearcher, SCORES } from "ekrina";
 
   // build once, outside the keystroke handler or the render
-+ const search = createFuzzySearch(items, (item) => item.title);
++ const search = createSearcher(items, (item) => item.title);
 
 - const results = matchSorter(items, query, { keys: ["title"] });
 + const results = search(query).map((r) => r.item);
@@ -22,7 +22,7 @@ The change is building a searcher once instead of sorting the whole list on ever
 - matchSorter(items, query, {
 -   keys: ["title", { key: "body", maxRanking: rankings.CONTAINS }],
 - });
-+ const search = createFuzzySearch(items, [
++ const search = createSearcher(items, [
 +   { selectField: (item) => item.title },
 +   { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
 + ]);
@@ -71,5 +71,5 @@ Behavioural differences:
   Ties go to a match that ends on a word boundary, then to list order.
 - **Keys are functions.**
   `"author.name"` becomes `(item) => item.author.name`, and an array key such as `"tags"` becomes `(item) => item.tags.join(" ")`.
-  A list of strings needs no key at all: `createFuzzySearch(strings)`.
+  A list of strings needs no key at all: `createSearcher(strings)`.
 - **Accents fold either way, with no `keepDiacritics`.**

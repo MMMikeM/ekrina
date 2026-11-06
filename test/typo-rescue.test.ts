@@ -1,7 +1,7 @@
 // One extra ("generric"), one missing ("genric"), one wrong ("genaric");
 // the adjacent swap has its own file.
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
+import { createSearcher, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
 
 describe("a query missing a character", () => {
 	it("a dropped keystroke in an otherwise exact word", () => {
@@ -183,24 +183,24 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 
 	it("a query too short to correct through a missing class finds nothing", () => {
 		expect(fuzzyMatch("gen", "gex")).toBeNull();
-		expect(createFuzzySearch(["gen"])("gex")).toHaveLength(0);
+		expect(createSearcher(["gen"])("gex")).toHaveLength(0);
 	});
 
 	it("one character longer, and both agree it can", () => {
 		expect(fuzzyMatch("gene", "genx")?.tier).toBe("corrected");
-		expect(createFuzzySearch(["gene"])("genx")[0]?.fields[0]?.tier).toBe("corrected");
+		expect(createSearcher(["gene"])("genx")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("a multi-word query relaxes once its mistyped word is long enough", () => {
 		expect(fuzzyMatch("wooden table", "wooden tablx")?.tier).toBe("corrected");
-		expect(createFuzzySearch(["wooden table"])("wooden tablx")[0]?.fields[0]?.tier).toBe(
+		expect(createSearcher(["wooden table"])("wooden tablx")[0]?.fields[0]?.tier).toBe(
 			"corrected",
 		);
 	});
 
 	it("a multi-word query keeps the strict gate while every word is under the floor", () => {
 		expect(fuzzyMatch("big oak", "big oakx")).toBeNull();
-		expect(createFuzzySearch(["big oak"])("big oakx")).toHaveLength(0);
+		expect(createSearcher(["big oak"])("big oakx")).toHaveLength(0);
 	});
 });
 
@@ -211,8 +211,8 @@ describe("matcher and searcher agree on the typo floor", () => {
 	// The searcher is asked three ways: first search, second search, indexed.
 	const agreedTier = (field: string, query: string): string | null => {
 		const matched = fuzzyMatch(field, query)?.tier ?? null;
-		const lazy = createFuzzySearch([field]);
-		const indexed = createFuzzySearch([field]);
+		const lazy = createSearcher([field]);
+		const indexed = createSearcher([field]);
 		indexed.buildIndex();
 		for (const tier of [tierFrom(lazy(query)), tierFrom(lazy(query)), tierFrom(indexed(query))]) {
 			expect(tier, query).toBe(matched);
@@ -244,7 +244,7 @@ describe("matcher and searcher agree on the typo floor", () => {
 
 describe("a short query is corrected only when nothing matches it as typed", () => {
 	it("a fuzzy chain beside it does not keep a swap uncorrected", () => {
-		const search = createFuzzySearch(["Soft Gold Hat", "Safe Fort Inn"]);
+		const search = createSearcher(["Soft Gold Hat", "Safe Fort Inn"]);
 		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
 			["Soft Gold Hat", "corrected"],
 			["Safe Fort Inn", "fuzzy"],
@@ -252,14 +252,14 @@ describe("a short query is corrected only when nothing matches it as typed", () 
 	});
 
 	it("with nothing matching as typed, the correction is offered", () => {
-		const search = createFuzzySearch(["Soft Gold Hat", "Red Oak Table"]);
+		const search = createSearcher(["Soft Gold Hat", "Red Oak Table"]);
 		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
 			["Soft Gold Hat", "corrected"],
 		]);
 	});
 
 	it("a five-character query is corrected alongside matches as typed", () => {
-		const search = createFuzzySearch(["Golden Hat", "Gloden Pond"]);
+		const search = createSearcher(["Golden Hat", "Gloden Pond"]);
 		expect(search("gloden").map((r) => r.fields[0]?.tier)).toEqual(["prefix", "corrected"]);
 	});
 });
@@ -292,7 +292,7 @@ describe("a certain match always beats a speculative one", () => {
 
 	it("a literal infix hit outranks another item's typo correction", () => {
 		// "eneri" is a genuine infix of one item and one substitution from the other.
-		const search = createFuzzySearch(["Enero Calendar", "Generic Widget"]);
+		const search = createSearcher(["Enero Calendar", "Generic Widget"]);
 		const results = search("eneri");
 		expect(results[0]?.item).toBe("Generic Widget");
 		expect(results[0]?.fields[0]?.tier).toBe("contains");
@@ -301,13 +301,13 @@ describe("a certain match always beats a speculative one", () => {
 	it("an item excluded by a shorter query's strict gate is still reachable", () => {
 		// The gate relaxes at the 5th character, so the survivor set built at 4
 		// is not a valid superset — and every query is typed through 4.
-		const search = createFuzzySearch(["Ergonomic Granite Hat"]);
+		const search = createSearcher(["Ergonomic Granite Hat"]);
 		search("ergq");
 		expect(search("ergqnomic")[0]?.fields[0]?.tier).toBe("corrected");
 	});
 
 	it("a corrected hit still beats no hit at all", () => {
-		const search = createFuzzySearch(["Silk Towels", "Cotton Rug"]);
+		const search = createSearcher(["Silk Towels", "Cotton Rug"]);
 		const results = search("towles");
 		expect(results[0]?.item).toBe("Silk Towels");
 		expect(results[0]?.fields[0]?.tier).toBe("corrected");
@@ -317,7 +317,7 @@ describe("a certain match always beats a speculative one", () => {
 
 describe("a typo in a word holding digits", () => {
 	it("is corrected like any other", () => {
-		const search = createFuzzySearch(["abc12345 x", "zzz"]);
+		const search = createSearcher(["abc12345 x", "zzz"]);
 		expect(search("abc12x45")[0]?.fields[0]?.corrected).toBe("abc12345");
 	});
 });

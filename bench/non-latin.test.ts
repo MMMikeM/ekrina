@@ -1,6 +1,6 @@
 // Reaches into ../src for charMask on purpose, as funnel.test.ts does.
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, normaliseText } from "ekrina";
+import { createSearcher, normaliseText } from "ekrina";
 import { charMask } from "../src/gates";
 import { CONFIG_NAMES, configs } from "./configs.ts";
 import { CORPORA } from "./corpus";
@@ -49,7 +49,7 @@ describe("a corpus in Cyrillic", () => {
 	it("gets exactly the answers its Latin original gets", { timeout: 120_000 }, () => {
 		const [fromLatin, fromCyrillic] = SCRIPTS.map(({ list }) => {
 			const indexOf = new Map(list.map((item, i) => [item, i]));
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			return (query: string) =>
 				search(query).map(({ item, score, fields }) => ({
 					at: indexOf.get(item),

@@ -12,7 +12,7 @@ import {
 	type RescueState,
 } from "./rescue";
 import { ACRONYM_SCORE, BOUNDARY_SCORE, BOUNDARY_CASED_SCORE, CONTAINS_SCORE, EXACT_SCORE, MULTI_WORD_SCORE, NORMALISED_EXACT_SCORE, PREFIX_SCORE } from "./scores";
-import type { MatchResult, Range } from "./types";
+import type { MatchResult, HighlightRange } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
 // lazy rescue fields share one protocol: undefined = not built yet, null = the
@@ -118,7 +118,7 @@ const boundaryTier = (
 // each copy of a repeated word resumes after the last, so a query of one word
 // repeated walks the field once instead of once per copy.
 const multiWordTier = (normalisedField: string, words: string[]): MatchResult | null => {
-	const ranges: Range[] = [];
+	const ranges: HighlightRange[] = [];
 	const isTaken = (start: number, end: number): boolean =>
 		ranges.some(([takenStart, takenEnd]) => start <= takenEnd && takenStart <= end);
 	let from = 0;
@@ -151,7 +151,7 @@ const acronymTier = (normalisedField: string, normalisedQuery: string): MatchRes
 		tier: "acronym",
 		ranges: wordStarts
 			.slice(at, at + normalisedQuery.length)
-			.map((wordStart) => [wordStart, wordStart] as Range),
+			.map((wordStart) => [wordStart, wordStart] as HighlightRange),
 	};
 };
 

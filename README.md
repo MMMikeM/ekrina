@@ -39,7 +39,7 @@ npm install ekrina
 **1. Build a searcher once, and call it with each query.**
 
 ```typescript
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
 const commands = [
 	{ id: "file.open", title: "Open File…" },
@@ -47,7 +47,7 @@ const commands = [
 	{ id: "settings.open", title: "Preferences: Open User Settings" },
 ];
 
-const search = createFuzzySearch(commands, (command) => command.title);
+const search = createSearcher(commands, (command) => command.title);
 ```
 
 **2. Read how each result matched.** Lower scores are better, and results come back best first.

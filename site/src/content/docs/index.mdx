@@ -22,9 +22,9 @@ import { bench } from "../../bench.ts";
 ## 1. What comes back
 
 ```ts
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
-const search = createFuzzySearch(["Open File…", "Open Recent", "Close Editor"]);
+const search = createSearcher(["Open File…", "Open Recent", "Close Editor"]);
 
 search("recnet");
 // [{

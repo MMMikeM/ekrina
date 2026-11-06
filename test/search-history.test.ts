@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch } from "../src/index";
+import { createSearcher } from "../src/index";
 
 const typing = (query: string): string[] =>
 	Array.from({ length: query.length }, (_, k) => query.slice(0, k + 1));
@@ -12,17 +12,17 @@ type Session = { name: string; queries: string[] };
 const replaysEachSession = (list: string[], sessions: Session[]): void => {
 	for (const { name, queries } of sessions) {
 		it(name, () => {
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			for (const query of queries) {
-				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
+				expect(search(query), query).toEqual(createSearcher(list)(query));
 			}
 		});
 
 		it(`${name}, with the index built first`, () => {
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			search.buildIndex();
 			for (const query of queries) {
-				expect(search(query), query).toEqual(createFuzzySearch(list)(query));
+				expect(search(query), query).toEqual(createSearcher(list)(query));
 			}
 		});
 	}
@@ -38,7 +38,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 		];
 
 		it("the dead ends below really match nothing", () => {
-			const search = createFuzzySearch(list);
+			const search = createSearcher(list);
 			expect(search("statsu reportqzx")).toEqual([]);
 			expect(search("qqzz")).toEqual([]);
 		});
@@ -65,7 +65,7 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 		const list = ["Soft Gold Hat", "Soft Gold Ball", "Gold Leaf Frame", "Softball Glove"];
 
 		it("the dead end below really matches nothing", () => {
-			expect(createFuzzySearch(list)("sfot goldqz")).toEqual([]);
+			expect(createSearcher(list)("sfot goldqz")).toEqual([]);
 		});
 
 		replaysEachSession(list, [

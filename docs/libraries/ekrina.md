@@ -3,7 +3,7 @@
 Every configuration of Ekrina the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
 The headline tables there show every Ekrina configuration.
 
-- **Ekrina**: the defaults, `createFuzzySearch(list)`.
+- **Ekrina**: the defaults, `createSearcher(list)`.
 - **Ekrina (acronym)**: `acronym: true`, which adds the word-initials tier.
 - **Ekrina (indexed)**: the defaults with `buildIndex()` called up front, so the whole-list mask index moves into the constructor; results are identical to the defaults.
 
