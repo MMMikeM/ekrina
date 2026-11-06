@@ -17,6 +17,8 @@ import {
 	save,
 } from "./artifact.ts";
 import { inject } from "./inject.ts";
+import { META } from "./libraries.ts";
+import { gzipBytes } from "./size.ts";
 import { omittedFrom, regions } from "./tables.ts";
 
 const here = fileURLToPath(new URL(".", import.meta.url));
@@ -54,11 +56,12 @@ const LIBRARIES = ONLY || (ALL ? "all" : "ekrina");
 
 const measures = !DOCS_ONLY && !CHECK;
 const DRY = SCOPE !== "" || (measures && !ALL && !ONLY);
-const named = flags.has("--speed") || flags.has("--quality") || flags.has("--memory");
+const named = flags.has("--speed") || flags.has("--quality") || flags.has("--memory") || flags.has("--size");
 const stages = {
 	cold: measures && (flags.has("--speed") || !named),
 	quality: measures && (flags.has("--quality") || (!named && !DRY)),
 	memory: measures && (flags.has("--memory") || (!named && !DRY)),
+	size: measures && (flags.has("--size") || (!named && !DRY)),
 };
 
 // A scoped run has no artifact to render afterwards, so the runner's own
@@ -243,6 +246,20 @@ const runQuality = (artifact: Artifact): void => {
 	}
 };
 
+// Measures the built dist, which `pnpm bench` builds before this runs.
+const runSize = (artifact: Artifact): void => {
+	const libraries = Object.keys(META).filter((library) =>
+		LIBRARIES === "all" ? true : library.toLowerCase().includes(LIBRARIES.toLowerCase()),
+	);
+	artifact.gzipBytes ??= {};
+	for (const library of libraries) {
+		const bytes = gzipBytes(library);
+		const committed = artifact.gzipBytes[library];
+		console.error(`size ${library}: ${bytes} B gzipped${committed === undefined || committed === bytes ? "" : ` (was ${committed} B)`}`);
+		artifact.gzipBytes[library] = bytes;
+	}
+};
+
 const runMemory = (artifact: Artifact): void => {
 	console.error("memory stage: retained footprint at 100k, one process per cell…");
 	execFileSync(process.execPath, ["--expose-gc", `${here}memory.ts`, LIBRARIES], {
@@ -269,6 +286,7 @@ if (ONLY) {
 if (stages.cold) runCold(artifact);
 if (stages.quality) runQuality(artifact);
 if (stages.memory) runMemory(artifact);
+if (stages.size) runSize(artifact);
 
 if (DRY) {
 	console.error("\nartifact and docs left untouched; `--all` measures every library and publishes.");
@@ -277,7 +295,7 @@ if (DRY) {
 
 const tables = regions(artifact);
 
-if (stages.cold || stages.quality || stages.memory) save(artifact);
+if (stages.cold || stages.quality || stages.memory || stages.size) save(artifact);
 
 // docs/benchmarks.md carries the headline tables, README.md and
 // docs/compare.md the comparison, each library page its own.

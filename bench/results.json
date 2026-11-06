@@ -1,6 +1,6 @@
 {
 	"method": {
-		"size": "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
+		"size": "esbuild --bundle --minify (tree-shaken to primary API), gzipped by node:zlib at its default level",
 		"timing": "process-cold (bench/run.ts): every sample is a fresh node process; index = the constructor call, query = the first answer per probe, batch = all probes once in one process; medians across processes, min kept; no warm-loop sampling anywhere",
 		"quality": "MRR@10 over catalogue.ts's sampled families, weighted by group (typos 0.35, phonetic 0.25, partial words 0.15, query shape 0.15, noise 0.10); junk = share of queries nothing answers that a library answers anyway; ranks are deterministic and measured untimed",
 		"corpora": {
@@ -11,7 +11,10 @@
 	},
 	"libraries": {
 		"ekrina": {
-			"gzipKB": 6.4,
+			"api": {
+				"from": "ekrina",
+				"name": "createSearcher"
+			},
 			"deps": 0,
 			"type": "subsequence (tiered)",
 			"module": "esm",
@@ -23,10 +26,14 @@
 				"multiWord": "yes",
 				"perField": "yes",
 				"typos": "partial"
-			}
+			},
+			"typoReach": "≤ 2 edits"
 		},
 		"@nozbe/microfuzz": {
-			"gzipKB": 1.7,
+			"api": {
+				"from": "@nozbe/microfuzz",
+				"name": "default"
+			},
 			"deps": 0,
 			"type": "subsequence",
 			"module": "cjs",
@@ -38,10 +45,14 @@
 				"multiWord": "yes",
 				"perField": "yes",
 				"typos": "no"
-			}
+			},
+			"typoReach": null
 		},
 		"fuzzysort": {
-			"gzipKB": 3.7,
+			"api": {
+				"from": "fuzzysort",
+				"name": "default"
+			},
 			"deps": 0,
 			"type": "subsequence",
 			"module": "cjs",
@@ -53,10 +64,14 @@
 				"multiWord": "yes",
 				"perField": "yes",
 				"typos": "no"
-			}
+			},
+			"typoReach": null
 		},
 		"match-sorter": {
-			"gzipKB": 3.4,
+			"api": {
+				"from": "match-sorter",
+				"name": "matchSorter"
+			},
 			"deps": 2,
 			"type": "subsequence (tiered)",
 			"module": "dual",
@@ -68,10 +83,14 @@
 				"multiWord": "no",
 				"perField": "yes",
 				"typos": "no"
-			}
+			},
+			"typoReach": null
 		},
 		"uFuzzy": {
-			"gzipKB": 4.1,
+			"api": {
+				"from": "@leeoniya/ufuzzy",
+				"name": "default"
+			},
 			"deps": 0,
 			"type": "subsequence",
 			"module": "dual",
@@ -83,10 +102,14 @@
 				"multiWord": "opt-in",
 				"perField": "no",
 				"typos": "opt-in"
-			}
+			},
+			"typoReach": "≤ 1 edit"
 		},
 		"fuzzy": {
-			"gzipKB": 0.8,
+			"api": {
+				"from": "fuzzy",
+				"name": "default"
+			},
 			"deps": 0,
 			"type": "substring",
 			"module": "cjs",
@@ -98,10 +121,14 @@
 				"multiWord": "no",
 				"perField": "no",
 				"typos": "no"
-			}
+			},
+			"typoReach": null
 		},
 		"fuse.js": {
-			"gzipKB": 9.3,
+			"api": {
+				"from": "fuse.js",
+				"name": "default"
+			},
 			"deps": 0,
 			"type": "typo-tolerant",
 			"module": "dual",
@@ -113,10 +140,14 @@
 				"multiWord": "opt-in",
 				"perField": "yes",
 				"typos": "yes"
-			}
+			},
+			"typoReach": "any"
 		},
 		"fast-fuzzy": {
-			"gzipKB": 11,
+			"api": {
+				"from": "fast-fuzzy",
+				"name": "Searcher"
+			},
 			"deps": 1,
 			"type": "typo-tolerant",
 			"module": "dual",
@@ -128,7 +159,8 @@
 				"multiWord": "no",
 				"perField": "yes",
 				"typos": "yes"
-			}
+			},
+			"typoReach": "any"
 		}
 	},
 	"speed": {
@@ -17704,5 +17736,15 @@
 				}
 			}
 		]
+	},
+	"gzipBytes": {
+		"ekrina": 8223,
+		"@nozbe/microfuzz": 1710,
+		"fuzzysort": 3745,
+		"match-sorter": 3565,
+		"uFuzzy": 4290,
+		"fuzzy": 793,
+		"fuse.js": 9637,
+		"fast-fuzzy": 11090
 	}
 }

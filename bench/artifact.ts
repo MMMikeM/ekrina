@@ -63,6 +63,8 @@ export type LongtextRow = {
 export type Artifact = {
 	method: Record<string, unknown>;
 	libraries: Record<string, LibraryMeta>;
+	/** library → its primary API's gzipped bundle in bytes (bench/size.ts). */
+	gzipBytes: Record<string, number>;
 	coldMatrix: ColdMatrix;
 	scorecard: { corpora: Record<string, ScorecardRow[]> };
 	probes: Record<string, ProbeTable[]>;
@@ -97,7 +99,7 @@ export const RAW_DIR = new URL("./.raw/", import.meta.url);
 export const rawFile = (name: string): URL => new URL(name, RAW_DIR);
 
 const METHOD = {
-	size: "esbuild --bundle --minify (tree-shaken to primary API) | gzip",
+	size: "esbuild --bundle --minify (tree-shaken to primary API), gzipped by node:zlib at its default level",
 	timing:
 		"process-cold (bench/run.ts): every sample is a fresh node process; index = the constructor call, query = the first answer per probe, batch = all probes once in one process; medians across processes, min kept; no warm-loop sampling anywhere",
 	quality:
@@ -112,6 +114,7 @@ const METHOD = {
 const EMPTY: Artifact = {
 	method: METHOD,
 	libraries: META,
+	gzipBytes: {},
 	coldMatrix: {},
 	scorecard: { corpora: {} },
 	probes: {},

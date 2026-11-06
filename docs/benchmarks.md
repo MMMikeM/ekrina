@@ -39,16 +39,16 @@ Feature coverage first; each cell is verified against the library's current sour
 Size and type, Ekrina first, then by bundle size ascending.
 
 <!-- bench:libraries -->
-| Library          | Gzip    | Deps | Type                 |
-|------------------|---------|------|----------------------|
-| **Ekrina**       | ~7.7 kB | 0    | subsequence (tiered) |
-| fuzzy            | ~0.8 kB | 0    | substring            |
-| @nozbe/microfuzz | ~1.7 kB | 0    | subsequence          |
-| match-sorter     | ~3.5 kB | 2    | subsequence (tiered) |
-| fuzzysort        | ~3.7 kB | 0    | subsequence          |
-| uFuzzy           | ~4.2 kB | 0    | subsequence          |
-| Fuse.js          | ~9.6 kB | 0    | typo-tolerant        |
-| fast-fuzzy       | ~11 kB  | 1    | typo-tolerant        |
+| Library          | Gzip     | Deps | Type                 |
+|------------------|----------|------|----------------------|
+| **Ekrina**       | ~8.2 kB  | 0    | subsequence (tiered) |
+| fuzzy            | ~0.8 kB  | 0    | substring            |
+| @nozbe/microfuzz | ~1.7 kB  | 0    | subsequence          |
+| match-sorter     | ~3.6 kB  | 2    | subsequence (tiered) |
+| fuzzysort        | ~3.7 kB  | 0    | subsequence          |
+| uFuzzy           | ~4.3 kB  | 0    | subsequence          |
+| Fuse.js          | ~9.6 kB  | 0    | typo-tolerant        |
+| fast-fuzzy       | ~11.1 kB | 1    | typo-tolerant        |
 <!-- bench:end -->
 
 The tables below show each library at its best-scoring configuration, plus every Ekrina configuration.
@@ -570,7 +570,7 @@ _Both charts read the scorecard above out of [`bench/results.json`](../bench/res
 
 ## Size, speed & search type
 
-**Gzip** = esbuild `--bundle --minify` + gzip, tree-shaken to each lib's primary API (the size table is in [Libraries](#libraries)).
+**Gzip** = esbuild `--bundle --minify`, tree-shaken to each lib's primary API, gzipped by Node's zlib, measured by `pnpm bench --size --all` (the size table is in [Libraries](#libraries)).
 Every cell is process-cold ("One measurement model"), and each corpus gets two tables.
 The scale table measures the one-shot workload: **index** = the constructor, **cold query** = mean first answer across the six timed queries (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each query's own child, **total rel** = that total relative to Ekrina (100% = same, lower = faster).
 The batch table measures the session: **batch total** = one fresh process answering a short-word warmup match then every family's representative query once, **batch/query** = the mean of the 24 post-warmup queries, **batch rel** = batch total relative to Ekrina.
@@ -737,7 +737,7 @@ Literal-only matching, for callers that want no fuzzy assemblies or corrections 
 The recommendation is to _pick Ekrina for list matching_, with two carve-outs the data supports.
 
 - **Quality**: Ekrina tops the scorecard on all three corpora (0.92 en, 0.91 native and emoji) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
-- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (33.82 ms at native 10k) and Ekrina the fastest per query after the warm-up (1.06 ms), and every Ekrina row runs that session in about a fifth of fast-fuzzy's time (167.00 ms) and about half of match-sorter's (75.33 ms), with a near-zero constructor, ~7.7 kB gzip and zero deps.
+- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (33.82 ms at native 10k) and Ekrina the fastest per query after the warm-up (1.06 ms), and every Ekrina row runs that session in about a fifth of fast-fuzzy's time (167.00 ms) and about half of match-sorter's (75.33 ms), with a near-zero constructor, <!-- bench:ekrina-gzip -->~8.2 kB<!-- bench:end --> gzip and zero deps.
   The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 5.6–6.1 ms at 10k and 15–19 ms at 100k across the timed queries, or ~2.8 ms and 4.8–5.1 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster.
 - **Long text**: the density floor holds `fuzzyMatch` junk to 2–4% at every measured document length, so the same engine covers documents as well as labels.
 

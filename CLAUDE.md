@@ -36,11 +36,12 @@ Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run ove
 - `pnpm bench --docs` re-emits every table from the committed `results.json` without measuring. This is the one to reach for when reworking prose around a table.
 - `pnpm bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
 - `pnpm bench --speed` / `--quality` / `--memory` run one stage (ekrina only and printed, unless `--all`); `--runs=N` sets the fresh processes per cold cell (default 1; a full `--all` run takes about four minutes).
+- `pnpm bench --size --all` measures every library's gzipped bundle (`bench/size.ts`) and rewrites the size cells and the inline `<!-- bench:ekrina-gzip -->` regions in seconds; sizes live in `results.json`, not `bench/libraries.ts`. `bench/size.test.ts` holds Ekrina's under a budget. An inline region keeps both markers on one line, inside a sentence.
 - `pnpm bench --only=<library>` re-measures one library's rows and merges them over the committed artifact, guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
 - `pnpm bench:test` — the gate funnel and the other assertions, against ekrina's rows unless `BENCH_ONLY=all`. The funnel is a diagnostic, not a published table.
 
 `bench/results.json` is committed: it is the evidence for every published cell, so a number that moves is a reviewable diff.
-Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers.
+Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers, except the clause an inline region generates.
 
 Guards to respect rather than route around:
 

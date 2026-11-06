@@ -11,13 +11,13 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  1.06 |     7.7 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
-| fast-fuzzy        | 0.81 |  6.20 |    11.0 |  24% | any       |  no   | partial |    1 |
+| **Ekrina**        | 0.91 |  1.06 |     8.2 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| fast-fuzzy        | 0.81 |  6.20 |    11.1 |  24% | any       |  no   | partial |    1 |
 | Fuse.js (tuned)   | 0.76 | 12.21 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
-| uFuzzy (all opts) | 0.66 |  0.64 |     4.2 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
+| uFuzzy (all opts) | 0.66 |  0.64 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
 | fuzzysort         | 0.46 |  0.41 |     3.7 |   7% | none      |  no   |   yes   |    0 |
 | @nozbe/microfuzz  | 0.41 |  2.10 |     1.7 |   7% | none      |  no   |   yes   |    0 |
-| match-sorter      | 0.39 |  2.70 |     3.5 |   7% | none      |  yes  |   no    |    2 |
+| match-sorter      | 0.39 |  2.70 |     3.6 |   7% | none      |  yes  |   no    |    2 |
 | fuzzy             | 0.30 |  2.10 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
@@ -28,7 +28,7 @@ The ranking is the same on all three, with Ekrina at 0.91–0.92.
   It is averaged over 33 query families of ten queries each (330 different queries in total), weighted by group before anything was measured ([how](./benchmarks.md#match-quality-by-query-family)).
 - **ms** is the average time of 24 different queries in one fresh process, after a single warm-up query that takes each library's one-time setup.
   The warm-up matches literally, so Ekrina builds its index during the first of the 24 that needs it, and that build time is part of the average.
-- **Gzip kB** is `esbuild --bundle --minify` tree-shaken to each library's primary API, rounded to a tenth; the size badge on the README measures the whole published package instead.
+- **Gzip kB** is `esbuild --bundle --minify` tree-shaken to each library's primary API and gzipped by Node's zlib, rounded to a tenth; the size badge on the README measures the whole published package instead.
 - **Junk** is the share of queries with no right answer in the list that the library answers anyway.
 - **Typos** is how many mistakes a query can hold and still match; _any_ means any number, scored by the library, and _none_ means a typo breaks the match.
 - **Tiers** and **Ranges** say whether a result carries a match category and the characters to highlight; _partial_ is one span for fast-fuzzy and a marked-up string for fuzzy, and _opt-in_ needs a setting.
@@ -56,7 +56,7 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Pick Ekrina, unless one of the cases below is yours.
 It tops the quality scorecard on all three benchmark corpora, answers nothing it shouldn't, and runs its session several times faster than the two libraries closest to it on quality.
-At ~7.7 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11 kB, are larger.
+At <!-- bench:ekrina-size-standing -->~8.2 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11.1 kB, are larger<!-- bench:end -->.
 About 1.3 kB of that is the two-edit corrections, which are also where the quality lead comes from.
 Pick something else when:
 

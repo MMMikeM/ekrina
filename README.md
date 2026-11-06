@@ -83,13 +83,13 @@ Each library at its best-scoring configuration, on 10,000 real Wikidata names un
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  1.06 |     7.7 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
-| fast-fuzzy        | 0.81 |  6.20 |    11.0 |  24% | any       |  no   | partial |    1 |
+| **Ekrina**        | 0.91 |  1.06 |     8.2 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| fast-fuzzy        | 0.81 |  6.20 |    11.1 |  24% | any       |  no   | partial |    1 |
 | Fuse.js (tuned)   | 0.76 | 12.21 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
-| uFuzzy (all opts) | 0.66 |  0.64 |     4.2 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
+| uFuzzy (all opts) | 0.66 |  0.64 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
 | fuzzysort         | 0.46 |  0.41 |     3.7 |   7% | none      |  no   |   yes   |    0 |
 | @nozbe/microfuzz  | 0.41 |  2.10 |     1.7 |   7% | none      |  no   |   yes   |    0 |
-| match-sorter      | 0.39 |  2.70 |     3.5 |   7% | none      |  yes  |   no    |    2 |
+| match-sorter      | 0.39 |  2.70 |     3.6 |   7% | none      |  yes  |   no    |    2 |
 | fuzzy             | 0.30 |  2.10 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
