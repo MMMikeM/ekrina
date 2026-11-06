@@ -44,7 +44,7 @@ search("qxzwkv");
 
 Every match says how it matched.
 `tier` names the kind of match, from `exact` down to `fuzzy` and `corrected`, so you can rank, filter or label results without decoding a number.
-`ranges` are the characters to highlight, as `[start, end]` pairs with both ends included, indexed into the string you passed in, accents and casing included.
+`ranges` are the characters to highlight, as inclusive `[start, end]` pairs indexed into the string you passed in, accents and casing included.
 A correction carries the query it fixed, which is your "Showing results for recent" in one line.
 
 Lower scores are better, the other way round to most libraries, and anything at or below `SCORES.CONTAINS` is the query as typed.
@@ -86,11 +86,13 @@ Each library at its best-scoring configuration over 10,000 native names, with th
 <CompareTable />
 
 **MRR** is mean reciprocal rank, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
-Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best, and answers none of the queries that no item answers. {bench.alsoJunkFree}
+Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
+It answers none of the queries with no right answer on any of the three lists{bench.alsoJunkFree}.
 It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.
 
-It trails on three kinds of query: a word the item lacks, since every word of the query has to match; silent letters dropped; and a few typo and phonetic families on emoji, where fast-fuzzy scores higher.
-[The benchmarks](/benchmarks/) have the numbers for each, and every number on this page, and [Compare two libraries](/explorer/) puts any one library beside Ekrina.
+It trails when a query has a word the item lacks, since every word of the query has to match, and when a query drops a silent letter.
+On emoji, fast-fuzzy scores higher on a few typo and phonetic families.
+[The benchmarks](/benchmarks/) have the numbers for those query families, and every number on this page, and [Compare two libraries](/explorer/) puts any one library beside Ekrina.
 
 ## 5. Runs anywhere
 

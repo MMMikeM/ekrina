@@ -59,11 +59,9 @@ const sizeRank = () => {
 };
 
 const msOf = (config: string) => batchOf(config, SIZE).restMs!;
-const nativeMrrOf = (config: string) =>
-	explorer.libraries.find((library) => library.config === config)!.headline.native.toFixed(2);
 
 // The other libraries that, like Ekrina, answer none of the no-answer queries on
-// any of the three lists, for "So does uFuzzy (all opts), at 0.66 MRR."
+// any of the three lists, for ", and so does uFuzzy (all opts), at 0.66 MRR".
 const junkFree = explorer.libraries
 	.map((library) => library.config)
 	.filter(
@@ -110,6 +108,6 @@ export const bench = {
 	alsoJunkFree:
 		junkFree.length === 0
 			? ""
-			: `So does ${junkFree.map((config) => `${displayName(config)}, at ${nativeMrrOf(config)} MRR`).join(", and ")}.`,
+			: `, and so ${junkFree.length === 1 ? "does" : "do"} ${junkFree.map((config) => `${displayName(config)}, at ${mrrRange(config)} MRR`).join(", and ")}`,
 	at100k: at100k(),
 };

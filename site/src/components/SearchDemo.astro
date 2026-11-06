@@ -149,7 +149,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 	};
 
 	const countText = (query: string, count: number): string => {
-		if (count === 0) return `Nothing. No emoji is close enough to “${query}” to guess.`;
+		if (count === 0) return `No emoji is close enough to “${query}” to guess.`;
 		if (count === LIMIT) return `Best ${LIMIT} matches`;
 		return count === 1 ? "1 match" : `${count} matches`;
 	};
