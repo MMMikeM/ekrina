@@ -14,6 +14,7 @@ import {
 	type TimedCorpus,
 	stripSvg,
 } from "../explorer.ts";
+import { STRIP_LAYOUTS } from "../linear-charts.ts";
 
 const explorer = data as ExplorerData;
 const ekrina = explorer.libraries.find((library) => library.config === "ekrina")!;
@@ -73,11 +74,6 @@ const strips = Object.fromEntries(
 			size,
 			wide: stripSvg(explorer, corpus, size.id, "wide"),
 			narrow: stripSvg(explorer, corpus, size.id, "narrow"),
-			linear: others.map((library) => ({
-				slug: library.slug,
-				wide: stripSvg(explorer, corpus, size.id, "wide", { type: "linear", picked: library }),
-				narrow: stripSvg(explorer, corpus, size.id, "narrow", { type: "linear", picked: library }),
-			})),
 		})),
 	]),
 );
@@ -197,7 +193,7 @@ const strips = Object.fromEntries(
 		<section aria-labelledby="speed">
 			<div class="section-head">
 				<h2 id="speed">Speed</h2>
-				<fieldset class="labelled-switch decoration">
+				<fieldset class="labelled-switch decoration" data-scale hidden>
 					<legend>Scale</legend>
 					<div class="segmented">
 						<label>
@@ -214,16 +210,13 @@ const strips = Object.fromEntries(
 			{
 				timed.map((corpus) => (
 					<figure data-timed={corpus}>
-						{strips[corpus]!.map(({ size, wide, narrow, linear }) => (
+						{strips[corpus]!.map(({ size, wide, narrow }) => (
 							<div class="strip-size">
 								<p class="strip-title">{size.label} items</p>
 								<div class="strip strip-wide scale-log decoration" set:html={wide} />
 								<div class="strip strip-narrow scale-log decoration" set:html={narrow} />
-								{linear.map((chart) => (
-									<>
-										<div class="strip strip-wide scale-linear decoration" data-lib={chart.slug} set:html={chart.wide} />
-										<div class="strip strip-narrow scale-linear decoration" data-lib={chart.slug} set:html={chart.narrow} />
-									</>
+								{STRIP_LAYOUTS.map((layout) => (
+									<div class={`strip strip-${layout} scale-linear decoration`} data-linear-corpus={corpus} data-linear-size={size.id} data-linear-layout={layout} />
 								))}
 							</div>
 						))}
@@ -342,6 +335,63 @@ const strips = Object.fromEntries(
 		</section>
 	</div>
 </StarlightPage>
+
+<script>
+	import type { ListSize, TimedCorpus } from "../explorer.ts";
+	import { linearChartName, type StripLayout } from "../linear-charts.ts";
+
+	// The linear charts are one pair per library, so they load when Linear is
+	// picked instead of shipping hidden in every page; without script, the page
+	// keeps the log charts and hides the switch.
+	const workbench = document.querySelector<HTMLElement>(".workbench")!;
+	const library = workbench.querySelector<HTMLSelectElement>('select[name="library"]')!;
+	const linear = workbench.querySelector<HTMLInputElement>('[name="scale"][value="linear"]')!;
+	const slots = [...workbench.querySelectorAll<HTMLElement>("[data-linear-layout]")];
+	const charts = new Map<string, Promise<string>>();
+
+	const load = (name: string): Promise<string> => {
+		let svg = charts.get(name);
+		if (!svg) {
+			svg = fetch(`/explorer/linear/${name}.svg`).then((response) => {
+				if (!response.ok) throw new Error(`${response.status} for ${name}`);
+				return response.text();
+			});
+			svg.catch(() => charts.delete(name));
+			charts.set(name, svg);
+		}
+		return svg;
+	};
+
+	const fill = (): void => {
+		if (!linear.checked) return;
+		const slug = library.value;
+		for (const slot of slots) {
+			const { linearCorpus, linearSize, linearLayout } = slot.dataset;
+			const name = linearChartName(
+				linearCorpus as TimedCorpus,
+				linearSize as ListSize,
+				linearLayout as StripLayout,
+				slug,
+			);
+			if (slot.dataset.chart === name) continue;
+			load(name).then(
+				(svg) => {
+					// A slow response for an earlier pick must not replace a newer one.
+					if (library.value !== slug || !linear.checked) return;
+					slot.innerHTML = svg;
+					slot.dataset.chart = name;
+				},
+				() => {
+					if (library.value === slug) slot.textContent = "The linear chart didn’t load. Pick Linear again to retry.";
+				},
+			);
+		}
+	};
+
+	workbench.querySelector<HTMLFieldSetElement>("[data-scale]")!.hidden = false;
+	workbench.addEventListener("change", fill);
+	fill();
+</script>
 
 <style is:global set:html={toggles}></style>
 <style is:global set:html={chartStylesheet()}></style>
@@ -535,6 +585,10 @@ const strips = Object.fromEntries(
 		display: flex;
 		align-items: center;
 		gap: var(--space-xs);
+	}
+
+	.labelled-switch[hidden] {
+		display: none;
 	}
 
 	.labelled-switch legend {
