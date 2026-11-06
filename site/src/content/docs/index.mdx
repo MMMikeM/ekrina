@@ -3,6 +3,7 @@ title: Ekrina, fuzzy search for TypeScript that forgives typos
 description: Fuzzy search for TypeScript that corrects up to two mistakes per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.
 template: splash
 heroHighlight: Lazy
+heroDemo: true
 hero:
   title: Lazy where it counts.
   tagline: Ekrina forgives typos, correcting up to two mistakes per query and telling you when it did. It does only the work each query needs, and only guesses when the query as typed comes up short. Nonsense gets nothing back.
@@ -12,21 +13,11 @@ hero:
     - text: How it compares
       link: /compare/
       variant: secondary
-    - text: API reference
-      link: /reference/
-      variant: minimal
 ---
 
-import SearchDemo from "../../components/SearchDemo.astro";
 import { bench } from "../../bench.ts";
 
-## 1. Try it
-
-The search below runs this library in your browser over the {bench.emoji} emoji of an emoji picker, searching each one's name and then its tags.
-
-<SearchDemo />
-
-## 2. What comes back
+## 1. What comes back
 
 ```ts
 import { createFuzzySearch } from "ekrina";
@@ -37,9 +28,12 @@ search("recnet");
 // [{
 //   item: "Open Recent",
 //   score: 3.1,
-//   fields: [
-//     { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] },
-//   ],
+//   fields: [{
+//     score: 3.1,
+//     tier: "corrected",
+//     corrected: "recent",
+//     ranges: [[5, 10]],
+//   }],
 // }]
 
 search("qxzwkv");
@@ -54,7 +48,7 @@ A correction carries the query it fixed, which is your "Showing results for rece
 Lower scores are better, the other way round to most libraries, and anything at or below `SCORES.CONTAINS` is the query as typed.
 A correction always scores above that line, so a real match is never outranked by a guess.
 
-## 3. What it forgives
+## 2. What it forgives
 
 | Typed         | Finds                | How                                         |
 | ------------- | -------------------- | ------------------------------------------- |
@@ -73,7 +67,7 @@ A query with one word the item lacks returns nothing, so for an OR-style search,
 
 [What it corrects](/how-it-works/corrections/) has every rule, and [the fuzzy tier](/how-it-works/fuzzy-tier/) says which pieces count.
 
-## 4. Only the work a query needs
+## 3. Only the work a query needs
 
 Creating a searcher reads nothing.
 Each item is prepared the first time a query matches it, and the index over the whole list is built the first time a query needs it.
@@ -83,21 +77,33 @@ Corrections are tried only while fewer than ten items match the query as typed, 
 Over 10,000 items a query takes about {bench.ekrina.msPerQuery} ms once the searcher has answered its first, and about {bench.ekrina.msPerQuery100k} ms over 100,000.
 The first query that needs the index builds it; [search as you type](/guides/search-as-you-type/) shows how to build it ahead of time instead.
 
-## 5. How it compares
+## 4. How it compares
 
 Against {bench.libraries} other libraries on three real-world lists, Ekrina ranks the right item higher than any of them.
 It scores {bench.ekrina.mrr} on mean reciprocal rank, where 1 means the right item always comes first, against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
 On queries that no item answers, it returns nothing on all three lists, where on the list of native names {bench.runnerUp.name} answers {bench.runnerUp.junk} of them and {bench.fuse.name} {bench.fuse.junk}.
 
+It isn't the fastest.
+Over 10,000 native names, {bench.faster} answer a query faster than Ekrina's {bench.ekrina.msPerQueryExact} ms with {bench.ekrina.nativeMrr}.
+
 It isn't small.
 At {bench.ekrina.gzip} gzipped it is {bench.size}.
-It loses some query families outright, and [the benchmarks](/benchmarks/) say which, alongside every number on this page.
-[Compare two libraries](/explorer/) puts any one of them beside Ekrina.
 
-## 6. Runs anywhere
+It trails on three kinds of query: a word the item lacks, since every word of the query has to match; silent letters dropped; and a few typo and phonetic families on emoji, where fast-fuzzy scores higher.
+[The benchmarks](/benchmarks/) have the numbers for each, and every number on this page, and [Compare two libraries](/explorer/) puts any one library beside Ekrina.
+
+## 5. Runs anywhere
 
 It needs only ES2022, with no `node:` imports, no DOM and no polyfills.
 Browsers, Node, Deno, Bun and edge runtimes all run the same build, as ESM or CommonJS, with types for each, and it has no dependencies.
+
+## 6. Install it
+
+```bash
+npm install ekrina
+```
+
+The [quickstart](/getting-started/) goes from there to highlighted results and correction notices, and [the tutorial](/tutorial/) builds a command palette.
 
 ## Appendix A. Coming from another library
 

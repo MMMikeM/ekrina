@@ -1,5 +1,6 @@
 ---
 import corpus from "../../../bench/corpus-emoji.json";
+import { emojiSearch } from "./emoji-search.ts";
 import glyphs from "./emoji-glyphs.json";
 
 if (glyphs.length !== corpus.length) {
@@ -8,12 +9,21 @@ if (glyphs.length !== corpus.length) {
 	);
 }
 
-const examples = ["rainb", "partypop", "rcoket", "tears joy"];
+const examples = ["rainb", "partypop", "rcoket", "tears joy", "qxzwkv"];
+
+// What three of them find, worked out by the same search at build time, for
+// readers before they type and for the page's Markdown copy.
+const search = emojiSearch(corpus, glyphs);
+const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
+	const [top] = search(query);
+	const corrected = top?.fields.find((field) => field?.score === top.score)?.tier === "corrected";
+	return { query, found: top && `${top.item.glyph} ${top.item.label}`, corrected };
+});
 ---
 
-<div class="search-demo not-content decoration" data-search-demo>
-	<label class="field">
-		<span class="field-label">Search {corpus.length.toLocaleString("en")} emoji by name or tag</span>
+<div class="search-demo not-content" data-search-demo>
+	<label class="field decoration">
+		<span class="field-label">Search {corpus.length.toLocaleString("en")} emoji by name or tag, in your browser</span>
 		<input
 			type="search"
 			autocomplete="off"
@@ -23,11 +33,21 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 			placeholder="Try a typo"
 		/>
 	</label>
-	<div class="examples" role="group" aria-label="Example queries">
+	<div class="examples decoration" role="group" aria-label="Example queries">
 		<span class="examples-label" aria-hidden="true">Try</span>
 		{examples.map((query) => <button type="button" data-query={query}>{query}</button>)}
 	</div>
-	<div class="panel">
+	<p class="sample">
+		For example,{" "}
+		{samples.map(({ query, found, corrected }, i) => (
+			<>
+				{i === samples.length - 1 && "and "}<code>{query}</code>{" "}
+				{found ? `finds ${found}${corrected ? ", as a correction" : ""}` : "finds nothing"}
+				{i < samples.length - 1 ? "; " : "."}
+			</>
+		))}
+	</p>
+	<div class="panel decoration">
 		<div aria-live="polite">
 			<p class="status"></p>
 			<p class="corrected" hidden>Showing results for <strong></strong></p>
@@ -38,39 +58,19 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 
 <script>
 	import type { FuzzyResult, MatchResult, Range } from "../../../src/index.ts";
+	import { DEMO_LIMIT as LIMIT, type Emoji, type EmojiSearch as Searcher } from "./emoji-search.ts";
 
-	type Emoji = { glyph: string; label: string; tags: string | null };
-	type Searcher = (query: string) => FuzzyResult<Emoji>[];
-
-	const LIMIT = 8;
 	const LABEL_FIELD = 0;
-	const TAGS_SEPARATOR = " — ";
 	const TAG_SEPARATOR = ", ";
 
 	let searcher: Promise<Searcher> | undefined;
 
 	const loadSearcher = (): Promise<Searcher> =>
 		(searcher ??= Promise.all([
-			import("../../../src/index.ts"),
+			import("./emoji-search.ts"),
 			import("../../../bench/corpus-emoji.json"),
 			import("./emoji-glyphs.json"),
-		]).then(([{ createFuzzySearch, SCORES }, { default: corpus }, { default: glyphs }]) => {
-			const items = corpus.map((item, i): Emoji => {
-				const at = item.indexOf(TAGS_SEPARATOR);
-				return {
-					glyph: glyphs[i]!,
-					label: at < 0 ? item : item.slice(0, at),
-					tags: at < 0 ? null : item.slice(at + TAGS_SEPARATOR.length),
-				};
-			});
-			// A tag hit ranks level with a contains in a name, so a name that starts with the query comes first.
-			const search = createFuzzySearch(items, [
-				{ selectField: (emoji) => emoji.label },
-				{ selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS },
-			]);
-			search.buildIndex();
-			return (query: string) => search(query, { limit: LIMIT });
-		}).catch((error: unknown) => {
+		]).then(([{ emojiSearch }, { default: corpus }, { default: glyphs }]) => emojiSearch(corpus, glyphs)).catch((error: unknown) => {
 			searcher = undefined;
 			throw error;
 		}));
@@ -149,7 +149,7 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 	};
 
 	const countText = (query: string, count: number): string => {
-		if (count === 0) return `No emoji match “${query}”`;
+		if (count === 0) return `Nothing. No emoji is close enough to “${query}” to guess.`;
 		if (count === LIMIT) return `Best ${LIMIT} matches`;
 		return count === 1 ? "1 match" : `${count} matches`;
 	};
@@ -269,6 +269,16 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 
 	button:hover {
 		background: color-mix(in srgb, var(--ink) 8%, transparent);
+	}
+
+	.sample {
+		margin: 0;
+		color: var(--ink-muted);
+		font-size: var(--text-sm);
+	}
+
+	[data-used] .sample {
+		display: none;
 	}
 
 	/* Once in use, a full list's height whatever the result count, so the page below doesn't jump as you type. */

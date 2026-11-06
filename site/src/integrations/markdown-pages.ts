@@ -91,13 +91,15 @@ const prepareTabs = (tree: Root) => {
 	}
 };
 
-// A splash page's tagline, install command and action links sit in its hero, outside the content.
+// A splash page's tagline, install command, action links and demo sit in its hero, outside the content.
 const heroOf = (page: Root): ElementContent[] => {
 	const tagline = select(".hero .tagline > p", page);
 	const actions = selectAll(".hero .actions a", page);
 	const install = select(".install code", page);
+	const demoSample = select(".search-demo .sample", page);
 	return [
 		...(tagline ? [element("p", ...tagline.children)] : []),
+		...(demoSample ? [element("p", ...demoSample.children)] : []),
 		...(install
 			? [element("pre", { ...install, properties: { className: ["language-sh"] } })]
 			: []),

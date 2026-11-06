@@ -1,7 +1,6 @@
 import type { Artifact } from "../../bench/artifact.ts";
 import { displayName, META } from "../../bench/libraries.ts";
 import results from "../../bench/results.json" with { type: "json" };
-import emoji from "../../bench/corpus-emoji.json" with { type: "json" };
 import data from "./data/explorer.json" with { type: "json" };
 import type { ExplorerData } from "./explorer.ts";
 
@@ -71,14 +70,26 @@ const sizeStanding = () => {
 	return `${level.length === 0 ? rank : `level with ${named(level)}`}${above}`;
 };
 
+const msOf = (config: string) => batchOf(config, SIZE).restMs!;
+const nativeMrrOf = (config: string) =>
+	explorer.libraries.find((library) => library.config === config)!.headline.native.toFixed(2);
+
+// Every library that answers a query faster than Ekrina, fastest first, for
+// "fuzzysort, at 0.41 ms with 0.46 MRR, and uFuzzy (all opts), at 0.64 ms with 0.66 MRR,".
+const faster = explorer.libraries
+	.map((library) => library.config)
+	.filter((config) => config !== "ekrina" && msOf(config) < msOf("ekrina"))
+	.sort((a, b) => msOf(a) - msOf(b));
+
 export const bench = {
 	libraries: COUNTS[explorer.libraries.length - 1],
-	emoji: emoji.length.toLocaleString("en-GB"),
 	ekrina: {
 		mrr: mrrRange("ekrina"),
 		junk: percent(junkOf("ekrina")),
 		msPerQuery: batchOf("ekrina", SIZE).restMs!.toFixed(1),
 		msPerQuery100k: batchOf("ekrina", "100000").restMs!.toFixed(1),
+		msPerQueryExact: msOf("ekrina").toFixed(2),
+		nativeMrr: nativeMrrOf("ekrina"),
 		gzip: gzipOf("ekrina"),
 	},
 	runnerUp: {
@@ -92,5 +103,8 @@ export const bench = {
 		junk: percent(junkOf("fuse.js (tuned)")),
 	},
 	size: sizeStanding(),
+	faster: faster
+		.map((config) => `${displayName(config)}, at ${msOf(config).toFixed(2)} ms with ${nativeMrrOf(config)} MRR,`)
+		.join(" and "),
 	at100k: at100k(),
 };

@@ -28,7 +28,7 @@ Ekrina tells you how every result matched: a `tier` such as `prefix`, `fuzzy` or
 It corrects up to two mistakes per query and says when it did, but only guesses when the query as typed comes up short, and it returns nothing for nonsense.
 It does only the work each query needs, has no dependencies, and runs on anything with ES2022.
 
-To see it first, [search the emoji](https://ekrina.thelazyweb.dev/#1-try-it) on the docs site, which runs this library in your browser.
+To see it first, [search the emoji](https://ekrina.thelazyweb.dev/) on the docs site's home page, which runs this library in your browser.
 
 ```bash
 npm install ekrina
