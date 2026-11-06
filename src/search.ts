@@ -92,8 +92,8 @@ const integerLike = /^(0|[1-9]\d*)$/;
 
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
-const isSpec = (value: unknown): value is FieldSpec<never> =>
-	typeof (value as FieldSpec<never> | null)?.selectField === "function";
+const isField = (value: unknown): value is Field<never> =>
+	typeof value === "function" || typeof (value as FieldSpec<never> | null)?.selectField === "function";
 
 const resolveField = <T>(field: Field<T>, fieldName: string | undefined): ResolvedSpec<T> => {
 	const spec = typeof field === "function" ? { selectField: field } : field;
@@ -108,7 +108,7 @@ const resolveField = <T>(field: Field<T>, fieldName: string | undefined): Resolv
 
 const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): ResolvedSpec<T>[] => {
 	if (!selection) selection = (item) => item as unknown as string;
-	if (typeof selection === "function" || isSpec(selection)) return [resolveField(selection, undefined)];
+	if (isField(selection)) return [resolveField(selection, undefined)];
 	if (typeof selection !== "object" || Array.isArray(selection)) {
 		throw new TypeError(
 			"createSearcher takes a field, or an object of named fields such as { title: (item) => item.title }",
@@ -124,7 +124,7 @@ const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): 
 					(name === "selectField" ? "" : ": integer-like names sort before the others"),
 			);
 		}
-		if (typeof field !== "function" && !isSpec(field)) {
+		if (!isField(field)) {
 			throw new TypeError(`field ${name} needs selectField, which replaced text in 2.0`);
 		}
 		return resolveField(field, name);
@@ -570,17 +570,14 @@ export function createSearcher<T, F extends string>(
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at. A short query's
 		// correction only stands in for a missing match (see isShortQuery).
+		// Taken before the relaxed pass, which rescores the literal hits.
+		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		const rescuing =
 			rescuable &&
-			(isShortQuery(normalisedQuery, prepared.queryWords)
-				? matched.length === 0
-				: literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF));
+			(isShortQuery(normalisedQuery, prepared.queryWords) ? matched.length === 0 : offeringSecondPass);
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
-		// Taken before the relaxed pass, which rescores the literal hits.
-		const offeringSecondPass =
-			literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		if (rescuing) relaxedPass();
 		if (offeringSecondPass) secondPass();
 		commitSurvivorCache(!rescuing && !singleChar);

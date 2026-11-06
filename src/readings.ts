@@ -548,7 +548,7 @@ const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
 	if (lastReadings?.query !== prepared.query) {
-		lastReadings = { query: prepared.query, byCompeting: [undefined, undefined] };
+		lastReadings = { query: prepared.query, byCompeting: [] };
 	}
 	const slot = competing ? 1 : 0;
 	return (lastReadings.byCompeting[slot] ??= prepareReading(prepared, competing));

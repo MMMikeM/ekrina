@@ -1,4 +1,4 @@
-const combiningMarks = /[\u0300-\u036f]/g;
+export const combiningMarks: RegExp = /[\u0300-\u036f]/g;
 const hasCombiningMark = /[\u0300-\u036f]/;
 const hasNonAscii = /[\u0080-\uffff]/;
 
