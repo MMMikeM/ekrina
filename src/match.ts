@@ -252,7 +252,7 @@ export const matchField = (
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
-		(rescue ??= { field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
+		(rescue ??= { rawField: field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 

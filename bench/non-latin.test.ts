@@ -51,10 +51,11 @@ describe("a corpus in Cyrillic", () => {
 			const indexOf = new Map(list.map((item, i) => [item, i]));
 			const search = createSearcher(list);
 			return (query: string) =>
-				search(query).map(({ item, score, fields }) => ({
+				search(query).map(({ item, corrected, text, ...match }) => ({
+					...match,
 					at: indexOf.get(item),
-					score,
-					fields: fields.map((f) => f && { ...f, corrected: f.corrected && toCyrillic(f.corrected) }),
+					corrected: corrected && toCyrillic(corrected),
+					text: toCyrillic(text),
 				}));
 		});
 		for (const query of queries) {

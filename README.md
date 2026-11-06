@@ -69,8 +69,8 @@ search("settings");
 const [top] = search("recnet");
 // top.fields[0]: { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
 
-if (top?.fields[0]?.tier === "corrected") {
-	showNotice(`Showing results for ${top.fields[0].corrected}`);
+if (top?.tier === "corrected") {
+	showNotice(`Showing results for ${top.corrected}`);
 }
 ```
 

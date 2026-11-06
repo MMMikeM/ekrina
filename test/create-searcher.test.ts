@@ -8,9 +8,9 @@ import { createSearcher, fuzzyMatch } from "../src/index";
 describe("string collections", () => {
 	const search = createSearcher(["apple", "banana", "cherry", "grape"]);
 
-	it("returns matching items with score and per-field result", () => {
+	it("returns matching items with how each matched", () => {
 		expect(search("ban")).toEqual([
-			{ item: "banana", score: 0.5, fields: [{ score: 0.5, tier: "prefix", ranges: [[0, 2]] }] },
+			{ item: "banana", score: 0.5, tier: "prefix", ranges: [[0, 2]], text: "banana" },
 		]);
 	});
 
@@ -22,8 +22,8 @@ describe("string collections", () => {
 		expect(createSearcher([])("anything")).toEqual([]);
 	});
 
-	it("an empty spec array means no searchable fields, so every query → []", () => {
-		expect(createSearcher(["apple"], [])("apple")).toEqual([]);
+	it("an empty object of fields means nothing to search, so every query → []", () => {
+		expect(createSearcher(["apple"], {})("apple")).toEqual([]);
 	});
 });
 
@@ -39,7 +39,7 @@ describe("one-character queries", () => {
 
 	it("a single character matches where it starts a word", () => {
 		expect(search("a").map((r) => r.item)).toEqual(["apple", "apricot"]);
-		expect(createSearcher(["a"])("a")[0]?.fields[0]?.tier).toBe("exact");
+		expect(createSearcher(["a"])("a")[0]?.tier).toBe("exact");
 	});
 
 	it("a single character never matches inside a word", () => {
@@ -101,8 +101,7 @@ describe("selectField overload", () => {
 		const results = createSearcher(users, (u) => u.name)("john");
 		expect(results).toHaveLength(1);
 		expect(results[0]!.item).toBe(users[0]);
-		expect(results[0]!.score).toBe(0.5);
-		expect(results[0]!.fields[0]).toEqual({ score: 0.5, tier: "prefix", ranges: [[0, 3]] });
+		expect(results[0]).toMatchObject({ score: 0.5, tier: "prefix", ranges: [[0, 3]], text: "John Doe" });
 	});
 
 	it("skips items whose text is null", () => {
@@ -203,7 +202,7 @@ describe("unicode", () => {
 	it("diacritic-insensitive match", () => {
 		const r = createSearcher(["Señor García"], (s) => s)("garcia")[0]!;
 		expect(r.score).toBe(1);
-		expect(r.fields[0]?.ranges).toEqual([[6, 11]]);
+		expect(r?.ranges).toEqual([[6, 11]]);
 	});
 
 	it("normalised-exact for special characters", () => {
@@ -213,7 +212,7 @@ describe("unicode", () => {
 	it("finds a mid-word match whose accent is a separate combining mark", () => {
 		const decomposed = "Re\u0301sume\u0301";
 		expect(fuzzyMatch(decomposed, "esum")?.tier).toBe("contains");
-		expect(createSearcher([decomposed])("esum").map((r) => r.fields[0]?.tier)).toEqual([
+		expect(createSearcher([decomposed])("esum").map((r) => r?.tier)).toEqual([
 			"contains",
 		]);
 	});

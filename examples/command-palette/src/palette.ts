@@ -1,20 +1,20 @@
 import { createSearcher, SCORES } from "ekrina";
-import type { SearchResult, HighlightRanges, MatchResult } from "ekrina";
+import type { HighlightRanges, SearchResultOf } from "ekrina";
 import type { Command } from "./commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [
-		{ selectField: (command) => command.title, acronym: true },
-		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
-	]);
+	const search = createSearcher(commands, {
+		title: { selectField: (command) => command.title, acronym: true },
+		keywords: { selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
+	});
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
 
-const bestField = (result: SearchResult<Command>): MatchResult =>
-	result.fields.find((field) => field?.score === result.score)!;
+type Result = SearchResultOf<typeof createSearch>;
 
 const highlighted = (text: string, ranges: HighlightRanges): (string | HTMLElement)[] => {
 	const nodes: (string | HTMLElement)[] = [];
@@ -41,12 +41,12 @@ const element = <K extends keyof HTMLElementTagNameMap>(
 	return node;
 };
 
-const option = (result: SearchResult<Command>, id: string): HTMLLIElement => {
+const option = (result: Result, id: string): HTMLLIElement => {
 	const { title, category, keywords } = result.item;
-	const [titleMatch, keywordMatch] = result.fields;
-	const text = element("span", "text", element("span", "title", ...highlighted(title, titleMatch?.ranges ?? [])));
-	if (!titleMatch && keywordMatch && keywords) {
-		text.append(element("span", "keywords", ...highlighted(keywords, keywordMatch.ranges)));
+	const keywordsMatched = result.field === "keywords";
+	const text = element("span", "text", element("span", "title", ...highlighted(title, keywordsMatched ? [] : result.ranges)));
+	if (keywordsMatched && keywords) {
+		text.append(element("span", "keywords", ...highlighted(keywords, result.ranges)));
 	}
 	const row = element("li", "option", text, element("span", "category", category));
 	row.id = id;
@@ -84,7 +84,7 @@ export const createPalette = (
 	root.classList.add("palette");
 	root.append(input, notice, list);
 
-	let results: SearchResult<Command>[] = [];
+	let results: Result[] = [];
 	let active = 0;
 
 	const highlightActive = (): void => {
@@ -99,8 +99,7 @@ export const createPalette = (
 		if (query === "") return "";
 		const top = results[0];
 		if (!top) return `No commands match “${query}”`;
-		const match = bestField(top);
-		return match.tier === "corrected" ? `Showing results for “${match.corrected}”` : "";
+		return top.tier === "corrected" ? `Showing results for “${top.corrected}”` : "";
 	};
 
 	const update = (): void => {

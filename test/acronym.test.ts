@@ -27,7 +27,7 @@ describe("acronym tier", () => {
 	it("ranks an acronym match above an incidental contains", () => {
 		const results = createSearcher(
 			["United States", "campus tour"],
-			[{ selectField: (s) => s, acronym: true }],
+			{ label: { selectField: (s) => s, acronym: true } },
 		)("us");
 		expect(results.map((r) => r.item)).toEqual(["United States", "campus tour"]);
 		expect(results[0]!.score).toBe(SCORES.ACRONYM); // 1.8

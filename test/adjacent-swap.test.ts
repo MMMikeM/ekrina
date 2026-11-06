@@ -54,7 +54,7 @@ describe("the adjacent-swap rescue", () => {
 			"geenric",
 		);
 		expect(results[0]?.item).toBe("generic gasket");
-		expect(results[0]?.fields[0]?.tier).toBe("corrected");
+		expect(results[0]?.tier).toBe("corrected");
 	});
 
 	it("real-word neighbours match with the penalty visible", () => {

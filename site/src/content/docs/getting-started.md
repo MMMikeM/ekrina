@@ -80,7 +80,7 @@ const highlight = (text: string, ranges: HighlightRanges): string => {
 
 const [top] = search("settings");
 if (top) {
-	highlight(top.item.title, top.fields[0]?.ranges ?? []);
+	highlight(top.item.title, top?.ranges ?? []);
 	// "Preferences: Open User <mark>Settings</mark>"
 }
 ```
@@ -94,7 +94,7 @@ A corrected match carries the query it fixed:
 ```ts
 declare const showNotice: (message: string) => void;
 
-const match = search("recnet")[0]?.fields[0];
+const match = search("recnet")[0]?;
 // { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
 
 if (match?.tier === "corrected") {

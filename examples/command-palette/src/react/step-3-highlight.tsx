@@ -1,18 +1,21 @@
 import { createSearcher, SCORES } from "ekrina";
-import type { SearchResult, HighlightRanges } from "ekrina";
+import type { HighlightRanges, SearchResultOf } from "ekrina";
 import { type ReactNode, useMemo, useState } from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [
-		{ selectField: (command) => command.title, acronym: true },
-		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
-	]);
+	const search = createSearcher(commands, {
+		title: { selectField: (command) => command.title, acronym: true },
+		keywords: { selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
+	});
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
+
+type Result = SearchResultOf<typeof createSearch>;
 
 const highlighted = (text: string, ranges: HighlightRanges): ReactNode[] => {
 	const nodes: ReactNode[] = [];
@@ -26,15 +29,15 @@ const highlighted = (text: string, ranges: HighlightRanges): ReactNode[] => {
 	return nodes;
 };
 
-const Option = ({ result, onChoose }: { result: SearchResult<Command>; onChoose: () => void }) => {
+const Option = ({ result, onChoose }: { result: Result; onChoose: () => void }) => {
 	const { title, category, keywords } = result.item;
-	const [titleMatch, keywordMatch] = result.fields;
+	const keywordsMatched = result.field === "keywords";
 	return (
 		<li className="option" onClick={onChoose}>
 			<span className="text">
-				<span className="title">{highlighted(title, titleMatch?.ranges ?? [])}</span>
-				{!titleMatch && keywordMatch && keywords && (
-					<span className="keywords">{highlighted(keywords, keywordMatch.ranges)}</span>
+				<span className="title">{highlighted(title, keywordsMatched ? [] : result.ranges)}</span>
+				{keywordsMatched && keywords && (
+					<span className="keywords">{highlighted(keywords, result.ranges)}</span>
 				)}
 			</span>
 			<span className="category">{category}</span>

@@ -204,12 +204,15 @@ describe("a swap in a four-letter word", () => {
 		expect(search(items)("tahn")[0]).toEqual({
 			item: "Louder Than Bombs",
 			score: SCORES.BOUNDARY + TYPO_PENALTY,
-			fields: [{ score: SCORES.BOUNDARY + TYPO_PENALTY, tier: "corrected", corrected: "Than", ranges: [[7, 10]] }],
+			tier: "corrected",
+			corrected: "Than",
+			ranges: [[7, 10]],
+			text: "Louder Than Bombs",
 		});
 	});
 
 	it("finishes a longer word it starts", () => {
-		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]?.fields[0]).toMatchObject({
+		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]).toMatchObject({
 			score: SCORES.PREFIX + TYPO_PENALTY,
 			corrected: "Than",
 		});
@@ -368,7 +371,7 @@ describe("two edits in one word of a phrase", () => {
 describe("in a searcher", () => {
 	it("joins the results while fewer than ten items match as typed", () => {
 		const search = searcher(["Huguette Brown", "Hget Lane"]);
-		expect(search("hget").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+		expect(search("hget").map((r) => [r.item, r?.tier])).toEqual([
 			["Hget Lane", "prefix"],
 			["Huguette Brown", "corrected"],
 		]);
@@ -394,11 +397,13 @@ describe("in a searcher", () => {
 
 	it("replaces a weaker result on the same item", () => {
 		const search = searcher(["Handcrafted"]);
-		expect(search("hndcrfted")[0].fields[0]?.tier).toBe("corrected");
+		expect(search("hndcrfted")[0]?.tier).toBe("corrected");
 	});
 
 	it("keeps a correction that already scores better", () => {
-		expect(searcher(["huguette"])("hugutte")[0].fields[0]).toEqual({
+		expect(searcher(["huguette"])("hugutte")[0]).toEqual({
+			item: "huguette",
+			text: "huguette",
 			score: TYPO_PENALTY,
 			tier: "corrected",
 			corrected: "huguette",
@@ -414,23 +419,14 @@ describe("in a searcher", () => {
 	it("scores each field and keeps the best", () => {
 		const search = createSearcher(
 			[{ title: "Hxgxextx", body: "Hagueta" }],
-			[
-				{ selectField: (r) => r.title },
-				{ selectField: (r) => r.body },
-			],
+			{ title: (r) => r.title, body: (r) => r.body },
 		);
-		const [result] = search("hget");
-		expect(result.fields.map((field) => field?.corrected)).toEqual(["Hxgxextx", "Hagueta"]);
-		expect(result.score).toBe(result.fields[1]?.score);
+		expect(search("hget")[0]).toMatchObject({ field: "body", corrected: "Hagueta" });
 		const [reversed] = createSearcher(
 			[{ title: "Hagueta", body: "Hxgxextx" }],
-			[
-				{ selectField: (r) => r.title },
-				{ selectField: (r) => r.body },
-			],
+			{ title: (r) => r.title, body: (r) => r.body },
 		)("hget");
-		expect(reversed.score).toBe(reversed.fields[0]?.score);
-		expect(reversed.fields[1]?.corrected).toBe("Hxgxextx");
+		expect(reversed).toMatchObject({ field: "title", corrected: "Hagueta" });
 	});
 
 	it("ranks the item a correction spells whole above one it starts", () => {
@@ -444,8 +440,8 @@ describe("in a searcher", () => {
 	it("corrects a list that matches nothing", () => {
 		const search = searcher(["Ergonomic Chair", "Ergonomic Desk", "Rustic Steel Pizza"]);
 		expect(search("ergxnomiq").map((r) => r.item)).toEqual(["Ergonomic Chair", "Ergonomic Desk"]);
-		expect(search("rustix stexl")[0].fields[0]?.corrected).toBe("Rustic Steel");
-		expect(search("pizza").map((r) => r.fields[0]?.tier)).toEqual(["boundary"]);
+		expect(search("rustix stexl")[0]?.corrected).toBe("Rustic Steel");
+		expect(search("pizza").map((r) => r?.tier)).toEqual(["boundary"]);
 	});
 
 	it("breaks a tie between its matches by list order", () => {
@@ -459,10 +455,7 @@ describe("in a searcher", () => {
 
 	it("ranks an item by where its best field's match ends", () => {
 		const bodies = (items: { title: string; body: string }[]) =>
-			createSearcher(items, [
-				{ selectField: (r) => r.title },
-				{ selectField: (r) => r.body },
-			])("hget").map((r) => r.item.body);
+			createSearcher(items, { title: (r) => r.title, body: (r) => r.body })("hget").map((r) => r.item.body);
 		const beaten = [
 			{ title: "Hxgxet", body: "Hgueetx" },
 			{ title: "Hxgxet", body: "zzz" },
@@ -481,10 +474,7 @@ describe("in a searcher", () => {
 				{ title: "Steel Desk", body: "Handcrafted Wooden Chair" },
 				{ title: "Handcrafted Wooden Table", body: "Steel" },
 			],
-			[
-				{ selectField: (r) => r.title },
-				{ selectField: (r) => r.body },
-			],
+			{ title: (r) => r.title, body: (r) => r.body },
 		);
 		expect(search("handcxafted wooxen").map((r) => r.item.title)).toEqual([
 			"Steel Desk",
@@ -494,7 +484,7 @@ describe("in a searcher", () => {
 
 	it("corrects a phrase holding a letter outside ASCII or an underscore", () => {
 		const tiers = (list: string[], query: string) =>
-			searcher(list)(query).map((r) => r.fields[0]?.tier);
+			searcher(list)(query).map((r) => r?.tier);
 		expect(tiers(["Søndergaard ApS Holding"], "søndrgaard holdixg")).toEqual(["corrected"]);
 		expect(tiers(["snake_case helper"], "snake_cse helpxr")).toEqual(["corrected"]);
 	});
@@ -508,14 +498,10 @@ describe("in a searcher", () => {
 		let throwing = false;
 		const search = createSearcher(
 			["Hget Lane", "Huguette Brown"],
-			[
-				{
-					selectField: (s) => {
-						if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
-						return s;
-					},
-				},
-			],
+			(s) => {
+				if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
+				return s;
+			},
 		);
 		throwing = true;
 		expect(() => search("hget")).toThrow("unreadable");
@@ -534,19 +520,19 @@ describe("in a searcher", () => {
 	it("skips an item whose field is missing", () => {
 		const search = createSearcher(
 			[{ name: null }, { name: "Ergonomic" }],
-			[{ selectField: (r) => r.name }],
+			(r) => r.name,
 		);
 		expect(search("ergxnomiq").map((r) => r.item.name)).toEqual(["Ergonomic"]);
 		expect(search("________")).toEqual([]);
 	});
 
 	it("lets an accented item through the check on its raw text", () => {
-		expect(searcher(["Ergönomic Chair"])("ergxnomiq")[0].fields[0]?.corrected).toBe("Ergönomic");
-		expect(searcher(["Ergonomíc"])("ergonxmiq")[0].fields[0]?.corrected).toBe("Ergonomíc");
+		expect(searcher(["Ergönomic Chair"])("ergxnomiq")[0]?.corrected).toBe("Ergönomic");
+		expect(searcher(["Ergonomíc"])("ergonxmiq")[0]?.corrected).toBe("Ergonomíc");
 	});
 
 	it("highlights a padded field in its own offsets", () => {
-		expect(searcher(["  Ergonomic"])("ergxnomiq")[0].fields[0]?.ranges).toEqual([[2, 10]]);
+		expect(searcher(["  Ergonomic"])("ergxnomiq")[0]?.ranges).toEqual([[2, 10]]);
 	});
 
 	it("keeps narrowing on the next keystroke", () => {

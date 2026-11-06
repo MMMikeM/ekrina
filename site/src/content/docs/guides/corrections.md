@@ -11,7 +11,7 @@ A corrected match has `tier: "corrected"`, and `corrected` holds the query as it
 const search = createSearcher(["Open File…", "Open Recent", "Close Editor"]);
 
 const [top] = search("recnet");
-top?.fields[0];
+top?;
 // { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
 ```
 
@@ -21,7 +21,7 @@ Check the top result, since a correction only reaches the top when nothing typed
 
 ```ts
 const results = search(query);
-const best = results[0]?.fields[0];
+const best = results[0]?;
 
 const notice =
 	best?.tier === "corrected" ? `Showing results for ${best.corrected}` : null;
@@ -44,7 +44,7 @@ import { SCORES } from "ekrina";
 search(query).filter((result) => result.score <= SCORES.CONTAINS);
 ```
 
-To drop corrections but keep fuzzy matches, filter on the tier instead: `result.fields[0]?.tier !== "corrected"`.
+To drop corrections but keep fuzzy matches, filter on the tier instead: `result?.tier !== "corrected"`.
 [Keep only literal matches](/guides/literal-matches/) covers fields with `demoteBy`, where the score test no longer works.
 
 ## When it corrects

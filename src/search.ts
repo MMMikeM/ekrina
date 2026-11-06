@@ -20,7 +20,6 @@ import type {
 	SearchOptions,
 } from "./types";
 
-const { MAX_SAFE_INTEGER } = Number;
 
 // Ten because that is the slice a picker shows, and the cutoff the published
 // MRR uses; a correction that cannot reach the top ten is work no caller can
@@ -82,30 +81,46 @@ type ResolvedSpec<T> = {
 	selector: (item: T) => string | null;
 	acronymTier: boolean;
 	demotion: number;
+	fieldName: string | undefined;
 };
+
+// JavaScript orders integer-like keys before all others, which would reorder the
+// fields and so the tie rule.
+const integerLike = /^(0|[1-9]\d*)$/;
 
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
 const resolveFieldSpecs = <T>(
-	selection?: ((item: T) => string | null) | FieldSpec<T>[],
+	selection?:
+		| ((item: T) => string | null)
+		| Record<string, FieldSpec<T> | ((item: T) => string | null)>,
 ): ResolvedSpec<T>[] => {
-	if (selection && typeof selection !== "function" && !Array.isArray(selection)) {
-		throw new TypeError("createSearcher takes a function or an array of field specs");
+	if (!selection) selection = (item) => item as unknown as string;
+	if (typeof selection === "function") {
+		return [{ selector: selection, acronymTier: false, demotion: 0, fieldName: undefined }];
 	}
-	const specs: FieldSpec<T>[] = !selection
-		? [{ selectField: (item) => item as unknown as string }]
-		: typeof selection === "function"
-			? [{ selectField: selection }]
-			: selection;
-	return specs.map((spec) => {
-		if (typeof spec.selectField !== "function") {
-			throw new TypeError("a field spec needs selectField, which replaced text in 2.0");
+	if (typeof selection !== "object" || Array.isArray(selection)) {
+		throw new TypeError(
+			"createSearcher takes a function, or an object of named fields such as { title: (item) => item.title }",
+		);
+	}
+	return Object.entries(selection).map(([name, value]) => {
+		if (name === "getText") {
+			throw new TypeError("pass the function itself: createSearcher(items, (item) => item.title)");
+		}
+		if (integerLike.test(name)) {
+			throw new TypeError(`a field can't be named ${name}: integer-like names sort before the others`);
+		}
+		const spec = typeof value === "function" ? { selectField: value } : value;
+		if (typeof spec?.selectField !== "function") {
+			throw new TypeError(`field ${name} needs selectField, which replaced text in 2.0`);
 		}
 		if ("atBest" in spec) throw new TypeError("atBest is demoteBy since 2.0");
 		return {
 			selector: spec.selectField,
 			acronymTier: spec.acronym ?? false,
 			demotion: spec.demoteBy ?? 0,
+			fieldName: name,
 		};
 	});
 };
@@ -123,35 +138,45 @@ const resolveFieldSpecs = <T>(
  * match beside them.
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
- * An empty spec array leaves the searcher with no searchable fields, so every
- * query returns no results.
+ * With named fields, a result says which one matched best in `field`; a tie goes
+ * to the field whose match ends on a word boundary, then to the one named first.
+ * An empty object of fields leaves nothing to search, so every query returns no
+ * results.
+ *
+ * @throws TypeError when the fields are neither a function nor an object of
+ * named fields, when a field is named like an integer, or when a field lacks
+ * `selectField` or uses the 1.x `atBest`.
  *
  * @example
  * // Array of strings
  * const search = createSearcher(['apple', 'banana']);
- * search('ban'); // [{ item: 'banana', score: 0.5, fields: [{ score: 0.5, tier: 'prefix', ranges: [[0, 2]] }] }]
+ * search('ban'); // [{ item: 'banana', score: 0.5, tier: 'prefix', ranges: [[0, 2]], text: 'banana' }]
  *
  * @example
  * // Objects, one field
  * const search = createSearcher(users, (u) => u.name);
  *
  * @example
- * // Multiple fields, per-field config (a body hit ranks like a title contains)
- * const search = createSearcher(posts, [
- *   { selectField: (p) => p.title },
- *   { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
- * ]);
+ * // Named fields, each a function or a spec (a body hit ranks like a title contains)
+ * const search = createSearcher(posts, {
+ *   title: (p) => p.title,
+ *   body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
+ * });
+ * search('loop')[0]?.field; // 'title' | 'body'
  */
 export function createSearcher(list: string[]): Searcher<string>;
 export function createSearcher<T>(
 	list: T[],
 	selectField: (item: T) => string | null,
 ): Searcher<T>;
-export function createSearcher<T>(list: T[], specs: FieldSpec<T>[]): Searcher<T>;
-export function createSearcher<T>(
+export function createSearcher<T, F extends string>(
 	list: T[],
-	selection?: ((item: T) => string | null) | FieldSpec<T>[],
-): Searcher<T> {
+	fields: Record<F, FieldSpec<T> | ((item: T) => string | null)>,
+): Searcher<T, F>;
+export function createSearcher<T, F extends string>(
+	list: T[],
+	selection?: ((item: T) => string | null) | Record<F, FieldSpec<T> | ((item: T) => string | null)>,
+): Searcher<T, F> {
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
@@ -159,15 +184,10 @@ export function createSearcher<T>(
 	// match can replace a weaker one; a stamp from an earlier generation means
 	// none. Float64 so the generation count never wraps.
 	// oxlint-disable-next-line unicorn/no-new-array
-	const heldResults: (SearchResult<T> | undefined)[] = new Array(count);
+	const heldResults: (SearchResult<T, F> | undefined)[] = new Array(count);
 	const heldStamps = new Float64Array(count);
 	const heldEndsWord = new Uint8Array(count);
 	let generation = 0;
-	// Where an item's best match ends follows its best field, as scoreItem sets it.
-	const regroupHeld = (i: number, score: number, bestScore: number, endsWord: boolean): void => {
-		if (score < bestScore) heldEndsWord[i] = endsWord ? 1 : 0;
-		else if (score === bestScore && endsWord) heldEndsWord[i] = 1;
-	};
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -270,7 +290,7 @@ export function createSearcher<T>(
 		count: 0,
 	};
 
-	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T>[] => {
+	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T, F>[] => {
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
 			throw new RangeError(`limit must be a positive integer, got ${limit}`);
 		}
@@ -295,10 +315,9 @@ export function createSearcher<T>(
 		let literalHits = 0;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
-		// objects per call, so the demoteBy shift can mutate.
-		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
+		// objects per call, so their ranges can shift in place.
+		const placeFieldResult = (result: MatchResult, at: number): boolean => {
 			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
-			result.score += resolvedSpecs[f].demotion;
 			if (leads !== null) {
 				const lead = leads[at];
 				if (lead) shiftRanges(result.ranges, lead);
@@ -306,7 +325,7 @@ export function createSearcher<T>(
 			return endsWord;
 		};
 
-		const record = (i: number, entry: SearchResult<T>, endsWord: boolean): void => {
+		const record = (i: number, entry: SearchResult<T, F>, endsWord: boolean): void => {
 			matched.push(i);
 			heldResults[i] = entry;
 			heldStamps[i] = generation;
@@ -318,27 +337,36 @@ export function createSearcher<T>(
 			generation++;
 		};
 
-		// A field's match joins the item's entry, or replaces a weaker one. Where
-		// an item's match ends follows its best field.
+		const resultOf = (i: number, f: number, match: MatchResult, score: number): SearchResult<T, F> => {
+			const spec = resolvedSpecs[f];
+			const result: SearchResult<T> & { field?: string } = {
+				item: list[i],
+				score,
+				tier: match.tier,
+				ranges: match.ranges,
+				text: spec.selector(list[i]) as string,
+			};
+			if (spec.fieldName !== undefined) result.field = spec.fieldName;
+			if (match.corrected !== undefined) result.corrected = match.corrected;
+			return result as SearchResult<T, F>;
+		};
+
+		// An item reports its best field. On a tied score the field whose match
+		// ends on a word boundary wins, as it does in the sort, then the earlier one.
 		const offerField = (
 			i: number,
-			entry: SearchResult<T> | undefined,
+			entry: SearchResult<T, F> | undefined,
 			f: number,
-			result: MatchResult,
-		): SearchResult<T> => {
-			const endsWord = placeFieldResult(result, i * specCount + f, f);
+			match: MatchResult,
+		): SearchResult<T, F> => {
+			const endsWord = placeFieldResult(match, i * specCount + f);
+			const score = match.score + resolvedSpecs[f].demotion;
 			if (entry === undefined) {
-				// The literal is faster than new Array().fill(), and runs once per result.
-				const fields: (MatchResult | null)[] =
-					// oxlint-disable-next-line unicorn/no-new-array
-					specCount === 1 ? [result] : new Array(specCount).fill(null);
-				fields[f] = result;
-				entry = { item: list[i], score: result.score, fields };
+				entry = resultOf(i, f, match, score);
 				record(i, entry, endsWord);
-			} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
-				entry.fields[f] = result;
-				regroupHeld(i, result.score, entry.score, endsWord);
-				entry.score = Math.min(entry.score, result.score);
+			} else if (score < entry.score || (score === entry.score && endsWord && !heldEndsWord[i])) {
+				heldEndsWord[i] = endsWord ? 1 : 0;
+				entry = heldResults[i] = resultOf(i, f, match, score);
 			}
 			return entry;
 		};
@@ -351,7 +379,7 @@ export function createSearcher<T>(
 		): void => {
 			materialise(i);
 			const base = i * specCount;
-			let entry: SearchResult<T> | undefined;
+			let entry: SearchResult<T, F> | undefined;
 			for (let f = 0; f < specCount; f++) {
 				const result = matchField(
 					trimmedFields[base + f] as string,
@@ -455,7 +483,7 @@ export function createSearcher<T>(
 		// corrected one; a literal match is never touched.
 		const offerFallbacks = (
 			i: number,
-			held: SearchResult<T> | undefined,
+			held: SearchResult<T, F> | undefined,
 			reading: PreparedReading,
 		): void => {
 			const base = i * specCount;
@@ -548,11 +576,11 @@ export function createSearcher<T>(
 		const results = matched
 			.sort(
 				(a, b) =>
-					(heldResults[a] as SearchResult<T>).score - (heldResults[b] as SearchResult<T>).score ||
+					(heldResults[a] as SearchResult<T, F>).score - (heldResults[b] as SearchResult<T, F>).score ||
 					heldEndsWord[b] - heldEndsWord[a] ||
 					a - b,
 			)
-			.map((i) => heldResults[i] as SearchResult<T>);
+			.map((i) => heldResults[i] as SearchResult<T, F>);
 		if (limit !== undefined && results.length > limit) results.length = limit;
 		return results;
 	};

@@ -7,8 +7,8 @@ const target = "Weekly status report";
 // Each holds both query words as typed: ten literal (multi-word) hits.
 const literals = Array.from({ length: 10 }, (_, i) => `Statsu report draft ${i + 1}`);
 
-const tierOf = (results: { item: string; fields: ({ tier: string } | null)[] }[]) =>
-	results.find((r) => r.item === target)?.fields[0]?.tier ?? null;
+const tierOf = (results: { item: string; tier: string }[]) =>
+	results.find((r) => r.item === target)?.tier ?? null;
 
 describe("the rescue budget does not depend on list order", () => {
 	it("the target's tier does not depend on whether it comes before or after the literal hits", () => {

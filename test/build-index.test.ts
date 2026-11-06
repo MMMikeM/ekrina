@@ -14,10 +14,10 @@ const products: Product[] = [
 	{ title: "Rustic Granite Table", tags: "furniture stone" },
 ];
 
-const fields: FieldSpec<Product>[] = [
-	{ selectField: (p) => p.title, acronym: true },
-	{ selectField: (p) => p.tags, demoteBy: SCORES.CONTAINS },
-];
+const fields = {
+	title: { selectField: (p) => p.title, acronym: true },
+	tags: { selectField: (p) => p.tags, demoteBy: SCORES.CONTAINS },
+} satisfies Record<string, FieldSpec<Product>>;
 
 const queries = [
 	"wooden",
@@ -33,7 +33,7 @@ const queries = [
 	"qxzwkv",
 ];
 
-const indexed = <T>(search: Searcher<T>): Searcher<T> => {
+const indexed = <T, F extends string = never>(search: Searcher<T, F>): Searcher<T, F> => {
 	search.buildIndex();
 	return search;
 };
@@ -89,6 +89,6 @@ describe("buildIndex", () => {
 
 	it("an empty list or an empty spec array still answers nothing", () => {
 		expect(indexed(createSearcher([] as string[]))("anything")).toEqual([]);
-		expect(indexed(createSearcher(["apple"], []))("apple")).toEqual([]);
+		expect(indexed(createSearcher(["apple"], {}))("apple")).toEqual([]);
 	});
 });

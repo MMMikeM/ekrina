@@ -7,7 +7,7 @@ import type { HighlightRanges, MatchResult } from "./types";
 // The field currently being rescued against the prepared query, allocated by
 // matchField only when a field actually reaches a rescue site.
 export type RescueContext = {
-	field: string;
+	rawField: string;
 	normalisedField: string;
 	fieldMask: number;
 	prepared: PreparedQuery;
@@ -140,7 +140,7 @@ const scoreCorrectedQuery = (
 	short = false,
 ): MatchResult | null => {
 	const result = matchField(
-		rescue.field,
+		rescue.rawField,
 		rescue.normalisedField,
 		rescue.fieldMask,
 		correctedQuery,
@@ -285,7 +285,7 @@ const spliceCorrectedWord = (
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
 type CorrectionSubject = {
-	text: string;
+	queryText: string;
 	variants: RescueVariant[];
 	fromVariant: (variant: RescueVariant) => PreparedQuery;
 	fromWindow: (corrected: string) => PreparedQuery;
@@ -295,7 +295,7 @@ const wholeQuerySubject = (
 	prepared: PreparedQuery,
 	variants: RescueVariant[],
 ): CorrectionSubject => ({
-	text: prepared.normalisedQuery,
+	queryText: prepared.normalisedQuery,
 	variants,
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
@@ -311,7 +311,7 @@ const absentWordSubject = (
 	wordIndex: number,
 	variants: RescueVariant[],
 ): CorrectionSubject => ({
-	text: prepared.queryWords[wordIndex],
+	queryText: prepared.queryWords[wordIndex],
 	variants,
 	fromVariant: (variant) =>
 		spliceCorrectedWord(prepared, wordIndex, variant.raw, variant.normalised),
@@ -334,7 +334,7 @@ const scoreEnumeratedVariants = (
 	for (const variant of subject.variants) {
 		// Only a drop shortens the subject, so only it answers to the field-scaled
 		// floor.
-		if (variant.isDrop && subject.text.length < fieldFloor) continue;
+		if (variant.isDrop && subject.queryText.length < fieldFloor) continue;
 		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
@@ -351,7 +351,7 @@ const scoreSubstitutedWindows = (
 	short: boolean,
 ): MatchResult | null => {
 	let best = incumbent;
-	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text, short)) {
+	for (const corrected of substitutedWindows(rescue.normalisedField, subject.queryText, short)) {
 		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
 		if (isUnbeatableCorrection(best)) return best;
 	}
@@ -366,9 +366,9 @@ const scoreSubstitutedWindows = (
 // A corrected exact hit is unbeatable and exits early.
 const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
 	const fieldLength = rescue.normalisedField.length;
-	const short = subject.text.length < MIN_TYPO_QUERY_LENGTH;
+	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;
 	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
-	if (isUnbeatableCorrection(best) || subject.text.length < minSubstitutionLength(fieldLength)) {
+	if (isUnbeatableCorrection(best) || subject.queryText.length < minSubstitutionLength(fieldLength)) {
 		return best;
 	}
 	return scoreSubstitutedWindows(rescue, subject, best, short);
