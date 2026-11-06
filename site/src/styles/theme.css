@@ -123,6 +123,11 @@ h1 {
 	text-wrap: balance;
 }
 
+/* A comfortable measure for running prose; code, tables and charts keep the full column. */
+.sl-markdown-content > :is(p, ul, ol) {
+	max-width: 72ch;
+}
+
 /* No word left alone on a paragraph's last line, where the browser supports it. */
 :is(p, li, dd, td, th, blockquote, figcaption) {
 	text-wrap: pretty;

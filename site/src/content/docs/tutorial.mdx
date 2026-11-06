@@ -116,6 +116,7 @@ The last step adds a notice above the list:
 
 `bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
 It says when that result is a correction, "Showing results for “terminal”", or that nothing matched.
+`corrected` keeps your casing when it fixed a single character and takes the command's spelling when it read the word another way, so `termnial` shows “terminal” and `comit` shows “Commit”.
 The library corrected typos from the first step, as `termnial` shows in every palette above; this step only says so.
 `noticeText` reads only the top result, so the notice appears when the best match is a correction, and a weaker match of the query as typed can still sit below it.
 The notice is a live region, so a screen reader announces it as it changes.
