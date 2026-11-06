@@ -37,7 +37,7 @@ fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
 
 Behavioural differences:
 
-- **The scale runs the other way.**
+- **Lower scores are better.**
   fast-fuzzy scores 1 for a perfect match; Ekrina scores 0, and every match of the text as typed is at or below `SCORES.CONTAINS` (2) ([Scores and tiers](/how-it-works/scores/)).
   There is no `threshold`, so filter on `score` or `tier` instead.
 - **One span becomes a list of ranges.**

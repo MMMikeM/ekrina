@@ -48,7 +48,7 @@ The rankings and the tiers they become:
 
 Behavioural differences:
 
-- **The scale runs the other way.**
+- **Lower scores are better.**
   A ranking is a number that rises as the match gets closer; Ekrina's `score` falls, from `SCORES.EXACT` (0) to `SCORES.CONTAINS` (2) for every match of the text as typed ([Scores and tiers](/how-it-works/scores/)).
 - **Acronyms are opt-in, and rank above `contains`.**
   match-sorter tries `ACRONYM` on every key and ranks it below `CONTAINS`.
