@@ -10,6 +10,4 @@ src/data/
 public/charts/
 .wrangler/
 .dev.vars
-# Impeccable's working files; only the design system's sidecar is tracked.
-.impeccable/*
-!.impeccable/design.json
+.impeccable/
