@@ -1,21 +1,37 @@
 ---
 import "../../../examples/command-palette/src/palette.css";
+
+interface Props {
+	/** Which step of the tutorial to run; 5 is the finished palette. */
+	step: 1 | 2 | 3 | 4 | 5;
+}
+
+const { step } = Astro.props;
+const hint = step < 4 ? "Type, then click or tap a command to run it." : "Use the arrow keys and Enter, or click or tap a command.";
 ---
 
-<div class="command-palette not-content">
-	<div id="tutorial-palette"></div>
-	<p class="ran" aria-live="polite">Pick a command with the arrow keys and Enter.</p>
+<div class="command-palette not-content" data-palette-step={step}>
+	<div id={`tutorial-palette-${step}`} class="palette-root"></div>
+	<p class="ran" aria-live="polite">{hint}</p>
 </div>
 
 <script>
 	import { commands } from "../../../examples/command-palette/src/commands";
-	import { createPalette } from "../../../examples/command-palette/src/palette";
+	import { createPalette as finished } from "../../../examples/command-palette/src/palette";
+	import { createPalette as search } from "../../../examples/command-palette/src/step-1-search";
+	import { createPalette as keywords } from "../../../examples/command-palette/src/step-2-keywords";
+	import { createPalette as highlight } from "../../../examples/command-palette/src/step-3-highlight";
+	import { createPalette as keyboard } from "../../../examples/command-palette/src/step-4-keyboard";
 
-	const root = document.querySelector<HTMLElement>("#tutorial-palette")!;
-	const ran = document.querySelector<HTMLElement>(".command-palette .ran")!;
-	createPalette(root, commands, (command) => {
-		ran.textContent = `Ran ${command.id}`;
-	});
+	const steps = [search, keywords, highlight, keyboard, finished];
+
+	for (const demo of document.querySelectorAll<HTMLElement>("[data-palette-step]")) {
+		const ran = demo.querySelector<HTMLElement>(".ran")!;
+		const createPalette = steps[Number(demo.dataset.paletteStep) - 1]!;
+		createPalette(demo.querySelector<HTMLElement>(".palette-root")!, commands, (command) => {
+			ran.textContent = `Ran ${command.title}`;
+		});
+	}
 </script>
 
 <style>

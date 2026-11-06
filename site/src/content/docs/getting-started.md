@@ -101,6 +101,7 @@ And a query nothing in the list could mean returns `[]`.
 
 ## Next
 
+- [Build a command palette](/tutorial/) puts all of this together, one step at a time.
 - [Search several fields](/guides/several-fields/) weights a title above a description.
 - [Search as you type](/guides/search-as-you-type/) covers `limit` and building the index ahead of time.
 - [Scores and tiers](/how-it-works/scores/) lists every tier and its score.
