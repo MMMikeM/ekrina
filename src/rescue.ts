@@ -1,7 +1,7 @@
 import { isBoundaryChar, wordChar } from "./boundaries";
-import { charMask, escapeRegex } from "./gates";
+import { charMask } from "./gates";
 import { matchField, type PreparedQuery, prepareQuery } from "./match";
-import { SCORES, TYPO_PENALTY } from "./scores";
+import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
 // The field currently being rescued against the prepared query, allocated by
@@ -11,7 +11,7 @@ export type RescueContext = {
 	normalisedField: string;
 	fieldMask: number;
 	prepared: PreparedQuery;
-	acronym: boolean;
+	acronymTier: boolean;
 	missingClasses: number;
 };
 
@@ -25,11 +25,7 @@ export type RescueVariant = {
 	prepared: PreparedQuery | null;
 };
 
-export type RescueState = {
-	variants: RescueVariant[];
-	variantGate: RegExp | null;
-	gate: RegExp | null;
-};
+export type RescueState = RescueVariant[];
 
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
@@ -95,42 +91,27 @@ export const preferBetter = (
 // The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
 type Edit = (text: string, at: number) => string;
 
-const swapAdjacentAt: Edit = (text, at) =>
+export const swapAdjacentAt: Edit = (text, at) =>
 	text.slice(0, at) + text[at + 1] + text[at] + text.slice(at + 2);
 
 const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at + 1);
 
 // Needs normaliseText's 1:1 mapping to index the raw query by normalised
-// offsets; when NFC shortened decomposed input, callers fall back to the
-// normalised correction — sound, just case-blind.
-const offsetsAligned = (query: string, normalisedQuery: string): boolean =>
-	query.length === normalisedQuery.length;
+// offsets; when NFC shortened decomposed input, the normalised query stands in
+// for it — sound, just case-blind.
+const rawQuery = ({ query, normalisedQuery }: PreparedQuery): string =>
+	query.length === normalisedQuery.length ? query : normalisedQuery;
 
 // The correction must be the user's own text with one character changed —
 // spelling it out of the field would credit an ALL-CAPS query with an
 // exact-case match it never made.
-const rawSubstitution = (prepared: PreparedQuery, corrected: string): string => {
-	const { query, normalisedQuery } = prepared;
-	if (!offsetsAligned(query, normalisedQuery)) return corrected;
+const substituteRaw = (raw: string, normalised: string, corrected: string): string => {
 	for (let i = 0; i < corrected.length; i++) {
-		if (corrected[i] !== normalisedQuery[i]) {
-			return query.slice(0, i) + corrected[i] + query.slice(i + 1);
-		}
+		if (corrected[i] !== normalised[i]) return raw.slice(0, i) + corrected[i] + raw.slice(i + 1);
 	}
 	// A substitution differs in exactly one place, so the loop always returns.
 	/* v8 ignore next */
 	return corrected;
-};
-
-const rawInsertion = (
-	prepared: PreparedQuery,
-	gapChar: string,
-	insertAt: number,
-): string | null => {
-	const { query, normalisedQuery } = prepared;
-	return offsetsAligned(query, normalisedQuery)
-		? query.slice(0, insertAt) + gapChar + query.slice(insertAt)
-		: null;
 };
 
 const prepareCorrection = (
@@ -163,7 +144,7 @@ const scoreCorrectedQuery = (
 		rescue.normalisedField,
 		rescue.fieldMask,
 		correctedQuery,
-		rescue.acronym,
+		rescue.acronymTier,
 		false,
 	);
 	return result && acceptsCorrection(result, short)
@@ -180,8 +161,8 @@ const scoreCorrectedQuery = (
 // one edit from four characters ("colt" in "Nicolas").
 const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
 	short
-		? result.score < SCORES.CONTAINS && result.tier !== "acronym"
-		: result.score <= SCORES.CONTAINS;
+		? result.score < CONTAINS_SCORE && result.tier !== "acronym"
+		: result.score <= CONTAINS_SCORE;
 
 const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
@@ -189,17 +170,16 @@ const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =
 // Swaps and drops never collide — they differ in length. A *missing* character
 // is not enumerable and is recovered from the fuzzy chain instead (see
 // missingCharRescue).
-const buildRescueVariants = (query: string, normalisedQuery: string): RescueVariant[] => {
+const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVariant[] => {
 	const seen = new Set<string>();
 	const variants: RescueVariant[] = [];
-	const aligned = offsetsAligned(query, normalisedQuery);
 	const addVariant = (at: number, edit: Edit): void => {
 		const normalised = edit(normalisedQuery, at);
 		if (seen.has(normalised)) return;
 		seen.add(normalised);
 		variants.push({
 			normalised,
-			raw: aligned ? edit(query, at) : normalised,
+			raw: edit(raw, at),
 			isDrop: normalised.length < normalisedQuery.length,
 			requiredMask: charMask(normalised),
 			prepared: null,
@@ -212,28 +192,6 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 		for (let at = 0; at < normalisedQuery.length; at++) addVariant(at, dropCharAt);
 	}
 	return variants;
-};
-
-// The broad gate carries the variant texts plus the subject's two halves, so one
-// native test rules out the enumerated and substitution families both. It may
-// only false-pass, so it leaves the field-scaled floor to the window phase.
-const buildRescueGates = (rawSubject: string, subject: string): RescueState => {
-	const variants = buildRescueVariants(rawSubject, subject);
-	// A short subject's halves are two characters, which nearly every field holds.
-	if (subject.length < MIN_TYPO_QUERY_LENGTH) return { variants, variantGate: null, gate: null };
-	const literals = variants.map((variant) => escapeRegex(variant.normalised));
-	const variantGate = new RegExp(literals.join("|"));
-	const splitAt = subject.length >> 1;
-	literals.push(escapeRegex(subject.slice(0, splitAt)), escapeRegex(subject.slice(splitAt)));
-	return { variants, variantGate, gate: new RegExp(literals.join("|")) };
-};
-
-// Null when the field holds neither a variant nor half of the subject.
-const gatedVariants = (gates: RescueState, normalisedField: string): RescueVariant[] | null => {
-	if (gates.gate !== null && !gates.gate.test(normalisedField)) return null;
-	return gates.variantGate === null || gates.variantGate.test(normalisedField)
-		? gates.variants
-		: [];
 };
 
 // By the pigeonhole principle a single substitution leaves at least one half of
@@ -294,35 +252,17 @@ const wordStartsOf = (prepared: PreparedQuery): number[] => {
 	return starts;
 };
 
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
-	let state = cache[wordIndex];
-	if (state === null) {
-		const word = prepared.queryWords[wordIndex];
-		const wordStart = wordStartsOf(prepared)[wordIndex];
-		const rawWord = offsetsAligned(prepared.query, prepared.normalisedQuery)
-			? prepared.query.slice(wordStart, wordStart + word.length)
-			: word;
-		state = cache[wordIndex] = buildRescueGates(rawWord, word);
-	}
-	return state;
+const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
+	const wordStart = wordStartsOf(prepared)[wordIndex];
+	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };
 
-const rawWordSubstitution = (
-	prepared: PreparedQuery,
-	wordIndex: number,
-	corrected: string,
-): string => {
-	if (!offsetsAligned(prepared.query, prepared.normalisedQuery)) return corrected;
-	const word = prepared.queryWords[wordIndex];
-	const wordStart = wordStartsOf(prepared)[wordIndex];
-	const rawWord = prepared.query.slice(wordStart, wordStart + word.length);
-	for (let i = 0; i < corrected.length; i++) {
-		if (corrected[i] !== word[i]) return rawWord.slice(0, i) + corrected[i] + rawWord.slice(i + 1);
-	}
-	// A substitution differs in exactly one place, so the loop always returns.
-	/* v8 ignore next */
-	return corrected;
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
+	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
+	return (cache[wordIndex] ??= buildRescueVariants(
+		rawWordOf(prepared, wordIndex),
+		prepared.queryWords[wordIndex],
+	));
 };
 
 const spliceCorrectedWord = (
@@ -337,9 +277,8 @@ const spliceCorrectedWord = (
 		prepared.normalisedQuery.slice(0, wordStart) +
 		normalisedWord +
 		prepared.normalisedQuery.slice(wordEnd);
-	const rawCorrected = offsetsAligned(prepared.query, prepared.normalisedQuery)
-		? prepared.query.slice(0, wordStart) + rawWord + prepared.query.slice(wordEnd)
-		: normalisedCorrected;
+	const raw = rawQuery(prepared);
+	const rawCorrected = raw.slice(0, wordStart) + rawWord + raw.slice(wordEnd);
 	return prepareCorrection(prepared, rawCorrected, normalisedCorrected);
 };
 
@@ -360,7 +299,11 @@ const wholeQuerySubject = (
 	variants,
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
-		prepareCorrection(prepared, rawSubstitution(prepared, corrected), corrected),
+		prepareCorrection(
+			prepared,
+			substituteRaw(rawQuery(prepared), prepared.normalisedQuery, corrected),
+			corrected,
+		),
 });
 
 const absentWordSubject = (
@@ -376,7 +319,7 @@ const absentWordSubject = (
 		spliceCorrectedWord(
 			prepared,
 			wordIndex,
-			rawWordSubstitution(prepared, wordIndex, corrected),
+			substituteRaw(rawWordOf(prepared, wordIndex), prepared.queryWords[wordIndex], corrected),
 			corrected,
 		),
 });
@@ -450,15 +393,16 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	const absentIndex = soleAbsentWord(normalisedField, prepared.queryWords);
 	if (absentIndex === null) return null;
 	if (prepared.queryWords[absentIndex].length < MIN_RESCUE_QUERY_LENGTH) return null;
-	const variants = gatedVariants(wordRescueStateOf(prepared, absentIndex), normalisedField);
-	return variants && correctSubject(rescue, absentWordSubject(prepared, absentIndex, variants));
+	return correctSubject(
+		rescue,
+		absentWordSubject(prepared, absentIndex, wordRescueStateOf(prepared, absentIndex)),
+	);
 };
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
-	const { prepared, normalisedField } = rescue;
-	prepared.rescueState ??= buildRescueGates(prepared.query, prepared.normalisedQuery);
-	const variants = gatedVariants(prepared.rescueState, normalisedField);
-	return variants && correctSubject(rescue, wholeQuerySubject(prepared, variants));
+	const { prepared } = rescue;
+	prepared.rescueState ??= buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery);
+	return correctSubject(rescue, wholeQuerySubject(prepared, prepared.rescueState));
 };
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a
@@ -477,11 +421,15 @@ export const missingCharRescue = (
 	const gapChar = normalisedField[firstEnd + 1];
 	if (secondStart !== firstEnd + 2 || !wordChar.test(gapChar)) return null;
 
-	const corrected = normalisedField.slice(firstStart, secondEnd + 1);
-	const rawCorrected = rawInsertion(prepared, gapChar, firstEnd - firstStart + 1);
+	const insertAt = firstEnd - firstStart + 1;
+	const raw = rawQuery(prepared);
 	return scoreCorrectedQuery(
 		rescue,
-		prepareCorrection(prepared, rawCorrected ?? corrected, corrected),
+		prepareCorrection(
+			prepared,
+			raw.slice(0, insertAt) + gapChar + raw.slice(insertAt),
+			normalisedField.slice(firstStart, secondEnd + 1),
+		),
 	);
 };
 

@@ -1,4 +1,4 @@
-import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
+import { splitWords, WORD_CHARS, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import { normaliseText } from "./normalise";
@@ -11,7 +11,7 @@ import {
 	rescueField,
 	type RescueState,
 } from "./rescue";
-import { SCORES } from "./scores";
+import { ACRONYM_SCORE, BOUNDARY_SCORE, BOUNDARY_CASED_SCORE, CONTAINS_SCORE, EXACT_SCORE, MULTI_WORD_SCORE, NORMALISED_EXACT_SCORE, PREFIX_SCORE } from "./scores";
 import type { MatchResult, Range } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
@@ -59,12 +59,12 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 // its length, so only its first 256 characters are matched (@see SECURITY.md).
 const MAX_QUERY_LENGTH = 256;
 
-const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
-
 const boundQuery = (query: string): string => {
 	const text = query.trimStart();
 	if (text.length <= MAX_QUERY_LENGTH) return text;
-	const splitsPair = isHighSurrogate(text.charCodeAt(MAX_QUERY_LENGTH - 1));
+	const last = text.charCodeAt(MAX_QUERY_LENGTH - 1);
+	// A high surrogate there would be cut from its pair.
+	const splitsPair = last >= 0xd800 && last <= 0xdbff;
 	return text.slice(0, splitsPair ? MAX_QUERY_LENGTH - 1 : MAX_QUERY_LENGTH);
 };
 
@@ -88,11 +88,10 @@ const longestFirst = (words: string[]): string[] =>
 		? [...words].sort((a, b) => b.length - a.length || Number(a > b) - Number(a < b))
 		: words;
 
-const sortByRangeStart = (a: Range, b: Range): number => a[0] - b[0];
 
 // Word-internal apostrophes don't end a run: "people's" is one word with
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
-const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
+const wordRun = new RegExp(`[${WORD_CHARS}]+(?:'[${WORD_CHARS}]+)*`, "gu");
 
 const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
 	let at = haystack.indexOf(needle, from);
@@ -103,23 +102,14 @@ const wordStartOccurrence = (haystack: string, needle: string, from = 0): number
 	return -1;
 };
 
-const boundaryOccurrence = (haystack: string, needle: string): number => {
-	let at = haystack.indexOf(needle);
-	while (at > -1) {
-		if (at === 0 || isBoundaryChar(haystack[at - 1])) return at;
-		at = haystack.indexOf(needle, at + 1);
-	}
-	return -1;
-};
-
 const boundaryTier = (
 	haystack: string,
 	needle: string,
 	tier: "boundary-cased" | "boundary",
 ): MatchResult | null => {
-	const at = boundaryOccurrence(haystack, needle);
+	const at = wordStartOccurrence(haystack, needle);
 	if (at === -1) return null;
-	const score = tier === "boundary-cased" ? SCORES.BOUNDARY_CASED : SCORES.BOUNDARY;
+	const score = tier === "boundary-cased" ? BOUNDARY_CASED_SCORE : BOUNDARY_SCORE;
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
 };
 
@@ -143,7 +133,7 @@ const multiWordTier = (normalisedField: string, words: string[]): MatchResult | 
 		from = at + 1;
 		ranges.push([at, at + word.length - 1]);
 	}
-	return { score: SCORES.MULTI_WORD, tier: "multi-word", ranges: ranges.sort(sortByRangeStart) };
+	return { score: MULTI_WORD_SCORE, tier: "multi-word", ranges: ranges.sort((a, b) => a[0] - b[0]) };
 };
 
 const acronymTier = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
@@ -157,7 +147,7 @@ const acronymTier = (normalisedField: string, normalisedQuery: string): MatchRes
 	const at = initials.indexOf(normalisedQuery);
 	if (at === -1) return null;
 	return {
-		score: SCORES.ACRONYM,
+		score: ACRONYM_SCORE,
 		tier: "acronym",
 		ranges: wordStarts
 			.slice(at, at + normalisedQuery.length)
@@ -169,7 +159,7 @@ const containsTier = (normalisedField: string, normalisedQuery: string): MatchRe
 	const at = normalisedField.indexOf(normalisedQuery);
 	return at > -1
 		? {
-				score: SCORES.CONTAINS,
+				score: CONTAINS_SCORE,
 				tier: "contains",
 				ranges: [[at, at + normalisedQuery.length - 1]],
 			}
@@ -185,13 +175,12 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 	if (prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)) {
 		return rescuable ? rescueField(rescue) : null;
 	}
-	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
-	if (fuzzy) {
-		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
+	const chain = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
+	if (chain) {
 		if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
 		// literally contain the corrected word, so both rescues are still scored.
-		const dropped = missingCharRescue(rescue, fuzzy.ranges);
+		const dropped = missingCharRescue(rescue, chain.ranges);
 		return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
 	}
 	// The chain can refuse past the gate via its density floor.
@@ -212,17 +201,17 @@ export const literalTiers = (
 	const { query, normalisedQuery, queryWords, wordsLongestFirst } = prepared;
 
 	if (field === query) {
-		return { score: SCORES.EXACT, tier: "exact", ranges: [[0, field.length - 1]] };
+		return { score: EXACT_SCORE, tier: "exact", ranges: [[0, field.length - 1]] };
 	}
 	if (normalisedField === normalisedQuery) {
 		return {
-			score: SCORES.NORMALISED_EXACT,
+			score: NORMALISED_EXACT_SCORE,
 			tier: "normalised-exact",
 			ranges: [[0, normalisedField.length - 1]],
 		};
 	}
 	if (normalisedField.startsWith(normalisedQuery)) {
-		return { score: SCORES.PREFIX, tier: "prefix", ranges: [[0, normalisedQuery.length - 1]] };
+		return { score: PREFIX_SCORE, tier: "prefix", ranges: [[0, normalisedQuery.length - 1]] };
 	}
 	const boundary =
 		boundaryTier(field, query, "boundary-cased") ??
@@ -248,9 +237,9 @@ export const matchField = (
 	fieldMask: number,
 	prepared: PreparedQuery,
 	acronym: boolean,
-	mayRescue: boolean = true,
-	preGated: boolean = false,
-	literalOnly: boolean = false,
+	mayRescue: boolean,
+	preGated?: boolean,
+	literalOnly?: boolean,
 ): MatchResult | null => {
 	const { normalisedQuery, queryWords } = prepared;
 
@@ -263,7 +252,7 @@ export const matchField = (
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
-		(rescue ??= { field, normalisedField, fieldMask, prepared, acronym, missingClasses });
+		(rescue ??= { field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 
@@ -284,7 +273,7 @@ export const matchField = (
 	// One character anywhere matches most of any list and ranks none of it, so it
 	// counts only where it starts a word.
 	if (normalisedQuery.length === 1) {
-		return literal !== null && literal.score <= SCORES.BOUNDARY ? literal : null;
+		return literal !== null && literal.score <= BOUNDARY_SCORE ? literal : null;
 	}
 	if (literal !== null || literalOnly) return literal;
 	return fuzzyOrRescue(rescueContext(), rescuable);

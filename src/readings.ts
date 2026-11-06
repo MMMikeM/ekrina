@@ -1,20 +1,19 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
-import { bigramBit, bigramClass } from "./normalise";
 import { charMask } from "./gates";
-import { SCORES, TYPO_PENALTY } from "./scores";
+import { bigramBit, bigramClass } from "./normalise";
+import { swapAdjacentAt } from "./rescue";
+import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { MatchResult, Range } from "./types";
 
 // What one query admits under a reading, prepared once and tried against
 // fields that matched nothing else.
 export type PreparedReading = {
-	// All three may only false-pass: a field any rejects must have no match.
-	// `admitsText` reads the caller's own string, before normalisation;
-	// `admitsPairs`, absent when it could reject nothing, reads an item's bigram
-	// set (see rawFieldScan) when the searcher has one. `match` is only called
-	// on a field they admit.
+	// May only false-pass: a field it rejects must have no match. `match` is
+	// only called on a field it admits.
 	admitsMask: (fieldMask: number) => boolean;
-	admitsText: (text: string) => boolean;
+	// Absent when it could reject nothing; reads an item's bigram set (see
+	// rawFieldPairs).
 	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
 	// The reading may match fields the literal pass rejected, so every item is
@@ -51,41 +50,27 @@ const MAX_FIELD_LENGTH = 512;
 
 const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 
-let rows = new Int32Array(0);
-
 // Optimal string alignment distance: insertions, deletions, substitutions and
-// adjacent swaps, each one edit. Capped at `limit + 1`. Only cells within
-// `limit` of the diagonal can stay under the cap, so the rest are never filled
-// and read as over it.
+// adjacent swaps, each one edit. Capped at `limit + 1`. A shared first
+// character is always matched: no cheaper alignment edits it.
 const editDistance = (a: string, b: string, limit: number): number => {
-	const width = b.length + 1;
-	const over = limit + 1;
-	if (rows.length < 3 * width) rows = new Int32Array(3 * width);
-	rows.fill(over, 0, 3 * width);
-	let beforeLast = 0;
-	let last = width;
-	let current = 2 * width;
-	for (let j = 0; j <= Math.min(limit, b.length); j++) rows[last + j] = j;
-	for (let i = 1; i <= a.length; i++) {
-		const from = Math.max(1, i - limit);
-		const to = Math.min(b.length, i + limit);
-		rows[current + from - 1] = from === 1 ? (i <= limit ? i : over) : over;
-		if (to + 1 < width) rows[current + to + 1] = over;
-		let rowMin = over;
-		if (from === 1 && i <= limit) rowMin = i;
-		for (let j = from; j <= to; j++) {
-			let cost = rows[last + j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
-			cost = Math.min(cost, rows[last + j] + 1, rows[current + j - 1] + 1);
-			if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-				cost = Math.min(cost, rows[beforeLast + j - 2] + 1);
-			}
-			rows[current + j] = cost;
-			rowMin = Math.min(rowMin, cost);
-		}
-		if (rowMin > limit) return limit + 1;
-		[beforeLast, last, current] = [last, current, beforeLast];
+	let i = 0;
+	while (i < a.length && i < b.length && a[i] === b[i]) i++;
+	if (i === a.length || i === b.length) {
+		return Math.min(Math.max(a.length, b.length) - i, limit + 1);
 	}
-	return Math.min(rows[last + width - 1], limit + 1);
+	if (limit === 0) return 1;
+	const restA = a.slice(i + 1);
+	const restB = b.slice(i + 1);
+	let fewest = Math.min(
+		editDistance(restA, restB, limit - 1),
+		editDistance(restA, b.slice(i), limit - 1),
+		editDistance(a.slice(i), restB, limit - 1),
+	);
+	if (a[i] === b[i + 1] && a[i + 1] === b[i]) {
+		fewest = Math.min(fewest, editDistance(a.slice(i + 2), b.slice(i + 2), limit - 1));
+	}
+	return fewest + 1;
 };
 
 // Each edit changes the length by at most one.
@@ -111,76 +96,7 @@ const lacksAtMost = (counts: Int32Array, missingClasses: number, limit: number):
 	return true;
 };
 
-// `asciiSlots` maps an ASCII code unit to its slot in `counts`, or -1; a
-// non-ASCII letter needs no slot, since only non-ASCII text can match it.
-type LetterGate = { asciiSlots: Int16Array; counts: Int32Array; needed: number };
-
-// Only a substitution or a deletion leaves a query letter unmatched, so a field
-// holding a correction shares all but `MAX_EDITS` of the query's letters.
-const letterGate = (letters: string, needed: number): LetterGate => {
-	const units: number[] = [];
-	const counts: number[] = [];
-	for (let i = 0; i < letters.length; i++) {
-		const unit = letters.charCodeAt(i);
-		const at = units.indexOf(unit);
-		if (at === -1) {
-			units.push(unit);
-			counts.push(1);
-		} else counts[at]++;
-	}
-	const asciiSlots = new Int16Array(128).fill(-1);
-	for (let slot = 0; slot < units.length; slot++) {
-		if (units[slot] < 128) asciiSlots[units[slot]] = slot;
-	}
-	return { asciiSlots, counts: Int32Array.from(counts), needed };
-};
-
-let remaining = new Int32Array(0);
-
-const ASCII_UPPER_A = 65;
-const ASCII_UPPER_Z = 90;
-const ASCII_CASE_BIT = 32;
-
-// Reads the caller's own text, where a non-ASCII character may fold to any
-// letter and so counts as a match, keeping the gate false-pass only.
-const holdsLetters = (gate: LetterGate, text: string): boolean => {
-	if (remaining.length < gate.counts.length) remaining = new Int32Array(gate.counts.length);
-	remaining.set(gate.counts);
-	const { asciiSlots, needed } = gate;
-	let shared = 0;
-	for (let i = 0; i < text.length; i++) {
-		if (text.length - i < needed - shared) return false;
-		const unit = text.charCodeAt(i);
-		if (unit > 127) {
-			if (++shared >= needed) return true;
-			continue;
-		}
-		const at = asciiSlots[unit | (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z ? ASCII_CASE_BIT : 0)];
-		if (at === -1 || remaining[at] === 0) continue;
-		remaining[at]--;
-		if (++shared >= needed) return true;
-	}
-	return false;
-};
-
-// The letter gate's subsequence form, for a reading that needs every letter in
-// order: a non-ASCII character matches whichever letter comes next.
-const holdsInOrder = (word: string, text: string): boolean => {
-	let next = 0;
-	for (let i = 0; i < text.length; i++) {
-		if (text.length - i < word.length - next) return false;
-		let unit = text.charCodeAt(i);
-		if (unit > 127) {
-			if (++next === word.length) return true;
-			continue;
-		}
-		if (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z) unit |= ASCII_CASE_BIT;
-		if (unit === word.charCodeAt(next) && ++next === word.length) return true;
-	}
-	return false;
-};
-
-type FieldWord = { word: string; at: number };
+type FieldWord = { word: string; offset: number };
 
 const asciiWordUnits = Uint8Array.from({ length: 128 }, (_, unit) =>
 	wordChar.test(String.fromCharCode(unit)) ? 1 : 0,
@@ -196,17 +112,17 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 		if (unit > 127) {
 			return Array.from(normalisedField.matchAll(wordRun), (match) => ({
 				word: match[0],
-				at: match.index,
+				offset: match.index,
 			}));
 		}
 		if (asciiWordUnits[unit] === 1) {
 			if (start === -1) start = at;
 		} else if (start !== -1) {
-			words.push({ word: normalisedField.slice(start, at), at: start });
+			words.push({ word: normalisedField.slice(start, at), offset: start });
 			start = -1;
 		}
 	}
-	if (start !== -1) words.push({ word: normalisedField.slice(start), at: start });
+	if (start !== -1) words.push({ word: normalisedField.slice(start), offset: start });
 	return words;
 };
 
@@ -214,8 +130,8 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 const composed = (text: string, normalised: string): string =>
 	text.length === normalised.length ? text : text.normalize("NFC");
 
-const spelling = (field: string, normalisedField: string, { word, at }: FieldWord): string =>
-	composed(field, normalisedField).slice(at, at + word.length);
+const spelling = (field: string, normalisedField: string, { word, offset }: FieldWord): string =>
+	composed(field, normalisedField).slice(offset, offset + word.length);
 
 const better = (a: MatchResult | null, b: MatchResult | null): MatchResult | null =>
 	a === null || (b !== null && b.score < a.score) ? b : a;
@@ -248,7 +164,7 @@ const correction = (
 	first: FieldWord,
 	last: FieldWord,
 ): MatchResult | null => {
-	const span = { word: normalisedField.slice(first.at, last.at + last.word.length), at: first.at };
+	const span = { word: normalisedField.slice(first.offset, last.offset + last.word.length), offset: first.offset };
 	const corrected = spelling(field, normalisedField, span);
 	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
 };
@@ -267,10 +183,7 @@ const correctWord = (
 	let best: MatchResult | null = null;
 	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
 		const budget = spare - joinedEdits;
-		const length = first === last ? first.word.length : first.word.length + last.word.length;
-		if (!lengthsWithin(word.length, length, budget)) return;
-		const target = first === last ? first.word : first.word + last.word;
-		const edits = editDistance(word, target, budget);
+		const edits = withinEdits(word, first === last ? first.word : first.word + last.word, budget);
 		if (edits > budget) return;
 		const candidate = correction(edits + spent + joinedEdits, field, normalisedField, first, last);
 		best = better(best, candidate);
@@ -286,7 +199,7 @@ const correctWord = (
 // each letter skipped past the first, so a word read with several letters
 // skipped falls below a correction that finishes a word, where one dropped
 // letter does not (@see docs/performance.md).
-const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
+const SCATTER_SCORE = CONTAINS_SCORE + 0.05;
 const SCATTER_SKIP_WEIGHT = 1.5;
 const SCATTER_EXTRA_SKIP_PENALTY = 0.15;
 const LATER_WORD_PENALTY = 0.05;
@@ -327,11 +240,11 @@ const scatterWord = (
 			SCATTER_SCORE +
 			SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
 			SCATTER_EXTRA_SKIP_PENALTY * Math.max(0, candidate.word.length - word.length - 1) +
-			(candidate.at === 0 ? 0 : LATER_WORD_PENALTY);
+			(candidate.offset === 0 ? 0 : LATER_WORD_PENALTY);
 		if (best !== null && best.score <= score) continue;
 		for (const run of runs) {
-			run[0] += candidate.at;
-			run[1] += candidate.at;
+			run[0] += candidate.offset;
+			run[1] += candidate.offset;
 		}
 		best = {
 			score,
@@ -487,14 +400,11 @@ const phrasePairs = (
 		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
 };
 
-type Gates = Pick<PreparedReading, "admitsMask" | "admitsText">;
+type MaskGate = PreparedReading["admitsMask"];
 
-const scatterGates = (letters: string): Gates => {
+const scatterGate = (letters: string): MaskGate => {
 	const lettersMask = charMask(letters);
-	return {
-		admitsMask: (fieldMask) => (lettersMask & ~fieldMask) === 0,
-		admitsText: (text) => holdsInOrder(letters, text),
-	};
+	return (fieldMask) => (lettersMask & ~fieldMask) === 0;
 };
 
 // A run of three or more of one letter, cut to two: a held key, whose one
@@ -513,7 +423,7 @@ const stuckKeyForm = (word: string): string | null => {
 const swapForms = (word: string): string[] => {
 	const forms: string[] = [];
 	for (let k = 0; k + 1 < word.length; k++) {
-		if (word[k] !== word[k + 1]) forms.push(word.slice(0, k) + word[k + 1] + word[k] + word.slice(k + 2));
+		if (word[k] !== word[k + 1]) forms.push(swapAdjacentAt(word, k));
 	}
 	return forms;
 };
@@ -530,28 +440,24 @@ const swapWord = (
 	for (const form of forms) {
 		for (const candidate of words) {
 			if (!candidate.word.startsWith(form)) continue;
-			const corrected = spelling(field, normalisedField, { word: form, at: candidate.at });
+			const corrected = spelling(field, normalisedField, { word: form, offset: candidate.offset });
 			best = better(best, scoreCorrection(1, field, normalisedField, form, corrected));
 		}
 	}
 	return best;
 };
 
-const eitherGate = (a: Gates, b: Gates): Gates => ({
-	admitsMask: (fieldMask) => a.admitsMask(fieldMask) || b.admitsMask(fieldMask),
-	admitsText: (text) => a.admitsText(text) || b.admitsText(text),
-});
+const eitherGate =
+	(a: MaskGate, b: MaskGate): MaskGate =>
+	(fieldMask) =>
+		a(fieldMask) || b(fieldMask);
 
 // `unmatched` is how many of the query's letters the edits can leave without a
 // counterpart in the field.
-const editGates = (letters: string, unmatched: number): Gates => {
+const editGate = (letters: string, unmatched: number): MaskGate => {
 	const lettersMask = charMask(letters);
 	const counts = classCounts(letters);
-	const gate = letterGate(letters, letters.length - unmatched);
-	return {
-		admitsMask: (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched),
-		admitsText: (text) => holdsLetters(gate, text),
-	};
+	return (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched);
 };
 
 // Edit distance over every field word is what makes a reading expensive, so
@@ -603,13 +509,14 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	// leave a letter unmatched.
 	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
 	if (!matchable) return null;
-	const gates = editable ? editGates(letters, unmatched) : scatterGates(letters);
+	const gate = editable ? editGate(letters, unmatched) : scatterGate(letters);
 	return {
-		...(stuck !== null
-			? eitherGate(gates, editGates(stuck, MAX_EDITS - 1))
-			: swaps !== null
-				? eitherGate(gates, editGates(letters, 0))
-				: gates),
+		admitsMask:
+			stuck !== null
+				? eitherGate(gate, editGate(stuck, MAX_EDITS - 1))
+				: swaps !== null
+					? eitherGate(gate, editGate(letters, 0))
+					: gate,
 		// A sparse reading keeps no pairs of a word together.
 		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
 		wholeList: !competing,

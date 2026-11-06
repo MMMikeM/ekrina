@@ -54,6 +54,15 @@ describe("field specs", () => {
 		expect(r.fields[1]?.tier).toBe("exact");
 	});
 
+	it("tolerates null field texts when a correction reads the item's letter pairs", () => {
+		const posts: Post[] = [{ title: "Keyboard Shortcuts", body: "settings" }];
+		const r = createFuzzySearch(posts, [{ selectField: (p) => p.title }, { selectField: () => null }])(
+			"kxyboard",
+		)[0]!;
+		expect(r.fields[0]).toMatchObject({ tier: "corrected", corrected: "keyboard" });
+		expect(r.fields[1]).toBeNull();
+	});
+
 	it("acronym can be toggled per field", () => {
 		const items = [{ name: "United States", note: "United States" }];
 		const r = createFuzzySearch(items, [
