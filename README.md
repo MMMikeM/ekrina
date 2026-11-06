@@ -81,16 +81,16 @@ A correction always comes after every match of the query as typed, and `search("
 Each library at its best-scoring configuration, on 10,000 real Wikidata names under their native spellings:
 
 <!-- bench:compare -->
-| Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
-|-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:------:|-----------|
-| **Ekrina**        | ~7.7 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
-| fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
-| Fuse.js (tuned)   | ~9.6 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
-| uFuzzy (all opts) | ~4.2 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
-| fuzzysort         | ~3.7 kB |    0 | 0.46 | 0.07 |     0.41 |  🔴   |   🟢   | 🔴        |
-| @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 | 0.07 |     2.10 |  🔴   |   🟢   | 🔴        |
-| match-sorter      | ~3.5 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
-| fuzzy             | ~0.8 kB |    0 | 0.30 | 0.07 |     2.10 |  🔴   |   🟡   | 🔴        |
+| Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges  | Typos         |
+|-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:-------:|---------------|
+| **Ekrina**        | ~7.7 kB |    0 | 0.91 |   0% |     1.06 |  yes  |   yes   | two edits     |
+| fast-fuzzy        |  ~11 kB |    1 | 0.81 |  24% |     6.20 |  no   | partial | edit distance |
+| Fuse.js (tuned)   | ~9.6 kB |    0 | 0.76 |  47% |    12.21 |  no   | opt-in  | edit distance |
+| uFuzzy (all opts) | ~4.2 kB |    0 | 0.66 |   0% |     0.64 |  no   |   yes   | one edit      |
+| fuzzysort         | ~3.7 kB |    0 | 0.46 |   7% |     0.41 |  no   |   yes   | none          |
+| @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 |   7% |     2.10 |  no   |   yes   | none          |
+| match-sorter      | ~3.5 kB |    2 | 0.39 |   7% |     2.70 |  yes  |   no    | none          |
+| fuzzy             | ~0.8 kB |    0 | 0.30 |   7% |     2.10 |  no   | partial | none          |
 <!-- bench:end -->
 
 **MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.

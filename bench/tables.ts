@@ -170,8 +170,7 @@ const librariesTable = (): string =>
 const isEkrinaVariant = (config: string): boolean =>
 	libraryOf(config) === "ekrina" && config !== "ekrina";
 
-const mark = (support: "yes" | "opt-in" | "partial" | "no"): string =>
-	support === "yes" ? "🟢" : support === "no" ? "🔴" : "🟡";
+const percent = (share: number): string => `${Math.round(100 * share)}%`;
 
 // README.md's comparison: each library once, at its headline configuration,
 // on the corpus and list size the per-probe tables use. ms/query is the batch
@@ -194,11 +193,11 @@ const compareTable = (a: Artifact): string => {
 				`~${meta.gzipKB} kB`,
 				String(meta.deps),
 				r.mrr.toFixed(2),
-				r.junk === undefined ? "—" : r.junk.toFixed(2),
+				r.junk === undefined ? "—" : percent(r.junk),
 				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
-				mark(meta.features.tier),
-				mark(meta.features.ranges),
-				meta.typoReach ?? "🔴",
+				meta.features.tier,
+				meta.features.ranges,
+				meta.typoReach ?? "none",
 			];
 		}),
 		["left", "right", "right", "right", "right", "right", "center", "center", "left"],
@@ -323,7 +322,7 @@ const scorecardTable = (
 			return [
 				emphasised.has(r.library) ? `**${name}**` : name,
 				r.mrr.toFixed(2),
-				r.junk === undefined ? "—" : r.junk.toFixed(2),
+				r.junk === undefined ? "—" : percent(r.junk),
 				batch ? ms(batch.indexMs) : "—",
 				cold == null ? "—" : ms(cold),
 				batch ? ms(batch.queryMs) : "—",

@@ -19,7 +19,7 @@ export type LibraryMeta = {
 	updated: string | null;
 	features: Features;
 	/** How far its typo correction reaches, as README.md's comparison says it; null when it corrects none. */
-	typoReach: "two edits" | "one edit" | "full" | null;
+	typoReach: "two edits" | "one edit" | "edit distance" | null;
 };
 
 export const META: Record<string, LibraryMeta> = {
@@ -133,7 +133,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
-		typoReach: "full",
+		typoReach: "edit distance",
 	},
 	"fast-fuzzy": {
 		gzipKB: 11,
@@ -149,7 +149,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
-		typoReach: "full",
+		typoReach: "edit distance",
 	},
 };
 

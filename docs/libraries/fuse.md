@@ -29,9 +29,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-native -->
 | Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 | 0.47 |     1.16 |   16.02 |   309.48 |       12.21 |
-| Fuse.js (all opts)  | 0.75 | 0.91 |     1.11 |   19.00 |   462.38 |       18.31 |
-| Fuse.js             | 0.72 | 0.99 |     1.17 |   16.78 |   436.65 |       17.54 |
+| **Fuse.js (tuned)** | 0.76 |  47% |     1.16 |   16.02 |   309.48 |       12.21 |
+| Fuse.js (all opts)  | 0.75 |  91% |     1.11 |   19.00 |   462.38 |       18.31 |
+| Fuse.js             | 0.72 |  99% |     1.17 |   16.78 |   436.65 |       17.54 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -39,9 +39,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-en -->
 | Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 | 0.46 |     1.14 |   15.64 |   275.27 |       10.83 |
-| Fuse.js (all opts)  | 0.76 | 0.95 |     1.09 |   18.85 |   323.75 |       12.70 |
-| Fuse.js             | 0.72 | 1.00 |     1.10 |   16.17 |   361.95 |       14.49 |
+| **Fuse.js (tuned)** | 0.76 |  46% |     1.14 |   15.64 |   275.27 |       10.83 |
+| Fuse.js (all opts)  | 0.76 |  95% |     1.09 |   18.85 |   323.75 |       12.70 |
+| Fuse.js             | 0.72 | 100% |     1.10 |   16.17 |   361.95 |       14.49 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
@@ -49,9 +49,9 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuse-scorecard-emoji -->
 | Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.71 | 0.35 |        — |       — |        — |           — |
-| Fuse.js (all opts)  | 0.67 | 0.85 |        — |       — |        — |           — |
-| Fuse.js             | 0.65 | 0.92 |        — |       — |        — |           — |
+| **Fuse.js (tuned)** | 0.71 |  35% |        — |       — |        — |           — |
+| Fuse.js (all opts)  | 0.67 |  85% |        — |       — |        — |           — |
+| Fuse.js             | 0.65 |  92% |        — |       — |        — |           — |
 <!-- bench:end -->
 
 ## Speed at 100k
