@@ -1,10 +1,13 @@
 import { isBoundaryChar } from "./boundaries";
 import {
+	buildRawGate,
+	buildRescueBigramGate,
+	buildWordStartRawGate,
 	charMask,
 	type Gate,
 } from "./gates";
 import { matchField, prepareBoundedQuery } from "./match";
-import { normaliseText, rawFieldScan } from "./normalise";
+import { normaliseText, rawFieldMask, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
@@ -175,18 +178,53 @@ export function createFuzzySearch<T>(
 	// is built by the first multi-word query or rescue, and never for a session
 	// of single words that all match literally.
 	let unionMasks: Int32Array | null = null;
-	const buildUnionMasks = (): Int32Array => {
+	// Each item's bigram set across its fields, computed the first time a gate
+	// reads it: only items that already passed the mask gate ever need one.
+	let bigramsLo = new Int32Array(0);
+	let bigramsHi = new Int32Array(0);
+	let bigramsKnown = new Uint8Array(0);
+	const bigrams = { lo: 0, hi: 0 };
+	const knowBigrams = (i: number): void => {
+		if (bigramsKnown.length === 0) {
+			bigramsLo = new Int32Array(count);
+			bigramsHi = new Int32Array(count);
+			bigramsKnown = new Uint8Array(count);
+		}
+		if (bigramsKnown[i]) return;
+		bigrams.lo = 0;
+		bigrams.hi = 0;
+		for (let f = 0; f < specCount; f++) rawFieldScan(resolvedSpecs[f].selectField(list[i]) || "", bigrams);
+		bigramsLo[i] = bigrams.lo;
+		bigramsHi[i] = bigrams.hi;
+		bigramsKnown[i] = 1;
+	};
+
+	// `withBigrams` takes every item's bigram set in the same pass as its masks,
+	// when the caller asked for the whole index up front.
+	const buildUnionMasks = (withBigrams = false): Int32Array => {
 		// With one field per item (every plain string list) the per-field masks ARE
 		// the union masks, so the array is shared rather than duplicated.
 		const masks = specCount === 1 ? fieldMasks : new Int32Array(count);
+		if (withBigrams) {
+			bigramsLo = new Int32Array(count);
+			bigramsHi = new Int32Array(count);
+			bigramsKnown = new Uint8Array(count).fill(1);
+		}
 		for (let i = 0; i < count; i++) {
 			let union = 0;
+			bigrams.lo = 0;
+			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const mask = rawFieldScan(resolvedSpecs[f].selectField(list[i]) || "");
+				const raw = resolvedSpecs[f].selectField(list[i]) || "";
+				const mask = withBigrams ? rawFieldScan(raw, bigrams) : rawFieldMask(raw);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
 			}
 			masks[i] = union;
+			if (withBigrams) {
+				bigramsLo[i] = bigrams.lo;
+				bigramsHi[i] = bigrams.hi;
+			}
 		}
 		return masks;
 	};
@@ -201,7 +239,10 @@ export function createFuzzySearch<T>(
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
 			const field = raw.trim();
 			trimmedFields[base + f] = field;
-			normalisedFields[base + f] = normaliseText(field);
+			const normalisedField = normaliseText(field);
+			normalisedFields[base + f] = normalisedField;
+			// Already filled, with strictly more bits, if the union scan ran.
+			if (unionMasks === null) fieldMasks[base + f] = charMask(normalisedField);
 		}
 	};
 
@@ -337,11 +378,31 @@ export function createFuzzySearch<T>(
 				}
 				return;
 			}
-			// A superset of what the fuzzy gate admits, so caching these survivors
-			// keeps the narrowing sound.
-			const masks = (unionMasks ??= buildUnionMasks());
+			// The presence gate has no raw-text form yet, so multi-word queries
+			// take the mask path.
+			const gate = singleChar
+				? buildWordStartRawGate(normalisedQuery)
+				: unionMasks === null && !multiWord
+					? buildRawGate(normalisedQuery)
+					: null;
+			if (gate === null) {
+				// A superset of what the gate admits, so caching these survivors
+				// keeps the narrowing sound.
+				const masks = (unionMasks ??= buildUnionMasks());
+				for (let i = 0; i < count; i++) {
+					if ((queryMask & ~masks[i]) !== 0) continue;
+					survivors[survivorCount++] = i;
+					scoreItem(i, false, false, literalOnly);
+				}
+				return;
+			}
 			for (let i = 0; i < count; i++) {
-				if ((queryMask & ~masks[i]) !== 0) continue;
+				const item = list[i];
+				let admitted = false;
+				for (let f = 0; f < specCount && !admitted; f++) {
+					admitted = gate.test(resolvedSpecs[f].selectField(item) || "");
+				}
+				if (!admitted) continue;
 				survivors[survivorCount++] = i;
 				scoreItem(i, false, false, literalOnly);
 			}
@@ -351,10 +412,24 @@ export function createFuzzySearch<T>(
 		// what a substitution typo looks like from a mask (see matchField).
 		const relaxedPass = (): void => {
 			const masks = (unionMasks ??= buildUnionMasks());
+			const bigramGate = buildRescueBigramGate(normalisedQuery);
 			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
 				if (missingClasses & (missingClasses - 1)) continue;
+				if (missingClasses !== 0) {
+					// Exactly one class absent: only an edit at that class's position
+					// can rescue, so the query's remaining bigrams must all be present
+					// (see buildRescueBigramGate).
+					const b = 31 - Math.clz32(missingClasses);
+					knowBigrams(i);
+					if (
+						(bigramGate.requiredLo[b] & ~bigramsLo[i]) |
+						(bigramGate.requiredHi[b] & ~bigramsHi[i])
+					) {
+						continue;
+					}
+				}
 				scoreItem(i, true, false, false);
 			}
 		};
@@ -405,11 +480,24 @@ export function createFuzzySearch<T>(
 				(multiWord || normalisedQuery === prepared.queryWords[0]);
 			// Fills every item's field masks, which the readings' gate reads.
 			if (!survivorsOnly) unionMasks ??= buildUnionMasks();
+			const masks = unionMasks;
+			// An item's union mask and bigram set span all its fields, so it is
+			// skipped only when no field's reading admits both.
+			const admitsPairs = reading.admitsPairs;
+			const admitsItem =
+				masks === null || admitsPairs === null
+					? null
+					: (i: number) => {
+							if (!reading.admitsMask(masks[i])) return false;
+							knowBigrams(i);
+							return admitsPairs(bigramsLo[i], bigramsHi[i]);
+						};
 			const scanned = survivorsOnly ? survivorCount : count;
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
 				const held = heldStamps[i] === generation ? heldResults[i] : undefined;
 				if (held !== undefined && held.score <= CONTAINS_SCORE) continue;
+				if (admitsItem !== null && !admitsItem(i)) continue;
 				offerFallbacks(i, held, fallbacks);
 			}
 		};
@@ -466,8 +554,10 @@ export function createFuzzySearch<T>(
 		return results;
 	};
 
+	// Asked for up front, the index takes every item's bigram set too, so no
+	// query pays for one later.
 	const buildIndex = (): void => {
-		unionMasks ??= buildUnionMasks();
+		unionMasks ??= buildUnionMasks(true);
 	};
 
 	return Object.assign(search, { buildIndex });

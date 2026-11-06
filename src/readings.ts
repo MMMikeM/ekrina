@@ -1,6 +1,7 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
 import { charMask } from "./gates";
+import { bigramBit, bigramClass } from "./normalise";
 import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { MatchResult, Range } from "./types";
 
@@ -10,6 +11,9 @@ export type PreparedReading = {
 	// May only false-pass: a field it rejects must have no match. `match` is
 	// only called on a field it admits.
 	admitsMask: (fieldMask: number) => boolean;
+	// Absent when it could reject nothing; reads an item's bigram set (see
+	// rawFieldPairs).
+	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
 	// The reading may match fields the literal pass rejected, so every item is
 	// tried rather than its survivors. One that is not `wholeList` must match
@@ -361,6 +365,57 @@ const correctSplitWord = (
 		? correctWord(queryWords.join(""), field, normalisedField, words, 1, spare)
 		: null;
 
+// An adjacent swap breaks the three letter pairs around it; every other edit
+// breaks fewer.
+const PAIRS_ONE_EDIT_BREAKS = 3;
+
+type Pairs = { lo: number; hi: number };
+
+// Only pairs of ASCII letters and digits, where a field's bigram set and the
+// normalised query are sure to agree.
+const pairsOf = (words: string[]): Pairs => {
+	const pairs = { lo: 0, hi: 0 };
+	for (const word of words) {
+		for (let at = 1; at < word.length; at++) {
+			const before = word.charCodeAt(at - 1);
+			const unit = word.charCodeAt(at);
+			if (before > 127 || unit > 127) continue;
+			const beforeClass = bigramClass(before);
+			const unitClass = bigramClass(unit);
+			if (beforeClass === 0 || unitClass === 0) continue;
+			const bit = bigramBit(beforeClass, unitClass);
+			if (bit < 32) pairs.lo |= 1 << bit;
+			else pairs.hi |= 1 << (bit - 32);
+		}
+	}
+	return pairs;
+};
+
+const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number): boolean => {
+	let missing = 0;
+	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
+	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
+	return true;
+};
+
+// A phrase word under five letters is never corrected, so its pairs all occur;
+// the rest lose at most what the edits break. Read as one word, the joined
+// query loses only what its `spare` edits beside the space break.
+const phrasePairs = (
+	queryWords: string[],
+	asPhrase: boolean,
+	spare: number,
+): NonNullable<PreparedReading["admitsPairs"]> => {
+	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
+	const all = pairsOf(queryWords);
+	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
+	return (lo, hi) =>
+		(asPhrase &&
+			lacksPairsAtMost(short, lo, hi, 0) &&
+			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
+		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
+};
+
 type MaskGate = PreparedReading["admitsMask"];
 
 const scatterGate = (letters: string): MaskGate => {
@@ -478,6 +533,8 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 				: swaps !== null
 					? eitherGate(gate, editGate(letters, 0))
 					: gate,
+		// A sparse reading keeps no pairs of a word together.
+		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
 		wholeList: !competing,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;

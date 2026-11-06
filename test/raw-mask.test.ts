@@ -1,16 +1,18 @@
-// Imports internals rather than the public surface: `rawFieldScan`'s mask half
-// is the index build's whole per-item cost and its correctness is not
+// Imports internals rather than the public surface: the raw scans' masks are
+// the index build's whole per-item cost and their correctness is not
 // observable through `createFuzzySearch` — a dropped bit makes results vanish
 // silently.
 import { describe, expect, it } from "vite-plus/test";
 import { charMask } from "../src/gates";
-import { normaliseText, rawFieldScan } from "../src/normalise";
+import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
 
 // Skipping NFC and the trim may only ADD bits. A bit the normalised form sets
 // and the raw form does not is a gate that false-rejects, which is the one
 // failure no tier can recover from.
+// Both raw scans build index masks: the mask-only one, and the one that also
+// takes the field's letter pairs.
 const dropped = (raw: string): number =>
-	charMask(normaliseText(raw.trim())) & ~rawFieldScan(raw);
+	charMask(normaliseText(raw.trim())) & ~(rawFieldMask(raw) & rawFieldScan(raw, { lo: 0, hi: 0 }));
 
 const CASES: [string, string][] = [
 	["lowercase ascii", "generic soft cheese"],
@@ -31,7 +33,7 @@ const CASES: [string, string][] = [
 	["whitespace only", "   \t  "],
 ];
 
-describe("rawFieldScan never drops a mask bit charMask would set", () => {
+describe("the raw scans never drop a mask bit charMask would set", () => {
 	for (const [name, raw] of CASES) {
 		it(name, () => {
 			expect(dropped(raw)).toBe(0);

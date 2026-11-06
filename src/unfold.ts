@@ -1,0 +1,59 @@
+// Every code point that folds to ASCII lives in these ranges; test/unfold.test.ts
+// walks the whole BMP and fails if a fold source ever appears outside them.
+const SOURCE_RANGES: readonly (readonly [number, number])[] = [
+	[0x30, 0x39],
+	[0x41, 0x5a],
+	[0x61, 0x7a],
+	[0xc0, 0x24f],
+	[0x1e00, 0x1eff],
+	[0x212a, 0x212b],
+];
+
+const combiningMarks = /[\u0300-\u036f]/g;
+
+let table: Record<string, string> | null = null;
+
+/**
+ * For each ASCII letter and digit, every code point that `normaliseText` folds
+ * to it, so a gate built from a normalised query can run against the caller's
+ * own un-normalised strings. A query character outside the table gets no raw
+ * gate and takes the mask path: slower, never wrong.
+ *
+ * Built on first use from the fold logic, which ships anyway, and in bulk: one
+ * `toLowerCase` and one NFD pass over the separator-joined ranges, mirroring
+ * `computeFold`'s rules, since folding per character is several times slower.
+ * Never per query character: the classes gate the field side, so a class
+ * missing any source would false-reject a field that carries it.
+ * test/unfold.test.ts pins equivalence with `normaliseText`.
+ */
+export const unfoldTable = (): Record<string, string> => {
+	if (table !== null) return table;
+	let sources = "";
+	for (const [lo, hi] of SOURCE_RANGES) {
+		for (let codePoint = lo; codePoint <= hi; codePoint++) {
+			sources += String.fromCharCode(codePoint);
+		}
+	}
+	const joined = sources.split("").join(" ");
+	const lowered = joined.toLowerCase();
+	const lowers = lowered.split(" ");
+	const candidates = lowered.normalize("NFD").replace(combiningMarks, "").split(" ");
+	const built: Record<string, string> = {};
+	for (let i = 0; i < sources.length; i++) {
+		const lower = lowers[i];
+		let candidate = candidates[i];
+		if (candidate === "ł") candidate = "l";
+		// The rest mirrors computeFold for code points these ranges don't hold today.
+		/* v8 ignore start */
+		else if (candidate === "ς") candidate = "σ";
+		const folded = candidate.length === 1 ? candidate : lower.length === 1 ? lower : sources[i];
+		if (folded.length !== 1) continue;
+		/* v8 ignore stop */
+		const unit = folded.charCodeAt(0);
+		if ((unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57)) {
+			built[folded] = (built[folded] ?? "") + sources[i];
+		}
+	}
+	table = built;
+	return built;
+};
