@@ -1,0 +1,32 @@
+---
+import "../../../examples/command-palette/src/palette.css";
+---
+
+<div class="command-palette not-content">
+	<div id="tutorial-palette"></div>
+	<p class="ran" aria-live="polite">Pick a command with the arrow keys and Enter.</p>
+</div>
+
+<script>
+	import { commands } from "../../../examples/command-palette/src/commands";
+	import { createPalette } from "../../../examples/command-palette/src/palette";
+
+	const root = document.querySelector<HTMLElement>("#tutorial-palette")!;
+	const ran = document.querySelector<HTMLElement>(".command-palette .ran")!;
+	createPalette(root, commands, (command) => {
+		ran.textContent = `Ran ${command.id}`;
+	});
+</script>
+
+<style>
+	.command-palette {
+		margin-block: 1.5rem;
+	}
+
+	.ran {
+		margin-top: 0.5rem;
+		font-family: var(--__sl-font-mono);
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+</style>

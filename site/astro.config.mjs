@@ -2,6 +2,7 @@
 import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import { fileURLToPath } from "node:url";
 import starlightLlmsTxt from "starlight-llms-txt";
 import { markdownPages } from "./src/integrations/markdown-pages.ts";
 import { lastModified } from "./src/last-modified.ts";
@@ -18,6 +19,8 @@ const socialImage = {
 
 export default defineConfig({
 	site,
+	// The tutorial runs examples/command-palette, which imports the package by name.
+	vite: { resolve: { alias: { ekrina: fileURLToPath(new URL("../src/index.ts", import.meta.url)) } } },
 	integrations: [
 		starlight({
 			title: "Ekrina",
@@ -80,6 +83,7 @@ export default defineConfig({
 						"Every page is also served as Markdown, at its URL with `.md` in place of the trailing slash (the home page at `index.md`). The key pages:",
 						[
 							["getting-started", "Install, search a list, read how it matched, highlight it, show corrections"],
+							["tutorial", "Build a command palette: fields, highlighting, keyboard, corrections"],
 							["ai-agents", "Rules for coding agents, also shipped in the package as dist/AGENTS.md"],
 							["compare", "Ekrina against seven libraries, and which to pick"],
 							["guides/several-fields", "Search several fields, demote one with demoteBy, acronyms per field"],
@@ -118,6 +122,7 @@ export default defineConfig({
 					label: "Start here",
 					items: [
 						{ label: "Quickstart", slug: "getting-started" },
+						{ label: "Build a command palette", slug: "tutorial" },
 						{ label: "How it compares", slug: "compare" },
 						{ label: "For AI coding agents", slug: "ai-agents" },
 					],

@@ -1,0 +1,91 @@
+---
+title: Build a command palette
+description: Build a command palette in plain TypeScript that searches titles and keywords, highlights each match, moves with the arrow keys and names a corrected typo.
+---
+
+import { Code } from "@astrojs/starlight/components";
+import CommandPalette from "../../components/CommandPalette.astro";
+import commandsTs from "../../../../examples/command-palette/src/commands.ts?raw";
+import paletteTs from "../../../../examples/command-palette/src/palette.ts?raw";
+import mainTs from "../../../../examples/command-palette/src/main.ts?raw";
+import paletteCss from "../../../../examples/command-palette/src/palette.css?raw";
+import indexHtml from "../../../../examples/command-palette/index.html?raw";
+
+Build the palette an editor opens on a shortcut, where you type part of a command, see the best eight and pick one with the arrow keys.
+Every file shown is the source of [`examples/command-palette`](https://github.com/MMMikeM/ekrina/tree/main/examples/command-palette), and the palette below runs those same files.
+
+<CommandPalette />
+
+Some queries to try in it:
+
+| Type        | Finds                    | Because                                          |
+| ----------- | ------------------------ | ------------------------------------------------ |
+| `gc`        | Git: Commit              | the title's initials, with acronyms turned on     |
+| `console`   | Toggle Terminal          | a keyword the title doesn't contain              |
+| `repl find` | Find and Replace         | every word of the query, in any order            |
+| `termnial`  | Toggle Terminal          | a corrected typo, which the palette says it fixed |
+| `qxzwkv`    | nothing                  | nothing in the list could mean it                |
+
+## 1. Get the code
+
+The example uses the library from its repository, so build that first.
+In your own project, `npm install ekrina` instead.
+
+```bash
+git clone https://github.com/MMMikeM/ekrina.git
+cd ekrina && pnpm install && pnpm build
+cd examples/command-palette && pnpm install && pnpm dev
+```
+
+It has no framework.
+One TypeScript module builds the palette into any element, and Vite serves it.
+
+## 2. The commands
+
+Each command has a title to search, a category shown beside it, and sometimes keywords, the words someone might type that the title doesn't contain:
+
+<Code code={commandsTs} lang="ts" title="src/commands.ts" />
+
+## 3. The palette
+
+<Code code={paletteTs} lang="ts" title="src/palette.ts" />
+
+**`createSearch`** searches two fields.
+With acronyms turned on for the title, `gc` finds Git: Commit and `tt` finds Toggle Terminal.
+The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked level with a title that only contains the query somewhere.
+It builds the index as soon as the palette exists, so the first keystroke doesn't wait for it.
+It passes `limit` because only eight rows are shown, and once eight commands match the query as typed, corrections that couldn't outrank them are never computed.
+
+**`bestField`** picks the field that set a result's score, the one with the lowest.
+The notice reads it from the top result.
+
+**`highlighted`** turns a field's `ranges` into text and `<mark>` elements.
+It sets `textContent` rather than building HTML, so a command title is never parsed as markup.
+When only the keywords matched, the row shows them under the title, highlighted, to make it clear why the command is there.
+
+**`createPalette`** builds an ARIA combobox.
+The input keeps focus, and `aria-activedescendant` points at the active row as the arrow keys move it.
+Enter or a click runs the command and clears the input, and Escape clears it without running anything.
+
+**`noticeText`** says when the top result is a correction, "Showing results for “terminal”", or that nothing matched.
+A screen reader announces the notice too, because it is a live region.
+A correction always ranks below every match of the query as typed, so the notice only appears when nothing matches the query as typed.
+
+## 4. Put it on a page
+
+The page needs an element to build the palette in, and somewhere to show what ran:
+
+<Code code={indexHtml} lang="html" title="index.html" />
+
+<Code code={mainTs} lang="ts" title="src/main.ts" />
+
+The styles take their colours from the surrounding text, so the palette suits a light page or a dark one:
+
+<Code code={paletteCss} lang="css" title="src/palette.css" />
+
+## Next
+
+- [Search several fields](/guides/several-fields/) covers `demoteBy` and acronyms in full.
+- [Highlight matches](/guides/highlight/) does the same highlighting in React.
+- [Handle corrections](/guides/corrections/) labels corrected rows or leaves them out.
+- [Search as you type](/guides/search-as-you-type/) says which keystrokes rescan the whole list.

@@ -52,7 +52,7 @@
 		"lint": "vp lint",
 		"lint:fix": "vp lint --fix",
 		"format": "vp fmt",
-		"lint:types": "tsc --noEmit && tsc -p bench --noEmit",
+		"lint:types": "tsc --noEmit && tsc -p bench --noEmit && tsc -p examples/command-palette --noEmit",
 		"test": "vp test run",
 		"gate": "vp run verify",
 		"bench": "pnpm build && node bench/pipeline.ts",
