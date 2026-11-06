@@ -1,9 +1,9 @@
 ---
 title: Build a command palette
-description: Build a command palette in plain TypeScript that searches titles and keywords, highlights each match, moves with the arrow keys and names a corrected typo.
+description: Build a command palette in TypeScript or React that searches titles and keywords, highlights each match, moves with the arrow keys and names a corrected typo.
 ---
 
-import { Code } from "@astrojs/starlight/components";
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
 import CommandPalette from "../../components/CommandPalette.astro";
 import { addedLines } from "../../added-lines.ts";
 import commandsTs from "../../../../examples/command-palette/src/commands.ts?raw";
@@ -15,12 +15,27 @@ import paletteTs from "../../../../examples/command-palette/src/palette.ts?raw";
 import mainTs from "../../../../examples/command-palette/src/main.ts?raw";
 import paletteCss from "../../../../examples/command-palette/src/palette.css?raw";
 import indexHtml from "../../../../examples/command-palette/index.html?raw";
+import reactStep1 from "../../../../examples/command-palette/src/react/step-1-search.tsx?raw";
+import reactStep2 from "../../../../examples/command-palette/src/react/step-2-keywords.tsx?raw";
+import reactStep3 from "../../../../examples/command-palette/src/react/step-3-highlight.tsx?raw";
+import reactStep4 from "../../../../examples/command-palette/src/react/step-4-keyboard.tsx?raw";
+import reactPalette from "../../../../examples/command-palette/src/react/palette.tsx?raw";
+import reactMain from "../../../../examples/command-palette/src/react/main.tsx?raw";
+import reactHtml from "../../../../examples/command-palette/react.html?raw";
 
 Build the palette an editor opens on a shortcut, where you type part of a command, see the best eight and pick one.
 Each of the five steps below adds one thing to it and runs on this page as it stands after that step.
-Every file shown is in [`examples/command-palette`](https://github.com/MMMikeM/ekrina/tree/main/examples/command-palette), and the finished palette is `src/palette.ts`:
+Every step is written twice, as plain TypeScript and as a React component, and picking one in any tab switches every tab on the page.
+Every file shown is in [`examples/command-palette`](https://github.com/MMMikeM/ekrina/tree/main/examples/command-palette), and the finished palette is `src/palette.ts`, or `src/react/palette.tsx` in React:
 
-<CommandPalette step={5} />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<CommandPalette step={5} />
+	</TabItem>
+	<TabItem label="React">
+		<CommandPalette step={5} framework="react" />
+	</TabItem>
+</Tabs>
 
 Some queries to try in it:
 
@@ -43,9 +58,17 @@ cd ekrina && pnpm install && pnpm build
 cd examples/command-palette && pnpm install && pnpm dev
 ```
 
-It has no framework.
-One TypeScript module builds the palette into any element, and Vite serves it.
-`pnpm dev` runs the finished palette; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		This version has no framework.
+		One TypeScript module builds the palette into any element, and Vite serves it.
+		`pnpm dev` runs the finished palette at `/`; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
+	</TabItem>
+	<TabItem label="React">
+		Each step is one component, and Vite serves it.
+		`pnpm dev` runs the finished palette at `/react.html`; to run one of the steps below instead, change `./palette` in `src/react/main.tsx` to that step's file, such as `./step-1-search`.
+	</TabItem>
+</Tabs>
 
 ## The commands
 
@@ -57,24 +80,39 @@ Each command has a title to search, a category shown beside it, and sometimes ke
 
 The first palette searches each command's title and lists the best eight:
 
-<Code code={step1} lang="ts" title="src/step-1-search.ts" wrap />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={step1} lang="ts" title="src/step-1-search.ts" wrap />
+		<CommandPalette step={1} />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactStep1} lang="tsx" title="src/react/step-1-search.tsx" wrap />
+		<CommandPalette step={1} framework="react" />
+	</TabItem>
+</Tabs>
 
 `createSearch` builds the searcher once, with the titles as its one field.
 It builds the index as soon as the palette exists, so the first keystroke doesn't wait for it.
 It passes `limit` because only eight rows are shown, and once eight commands match the query as typed, corrections that couldn't outrank them are never computed.
 Results come back best first, so the list is drawn in the order they arrive.
 Enter runs the top command and a click runs any of them, and either clears the input.
-
-<CommandPalette step={1} />
-
-Type `console` here and nothing comes back, since no title contains it.
+Type `console` in the palette above and nothing comes back, since no title contains it.
 
 ## 2. Search the keywords too
 
 A second field searches the keywords, and the title gets acronyms.
 The marked lines are the ones this step adds:
 
-<Code code={step2} lang="ts" title="src/step-2-keywords.ts" ins={addedLines(step1, step2)} wrap />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={step2} lang="ts" title="src/step-2-keywords.ts" ins={addedLines(step1, step2)} wrap />
+		<CommandPalette step={2} />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactStep2} lang="tsx" title="src/react/step-2-keywords.tsx" ins={addedLines(reactStep1, reactStep2)} wrap />
+		<CommandPalette step={2} framework="react" />
+	</TabItem>
+</Tabs>
 
 With acronyms turned on for the title, `gc` finds Git: Commit and `tt` finds Toggle Terminal.
 The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked below any title that contains the query.
@@ -83,37 +121,56 @@ Each result's `fields` has one entry per field, in the order the fields were giv
 So `[titleMatch, keywordMatch]` reads them by position.
 When only the keywords matched, the row shows them under the title, to make it clear why the command is there.
 
-<CommandPalette step={2} />
-
 ## 3. Highlight what matched
 
 Each match carries `ranges`, the characters that matched, indexed into the command's own text:
 
-<Code code={step3} lang="ts" title="src/step-3-highlight.ts" ins={addedLines(step2, step3)} wrap />
-
-`highlighted` turns a field's `ranges` into text and `<mark>` elements.
-It sets `textContent` rather than building HTML, so a command title is never parsed as markup.
-
-<CommandPalette step={3} />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={step3} lang="ts" title="src/step-3-highlight.ts" ins={addedLines(step2, step3)} wrap />
+		`highlighted` turns a field's `ranges` into text and `<mark>` elements.
+		It sets `textContent` rather than building HTML, so a command title is never parsed as markup.
+		<CommandPalette step={3} />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactStep3} lang="tsx" title="src/react/step-3-highlight.tsx" ins={addedLines(reactStep2, reactStep3)} wrap />
+		`highlighted` turns a field's `ranges` into strings and `<mark>` elements, and React escapes every string it renders, so a command title is never parsed as markup.
+		<CommandPalette step={3} framework="react" />
+	</TabItem>
+</Tabs>
 
 ## 4. Move with the keyboard
 
 The input becomes an ARIA combobox, with the list as its listbox:
 
-<Code code={step4} lang="ts" title="src/step-4-keyboard.ts" ins={addedLines(step3, step4)} wrap />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={step4} lang="ts" title="src/step-4-keyboard.ts" ins={addedLines(step3, step4)} wrap />
+		<CommandPalette step={4} />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactStep4} lang="tsx" title="src/react/step-4-keyboard.tsx" ins={addedLines(reactStep3, reactStep4)} wrap />
+		<CommandPalette step={4} framework="react" />
+	</TabItem>
+</Tabs>
 
 In a combobox, focus stays in the input, and `aria-activedescendant` names the row a screen reader should announce as active.
 The input has the `combobox` role, the list `listbox` and each row `option`, and `aria-controls` ties the input to the list.
 The arrow keys move the active row, wrapping at either end, and Enter now runs the active command rather than the top one.
 Escape clears the input without running anything, and a click no longer takes focus from the input.
 
-<CommandPalette step={4} />
-
 ## 5. Say when it corrected a typo
 
 The last step adds a notice above the list:
 
-<Code code={paletteTs} lang="ts" title="src/palette.ts" ins={addedLines(step4, paletteTs)} wrap />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={paletteTs} lang="ts" title="src/palette.ts" ins={addedLines(step4, paletteTs)} wrap />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactPalette} lang="tsx" title="src/react/palette.tsx" ins={addedLines(reactStep4, reactPalette)} wrap />
+	</TabItem>
+</Tabs>
 
 `bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
 It says when that result is a correction, as in Showing results for “terminal”, or that nothing matched.
@@ -124,11 +181,18 @@ The notice is a live region, so a screen reader announces it as it changes.
 
 ## Put it on a page
 
-The page needs an element to build the palette in, and somewhere to show what ran:
+The page needs an element for the palette, and somewhere to show what ran:
 
-<Code code={indexHtml} lang="html" title="index.html" wrap />
-
-<Code code={mainTs} lang="ts" title="src/main.ts" wrap />
+<Tabs syncKey="framework">
+	<TabItem label="Vanilla">
+		<Code code={indexHtml} lang="html" title="index.html" wrap />
+		<Code code={mainTs} lang="ts" title="src/main.ts" wrap />
+	</TabItem>
+	<TabItem label="React">
+		<Code code={reactHtml} lang="html" title="react.html" wrap />
+		<Code code={reactMain} lang="tsx" title="src/react/main.tsx" wrap />
+	</TabItem>
+</Tabs>
 
 The styles take their colours from the surrounding text, so the palette suits a light page or a dark one:
 

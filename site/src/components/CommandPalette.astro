@@ -4,33 +4,73 @@ import "../../../examples/command-palette/src/palette.css";
 interface Props {
 	/** Which step of the tutorial to run; 5 is the finished palette. */
 	step: 1 | 2 | 3 | 4 | 5;
+	framework?: "vanilla" | "react";
 }
 
-const { step } = Astro.props;
+const { step, framework = "vanilla" } = Astro.props;
 const hint =
 	step < 4
 		? "Type, then press Enter for the top command, or click or tap one."
 		: "Use the arrow keys and Enter, or click or tap a command.";
 ---
 
-<div class="command-palette not-content" data-palette-step={step}>
-	<div id={`tutorial-palette-${step}`} class="palette-root"></div>
+<div class="command-palette not-content" data-palette-step={step} data-palette-framework={framework}>
+	<div id={`tutorial-palette-${framework}-${step}`} class="palette-root"></div>
 	<p class="ran" aria-live="polite">{hint}</p>
 </div>
 
 <script>
-	import { commands } from "../../../examples/command-palette/src/commands";
+	import { commands, type Command } from "../../../examples/command-palette/src/commands";
 	import { createPalette as finished } from "../../../examples/command-palette/src/palette";
 	import { createPalette as search } from "../../../examples/command-palette/src/step-1-search";
 	import { createPalette as keywords } from "../../../examples/command-palette/src/step-2-keywords";
 	import { createPalette as highlight } from "../../../examples/command-palette/src/step-3-highlight";
 	import { createPalette as keyboard } from "../../../examples/command-palette/src/step-4-keyboard";
 
-	const steps = [search, keywords, highlight, keyboard, finished];
+	const vanillaSteps = [search, keywords, highlight, keyboard, finished];
+
+	const reactSteps = [
+		() => import("../../../examples/command-palette/src/react/step-1-search"),
+		() => import("../../../examples/command-palette/src/react/step-2-keywords"),
+		() => import("../../../examples/command-palette/src/react/step-3-highlight"),
+		() => import("../../../examples/command-palette/src/react/step-4-keyboard"),
+		() => import("../../../examples/command-palette/src/react/palette"),
+	];
+
+	const mountReact = async (demo: HTMLElement, run: (command: Command) => void): Promise<void> => {
+		const [{ createElement }, { createRoot }, { CommandPalette }] = await Promise.all([
+			import("react"),
+			import("react-dom/client"),
+			reactSteps[Number(demo.dataset.paletteStep) - 1]!(),
+		]);
+		const root = demo.querySelector<HTMLElement>(".palette-root")!;
+		createRoot(root).render(createElement(CommandPalette, { commands, run }));
+	};
+
+	// A React palette sits in a tab panel that stays hidden until a reader picks
+	// React, so React loads the first time one of them nears the viewport.
+	const seen = new IntersectionObserver(
+		(entries) => {
+			for (const entry of entries) {
+				if (!entry.isIntersecting) continue;
+				seen.unobserve(entry.target);
+				const demo = entry.target as HTMLElement;
+				const ran = demo.querySelector<HTMLElement>(".ran")!;
+				void mountReact(demo, (command) => {
+					ran.textContent = `Ran ${command.title}`;
+				});
+			}
+		},
+		{ rootMargin: "400px 0px" },
+	);
 
 	for (const demo of document.querySelectorAll<HTMLElement>("[data-palette-step]")) {
+		if (demo.dataset.paletteFramework === "react") {
+			seen.observe(demo);
+			continue;
+		}
 		const ran = demo.querySelector<HTMLElement>(".ran")!;
-		const createPalette = steps[Number(demo.dataset.paletteStep) - 1]!;
+		const createPalette = vanillaSteps[Number(demo.dataset.paletteStep) - 1]!;
 		createPalette(demo.querySelector<HTMLElement>(".palette-root")!, commands, (command) => {
 			ran.textContent = `Ran ${command.title}`;
 		});
