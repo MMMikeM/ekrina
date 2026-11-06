@@ -50,41 +50,27 @@ const MAX_FIELD_LENGTH = 512;
 
 const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 
-let rows = new Int32Array(0);
-
 // Optimal string alignment distance: insertions, deletions, substitutions and
-// adjacent swaps, each one edit. Capped at `limit + 1`. Only cells within
-// `limit` of the diagonal can stay under the cap, so the rest are never filled
-// and read as over it.
+// adjacent swaps, each one edit. Capped at `limit + 1`. A shared first
+// character is always matched: no cheaper alignment edits it.
 const editDistance = (a: string, b: string, limit: number): number => {
-	const width = b.length + 1;
-	const over = limit + 1;
-	if (rows.length < 3 * width) rows = new Int32Array(3 * width);
-	rows.fill(over, 0, 3 * width);
-	let beforeLast = 0;
-	let last = width;
-	let current = 2 * width;
-	for (let j = 0; j <= Math.min(limit, b.length); j++) rows[last + j] = j;
-	for (let i = 1; i <= a.length; i++) {
-		const from = Math.max(1, i - limit);
-		const to = Math.min(b.length, i + limit);
-		rows[current + from - 1] = from === 1 ? (i <= limit ? i : over) : over;
-		if (to + 1 < width) rows[current + to + 1] = over;
-		let rowMin = over;
-		if (from === 1 && i <= limit) rowMin = i;
-		for (let j = from; j <= to; j++) {
-			let cost = rows[last + j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
-			cost = Math.min(cost, rows[last + j] + 1, rows[current + j - 1] + 1);
-			if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-				cost = Math.min(cost, rows[beforeLast + j - 2] + 1);
-			}
-			rows[current + j] = cost;
-			rowMin = Math.min(rowMin, cost);
-		}
-		if (rowMin > limit) return limit + 1;
-		[beforeLast, last, current] = [last, current, beforeLast];
+	let i = 0;
+	while (i < a.length && i < b.length && a[i] === b[i]) i++;
+	if (i === a.length || i === b.length) {
+		return Math.min(Math.max(a.length, b.length) - i, limit + 1);
 	}
-	return Math.min(rows[last + width - 1], limit + 1);
+	if (limit === 0) return 1;
+	const restA = a.slice(i + 1);
+	const restB = b.slice(i + 1);
+	let fewest = Math.min(
+		editDistance(restA, restB, limit - 1),
+		editDistance(restA, b.slice(i), limit - 1),
+		editDistance(a.slice(i), restB, limit - 1),
+	);
+	if (a[i] === b[i + 1] && a[i + 1] === b[i]) {
+		fewest = Math.min(fewest, editDistance(a.slice(i + 2), b.slice(i + 2), limit - 1));
+	}
+	return fewest + 1;
 };
 
 // Each edit changes the length by at most one.

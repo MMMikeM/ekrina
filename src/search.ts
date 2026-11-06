@@ -309,6 +309,31 @@ export function createFuzzySearch<T>(
 			generation++;
 		};
 
+		// A field's match joins the item's entry, or replaces a weaker one. Where
+		// an item's match ends follows its best field.
+		const offerField = (
+			i: number,
+			entry: FuzzyResult<T> | undefined,
+			f: number,
+			result: MatchResult,
+		): FuzzyResult<T> => {
+			const endsWord = placeFieldResult(result, i * specCount + f, f);
+			if (entry === undefined) {
+				// The literal is faster than new Array().fill(), and runs once per result.
+				const fields: (MatchResult | null)[] =
+					// oxlint-disable-next-line unicorn/no-new-array
+					specCount === 1 ? [result] : new Array(specCount).fill(null);
+				fields[f] = result;
+				entry = { item: list[i], score: result.score, fields };
+				record(i, entry, endsWord);
+			} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
+				entry.fields[f] = result;
+				regroupHeld(i, result.score, entry.score, endsWord);
+				entry.score = Math.min(entry.score, result.score);
+			}
+			return entry;
+		};
+
 		const scoreItem = (
 			i: number,
 			mayRescue: boolean,
@@ -317,10 +342,7 @@ export function createFuzzySearch<T>(
 		): void => {
 			materialise(i);
 			const base = i * specCount;
-			let bestScore = MAX_SAFE_INTEGER;
-			let bestEndsWord = false;
-			let fields: (MatchResult | null)[] | null = null;
-
+			let entry: FuzzyResult<T> | undefined;
 			for (let f = 0; f < specCount; f++) {
 				const result = matchField(
 					trimmedFields[base + f] as string,
@@ -332,22 +354,9 @@ export function createFuzzySearch<T>(
 					preGated,
 					literalOnly,
 				);
-				if (result) {
-					const endsWord = placeFieldResult(result, base + f, f);
-					if (result.score < bestScore) bestEndsWord = endsWord;
-					else if (result.score === bestScore) bestEndsWord ||= endsWord;
-					bestScore = Math.min(bestScore, result.score);
-					// The literal is faster than new Array().fill(), and runs once per result.
-					if (specCount === 1) fields = [result];
-					// oxlint-disable-next-line unicorn/no-new-array
-					else (fields ??= new Array(specCount).fill(null))[f] = result;
-				}
+				if (result) entry = offerField(i, entry, f, result);
 			}
-
-			if (fields) {
-				if (bestScore <= CONTAINS_SCORE) literalHits++;
-				record(i, { item: list[i], score: bestScore, fields }, bestEndsWord);
-			}
+			if (entry !== undefined && entry.score <= CONTAINS_SCORE) literalHits++;
 		};
 
 		const narrowed =
@@ -449,19 +458,7 @@ export function createFuzzySearch<T>(
 					trimmedFields[base + f] as string,
 					normalisedFields[base + f] as string,
 				);
-				if (!result) continue;
-				const endsWord = placeFieldResult(result, base + f, f);
-				if (entry === undefined) {
-					// oxlint-disable-next-line unicorn/no-new-array
-					const fields: (MatchResult | null)[] = new Array(specCount).fill(null);
-					fields[f] = result;
-					entry = { item: list[i], score: result.score, fields };
-					record(i, entry, endsWord);
-				} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
-					entry.fields[f] = result;
-					regroupHeld(i, result.score, entry.score, endsWord);
-					entry.score = Math.min(entry.score, result.score);
-				}
+				if (result) entry = offerField(i, entry, f, result);
 			}
 		};
 

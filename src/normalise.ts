@@ -139,13 +139,20 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	let prevClass = 0;
 	let lastWordInitial = 0;
 	let degraded = false;
-	// The per-unit body appears twice (raw ASCII unit, folded unit), classifies
-	// inline, and writes mask bits per branch: every factored shape — shared
-	// helper, closure, module scratch, single mask-write site off
+	// One inline body for raw ASCII units and folded ones alike: every factored
+	// shape — shared helper, closure, module scratch, single mask-write site off
 	// `bigramClass − 1` — measured 8–15% slower on the whole-corpus build.
 	for (let i = 0; i < raw.length; i++) {
-		const unit = raw.charCodeAt(i);
-		if (unit < 128) {
+		let unit = raw.charCodeAt(i);
+		let folded = "";
+		if (unit > 127) {
+			if (unit >= 0x300 && unit <= 0x36f) degraded = true;
+			const codePoint = raw.codePointAt(i) as number;
+			if (codePoint > 0xffff) i++;
+			folded = foldChar(String.fromCodePoint(codePoint));
+			unit = folded.charCodeAt(0);
+		}
+		for (let k = 0; ; ) {
 			let unitClass = 0;
 			if (unit >= 97 && unit <= 122) {
 				mask |= 1 << (unit - 97);
@@ -156,67 +163,28 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 			} else if (unit >= 48 && unit <= 57) {
 				mask |= 1 << (26 + (unit & 3));
 				unitClass = 27 + (unit & 3);
+			} else if (unit > 127) {
+				mask |= 1 << (30 + (unit & 1));
+				if (unit >= 0x300 && unit <= 0x36f) degraded = true;
+				else unitClass = 31 + (unit & 1);
 			}
 			if (unitClass !== 0 && !degraded) {
 				if (prevClass !== 0) {
 					const bit = (prevClass * 37 + unitClass) & 63;
 					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << (bit - 32);
+					else bigramsHi |= 1 << bit;
 				} else {
 					if (lastWordInitial !== 0) {
 						const bit = (lastWordInitial * 37 + unitClass) & 63;
 						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << (bit - 32);
+						else bigramsHi |= 1 << bit;
 					}
 					lastWordInitial = unitClass;
 				}
 			}
 			prevClass = unitClass;
-			continue;
-		}
-		if (unit >= 0x300 && unit <= 0x36f) degraded = true;
-		const codePoint = raw.codePointAt(i) as number;
-		if (codePoint > 0xffff) i++;
-		const folded = foldChar(String.fromCodePoint(codePoint));
-		for (let k = 0; k < folded.length; k++) {
-			const foldedUnit = folded.charCodeAt(k);
-			let unitClass = 0;
-			if (foldedUnit >= 97 && foldedUnit <= 122) {
-				mask |= 1 << (foldedUnit - 97);
-				unitClass = foldedUnit - 96;
-			}
-			// No code point above 127 folds to A–Z or a digit (checked over all of
-			// Unicode). These keep a new fold from dropping a mask bit, which would
-			// make the gates false-reject.
-			/* v8 ignore start */
-			else if (foldedUnit >= 65 && foldedUnit <= 90) {
-				mask |= 1 << (foldedUnit - 65);
-				unitClass = foldedUnit - 64;
-			} else if (foldedUnit >= 48 && foldedUnit <= 57) {
-				mask |= 1 << (26 + (foldedUnit & 3));
-				unitClass = 27 + (foldedUnit & 3);
-			}
-			/* v8 ignore stop */
-			else if (foldedUnit > 127) {
-				mask |= 1 << (30 + (foldedUnit & 1));
-				if (foldedUnit >= 0x300 && foldedUnit <= 0x36f) degraded = true;
-				else unitClass = 31 + (foldedUnit & 1);
-			}
-			if (unitClass !== 0 && !degraded) {
-				if (prevClass !== 0) {
-					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << (bit - 32);
-				} else {
-					if (lastWordInitial !== 0) {
-						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << (bit - 32);
-					}
-					lastWordInitial = unitClass;
-				}
-			}
-			prevClass = unitClass;
+			if (++k >= folded.length) break;
+			unit = folded.charCodeAt(k);
 		}
 	}
 	if (degraded) {

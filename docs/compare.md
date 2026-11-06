@@ -9,7 +9,7 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 <!-- bench:compare -->
 | Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
 |-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:------:|-----------|
-| **Ekrina**        | ~7.9 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
+| **Ekrina**        | ~7.7 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
 | fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
 | Fuse.js (tuned)   | ~9.6 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
 | uFuzzy (all opts) | ~4.2 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
@@ -47,7 +47,7 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Pick Ekrina.
 It tops the quality scorecard on all three benchmark corpora, answers nothing it shouldn't, and runs its session several times faster than the two libraries closest to it on quality.
-At ~7.9 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11 kB, are larger.
+At ~7.7 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11 kB, are larger.
 That size goes on the correction machinery, which is also where the quality lead comes from (the unfold table is generated from the fold logic at first use, not shipped).
 The exception:
 
