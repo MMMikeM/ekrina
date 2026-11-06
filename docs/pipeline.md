@@ -14,10 +14,8 @@ flowchart LR
     B --> D(["done — under half a millisecond at 100k"])
 ```
 
-Construction reads nothing.
-It resolves the field specs and allocates the buffers survivors will later be written into.
-No text is trimmed, normalised or copied, and no mask is computed.
-At 100k that is under half a millisecond of allocation and nothing else (the build table in [benchmarks.md](./benchmarks.md)).
+Construction resolves the field specs and allocates the buffers survivors will later be written into, under half a millisecond at 100k (the build table in [benchmarks.md](./benchmarks.md)).
+It reads no item text, which is trimmed, normalised and masked the first time an item survives a gate.
 
 Everything an index would hold is built on demand, during queries.
 
@@ -61,7 +59,7 @@ Every subsequence gate, raw or normalised, checks a field longer than 256 charac
 
 With a `limit`, the ladder first runs its literal tiers alone, and the fuzzy chain and the corrections run only if fewer than `limit` items matched literally.
 
-## Who reaches what, and how long it takes
+## Records and time per stage
 
 en 100k, mean over sixteen single-word probes:
 
@@ -81,8 +79,7 @@ Native 100k behaves the same: the raw gate leaves _92 records, 0.09%_, at 2.81 m
 Once the gate has run, the literal path takes almost no time.
 0.09% of the corpus survives it, and everything downstream - materialising, normalising, masking and running the full tier ladder on those survivors - takes 0.05 ms against the gate's 2.31.
 
-The rescue is a different pipeline.
-It admits _2.3% of the corpus_, about 25 times what the literal gate lets through, and it is the only thing that needs a whole-corpus index.
+The rescue admits _2.3% of the corpus_, about 25 times what the literal gate lets through, and it is the only thing that needs a whole-corpus index.
 Twelve of the sixteen probes take it on both corpora, because the probe set is deliberately typo-heavy.
 The bigram stage keeps that set small: a field missing one character class is only reachable by an edit at that class's query position, so every query bigram away from that position must be present.
 
@@ -93,16 +90,15 @@ Built the first time a query is rescuable _and_ turns up fewer than ten literal 
 A four-character query builds them only when nothing matched it at all.
 A session whose queries all match literally never builds them.
 Multi-word and non-Latin queries have no raw-gate form, so they take the mask path and force the build immediately.
-The masks come from one scan per field that folds each code unit once (`rawFieldMask`), and nothing else.
-An item's bigram set is read only when a gate first needs it, which in the relaxed scan means an item missing exactly one character class: about 7% of the corpus, at 0.8–0.9 ms.
+That scan computes only the masks, folding each code unit once (`rawFieldMask`).
+An item's bigram set is read the first time a gate needs it, which in the relaxed scan means an item missing exactly one character class, about 7% of the corpus, and reading those takes 0.8–0.9 ms.
 
-**The raw gate, ~3–4 ms.**
+**The raw gate, ~2–3 ms.**
 Run by any query that cannot narrow: the first one, and any later one that isn't an extension of its predecessor.
-A typed sequence runs it once; a searcher handed unrelated queries runs it every time.
+A typed sequence runs it on its first keystroke, and each unrelated query runs it again.
 
-Those two are the design's central trade.
-Against an eagerly-built index the first query is faster and a long run of unrelated queries is slower.
-`search.buildIndex()` takes the other side of it on request: the masks and every bigram set are built at construction in one fused scan per field (`rawFieldScan`, 8.6–11.9 ms), and every query that cannot narrow filters on the masks instead of running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
+Building the masks only when a query needs them, and gating the raw text until then, makes the first query faster than an index built up front would, and a long run of unrelated queries slower.
+`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`, 8.6–11.9 ms), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 
@@ -117,9 +113,8 @@ A one-character query never seeds the cache: it admits only items where the char
 
 The rescue path deliberately ignores the cache: it scans all N, because the near-misses it wants are exactly what the cached set excluded.
 
-## Where the remaining time is
+## Large result sets
 
-For a query that returns a lot, the time goes elsewhere.
-0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part.
-What remains is proportional to how many results a query has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `gra`, the widest query, takes 2.28 ms per keystroke and `grady` 0.58.
-`limit` saves the fuzzy and correction work once enough items match literally; the literal results are still built and sorted.
+0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part of a query that returns a lot.
+The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `gra`, the widest query, takes 2.28 ms per keystroke and `grady` 0.58.
+Even with a `limit`, every literal result is built and sorted before the list is cut.
