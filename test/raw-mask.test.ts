@@ -1,6 +1,6 @@
 // Imports internals rather than the public surface: the raw scans' masks are
 // the index build's whole per-item cost and their correctness is not
-// observable through `createFuzzySearch` — a dropped bit makes results vanish
+// observable through `createSearcher` — a dropped bit makes results vanish
 // silently.
 import { describe, expect, it } from "vite-plus/test";
 import { charMask } from "../src/gates";

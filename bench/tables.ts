@@ -170,8 +170,7 @@ const librariesTable = (): string =>
 const isEkrinaVariant = (config: string): boolean =>
 	libraryOf(config) === "ekrina" && config !== "ekrina";
 
-const mark = (support: "yes" | "opt-in" | "partial" | "no"): string =>
-	support === "yes" ? "🟢" : support === "no" ? "🔴" : "🟡";
+const percent = (share: number): string => `${Math.round(100 * share)}%`;
 
 // README.md's comparison: each library once, at its headline configuration,
 // on the corpus and list size the per-probe tables use. ms/query is the batch
@@ -184,24 +183,24 @@ const compareTable = (a: Artifact): string => {
 		.filter((r) => headline.has(r.library) && !isEkrinaVariant(r.library))
 		.sort((x, y) => Number(y.library === "ekrina") - Number(x.library === "ekrina") || y.mrr - x.mrr);
 	return mdTable(
-		["Library", "Gzip", "Deps", "MRR", "junk", "ms/query", "Tiers", "Ranges", "Typos"],
+		["Library", "MRR", "ms", "Gzip kB", "Junk", "Typos", "Tiers", "Ranges", "Deps"],
 		shown.map((r) => {
 			const meta = META[libraryOf(r.library)];
 			if (!meta) throw new Error(`no metadata for '${r.library}' in bench/libraries.ts`);
 			const batch = cellOf(a, PROBE_CORPUS, "batch", PROBE_SIZE, r.library);
 			return [
 				r.library === "ekrina" ? "**Ekrina**" : displayName(r.library),
-				`~${meta.gzipKB} kB`,
-				String(meta.deps),
 				r.mrr.toFixed(2),
-				r.junk === undefined ? "—" : r.junk.toFixed(2),
 				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
-				mark(meta.features.tier),
-				mark(meta.features.ranges),
-				meta.typoReach ?? "🔴",
+				meta.gzipKB.toFixed(1),
+				r.junk === undefined ? "—" : percent(r.junk),
+				meta.typoReach ?? "none",
+				meta.features.tier,
+				meta.features.ranges,
+				String(meta.deps),
 			];
 		}),
-		["left", "right", "right", "right", "right", "right", "center", "center", "left"],
+		["left", "right", "right", "right", "right", "left", "center", "center", "right"],
 	);
 };
 
@@ -315,7 +314,7 @@ const scorecardTable = (
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
-		["Library", "MRR", "junk", "index ms", "cold ms", "batch ms", "batch/query"],
+		["Library", "MRR", "Junk", "index ms", "cold ms", "batch ms", "batch/query"],
 		rows.filter((r) => shown.has(r.library)).map((r) => {
 			const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
 			const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
@@ -323,7 +322,7 @@ const scorecardTable = (
 			return [
 				emphasised.has(r.library) ? `**${name}**` : name,
 				r.mrr.toFixed(2),
-				r.junk === undefined ? "—" : r.junk.toFixed(2),
+				r.junk === undefined ? "—" : percent(r.junk),
 				batch ? ms(batch.indexMs) : "—",
 				cold == null ? "—" : ms(cold),
 				batch ? ms(batch.queryMs) : "—",

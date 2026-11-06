@@ -7,7 +7,7 @@ const hasNonAscii = /[\u0080-\uffff]/;
 const QUOTE_FOLDS: Record<string, string> = { "‘": "'", "’": "'", "“": '"', "”": '"' };
 
 // One folded string per code point, never changing the code-unit length — the
-// 1:1 guarantee behind every published Range. Length-changing folds fall back
+// 1:1 guarantee behind every published HighlightRange. Length-changing folds fall back
 // to plain lowercase, then to the original character.
 const computeFold = (char: string): string => {
 	const quote = QUOTE_FOLDS[char];

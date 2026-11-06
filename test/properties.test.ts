@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, normaliseText } from "../src/index";
+import { createSearcher, fuzzyMatch, normaliseText } from "../src/index";
 
 // A small alphabet with accents, case, digits and separators, so random fields
 // and queries actually match each other often enough to exercise every tier.
@@ -62,7 +62,7 @@ describe(`properties of every match`, () => {
 	it("results come back best first", () => {
 		fc.assert(
 			fc.property(listAndQuery, ([items, typed]) => {
-				const scores = createFuzzySearch(items)(typed).map((result) => result.score);
+				const scores = createSearcher(items)(typed).map((result) => result.score);
 				expect(scores).toEqual([...scores].sort((a, b) => a - b));
 			}),
 		);
@@ -73,9 +73,9 @@ describe(`properties of every match`, () => {
 	it("typing a query keystroke by keystroke returns what a fresh search does", () => {
 		fc.assert(
 			fc.property(listAndQuery, ([items, typed]) => {
-				const typing = createFuzzySearch(items);
+				const typing = createSearcher(items);
 				for (let length = 1; length < typed.length; length++) typing(typed.slice(0, length));
-				expect(typing(typed)).toEqual(createFuzzySearch(items)(typed));
+				expect(typing(typed)).toEqual(createSearcher(items)(typed));
 			}),
 		);
 	});
@@ -83,8 +83,8 @@ describe(`properties of every match`, () => {
 	it("a limit returns exactly the first results an unlimited search would", () => {
 		fc.assert(
 			fc.property(listAndQuery, fc.integer({ min: 1, max: 12 }), ([items, typed], limit) => {
-				const search = createFuzzySearch(items);
-				expect(search(typed, { limit })).toEqual(createFuzzySearch(items)(typed).slice(0, limit));
+				const search = createSearcher(items);
+				expect(search(typed, { limit })).toEqual(createSearcher(items)(typed).slice(0, limit));
 			}),
 		);
 	});

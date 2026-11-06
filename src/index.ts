@@ -7,7 +7,7 @@
  * those apart.
  */
 
-export { createFuzzySearch, fuzzyMatch } from "./search";
+export { createSearcher, fuzzyMatch } from "./search";
 export { splitWords } from "./boundaries";
 export { normaliseText } from "./normalise";
 export { SCORES, TYPO_PENALTY } from "./scores";

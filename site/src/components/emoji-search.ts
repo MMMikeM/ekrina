@@ -1,7 +1,7 @@
-import { createFuzzySearch, type FuzzyResult, SCORES } from "../../../src/index.ts";
+import { createSearcher, type SearchResult, SCORES } from "../../../src/index.ts";
 
 export type Emoji = { glyph: string; label: string; tags: string | null };
-export type EmojiSearch = (query: string) => FuzzyResult<Emoji>[];
+export type EmojiSearch = (query: string) => SearchResult<Emoji>[];
 
 export const DEMO_LIMIT = 8;
 const TAGS_SEPARATOR = " — ";
@@ -17,7 +17,7 @@ export const emojiSearch = (corpus: string[], glyphs: string[]): EmojiSearch => 
 		};
 	});
 	// A tag hit ranks level with a contains in a name, so a name that starts with the query comes first.
-	const search = createFuzzySearch(items, [
+	const search = createSearcher(items, [
 		{ selectField: (emoji) => emoji.label },
 		{ selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS },
 	]);

@@ -10,7 +10,7 @@ import { bench } from "../../../bench.ts";
 Create the searcher once per list and call it on every keystroke:
 
 ```ts
-const search = createFuzzySearch(products, (product) => product.title);
+const search = createSearcher(products, (product) => product.title);
 
 input.addEventListener("input", () =>
 	render(search(input.value, { limit: 10 })),
@@ -48,7 +48,7 @@ The first of those also builds the searcher's index over the whole list, once.
 To build the index before anyone types, once the list has loaded or while the page is idle, call `buildIndex()`:
 
 ```ts
-const search = createFuzzySearch(products, (product) => product.title);
+const search = createSearcher(products, (product) => product.title);
 requestIdleCallback(() => search.buildIndex());
 ```
 

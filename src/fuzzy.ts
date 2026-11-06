@@ -1,9 +1,9 @@
 import { isBoundaryChar } from "./boundaries";
-import type { MatchResult, Range } from "./types";
+import type { MatchResult, HighlightRange } from "./types";
 
-// Same shape as a highlight Range, named for what it means here: a consecutive
+// Same shape as a HighlightRange, named for what it means here: a consecutive
 // run of matched characters.
-type Chunk = Range;
+type Chunk = HighlightRange;
 
 // BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
 // true contains — but intentionally NOT the same binding: they mean different

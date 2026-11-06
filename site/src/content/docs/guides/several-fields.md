@@ -8,14 +8,14 @@ sidebar:
 Pass an array of field specs instead of one function, and each result gets one entry in `fields` per spec, in the same order:
 
 ```ts
-import { createFuzzySearch, SCORES } from "ekrina";
+import { createSearcher, SCORES } from "ekrina";
 
 const posts = [
 	{ title: "Banana bread", body: "best baked goods" },
 	{ title: "Release notes", body: "banana picker shipped" },
 ];
 
-const search = createFuzzySearch(posts, [
+const search = createSearcher(posts, [
 	{ selectField: (post) => post.title },
 	{ selectField: (post) => post.body, demoteBy: SCORES.CONTAINS },
 ]);
@@ -43,7 +43,7 @@ To keep only matches of the query as typed across demoted fields, filter by tier
 The acronym tier matches a field's word initials, and it is off unless a field asks for it:
 
 ```ts
-const people = createFuzzySearch(staff, [
+const people = createSearcher(staff, [
 	{ selectField: (person) => person.name, acronym: true },
 	{ selectField: (person) => person.email, demoteBy: SCORES.CONTAINS },
 ]);

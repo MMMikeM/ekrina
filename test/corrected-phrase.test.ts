@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { SCORES } from "../src/index";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createSearcher, fuzzyMatch } from "../src/index";
 
 const FILLER = [
 	"Rustic Steel Table",
@@ -65,7 +65,7 @@ describe("one-edit corrections inside a phrase", () => {
 	});
 
 	it("a literal match always outranks a corrected phrase", () => {
-		const search = createFuzzySearch([
+		const search = createSearcher([
 			"Handcrafted Wooden Duck",
 			"Handcxafted Wooden Sign",
 			...FILLER,
@@ -78,7 +78,7 @@ describe("one-edit corrections inside a phrase", () => {
 	});
 
 	it("search() surfaces the phrase correction through the collection gates", () => {
-		const search = createFuzzySearch(["Handcrafted Wooden Duck", ...FILLER]);
+		const search = createSearcher(["Handcrafted Wooden Duck", ...FILLER]);
 		const results = search("handcxafted wooden");
 		expect(results).toHaveLength(1);
 		expect(results[0].item).toBe("Handcrafted Wooden Duck");

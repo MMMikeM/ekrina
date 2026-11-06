@@ -10,7 +10,7 @@ The package is `ekrina`; the working directory is still `mikrofuzz` from before 
 - **No runtime dependencies.** Ever. `devDependencies` only. The `bench` workspace depends on the eight comparison libraries on purpose, which is allowed because it is `private: true` and never published.
 - **Nothing platform-specific in `src/`.** No `node:` imports, no DOM, nothing outside ES2022 — `tsconfig.json` pins `lib: ["ES2022"]` so a stray global is a compile error rather than a runtime surprise on Workers. `node:fs` belongs to `bench/` and `docs/` scripts only.
 - **`isolatedDeclarations` is on.** Declarations come from oxc, not from the TypeScript compiler, so every export needs an explicit type annotation (`export const wordChar: RegExp = …`). Inference a human finds obvious still fails the build.
-- **`normaliseText` is offset-preserving.** Exactly one code unit out per code unit of `NFC(text).trim()` in. Every `Range` the library returns indexes the caller's own string, so a fold that changes length silently corrupts every highlight. New folds go through `computeFold`'s length check, no exceptions, however tempting the Unicode edge case.
+- **`normaliseText` is offset-preserving.** Exactly one code unit out per code unit of `NFC(text).trim()` in. Every `HighlightRange` the library returns indexes the caller's own string, so a fold that changes length silently corrupts every highlight. New folds go through `computeFold`'s length check, no exceptions, however tempting the Unicode edge case.
 - **Gates may only false-pass, never false-reject.** `charMask`, `buildPresenceGate`, `buildFuzzyGate` and the prefix-narrowing survivor cache exist purely to skip work. A gate that rejects a field some tier would have matched is a correctness bug, not a tuning question. The monotonicity argument in `search.ts` is what licenses reusing survivors across keystrokes; changing any gate means rechecking it.
 - **`SCORES.CONTAINS` is a published dividing line.** At or below it means "the query text appears here"; above it is a fuzzy chain or a one-edit rescue, and only `tier` tells those apart. `TYPO_PENALTY` (2.1) is sized so even a corrected exact hit sorts below a true `contains`; shrinking it inverts the guarantee and measurably lowers MRR (CHANGELOG records the measured inversion).
 - Score values and `Tier` strings are public API. The site's how-it-works/scores page documents them and `test/tier-constants.test.ts` pins them, so a tier rename or a changed score value is a breaking change with a CHANGELOG entry.
@@ -47,14 +47,14 @@ Guards to respect rather than route around:
 
 ## Documentation
 
-**Everything re-exported from `src/index.ts` carries JSDoc** — `fuzzyMatch`, `createFuzzySearch`, `normaliseText`, `splitWords`, `SCORES`, `TYPO_PENALTY`, and every public type, fields included. Internal exports get whatever the next reader needs, which is usually a `//` note about why the thing exists rather than what it does.
+**Everything re-exported from `src/index.ts` carries JSDoc** — `fuzzyMatch`, `createSearcher`, `normaliseText`, `splitWords`, `SCORES`, `TYPO_PENALTY`, and every public type, fields included. Internal exports get whatever the next reader needs, which is usually a `//` note about why the thing exists rather than what it does.
 
 JSDoc says what the caller needs and nothing more:
 
 - Lead with what it does, in one line.
 - `@param` only when the name and type don't already say it.
 - `@throws` whenever it can throw.
-- `@example` on the primary entry points only (`createFuzzySearch`, `fuzzyMatch`).
+- `@example` on the primary entry points only (`createSearcher`, `fuzzyMatch`).
 - Never restate the type signature in prose. TypeScript already published it.
 - Scores are always described as lower = better, matching README and `SCORES`.
 

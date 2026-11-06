@@ -14,28 +14,28 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fuzzy-scorecard-native -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.30 | 0.07 |     0.05 |    1.94 |    52.72 |        2.10 |
-| fuzzy (all opts) | 0.30 | 0.07 |     0.13 |    2.12 |    62.44 |        2.44 |
+| **fuzzy**        | 0.30 |   7% |     0.05 |    1.94 |    52.72 |        2.10 |
+| fuzzy (all opts) | 0.30 |   7% |     0.13 |    2.12 |    62.44 |        2.44 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-fuzzy-scorecard-en -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.29 | 0.03 |     0.04 |    1.81 |    36.12 |        1.42 |
-| fuzzy (all opts) | 0.29 | 0.03 |     0.04 |    1.97 |    38.13 |        1.50 |
+| **fuzzy**        | 0.29 |   3% |     0.04 |    1.81 |    36.12 |        1.42 |
+| fuzzy (all opts) | 0.29 |   3% |     0.04 |    1.97 |    38.13 |        1.50 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-fuzzy-scorecard-emoji -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.39 | 0.24 |        — |       — |        — |           — |
-| fuzzy (all opts) | 0.39 | 0.24 |        — |       — |        — |           — |
+| **fuzzy**        | 0.39 |  24% |        — |       — |        — |           — |
+| fuzzy (all opts) | 0.39 |  24% |        — |       — |        — |           — |
 <!-- bench:end -->
 
 ## Speed at 100k

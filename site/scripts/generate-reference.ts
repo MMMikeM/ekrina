@@ -493,7 +493,7 @@ type Kind = (typeof KINDS)[number];
 const KIND_PAGES: Record<Kind, { slug: string; description: string }> = {
 	Functions: {
 		slug: "functions",
-		description: "Every function ekrina exports, from createFuzzySearch and fuzzyMatch to normaliseText, with its signature, parameters and return value, from the JSDoc.",
+		description: "Every function ekrina exports, from createSearcher and fuzzyMatch to normaliseText, with its signature, parameters and return value, from the JSDoc.",
 	},
 	Classes: {
 		slug: "classes",
@@ -505,7 +505,7 @@ const KIND_PAGES: Record<Kind, { slug: string; description: string }> = {
 	},
 	Types: {
 		slug: "types",
-		description: "Every type ekrina exports, from MatchResult and FuzzyResult to the option types and Tier, with each field described, from the source's types and JSDoc.",
+		description: "Every type ekrina exports, from MatchResult and SearchResult to the option types and Tier, with each field described, from the source's types and JSDoc.",
 	},
 };
 // The platform types are what the exported types refer to, so they sit with them.
@@ -639,7 +639,7 @@ writeFileSync(
 		[
 			...frontmatter(
 				"API reference",
-				"Every export of ekrina, from createFuzzySearch and fuzzyMatch to SCORES and the result types, generated from the source's types and JSDoc.",
+				"Every export of ekrina, from createSearcher and fuzzyMatch to SCORES and the result types, generated from the source's types and JSDoc.",
 				0,
 				"Overview",
 			),

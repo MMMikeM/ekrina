@@ -10,16 +10,16 @@ fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
 
 ```diff
 - import { Searcher } from "fast-fuzzy";
-+ import { createFuzzySearch } from "ekrina";
++ import { createSearcher } from "ekrina";
 
 - const searcher = new Searcher(items, { keySelector: (item) => item.title });
 - const results = searcher.search(query);
-+ const search = createFuzzySearch(items, (item) => item.title);
++ const search = createSearcher(items, (item) => item.title);
 + const results = search(query).map((r) => r.item);
 
   // several keys
 - new Searcher(items, { keySelector: (item) => [item.title, item.body] });
-+ createFuzzySearch(items, [
++ createSearcher(items, [
 +   { selectField: (item) => item.title },
 +   { selectField: (item) => item.body },
 + ]);
@@ -58,4 +58,4 @@ Behavioural differences:
   When the list changes, create a new searcher.
   The constructor does no work up front, so a new searcher takes little time to create, and the work starts on its first query ([build time](/benchmarks/#build-time)).
 - **No one-shot `search(query, items)`.**
-  `createFuzzySearch(items, selectField)(query)` does the same, and `fuzzyMatch(text, query)` scores a single string.
+  `createSearcher(items, selectField)(query)` does the same, and `fuzzyMatch(text, query)` scores a single string.

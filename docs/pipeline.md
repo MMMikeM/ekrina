@@ -1,6 +1,6 @@
 # The pipeline, and where the time goes
 
-What `createFuzzySearch` builds, what a `search(query)` call does, how many of your records reach each stage, and how long each stage takes.
+What `createSearcher` builds, what a `search(query)` call does, how many of your records reach each stage, and how long each stage takes.
 
 Counts and timings come from `pnpm --filter=ekrina-bench exec vp test run stages.test.ts`, over the sixteen single-word probes at 100k, both corpora, on a machine under some load, so read the times as approximate.
 Stage times are measured by difference, so they overlap slightly.
@@ -9,7 +9,7 @@ Stage times are measured by difference, so they overlap slightly.
 
 ```mermaid
 flowchart LR
-    L["createFuzzySearch(list)"] --> S["resolve spec defaults"]
+    L["createSearcher(list)"] --> S["resolve spec defaults"]
     S --> B["allocate trimmedFields, normalisedFields, fieldMasks"]
     B --> D(["done — under half a millisecond at 100k"])
 ```

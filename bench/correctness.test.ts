@@ -7,7 +7,7 @@
  */
 import uFuzzy from "@leeoniya/ufuzzy";
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "ekrina";
+import { createSearcher, fuzzyMatch } from "ekrina";
 
 const uf = new uFuzzy(); // defaults: in-order, no diacritic folding
 
@@ -32,9 +32,9 @@ describe("ekrina correctness edges over uFuzzy (default config)", () => {
 		expect(uFuzzyMatches(["café"], "cafe")).toBe(false);
 	});
 
-	it("createFuzzySearch surfaces the out-of-order hit that uFuzzy drops", () => {
+	it("createSearcher surfaces the out-of-order hit that uFuzzy drops", () => {
 		const items = ["the event loop", "hello world", "async engine"];
-		const hits = createFuzzySearch(items)("loop event"); // reversed order
+		const hits = createSearcher(items)("loop event"); // reversed order
 		expect(hits.map((h) => h.item)).toContain("the event loop");
 		expect(uFuzzyMatches(items, "loop event")).toBe(false);
 	});

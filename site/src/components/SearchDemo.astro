@@ -57,7 +57,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 </div>
 
 <script>
-	import type { FuzzyResult, MatchResult, Range } from "../../../src/index.ts";
+	import type { HighlightRange, MatchResult, SearchResult } from "../../../src/index.ts";
 	import { DEMO_LIMIT as LIMIT, type Emoji, type EmojiSearch as Searcher } from "./emoji-search.ts";
 
 	const LABEL_FIELD = 0;
@@ -79,7 +79,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		loadSearcher().catch(() => {});
 	};
 
-	const bestField = ({ fields, score }: FuzzyResult<Emoji>): { index: number; match: MatchResult } => {
+	const bestField = ({ fields, score }: SearchResult<Emoji>): { index: number; match: MatchResult } => {
 		const index = fields.findIndex((match) => match?.score === score);
 		return { index, match: fields[index]! };
 	};
@@ -88,7 +88,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 	const appendHighlighted = (
 		parent: HTMLElement,
 		text: string,
-		ranges: Range[],
+		ranges: HighlightRange[],
 		from = 0,
 		to = text.length,
 	): void => {
@@ -106,7 +106,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		if (at < to) parent.append(text.slice(at, to));
 	};
 
-	const matchedTags = (tags: string, ranges: Range[]): HTMLElement => {
+	const matchedTags = (tags: string, ranges: HighlightRange[]): HTMLElement => {
 		const line = document.createElement("span");
 		line.className = "tags";
 		let start = 0;
@@ -121,7 +121,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		return line;
 	};
 
-	const row = (result: FuzzyResult<Emoji>): HTMLLIElement => {
+	const row = (result: SearchResult<Emoji>): HTMLLIElement => {
 		const { glyph, label, tags } = result.item;
 		const { index, match } = bestField(result);
 		const item = document.createElement("li");
@@ -161,7 +161,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		const correctedQuery = corrected.querySelector("strong")!;
 		const list = root.querySelector<HTMLOListElement>(".results")!;
 
-		const render = (query: string, results: FuzzyResult<Emoji>[]): void => {
+		const render = (query: string, results: SearchResult<Emoji>[]): void => {
 			const top = results[0] && bestField(results[0]).match;
 			const correction = top?.tier === "corrected" ? top.corrected : undefined;
 			corrected.hidden = !correction;

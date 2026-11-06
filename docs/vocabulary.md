@@ -9,7 +9,7 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 
 | Word                       | Means, everywhere                                                                                                                                   | Guarded by                                   |
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `item`                     | one collection element `T`                                                                                                                          | `FuzzyResult.item`                           |
+| `item`                     | one collection element `T`                                                                                                                          | `SearchResult.item`                           |
 | `field`                    | one searchable string an item's `FieldSpec.selectField` returns; on a result, `fields[i]` is the match of field `i`                                  | `matchField`, `FieldSpec.selectField`        |
 | `query`                    | the search string (trimmed raw; `normalisedQuery` for the folded form)                                                                              | `PreparedQuery`                              |
 | `prepared`                 | the per-query state built once and reused across every field                                                                                        | `PreparedQuery`, `prepareQuery`              |
@@ -18,8 +18,8 @@ Words that carry meaning across files; a maintainer should be able to trust thes
 | `tier`                     | which rung of the ladder matched (categorical)                                                                                                      | `Tier`, `SCORES`                             |
 | `score`                    | the numeric sort key, lower = better                                                                                                                | `MatchResult.score`                          |
 | `literal`                  | a hit at or below `SCORES.CONTAINS`, the query text actually appears                                                                               | `literalPass`, `literalHits`, `literalTiers` |
-| `range`                    | inclusive `[start, end]` span for highlighting                                                                                                      | `Range`, `HighlightRanges`                   |
-| `chunk`                    | a consecutive matched run inside the fuzzy tier (same type as `Range`, different meaning)                                                          | `Chunk` alias                                |
+| `range`                    | inclusive `[start, end]` span for highlighting                                                                                                      | `HighlightRange`, `HighlightRanges`                   |
+| `chunk`                    | a consecutive matched run inside the fuzzy tier (same type as `HighlightRange`, different meaning)                                                          | `Chunk` alias                                |
 | `chain`                    | an assembled sequence of chunks covering the whole query                                                                                            | `fuzzyChainMatch`, `ChainScore`              |
 | `gate`                     | a fast per-query pre-filter that can only false-pass, never false-reject                                                                            | `gates.ts`                                   |
 | `mask`                     | the 32-bit char-class summary used by the O(1) gate; every stored mask is scope-qualified (`queryMask`, `fieldMasks`, `UnionIndex.masks`, `requiredMask`) | `charMask`                                   |
@@ -51,7 +51,7 @@ Schemes the code follows deliberately; new code joins them.
 - **Characters**: `char` is a code point as a string; `unit` is a numeric UTF-16 code unit (`charCodeAt`); `codePoint` is a numeric code point (`codePointAt`).
 - **Bigram halves** carry the `Lo`/`Hi` suffix; field-side sets are `bigrams*`, query-side requirements are `required*`; the per-field accumulator keeps bare `{ lo, hi }` (`FieldBigrams`).
 - **Tier probes** in match.ts are `<name>Tier(…): MatchResult | null`; `fuzzyMatch` (public) and `fuzzyChainMatch` (a chain scorer, not a rung probe) are the deliberate exceptions.
-- **Ends are exclusive** in bare locals (`end`, `chunkEnd`, `wordEnd`, the JS slice idiom); inclusive ends exist only inside `Range` tuples and are always destructured `[start, end]`.
+- **Ends are exclusive** in bare locals (`end`, `chunkEnd`, `wordEnd`, the JS slice idiom); inclusive ends exist only inside `HighlightRange` tuples and are always destructured `[start, end]`.
 - **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`, `isShortQuery`, `isUnbeatableCorrection`) or a domain verb (`admitsChunk`).
 - **`*Occurrence`** returns an index or -1 (`boundaryOccurrence`, `wordStartOccurrence`).
 - **`build*` constructs fresh** per-query state (`buildFuzzyGate`, `buildRescueVariants`); **`prepare*` constructs caller-cached state** (`prepareQuery`, `prepareCorrection`); noun and `*Of` accessors may memoise transparently (`unfoldTable`, `wordStartsOf`).

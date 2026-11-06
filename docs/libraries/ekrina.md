@@ -3,7 +3,7 @@
 Every configuration of Ekrina the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
 The headline tables there show every Ekrina configuration.
 
-- **Ekrina**: the defaults, `createFuzzySearch(list)`.
+- **Ekrina**: the defaults, `createSearcher(list)`.
 - **Ekrina (acronym)**: `acronym: true`, which adds the word-initials tier.
 - **Ekrina (indexed)**: the defaults with `buildIndex()` called up front, so the whole-list mask index moves into the constructor; results are identical to the defaults.
 
@@ -14,31 +14,31 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-ekrina-scorecard-native -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.91 | 0.00 |     0.18 |    6.13 |    35.76 |        1.06 |
-| Ekrina (indexed) | 0.91 | 0.00 |     3.68 |    2.81 |    33.82 |        1.11 |
-| Ekrina (acronym) | 0.91 | 0.00 |     0.34 |    6.10 |    37.65 |        1.07 |
+| Ekrina           | 0.91 |   0% |     0.18 |    6.13 |    35.76 |        1.06 |
+| Ekrina (indexed) | 0.91 |   0% |     3.68 |    2.81 |    33.82 |        1.11 |
+| Ekrina (acronym) | 0.91 |   0% |     0.34 |    6.10 |    37.65 |        1.07 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-ekrina-scorecard-en -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.92 | 0.00 |     0.19 |    5.55 |    30.28 |        0.92 |
-| Ekrina (indexed) | 0.92 | 0.00 |     1.85 |    2.80 |    27.07 |        0.87 |
-| Ekrina (acronym) | 0.92 | 0.00 |     0.20 |    4.48 |    34.27 |        1.06 |
+| Ekrina           | 0.92 |   0% |     0.19 |    5.55 |    30.28 |        0.92 |
+| Ekrina (indexed) | 0.92 |   0% |     1.85 |    2.80 |    27.07 |        0.87 |
+| Ekrina (acronym) | 0.92 |   0% |     0.20 |    4.48 |    34.27 |        1.06 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-ekrina-scorecard-emoji -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.91 | 0.00 |        — |       — |        — |           — |
-| Ekrina (indexed) | 0.91 | 0.00 |        — |       — |        — |           — |
-| Ekrina (acronym) | 0.91 | 0.00 |        — |       — |        — |           — |
+| Ekrina           | 0.91 |   0% |        — |       — |        — |           — |
+| Ekrina (indexed) | 0.91 |   0% |        — |       — |        — |           — |
+| Ekrina (acronym) | 0.91 |   0% |        — |       — |        — |           — |
 <!-- bench:end -->
 
 ## Speed at 100k

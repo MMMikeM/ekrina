@@ -13,7 +13,7 @@
 import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
 import { normaliseText } from "../src/normalise";
-import { createFuzzySearch } from "../src/search";
+import { createSearcher } from "../src/search";
 import { CORPORA } from "./corpus";
 
 const time = (fn: () => void): number => {
@@ -73,7 +73,7 @@ it("one narrowing pass contains every result", { timeout: 600_000 }, () => {
 	for (const { name, build, queries } of CORPORA) {
 		const list = build(100_000);
 		const raw = list.map((s) => s.trim());
-		const search = createFuzzySearch(list);
+		const search = createSearcher(list);
 		const index = new Map(list.map((s, i) => [s, i]));
 		const extra = ["mar", "marble", "cot", "cotto", "wooden"];
 

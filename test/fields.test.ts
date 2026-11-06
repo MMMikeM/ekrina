@@ -1,16 +1,16 @@
 /**
  * Per-field search: an array of field specs with independent acronym / demoteBy,
- * plus the FuzzyResult invariants (fields alignment, score = min).
+ * plus the SearchResult invariants (fields alignment, score = min).
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, SCORES } from "../src/index";
+import { createSearcher, SCORES } from "../src/index";
 
 type Post = { title: string; body: string; tags?: string[] };
 
 describe("field specs", () => {
 	it("scores each field independently", () => {
 		const posts: Post[] = [{ title: "Event Loop", body: "the javascript runtime model" }];
-		const r = createFuzzySearch(posts, [{ selectField: (p) => p.title }, { selectField: (p) => p.body }])(
+		const r = createSearcher(posts, [{ selectField: (p) => p.title }, { selectField: (p) => p.body }])(
 			"loop",
 		)[0]!;
 		expect(r.fields[0]).toEqual({ score: 1, tier: "boundary", ranges: [[6, 9]] });
@@ -20,7 +20,7 @@ describe("field specs", () => {
 
 	it("demoteBy shifts the field's score and the min", () => {
 		const posts: Post[] = [{ title: "cat", body: "cat" }];
-		const r = createFuzzySearch(posts, [
+		const r = createSearcher(posts, [
 			{ selectField: (p) => p.title },
 			{ selectField: (p) => p.body, demoteBy: 2 },
 		])("cat")[0]!;
@@ -39,15 +39,15 @@ describe("field specs", () => {
 			{ selectField: (p: Post) => p.title },
 			{ selectField: (p: Post) => p.body, demoteBy: SCORES.CONTAINS },
 		];
-		expect(createFuzzySearch(posts, fields)("redux")[0]!.item.title).toBe("Redux Toolkit stuff");
+		expect(createSearcher(posts, fields)("redux")[0]!.item.title).toBe("Redux Toolkit stuff");
 		// without demoteBy, the body match wins
 		const unshifted = fields.map((f) => ({ selectField: f.selectField }));
-		expect(createFuzzySearch(posts, unshifted)("redux")[0]!.item.title).toBe("unrelated title");
+		expect(createSearcher(posts, unshifted)("redux")[0]!.item.title).toBe("unrelated title");
 	});
 
 	it("tolerates null field texts", () => {
 		const posts: Post[] = [{ title: "hello", body: "world" }];
-		const r = createFuzzySearch(posts, [{ selectField: () => null }, { selectField: (p) => p.title }])(
+		const r = createSearcher(posts, [{ selectField: () => null }, { selectField: (p) => p.title }])(
 			"hello",
 		)[0]!;
 		expect(r.fields[0]).toBeNull();
@@ -56,7 +56,7 @@ describe("field specs", () => {
 
 	it("tolerates null field texts when a correction reads the item's letter pairs", () => {
 		const posts: Post[] = [{ title: "Keyboard Shortcuts", body: "settings" }];
-		const r = createFuzzySearch(posts, [{ selectField: (p) => p.title }, { selectField: () => null }])(
+		const r = createSearcher(posts, [{ selectField: (p) => p.title }, { selectField: () => null }])(
 			"kxyboard",
 		)[0]!;
 		expect(r.fields[0]).toMatchObject({ tier: "corrected", corrected: "keyboard" });
@@ -65,7 +65,7 @@ describe("field specs", () => {
 
 	it("acronym can be toggled per field", () => {
 		const items = [{ name: "United States", note: "United States" }];
-		const r = createFuzzySearch(items, [
+		const r = createSearcher(items, [
 			{ selectField: (i) => i.name, acronym: true },
 			{ selectField: (i) => i.note, acronym: false },
 		])("us")[0]!;
@@ -74,8 +74,8 @@ describe("field specs", () => {
 	});
 });
 
-describe("FuzzyResult invariants", () => {
-	const search = createFuzzySearch(
+describe("SearchResult invariants", () => {
+	const search = createSearcher(
 		[{ a: "hello world", b: "xyz" }],
 		[{ selectField: (i) => i.a }, { selectField: (i) => i.b }],
 	);
@@ -88,7 +88,7 @@ describe("FuzzyResult invariants", () => {
 	});
 
 	it("score equals the minimum of the matched fields' scores", () => {
-		const r = createFuzzySearch(
+		const r = createSearcher(
 			[{ a: "pineapple", b: "app store" }],
 			[{ selectField: (i) => i.a }, { selectField: (i) => i.b }],
 		)("app")[0]!;
@@ -99,7 +99,7 @@ describe("FuzzyResult invariants", () => {
 
 describe("fields that tie on score", () => {
 	it("a whole word in any tied field ranks the item first", () => {
-		const search = createFuzzySearch(
+		const search = createSearcher(
 			[
 				{ name: "Willa Young", alias: "Willow" },
 				{ name: "Willa Young", alias: "Will Z" },
@@ -107,5 +107,32 @@ describe("fields that tie on score", () => {
 			[{ selectField: (row) => row.name }, { selectField: (row) => row.alias }],
 		);
 		expect(search("will").map((result) => result.item.alias)).toEqual(["Will Z", "Willow"]);
+	});
+});
+
+describe("selections the searcher rejects", () => {
+	const items = ["Open Recent"];
+
+	it("an options object, such as { getText }", () => {
+		const getText = { getText: (item: string) => [item] };
+		// @ts-expect-error the 1.x shape no longer type-checks either
+		expect(() => createSearcher(items, getText)).toThrow(
+			new TypeError("createSearcher takes a function or an array of field specs"),
+		);
+	});
+
+	it("a field spec without selectField, such as 1.x's { text }", () => {
+		const text = [{ text: (item: string) => item }];
+		// @ts-expect-error the 1.x shape no longer type-checks either
+		expect(() => createSearcher(items, text)).toThrow(
+			new TypeError("a field spec needs selectField, which replaced text in 2.0"),
+		);
+	});
+
+	it("1.x's atBest, rather than ignoring it", () => {
+		const atBest = [{ selectField: (item: string) => item, atBest: SCORES.CONTAINS }];
+		expect(() => createSearcher(items, atBest)).toThrow(
+			new TypeError("atBest is demoteBy since 2.0"),
+		);
 	});
 });

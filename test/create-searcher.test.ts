@@ -1,12 +1,12 @@
 /**
- * createFuzzySearch: string arrays, the selectField overload, sort order, stability.
+ * createSearcher: string arrays, the selectField overload, sort order, stability.
  * (Per-field specs + demoteBy live in fields.test.ts.)
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createSearcher, fuzzyMatch } from "../src/index";
 
 describe("string collections", () => {
-	const search = createFuzzySearch(["apple", "banana", "cherry", "grape"]);
+	const search = createSearcher(["apple", "banana", "cherry", "grape"]);
 
 	it("returns matching items with score and per-field result", () => {
 		expect(search("ban")).toEqual([
@@ -19,27 +19,27 @@ describe("string collections", () => {
 	});
 
 	it("empty collection → []", () => {
-		expect(createFuzzySearch([])("anything")).toEqual([]);
+		expect(createSearcher([])("anything")).toEqual([]);
 	});
 
 	it("an empty spec array means no searchable fields, so every query → []", () => {
-		expect(createFuzzySearch(["apple"], [])("apple")).toEqual([]);
+		expect(createSearcher(["apple"], [])("apple")).toEqual([]);
 	});
 });
 
 describe("empty and whitespace queries", () => {
-	const search = createFuzzySearch(["apple"]);
+	const search = createSearcher(["apple"]);
 	it.each([[""], ["   "], ["\t"]])("query %j → []", (query) => {
 		expect(search(query)).toEqual([]);
 	});
 });
 
 describe("one-character queries", () => {
-	const search = createFuzzySearch(["apple", "apricot", "banana"]);
+	const search = createSearcher(["apple", "apricot", "banana"]);
 
 	it("a single character matches where it starts a word", () => {
 		expect(search("a").map((r) => r.item)).toEqual(["apple", "apricot"]);
-		expect(createFuzzySearch(["a"])("a")[0]?.fields[0]?.tier).toBe("exact");
+		expect(createSearcher(["a"])("a")[0]?.fields[0]?.tier).toBe("exact");
 	});
 
 	it("a single character never matches inside a word", () => {
@@ -55,7 +55,7 @@ describe("one-character queries", () => {
 
 describe("ordering within a score", () => {
 	it("a whole word ranks before the longer words it starts", () => {
-		const search = createFuzzySearch(["Willa Corkery", "Williamson", "Will Smith"]);
+		const search = createSearcher(["Willa Corkery", "Williamson", "Will Smith"]);
 		expect(search("will").map((r) => [r.item, r.score])).toEqual([
 			["Will Smith", 0.5],
 			["Willa Corkery", 0.5],
@@ -64,20 +64,20 @@ describe("ordering within a score", () => {
 	});
 
 	it("list order still breaks ties between whole words", () => {
-		const search = createFuzzySearch(["Will Jones", "Will Smith"]);
+		const search = createSearcher(["Will Jones", "Will Smith"]);
 		expect(search("will").map((r) => r.item)).toEqual(["Will Jones", "Will Smith"]);
 	});
 });
 
 describe("limit", () => {
 	const words = ["alpha", "alpine", "palace", "salad", "plaza", "lapel", "atlas", "apple", "pal"];
-	const search = createFuzzySearch(words);
+	const search = createSearcher(words);
 
 	it("returns what slicing the full results returns", () => {
 		for (const query of ["al", "pal", "apl", "lpa", "alpah", "a", "zz"]) {
 			for (const limit of [1, 2, 3, 50]) {
 				expect(search(query, { limit }), `${query} limit ${limit}`).toEqual(
-					createFuzzySearch(words)(query).slice(0, limit),
+					createSearcher(words)(query).slice(0, limit),
 				);
 			}
 		}
@@ -97,8 +97,8 @@ describe("selectField overload", () => {
 	];
 
 	it("searches the extracted text; item is the original reference", () => {
-		createFuzzySearch(users, (u) => u.name)("john");
-		const results = createFuzzySearch(users, (u) => u.name)("john");
+		createSearcher(users, (u) => u.name)("john");
+		const results = createSearcher(users, (u) => u.name)("john");
 		expect(results).toHaveLength(1);
 		expect(results[0]!.item).toBe(users[0]);
 		expect(results[0]!.score).toBe(0.5);
@@ -107,7 +107,7 @@ describe("selectField overload", () => {
 
 	it("skips items whose text is null", () => {
 		const collection: Array<{ name?: string }> = [{ name: "apple" }, { name: undefined }];
-		const results = createFuzzySearch(collection, (i) => i.name ?? null)("app");
+		const results = createSearcher(collection, (i) => i.name ?? null)("app");
 		expect(results).toHaveLength(1);
 		expect(results[0]!.item).toBe(collection[0]);
 	});
@@ -124,7 +124,7 @@ describe("sort order — full tier ladder in one search", () => {
 		"Green Tea", // normalised-exact (0.1)
 		"matcha green tea", // boundary-cased (0.9)
 	];
-	const results = createFuzzySearch(collection)("green tea");
+	const results = createSearcher(collection)("green tea");
 
 	it("walks the ladder in order", () => {
 		expect(results.map((r) => r.item)).toEqual([
@@ -148,11 +148,11 @@ describe("sort order — full tier ladder in one search", () => {
 
 describe("sort stability", () => {
 	it("equal scores preserve collection order", () => {
-		expect(createFuzzySearch(["banana", "bandana"])("ban").map((r) => r.item)).toEqual([
+		expect(createSearcher(["banana", "bandana"])("ban").map((r) => r.item)).toEqual([
 			"banana",
 			"bandana",
 		]);
-		expect(createFuzzySearch(["bandana", "banana"])("ban").map((r) => r.item)).toEqual([
+		expect(createSearcher(["bandana", "banana"])("ban").map((r) => r.item)).toEqual([
 			"bandana",
 			"banana",
 		]);
@@ -170,9 +170,9 @@ describe("prefix-narrowing cache", () => {
 	];
 
 	it("typing a query char by char matches a fresh searcher at every step", () => {
-		const typed = createFuzzySearch(collection);
+		const typed = createSearcher(collection);
 		for (const q of ["b", "br", "bro", "brow", "brown", "brown f", "brown fo", "brown fox"]) {
-			expect(typed(q)).toEqual(createFuzzySearch(collection)(q));
+			expect(typed(q)).toEqual(createSearcher(collection)(q));
 		}
 	});
 
@@ -180,13 +180,13 @@ describe("prefix-narrowing cache", () => {
 		// "bor" is too short to correct and no item holds it as a subsequence, so
 		// nothing survives it; "borw" is one swap from "brow", and the narrowed
 		// rescan must not lose it.
-		const search = createFuzzySearch(collection);
+		const search = createSearcher(collection);
 		expect(search("bor").map((r) => r.item)).toEqual([]);
 		expect(search("borw").map((r) => r.item)).toEqual(["brown bread", "the quick brown fox"]);
 	});
 
 	it("non-extension queries (backspace, replacement) fall back to a full scan", () => {
-		const search = createFuzzySearch(collection);
+		const search = createSearcher(collection);
 		expect(search("quick brown")).toHaveLength(1);
 		expect(search("quick")).toHaveLength(2); // shorter than the cached query
 		expect(search("garcia")).toHaveLength(1); // unrelated replacement
@@ -194,26 +194,26 @@ describe("prefix-narrowing cache", () => {
 	});
 
 	it("repeating the same query returns identical results", () => {
-		const search = createFuzzySearch(collection);
+		const search = createSearcher(collection);
 		expect(search("quick")).toEqual(search("quick"));
 	});
 });
 
 describe("unicode", () => {
 	it("diacritic-insensitive match", () => {
-		const r = createFuzzySearch(["Señor García"], (s) => s)("garcia")[0]!;
+		const r = createSearcher(["Señor García"], (s) => s)("garcia")[0]!;
 		expect(r.score).toBe(1);
 		expect(r.fields[0]?.ranges).toEqual([[6, 11]]);
 	});
 
 	it("normalised-exact for special characters", () => {
-		expect(createFuzzySearch(["Łódź"])("lodz")[0]!.score).toBe(0.1);
+		expect(createSearcher(["Łódź"])("lodz")[0]!.score).toBe(0.1);
 	});
 
 	it("finds a mid-word match whose accent is a separate combining mark", () => {
 		const decomposed = "Re\u0301sume\u0301";
 		expect(fuzzyMatch(decomposed, "esum")?.tier).toBe("contains");
-		expect(createFuzzySearch([decomposed])("esum").map((r) => r.fields[0]?.tier)).toEqual([
+		expect(createSearcher([decomposed])("esum").map((r) => r.fields[0]?.tier)).toEqual([
 			"contains",
 		]);
 	});

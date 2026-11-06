@@ -9,7 +9,7 @@ interface Props {
 
 const { step, framework = "vanilla" } = Astro.props;
 const hint =
-	step < 4
+	step < 5
 		? "Type, then press Enter for the top command, or click or tap one."
 		: "Use the arrow keys and Enter, or click or tap a command.";
 ---
@@ -25,15 +25,15 @@ const hint =
 	import { createPalette as search } from "../../../examples/command-palette/src/step-1-search";
 	import { createPalette as keywords } from "../../../examples/command-palette/src/step-2-keywords";
 	import { createPalette as highlight } from "../../../examples/command-palette/src/step-3-highlight";
-	import { createPalette as keyboard } from "../../../examples/command-palette/src/step-4-keyboard";
+	import { createPalette as corrections } from "../../../examples/command-palette/src/step-4-corrections";
 
-	const vanillaSteps = [search, keywords, highlight, keyboard, finished];
+	const vanillaSteps = [search, keywords, highlight, corrections, finished];
 
 	const reactSteps = [
 		() => import("../../../examples/command-palette/src/react/step-1-search"),
 		() => import("../../../examples/command-palette/src/react/step-2-keywords"),
 		() => import("../../../examples/command-palette/src/react/step-3-highlight"),
-		() => import("../../../examples/command-palette/src/react/step-4-keyboard"),
+		() => import("../../../examples/command-palette/src/react/step-4-corrections"),
 		() => import("../../../examples/command-palette/src/react/palette"),
 	];
 

@@ -8,7 +8,7 @@
  * matches can never change.
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createSearcher, fuzzyMatch } from "../src/index";
 
 describe("the adjacent-swap rescue", () => {
 	it("rescues an adjacent-swap typo to the corrected tier plus penalty", () => {
@@ -50,7 +50,7 @@ describe("the adjacent-swap rescue", () => {
 	});
 
 	it("rescued items rank above junk subsequence chains", () => {
-		const results = createFuzzySearch(["generic gasket", "grabbing electric nickel rugs"])(
+		const results = createSearcher(["generic gasket", "grabbing electric nickel rugs"])(
 			"geenric",
 		);
 		expect(results[0]?.item).toBe("generic gasket");

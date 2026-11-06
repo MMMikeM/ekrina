@@ -7,7 +7,7 @@
  * for the unfixed bugs — see git history.)
  */
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createSearcher, fuzzyMatch } from "../src/index";
 
 describe("bug 1: punctuation is a word boundary", () => {
 	it("a comma glued to a word does not change its tier", () => {
@@ -46,9 +46,9 @@ describe("bug 4: multi-word tier does not penalise specificity", () => {
 });
 
 describe("bug 5: fuzzyMatch rejects an empty query", () => {
-	it("empty query matches nothing, like createFuzzySearch", () => {
+	it("empty query matches nothing, like createSearcher", () => {
 		expect(fuzzyMatch("abc", "")).toBeNull();
-		expect(createFuzzySearch(["abc"])("")).toEqual([]);
+		expect(createSearcher(["abc"])("")).toEqual([]);
 	});
 });
 

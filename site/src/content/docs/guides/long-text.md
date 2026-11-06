@@ -34,5 +34,5 @@ To accept only text that appears as typed, check the score: `match && match.scor
 
 ## One string or a list
 
-For a list, use `createFuzzySearch` rather than calling `fuzzyMatch` on each item.
+For a list, use `createSearcher` rather than calling `fuzzyMatch` on each item.
 A searcher knows how much else in the list matched, so it skips corrections once ten items match as typed, which `fuzzyMatch` can't know for a single string.

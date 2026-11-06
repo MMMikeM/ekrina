@@ -1,12 +1,12 @@
 /**
  * Start and end indices into the caller's own string, both inclusive.
  */
-export type Range = [number, number];
+export type HighlightRange = [number, number];
 
 /**
  * The ranges of the caller's string that matched, to highlight.
  */
-export type HighlightRanges = Range[];
+export type HighlightRanges = HighlightRange[];
 
 /**
  * Which tier a match came from. Lower on this list is a weaker match. Every
@@ -71,9 +71,9 @@ export type FieldSpec<T = unknown> = {
 };
 
 /**
- * A ranked search result for one collection item.
+ * A ranked search result for one item in the list.
  */
-export type FuzzyResult<T> = {
+export type SearchResult<T> = {
 	item: T;
 	/** Best (minimum) effective score across the item's fields. */
 	score: number;
@@ -94,9 +94,9 @@ export type SearchOptions = {
 /**
  * A prepared fuzzy search function.
  */
-export type FuzzySearcher<T> = {
+export type Searcher<T> = {
 	/** @throws {RangeError} when `limit` is not a positive integer. */
-	(query: string, options?: SearchOptions): FuzzyResult<T>[];
+	(query: string, options?: SearchOptions): SearchResult<T>[];
 	/**
 	 * Build the whole-list mask index now instead of on the first query that needs it.
 	 * Every query that doesn't extend the previous one then filters on the index

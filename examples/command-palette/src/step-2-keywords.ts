@@ -1,11 +1,11 @@
-import { createFuzzySearch, SCORES } from "ekrina";
-import type { FuzzyResult } from "ekrina";
+import { createSearcher, SCORES } from "ekrina";
+import type { SearchResult } from "ekrina";
 import type { Command } from "./commands";
 
 const LIMIT = 8;
 
 const createSearch = (commands: Command[]) => {
-	const search = createFuzzySearch(commands, [
+	const search = createSearcher(commands, [
 		{ selectField: (command) => command.title, acronym: true },
 		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
 	]);
@@ -24,7 +24,7 @@ const element = <K extends keyof HTMLElementTagNameMap>(
 	return node;
 };
 
-const option = (result: FuzzyResult<Command>): HTMLLIElement => {
+const option = (result: SearchResult<Command>): HTMLLIElement => {
 	const { title, category, keywords } = result.item;
 	const [titleMatch, keywordMatch] = result.fields;
 	const text = element("span", "text", element("span", "title", title));
@@ -54,7 +54,7 @@ export const createPalette = (
 	root.classList.add("palette");
 	root.append(input, list);
 
-	let results: FuzzyResult<Command>[] = [];
+	let results: SearchResult<Command>[] = [];
 
 	const update = (): void => {
 		const query = input.value.trim();

@@ -17,7 +17,7 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 import fuzzy from "fuzzy";
 import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
 // The bundlers behind vitest unwrap a CJS `exports.default`; node's ESM loader
 // hands back the namespace object instead, and memory.ts runs under plain node.
@@ -145,11 +145,11 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "ekrina",
 		make: () => {
-			const ekrina = createFuzzySearch(list);
+			const ekrina = createSearcher(list);
 			return {
 				count: (q) => ekrina(q).length,
 				probe: (q) => rankedOnly(ekrina(q).map((r) => r.item)),
-				index: () => consume(createFuzzySearch(list)),
+				index: () => consume(createSearcher(list)),
 				stateful: true,
 			};
 		},
@@ -157,13 +157,13 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "ekrina (indexed)",
 		make: () => {
-			const indexed = createFuzzySearch(list);
+			const indexed = createSearcher(list);
 			indexed.buildIndex();
 			return {
 				count: (q) => indexed(q).length,
 				probe: (q) => rankedOnly(indexed(q).map((r) => r.item)),
 				index: () => {
-					const fresh = createFuzzySearch(list);
+					const fresh = createSearcher(list);
 					fresh.buildIndex();
 					return consume(fresh);
 				},
@@ -175,11 +175,11 @@ const definitions = (list: string[]): Definition[] => [
 		name: "ekrina (acronym)",
 		make: () => {
 			const spec = [{ selectField: (x: string) => x, acronym: true }];
-			const acronym = createFuzzySearch(list, spec);
+			const acronym = createSearcher(list, spec);
 			return {
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
-				index: () => consume(createFuzzySearch(list, spec)),
+				index: () => consume(createSearcher(list, spec)),
 				stateful: true,
 			};
 		},

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
+import { createSearcher, fuzzyMatch, SCORES, TYPO_PENALTY } from "../src/index";
 
-const searcher = (list: string[]) => createFuzzySearch(list);
+const searcher = (list: string[]) => createSearcher(list);
 
 describe("two edits inside one word", () => {
 	it("two wrong characters in an eight-letter word", () => {
@@ -97,7 +97,7 @@ describe("a word typed sparsely", () => {
 	});
 
 	it("ranks a query typed in fewer pieces first", () => {
-		const search = createFuzzySearch(["Hxgxextx", "Hagueta"]);
+		const search = createSearcher(["Hxgxextx", "Hagueta"]);
 		expect(search("hget").map((r) => r.item)).toEqual(["Hagueta", "Hxgxextx"]);
 	});
 
@@ -191,13 +191,13 @@ describe("a key held down", () => {
 	});
 
 	it("stays out of a list where the word matches as typed", () => {
-		const search = createFuzzySearch(["Twaaain Street", "Mark Twain"]);
+		const search = createSearcher(["Twaaain Street", "Mark Twain"]);
 		expect(search("twaaain").map((r) => r.item)).toEqual(["Twaaain Street"]);
 	});
 });
 
 describe("a swap in a four-letter word", () => {
-	const search = (items: string[]) => createFuzzySearch(items);
+	const search = (items: string[]) => createSearcher(items);
 
 	it("is undone beside a fuzzy chain", () => {
 		const items = ["Louder Than Bombs", "Taha Hussein"];
@@ -412,7 +412,7 @@ describe("in a searcher", () => {
 	});
 
 	it("scores each field and keeps the best", () => {
-		const search = createFuzzySearch(
+		const search = createSearcher(
 			[{ title: "Hxgxextx", body: "Hagueta" }],
 			[
 				{ selectField: (r) => r.title },
@@ -422,7 +422,7 @@ describe("in a searcher", () => {
 		const [result] = search("hget");
 		expect(result.fields.map((field) => field?.corrected)).toEqual(["Hxgxextx", "Hagueta"]);
 		expect(result.score).toBe(result.fields[1]?.score);
-		const [reversed] = createFuzzySearch(
+		const [reversed] = createSearcher(
 			[{ title: "Hagueta", body: "Hxgxextx" }],
 			[
 				{ selectField: (r) => r.title },
@@ -459,7 +459,7 @@ describe("in a searcher", () => {
 
 	it("ranks an item by where its best field's match ends", () => {
 		const bodies = (items: { title: string; body: string }[]) =>
-			createFuzzySearch(items, [
+			createSearcher(items, [
 				{ selectField: (r) => r.title },
 				{ selectField: (r) => r.body },
 			])("hget").map((r) => r.item.body);
@@ -476,7 +476,7 @@ describe("in a searcher", () => {
 	});
 
 	it("corrects a phrase in whichever field holds it", () => {
-		const search = createFuzzySearch(
+		const search = createSearcher(
 			[
 				{ title: "Steel Desk", body: "Handcrafted Wooden Chair" },
 				{ title: "Handcrafted Wooden Table", body: "Steel" },
@@ -506,7 +506,7 @@ describe("in a searcher", () => {
 
 	it("answers afresh after a query whose field text threw", () => {
 		let throwing = false;
-		const search = createFuzzySearch(
+		const search = createSearcher(
 			["Hget Lane", "Huguette Brown"],
 			[
 				{
@@ -532,7 +532,7 @@ describe("in a searcher", () => {
 	});
 
 	it("skips an item whose field is missing", () => {
-		const search = createFuzzySearch(
+		const search = createSearcher(
 			[{ name: null }, { name: "Ergonomic" }],
 			[{ selectField: (r) => r.name }],
 		);

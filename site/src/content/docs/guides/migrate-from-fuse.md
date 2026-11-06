@@ -9,19 +9,19 @@ Both build a searcher once over a list and return each `item` with a `score` whe
 
 ```diff
 - import Fuse from "fuse.js";
-+ import { createFuzzySearch, SCORES } from "ekrina";
++ import { createSearcher, SCORES } from "ekrina";
 
   // one key
 - const fuse = new Fuse(items, { keys: ["title"], includeMatches: true });
 - const results = fuse.search(query);
-+ const search = createFuzzySearch(items, (item) => item.title);
++ const search = createSearcher(items, (item) => item.title);
 + const results = search(query);
 
   // several keys, the body weighted below the title
 - const fuse = new Fuse(items, {
 -   keys: [{ name: "title", weight: 2 }, "body"],
 - });
-+ const search = createFuzzySearch(items, [
++ const search = createSearcher(items, [
 +   { selectField: (item) => item.title },
 +   { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
 + ]);

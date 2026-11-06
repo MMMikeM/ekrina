@@ -39,7 +39,7 @@ npm install ekrina
 **1. Build a searcher once, and call it with each query.**
 
 ```typescript
-import { createFuzzySearch } from "ekrina";
+import { createSearcher } from "ekrina";
 
 const commands = [
 	{ id: "file.open", title: "Open File…" },
@@ -47,7 +47,7 @@ const commands = [
 	{ id: "settings.open", title: "Preferences: Open User Settings" },
 ];
 
-const search = createFuzzySearch(commands, (command) => command.title);
+const search = createSearcher(commands, (command) => command.title);
 ```
 
 **2. Read how each result matched.** Lower scores are better, and results come back best first.
@@ -81,19 +81,19 @@ A correction always comes after every match of the query as typed, and `search("
 Each library at its best-scoring configuration, on 10,000 real Wikidata names under their native spellings:
 
 <!-- bench:compare -->
-| Library           |    Gzip | Deps |  MRR | junk | ms/query | Tiers | Ranges | Typos     |
-|-------------------|--------:|-----:|-----:|-----:|---------:|:-----:|:------:|-----------|
-| **Ekrina**        | ~7.7 kB |    0 | 0.91 | 0.00 |     1.06 |  🟢   |   🟢   | two edits |
-| fast-fuzzy        |  ~11 kB |    1 | 0.81 | 0.24 |     6.20 |  🔴   |   🟡   | full      |
-| Fuse.js (tuned)   | ~9.6 kB |    0 | 0.76 | 0.47 |    12.21 |  🔴   |   🟡   | full      |
-| uFuzzy (all opts) | ~4.2 kB |    0 | 0.66 | 0.00 |     0.64 |  🔴   |   🟢   | one edit  |
-| fuzzysort         | ~3.7 kB |    0 | 0.46 | 0.07 |     0.41 |  🔴   |   🟢   | 🔴        |
-| @nozbe/microfuzz  | ~1.7 kB |    0 | 0.41 | 0.07 |     2.10 |  🔴   |   🟢   | 🔴        |
-| match-sorter      | ~3.5 kB |    2 | 0.39 | 0.07 |     2.70 |  🟢   |   🔴   | 🔴        |
-| fuzzy             | ~0.8 kB |    0 | 0.30 | 0.07 |     2.10 |  🔴   |   🟡   | 🔴        |
+| Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
+|-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
+| **Ekrina**        | 0.91 |  1.06 |     7.7 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| fast-fuzzy        | 0.81 |  6.20 |    11.0 |  24% | any       |  no   | partial |    1 |
+| Fuse.js (tuned)   | 0.76 | 12.21 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
+| uFuzzy (all opts) | 0.66 |  0.64 |     4.2 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
+| fuzzysort         | 0.46 |  0.41 |     3.7 |   7% | none      |  no   |   yes   |    0 |
+| @nozbe/microfuzz  | 0.41 |  2.10 |     1.7 |   7% | none      |  no   |   yes   |    0 |
+| match-sorter      | 0.39 |  2.70 |     3.5 |   7% | none      |  yes  |   no    |    2 |
+| fuzzy             | 0.30 |  2.10 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
-**MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
+**MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **Junk** is the share of queries with no right answer that a library answers anyway.
 [The comparison](https://ekrina.thelazyweb.dev/compare/) has the method and what to pick, including where another library wins, and [the benchmarks](https://ekrina.thelazyweb.dev/benchmarks/) have every family.
 
 ## Docs

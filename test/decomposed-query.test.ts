@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
-import { createFuzzySearch, fuzzyMatch } from "../src/index";
+import { createSearcher, fuzzyMatch } from "../src/index";
 
 // Typed with combining accents, a query is longer than its normalised form, so
 // a correction can't splice the caller's own characters back in and falls back
 // to the normalised spelling.
 const desserts = ["Crème brûlée", "Café noir"];
 const corrected = (query: string): string | undefined =>
-	createFuzzySearch(desserts)(query)[0]?.fields[0]?.corrected;
+	createSearcher(desserts)(query)[0]?.fields[0]?.corrected;
 
 describe("a query typed with combining accents", () => {
 	it("is still corrected by a substitution", () => {

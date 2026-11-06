@@ -19,7 +19,7 @@ export type LibraryMeta = {
 	updated: string | null;
 	features: Features;
 	/** How far its typo correction reaches, as README.md's comparison says it; null when it corrects none. */
-	typoReach: "two edits" | "one edit" | "full" | null;
+	typoReach: "≤ 2 edits" | "≤ 1 edit" | "any" | null;
 };
 
 export const META: Record<string, LibraryMeta> = {
@@ -37,7 +37,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "partial",
 		},
-		typoReach: "two edits",
+		typoReach: "≤ 2 edits",
 	},
 	"@nozbe/microfuzz": {
 		gzipKB: 1.7,
@@ -101,7 +101,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "no",
 			typos: "opt-in",
 		},
-		typoReach: "one edit",
+		typoReach: "≤ 1 edit",
 	},
 	fuzzy: {
 		gzipKB: 0.8,
@@ -133,7 +133,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
-		typoReach: "full",
+		typoReach: "any",
 	},
 	"fast-fuzzy": {
 		gzipKB: 11,
@@ -149,7 +149,7 @@ export const META: Record<string, LibraryMeta> = {
 			perField: "yes",
 			typos: "yes",
 		},
-		typoReach: "full",
+		typoReach: "any",
 	},
 };
 
