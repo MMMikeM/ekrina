@@ -33,7 +33,7 @@ search("ban");
 
 `demoteBy` is added to every score its field produces.
 Both posts above start a word with `ban`, but the body's match scores 0.5 + 2, so the title match leads.
-With `demoteBy: SCORES.CONTAINS`, an exact body match ranks level with a title that merely contains the query somewhere, and every other body match ranks below it.
+With `demoteBy: SCORES.CONTAINS`, an exact body match ranks level with a title that merely contains the query somewhere, and every other body match comes after it.
 
 The shift changes `score` and never `tier`, so a demoted field's prefix match still reports `tier: "prefix"`.
 To keep only matches of the query as typed across demoted fields, filter by tier rather than by score, as [Keep only literal matches](/guides/literal-matches/#on-demoted-fields) shows.

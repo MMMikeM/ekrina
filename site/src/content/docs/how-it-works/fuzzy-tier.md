@@ -6,7 +6,7 @@ sidebar:
 ---
 
 When a query doesn't appear as typed, Ekrina looks for its letters in order, in a few pieces: `vsc` matches "**V**isual **S**tudio **C**ode", and `sualdio` matches "Vi**sual** Stu**dio** Code".
-These matches have `tier: "fuzzy"` and score above `SCORES.CONTAINS`, so they rank below every match of the text as typed.
+These matches have `tier: "fuzzy"` and score above `SCORES.CONTAINS`, so they come after every match of the text as typed.
 The fuzzy tier is always on, with no strategy knob, and it only accepts pieces that follow these rules:
 
 - **Each piece starts a word or is at least three letters long.**
