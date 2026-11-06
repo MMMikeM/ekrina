@@ -1,5 +1,5 @@
 import type { Artifact } from "../../bench/artifact.ts";
-import { displayName, META } from "../../bench/libraries.ts";
+import { displayName, META, metaFor } from "../../bench/libraries.ts";
 import results from "../../bench/results.json" with { type: "json" };
 import data from "./data/explorer.json" with { type: "json" };
 import type { ExplorerData } from "./explorer.ts";
@@ -46,40 +46,21 @@ const at100k = () => {
 	};
 };
 
-const percent = (share: number) => `${Math.round(share * 100)}%`;
-
 const gzipOf = (config: string) => `~${META[config]!.gzipKB} kB`;
 
 const COUNTS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
-const named = (configs: string[]) =>
-	configs.map((config) => `${displayName(config)} at ${gzipOf(config)}`).join(" and ");
-
 const ORDINALS = ["", "second-", "third-", "fourth-", "fifth-", "sixth-", "seventh-", "eighth-"];
 
-// "the third-largest of the eight, and only Fuse.js at ~9.6 kB and fast-fuzzy at
-// ~11 kB are larger", from the bundle sizes bench/libraries.ts records.
-const sizeStanding = () => {
-	const own = META.ekrina!.gzipKB;
-	const others = Object.keys(META).filter((config) => config !== "ekrina");
-	const level = others.filter((config) => META[config]!.gzipKB === own);
-	const larger = others.filter((config) => META[config]!.gzipKB > own);
-	const rank = `the ${ORDINALS[larger.length]}largest of the ${COUNTS[Object.keys(META).length]}`;
-	const above =
-		larger.length === 0 ? "" : `, and only ${named(larger)} ${larger.length === 1 ? "is" : "are"} larger`;
-	return `${level.length === 0 ? rank : `level with ${named(level)}`}${above}`;
+// "the third-largest of the eight", from the bundle sizes bench/libraries.ts records.
+const sizeRank = () => {
+	const larger = Object.values(META).filter((meta) => meta.gzipKB > META.ekrina!.gzipKB).length;
+	return `the ${ORDINALS[larger]}largest of the ${COUNTS[Object.keys(META).length]}`;
 };
 
 const msOf = (config: string) => batchOf(config, SIZE).restMs!;
 const nativeMrrOf = (config: string) =>
 	explorer.libraries.find((library) => library.config === config)!.headline.native.toFixed(2);
-
-// Every library that answers a query faster than Ekrina, fastest first, for
-// "fuzzysort, at 0.41 ms with 0.46 MRR, and uFuzzy (all opts), at 0.64 ms with 0.66 MRR,".
-const faster = explorer.libraries
-	.map((library) => library.config)
-	.filter((config) => config !== "ekrina" && msOf(config) < msOf("ekrina"))
-	.sort((a, b) => msOf(a) - msOf(b));
 
 // The other libraries that, like Ekrina, answer none of the no-answer queries on
 // any of the three lists, for "So does uFuzzy (all opts), at 0.66 MRR."
@@ -91,34 +72,44 @@ const junkFree = explorer.libraries
 			Object.values(artifact.scorecard.corpora).every((rows) => !rows.find((row) => row.library === config)?.junk),
 	);
 
+export type CompareRow = {
+	name: string;
+	isEkrina: boolean;
+	mrr: number;
+	junk: number;
+	ms: number;
+	gzipKB: number;
+};
+
+// Each library at its best-scoring configuration over the 10,000 native names,
+// the corpus and size README.md's comparison uses, best on quality first.
+const compareRows: CompareRow[] = [...explorer.libraries]
+	.sort((a, b) => b.headline.native - a.headline.native)
+	.map((library) => ({
+		name: displayName(library.config),
+		isEkrina: library.config === "ekrina",
+		mrr: library.headline.native,
+		junk: junkOf(library.config),
+		ms: msOf(library.config),
+		gzipKB: metaFor(library.config)!.gzipKB,
+	}));
+
 export const bench = {
-	libraries: COUNTS[explorer.libraries.length - 1],
 	ekrina: {
 		mrr: mrrRange("ekrina"),
-		junk: percent(junkOf("ekrina")),
 		msPerQuery: batchOf("ekrina", SIZE).restMs!.toFixed(1),
 		msPerQuery100k: batchOf("ekrina", "100000").restMs!.toFixed(1),
-		msPerQueryExact: msOf("ekrina").toFixed(2),
-		nativeMrr: nativeMrrOf("ekrina"),
 		gzip: gzipOf("ekrina"),
 	},
 	runnerUp: {
 		name: displayName(runnerUp.config),
 		mrr: mrrRange(runnerUp.config),
-		junk: percent(junkOf(runnerUp.config)),
-		msPerQuery: batchOf(runnerUp.config, SIZE).restMs!.toFixed(1),
 	},
-	fuse: {
-		name: displayName("fuse.js (tuned)"),
-		junk: percent(junkOf("fuse.js (tuned)")),
-	},
-	size: sizeStanding(),
+	size: sizeRank(),
+	compareRows,
 	alsoJunkFree:
 		junkFree.length === 0
 			? ""
 			: `So does ${junkFree.map((config) => `${displayName(config)}, at ${nativeMrrOf(config)} MRR`).join(", and ")}.`,
-	faster: faster
-		.map((config) => `${displayName(config)}, at ${msOf(config).toFixed(2)} ms with ${nativeMrrOf(config)} MRR,`)
-		.join(" and "),
 	at100k: at100k(),
 };

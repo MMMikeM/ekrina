@@ -3,6 +3,7 @@ title: Ekrina, fuzzy search for TypeScript that forgives typos
 description: Fuzzy search for TypeScript that corrects up to two mistakes per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.
 template: splash
 heroHighlight: Lazy
+heroKicker: Fuzzy search for TypeScript · zero dependencies
 heroDemo: true
 hero:
   title: Lazy where it counts.
@@ -15,6 +16,7 @@ hero:
       variant: secondary
 ---
 
+import CompareTable from "../../components/CompareTable.astro";
 import { bench } from "../../bench.ts";
 
 ## 1. What comes back
@@ -79,16 +81,13 @@ The first query that needs the index builds it; [search as you type](/guides/sea
 
 ## 4. How it compares
 
-Against {bench.libraries} other libraries on three real-world lists, Ekrina ranks the right item higher than any of them.
-It scores {bench.ekrina.mrr} on mean reciprocal rank, where 1 means the right item always comes first, against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
-On queries that no item answers, it returns nothing on all three lists, where on the list of native names {bench.runnerUp.name} answers {bench.runnerUp.junk} of them and {bench.fuse.name} {bench.fuse.junk}.
-{bench.alsoJunkFree}
+Each library at its best-scoring configuration over 10,000 native names, with the best value in each column marked:
 
-It isn't the fastest.
-Over 10,000 native names, {bench.faster} answer a query faster than Ekrina's {bench.ekrina.msPerQueryExact} ms with {bench.ekrina.nativeMrr} MRR.
+<CompareTable />
 
-It isn't small.
-At {bench.ekrina.gzip} gzipped it is {bench.size}.
+**MRR** is mean reciprocal rank, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
+Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best, and answers none of the queries that no item answers. {bench.alsoJunkFree}
+It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.
 
 It trails on three kinds of query: a word the item lacks, since every word of the query has to match; silent letters dropped; and a few typo and phonetic families on emoji, where fast-fuzzy scores higher.
 [The benchmarks](/benchmarks/) have the numbers for each, and every number on this page, and [Compare two libraries](/explorer/) puts any one library beside Ekrina.

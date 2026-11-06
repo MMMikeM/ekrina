@@ -15,6 +15,7 @@ const install = `npm install ${project.name}`;
 <div class="lead">
 <div class="columns" data-with-demo={data.heroDemo ? "" : undefined}>
 	<div class="hero">
+		{data.heroKicker && <p class="kicker">{data.heroKicker}</p>}
 		<h1 id="_top" data-page-title>
 			{beforeHighlight}{afterHighlight !== undefined && <mark>{highlight}</mark>}{afterHighlight}
 		</h1>
@@ -107,6 +108,13 @@ const install = `npm install ${project.name}`;
 		padding-block: var(--space-l) var(--space-s);
 		--after-title: var(--space-m);
 		--after-tagline: var(--space-l);
+	}
+
+	.kicker {
+		margin: 0 0 var(--space-s);
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
 	}
 
 	h1 {
