@@ -151,7 +151,7 @@ Dark values sit on `:root`; every `-light` key is the same role under `[data-the
 - **Press Blue** (`button`, `button-light`) with **White** (`button-text`): the fill of the primary call to action only.
 
 ### Secondary
-- **Highlighter Yellow** (`highlight`) with **Highlight Ink** (`highlight-ink`): `<mark>` in prose and results, the hero's highlighted word, the sidebar's current page, and the bar in the mark (logo). Identical in both modes.
+- **Highlighter Yellow** (`highlight`) with **Highlight Ink** (`highlight-ink`): `<mark>` in prose and results, the hero's highlighted word, the sidebar's current page, and the field of the mark (logo), behind its serif "e". Identical in both modes.
 
 ### Tertiary
 - **Ekrina Series Blue** (`chart-ekrina`, `chart-ekrina-light`): Ekrina's line, dot and fill in every chart, its key swatch and winning-value fill in the explorer's scoreline, and the underline of the landing page's live search input.
@@ -260,7 +260,7 @@ The exception is the explorer's Log/Linear switch, which stays hidden until its 
 ### Navigation
 - Header, sidebar, right TOC, tabs and pagination all in mono.
 - The current sidebar page is a Highlighter Yellow block with Highlight Ink text.
-- The site title pairs the mark (three ink strokes, the middle one on a yellow bar) with the name in mono 500 at 1.125rem, 0.875rem on phones.
+- The site title pairs the mark (a serif "e" in Highlight Ink on a yellow field) with the name in mono 500 at 1.125rem, 0.875rem on phones.
 
 ### Install bar (signature)
 A single 8px-rounded Hairline outline holding `$ npm install ekrina` in mono, the prompt in Muted Ink, and a 2.75rem icon button whose copy icon swaps for a Pen Blue tick drawn by a 0.3s stroke animation (skipped under reduced motion).
