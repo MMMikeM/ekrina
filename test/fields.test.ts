@@ -109,3 +109,30 @@ describe("fields that tie on score", () => {
 		expect(search("will").map((result) => result.item.alias)).toEqual(["Will Z", "Willow"]);
 	});
 });
+
+describe("selections the searcher rejects", () => {
+	const items = ["Open Recent"];
+
+	it("an options object, such as { getText }", () => {
+		const getText = { getText: (item: string) => [item] };
+		// @ts-expect-error the 1.x shape no longer type-checks either
+		expect(() => createFuzzySearch(items, getText)).toThrow(
+			new TypeError("createFuzzySearch takes a function or an array of field specs"),
+		);
+	});
+
+	it("a field spec without selectField, such as 1.x's { text }", () => {
+		const text = [{ text: (item: string) => item }];
+		// @ts-expect-error the 1.x shape no longer type-checks either
+		expect(() => createFuzzySearch(items, text)).toThrow(
+			new TypeError("a field spec needs selectField, which replaced text in 2.0"),
+		);
+	});
+
+	it("1.x's atBest, rather than ignoring it", () => {
+		const atBest = [{ selectField: (item: string) => item, atBest: SCORES.CONTAINS }];
+		expect(() => createFuzzySearch(items, atBest)).toThrow(
+			new TypeError("atBest is demoteBy since 2.0"),
+		);
+	});
+});

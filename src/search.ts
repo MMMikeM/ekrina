@@ -89,16 +89,25 @@ type ResolvedSpec<T> = {
 const resolveFieldSpecs = <T>(
 	selection?: ((item: T) => string | null) | FieldSpec<T>[],
 ): ResolvedSpec<T>[] => {
+	if (selection && typeof selection !== "function" && !Array.isArray(selection)) {
+		throw new TypeError("createFuzzySearch takes a function or an array of field specs");
+	}
 	const specs: FieldSpec<T>[] = !selection
 		? [{ selectField: (item) => item as unknown as string }]
 		: typeof selection === "function"
 			? [{ selectField: selection }]
 			: selection;
-	return specs.map((spec) => ({
-		selector: spec.selectField,
-		acronymTier: spec.acronym ?? false,
-		demotion: spec.demoteBy ?? 0,
-	}));
+	return specs.map((spec) => {
+		if (typeof spec.selectField !== "function") {
+			throw new TypeError("a field spec needs selectField, which replaced text in 2.0");
+		}
+		if ("atBest" in spec) throw new TypeError("atBest is demoteBy since 2.0");
+		return {
+			selector: spec.selectField,
+			acronymTier: spec.acronym ?? false,
+			demotion: spec.demoteBy ?? 0,
+		};
+	});
 };
 
 /**
