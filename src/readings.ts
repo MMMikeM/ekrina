@@ -2,6 +2,7 @@ import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
 import { charMask } from "./gates";
 import { bigramBit, bigramClass } from "./normalise";
+import { swapAdjacentAt } from "./rescue";
 import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { MatchResult, Range } from "./types";
 
@@ -109,7 +110,7 @@ const lacksAtMost = (counts: Int32Array, missingClasses: number, limit: number):
 	return true;
 };
 
-type FieldWord = { word: string; at: number };
+type FieldWord = { word: string; offset: number };
 
 const asciiWordUnits = Uint8Array.from({ length: 128 }, (_, unit) =>
 	wordChar.test(String.fromCharCode(unit)) ? 1 : 0,
@@ -125,17 +126,17 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 		if (unit > 127) {
 			return Array.from(normalisedField.matchAll(wordRun), (match) => ({
 				word: match[0],
-				at: match.index,
+				offset: match.index,
 			}));
 		}
 		if (asciiWordUnits[unit] === 1) {
 			if (start === -1) start = at;
 		} else if (start !== -1) {
-			words.push({ word: normalisedField.slice(start, at), at: start });
+			words.push({ word: normalisedField.slice(start, at), offset: start });
 			start = -1;
 		}
 	}
-	if (start !== -1) words.push({ word: normalisedField.slice(start), at: start });
+	if (start !== -1) words.push({ word: normalisedField.slice(start), offset: start });
 	return words;
 };
 
@@ -143,8 +144,8 @@ const fieldWords = (normalisedField: string): FieldWord[] => {
 const composed = (text: string, normalised: string): string =>
 	text.length === normalised.length ? text : text.normalize("NFC");
 
-const spelling = (field: string, normalisedField: string, { word, at }: FieldWord): string =>
-	composed(field, normalisedField).slice(at, at + word.length);
+const spelling = (field: string, normalisedField: string, { word, offset }: FieldWord): string =>
+	composed(field, normalisedField).slice(offset, offset + word.length);
 
 const better = (a: MatchResult | null, b: MatchResult | null): MatchResult | null =>
 	a === null || (b !== null && b.score < a.score) ? b : a;
@@ -177,7 +178,7 @@ const correction = (
 	first: FieldWord,
 	last: FieldWord,
 ): MatchResult | null => {
-	const span = { word: normalisedField.slice(first.at, last.at + last.word.length), at: first.at };
+	const span = { word: normalisedField.slice(first.offset, last.offset + last.word.length), offset: first.offset };
 	const corrected = spelling(field, normalisedField, span);
 	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
 };
@@ -196,10 +197,7 @@ const correctWord = (
 	let best: MatchResult | null = null;
 	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
 		const budget = spare - joinedEdits;
-		const length = first === last ? first.word.length : first.word.length + last.word.length;
-		if (!lengthsWithin(word.length, length, budget)) return;
-		const target = first === last ? first.word : first.word + last.word;
-		const edits = editDistance(word, target, budget);
+		const edits = withinEdits(word, first === last ? first.word : first.word + last.word, budget);
 		if (edits > budget) return;
 		const candidate = correction(edits + spent + joinedEdits, field, normalisedField, first, last);
 		best = better(best, candidate);
@@ -256,11 +254,11 @@ const scatterWord = (
 			SCATTER_SCORE +
 			SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
 			SCATTER_EXTRA_SKIP_PENALTY * Math.max(0, candidate.word.length - word.length - 1) +
-			(candidate.at === 0 ? 0 : LATER_WORD_PENALTY);
+			(candidate.offset === 0 ? 0 : LATER_WORD_PENALTY);
 		if (best !== null && best.score <= score) continue;
 		for (const run of runs) {
-			run[0] += candidate.at;
-			run[1] += candidate.at;
+			run[0] += candidate.offset;
+			run[1] += candidate.offset;
 		}
 		best = {
 			score,
@@ -439,7 +437,7 @@ const stuckKeyForm = (word: string): string | null => {
 const swapForms = (word: string): string[] => {
 	const forms: string[] = [];
 	for (let k = 0; k + 1 < word.length; k++) {
-		if (word[k] !== word[k + 1]) forms.push(word.slice(0, k) + word[k + 1] + word[k] + word.slice(k + 2));
+		if (word[k] !== word[k + 1]) forms.push(swapAdjacentAt(word, k));
 	}
 	return forms;
 };
@@ -456,7 +454,7 @@ const swapWord = (
 	for (const form of forms) {
 		for (const candidate of words) {
 			if (!candidate.word.startsWith(form)) continue;
-			const corrected = spelling(field, normalisedField, { word: form, at: candidate.at });
+			const corrected = spelling(field, normalisedField, { word: form, offset: candidate.offset });
 			best = better(best, scoreCorrection(1, field, normalisedField, form, corrected));
 		}
 	}

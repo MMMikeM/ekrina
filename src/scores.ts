@@ -1,14 +1,3 @@
-// Each value on its own as well, for the library's internal use: the minifier
-// inlines a constant but not an object property.
-export const EXACT_SCORE = 0;
-export const NORMALISED_EXACT_SCORE = 0.1;
-export const PREFIX_SCORE = 0.5;
-export const BOUNDARY_CASED_SCORE = 0.9;
-export const BOUNDARY_SCORE = 1;
-export const MULTI_WORD_SCORE = 1.5;
-export const ACRONYM_SCORE = 1.8;
-export const CONTAINS_SCORE = 2;
-
 /**
  * The tier ladder as named constants. Lower = better. Every genuine tier
  * scores at or below CONTAINS, and anything above it is a `fuzzy` chain or a
@@ -26,15 +15,28 @@ export const SCORES: {
 	readonly ACRONYM: 1.8;
 	readonly CONTAINS: 2;
 } = {
-	EXACT: EXACT_SCORE,
-	NORMALISED_EXACT: NORMALISED_EXACT_SCORE,
-	PREFIX: PREFIX_SCORE,
-	BOUNDARY_CASED: BOUNDARY_CASED_SCORE,
-	BOUNDARY: BOUNDARY_SCORE,
-	MULTI_WORD: MULTI_WORD_SCORE,
-	ACRONYM: ACRONYM_SCORE,
-	CONTAINS: CONTAINS_SCORE,
+	EXACT: 0,
+	NORMALISED_EXACT: 0.1,
+	PREFIX: 0.5,
+	BOUNDARY_CASED: 0.9,
+	BOUNDARY: 1,
+	MULTI_WORD: 1.5,
+	ACRONYM: 1.8,
+	CONTAINS: 2,
 };
+
+// Each value on its own as well, for the library's internal use: the minifier
+// inlines a constant but not an object property. Written as literals in SCORES
+// too, since a constant SCORES also reads is never inlined; the types keep the
+// two equal.
+export const EXACT_SCORE: typeof SCORES.EXACT = 0;
+export const NORMALISED_EXACT_SCORE: typeof SCORES.NORMALISED_EXACT = 0.1;
+export const PREFIX_SCORE: typeof SCORES.PREFIX = 0.5;
+export const BOUNDARY_CASED_SCORE: typeof SCORES.BOUNDARY_CASED = 0.9;
+export const BOUNDARY_SCORE: typeof SCORES.BOUNDARY = 1;
+export const MULTI_WORD_SCORE: typeof SCORES.MULTI_WORD = 1.5;
+export const ACRONYM_SCORE: typeof SCORES.ACRONYM = 1.8;
+export const CONTAINS_SCORE: typeof SCORES.CONTAINS = 2;
 
 /**
  * Added to a corrected match's score once per typo fixed (tier `"corrected"`):

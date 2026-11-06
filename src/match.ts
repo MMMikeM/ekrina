@@ -1,4 +1,4 @@
-import { isBoundaryChar, splitWords, wordChar } from "./boundaries";
+import { splitWords, WORD_CHARS, wordChar } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import { normaliseText } from "./normalise";
@@ -91,7 +91,7 @@ const longestFirst = (words: string[]): string[] =>
 
 // Word-internal apostrophes don't end a run: "people's" is one word with
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
-const wordRun = /[\p{L}\p{N}_]+(?:'[\p{L}\p{N}_]+)*/gu;
+const wordRun = new RegExp(`[${WORD_CHARS}]+(?:'[${WORD_CHARS}]+)*`, "gu");
 
 const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
 	let at = haystack.indexOf(needle, from);
@@ -102,21 +102,12 @@ const wordStartOccurrence = (haystack: string, needle: string, from = 0): number
 	return -1;
 };
 
-const boundaryOccurrence = (haystack: string, needle: string): number => {
-	let at = haystack.indexOf(needle);
-	while (at > -1) {
-		if (at === 0 || isBoundaryChar(haystack[at - 1])) return at;
-		at = haystack.indexOf(needle, at + 1);
-	}
-	return -1;
-};
-
 const boundaryTier = (
 	haystack: string,
 	needle: string,
 	tier: "boundary-cased" | "boundary",
 ): MatchResult | null => {
-	const at = boundaryOccurrence(haystack, needle);
+	const at = wordStartOccurrence(haystack, needle);
 	if (at === -1) return null;
 	const score = tier === "boundary-cased" ? BOUNDARY_CASED_SCORE : BOUNDARY_SCORE;
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
@@ -184,13 +175,12 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 	if (prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)) {
 		return rescuable ? rescueField(rescue) : null;
 	}
-	const fuzzy = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
-	if (fuzzy) {
-		const chain: MatchResult = { score: fuzzy.score, tier: "fuzzy", ranges: fuzzy.ranges };
+	const chain = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
+	if (chain) {
 		if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
 		// A chain assembling is not evidence it is the best reading: the field may
 		// literally contain the corrected word, so both rescues are still scored.
-		const dropped = missingCharRescue(rescue, fuzzy.ranges);
+		const dropped = missingCharRescue(rescue, chain.ranges);
 		return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
 	}
 	// The chain can refuse past the gate via its density floor.
@@ -247,9 +237,9 @@ export const matchField = (
 	fieldMask: number,
 	prepared: PreparedQuery,
 	acronym: boolean,
-	mayRescue: boolean = true,
-	preGated: boolean = false,
-	literalOnly: boolean = false,
+	mayRescue: boolean,
+	preGated?: boolean,
+	literalOnly?: boolean,
 ): MatchResult | null => {
 	const { normalisedQuery, queryWords } = prepared;
 
@@ -262,7 +252,7 @@ export const matchField = (
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
-		(rescue ??= { field, normalisedField, fieldMask, prepared, acronym, missingClasses });
+		(rescue ??= { field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 

@@ -1,12 +1,9 @@
 import { isBoundaryChar } from "./boundaries";
-import type { HighlightRanges, Range } from "./types";
+import type { MatchResult, Range } from "./types";
 
 // Same shape as a highlight Range, named for what it means here: a consecutive
 // run of matched characters.
 type Chunk = Range;
-
-// A scored chain: the fuzzy tier's score plus the chunks that produced it.
-export type ChainScore = { score: number; ranges: HighlightRanges };
 
 // BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
 // true contains — but intentionally NOT the same binding: they mean different
@@ -23,7 +20,7 @@ const CHUNK_SCATTERED = 1.6;
 // is what keeps the fuzzy tier safe over document-length fields.
 const DENSITY_FLOOR = 0.18;
 
-const scoreChunks = (chunks: Chunk[], normalisedField: string): ChainScore | null => {
+const scoreChunks = (chunks: Chunk[], normalisedField: string): MatchResult | null => {
 	let matched = 0;
 	for (const [start, end] of chunks) matched += end - start + 1;
 	const span = chunks[chunks.length - 1][1] - chunks[0][0] + 1;
@@ -41,7 +38,7 @@ const scoreChunks = (chunks: Chunk[], normalisedField: string): ChainScore | nul
 		else if (end - start + 1 >= 3) score += CHUNK_LONG;
 		else score += CHUNK_SCATTERED;
 	}
-	return { score, ranges: chunks };
+	return { score, tier: "fuzzy", ranges: chunks };
 };
 
 // A chunk may start mid-word only by running 3+ characters; short query tails
@@ -113,9 +110,9 @@ const MAX_CHUNK_STARTS = 4;
 export const fuzzyChainMatch = (
 	normalisedField: string,
 	normalisedQuery: string,
-): ChainScore | null => {
+): MatchResult | null => {
 	const firstChar = normalisedQuery[0];
-	let best: ChainScore | null = null;
+	let best: MatchResult | null = null;
 	let attempts = 0;
 
 	for (

@@ -93,15 +93,7 @@ export const unitMask = (unit: number): number => {
 
 // `charMask`'s class for one code unit, shifted so 0 can mean "not a word
 // character": class n sets mask bit n − 1, for every class.
-export const bigramClass = (unit: number): number => {
-	if (unit >= 97 && unit <= 122) return unit - 96;
-	// Folded text has no capitals; this keeps the classes identical to charMask's.
-	/* v8 ignore next */
-	if (unit >= 65 && unit <= 90) return unit - 64;
-	if (unit >= 48 && unit <= 57) return 27 + (unit & 3);
-	if (unit > 127) return 31 + (unit & 1);
-	return 0;
-};
+export const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
 
 export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
 

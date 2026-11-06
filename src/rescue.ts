@@ -11,7 +11,7 @@ export type RescueContext = {
 	normalisedField: string;
 	fieldMask: number;
 	prepared: PreparedQuery;
-	acronym: boolean;
+	acronymTier: boolean;
 	missingClasses: number;
 };
 
@@ -91,42 +91,27 @@ export const preferBetter = (
 // The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
 type Edit = (text: string, at: number) => string;
 
-const swapAdjacentAt: Edit = (text, at) =>
+export const swapAdjacentAt: Edit = (text, at) =>
 	text.slice(0, at) + text[at + 1] + text[at] + text.slice(at + 2);
 
 const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at + 1);
 
 // Needs normaliseText's 1:1 mapping to index the raw query by normalised
-// offsets; when NFC shortened decomposed input, callers fall back to the
-// normalised correction — sound, just case-blind.
-const offsetsAligned = (query: string, normalisedQuery: string): boolean =>
-	query.length === normalisedQuery.length;
+// offsets; when NFC shortened decomposed input, the normalised query stands in
+// for it — sound, just case-blind.
+const rawQuery = ({ query, normalisedQuery }: PreparedQuery): string =>
+	query.length === normalisedQuery.length ? query : normalisedQuery;
 
 // The correction must be the user's own text with one character changed —
 // spelling it out of the field would credit an ALL-CAPS query with an
 // exact-case match it never made.
-const rawSubstitution = (prepared: PreparedQuery, corrected: string): string => {
-	const { query, normalisedQuery } = prepared;
-	if (!offsetsAligned(query, normalisedQuery)) return corrected;
+const substituteRaw = (raw: string, normalised: string, corrected: string): string => {
 	for (let i = 0; i < corrected.length; i++) {
-		if (corrected[i] !== normalisedQuery[i]) {
-			return query.slice(0, i) + corrected[i] + query.slice(i + 1);
-		}
+		if (corrected[i] !== normalised[i]) return raw.slice(0, i) + corrected[i] + raw.slice(i + 1);
 	}
 	// A substitution differs in exactly one place, so the loop always returns.
 	/* v8 ignore next */
 	return corrected;
-};
-
-const rawInsertion = (
-	prepared: PreparedQuery,
-	gapChar: string,
-	insertAt: number,
-): string | null => {
-	const { query, normalisedQuery } = prepared;
-	return offsetsAligned(query, normalisedQuery)
-		? query.slice(0, insertAt) + gapChar + query.slice(insertAt)
-		: null;
 };
 
 const prepareCorrection = (
@@ -159,7 +144,7 @@ const scoreCorrectedQuery = (
 		rescue.normalisedField,
 		rescue.fieldMask,
 		correctedQuery,
-		rescue.acronym,
+		rescue.acronymTier,
 		false,
 	);
 	return result && acceptsCorrection(result, short)
@@ -185,17 +170,16 @@ const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =
 // Swaps and drops never collide — they differ in length. A *missing* character
 // is not enumerable and is recovered from the fuzzy chain instead (see
 // missingCharRescue).
-const buildRescueVariants = (query: string, normalisedQuery: string): RescueVariant[] => {
+const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVariant[] => {
 	const seen = new Set<string>();
 	const variants: RescueVariant[] = [];
-	const aligned = offsetsAligned(query, normalisedQuery);
 	const addVariant = (at: number, edit: Edit): void => {
 		const normalised = edit(normalisedQuery, at);
 		if (seen.has(normalised)) return;
 		seen.add(normalised);
 		variants.push({
 			normalised,
-			raw: aligned ? edit(query, at) : normalised,
+			raw: edit(raw, at),
 			isDrop: normalised.length < normalisedQuery.length,
 			requiredMask: charMask(normalised),
 			prepared: null,
@@ -268,35 +252,17 @@ const wordStartsOf = (prepared: PreparedQuery): number[] => {
 	return starts;
 };
 
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
-	let state = cache[wordIndex];
-	if (state === null) {
-		const word = prepared.queryWords[wordIndex];
-		const wordStart = wordStartsOf(prepared)[wordIndex];
-		const rawWord = offsetsAligned(prepared.query, prepared.normalisedQuery)
-			? prepared.query.slice(wordStart, wordStart + word.length)
-			: word;
-		state = cache[wordIndex] = buildRescueVariants(rawWord, word);
-	}
-	return state;
+const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
+	const wordStart = wordStartsOf(prepared)[wordIndex];
+	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };
 
-const rawWordSubstitution = (
-	prepared: PreparedQuery,
-	wordIndex: number,
-	corrected: string,
-): string => {
-	if (!offsetsAligned(prepared.query, prepared.normalisedQuery)) return corrected;
-	const word = prepared.queryWords[wordIndex];
-	const wordStart = wordStartsOf(prepared)[wordIndex];
-	const rawWord = prepared.query.slice(wordStart, wordStart + word.length);
-	for (let i = 0; i < corrected.length; i++) {
-		if (corrected[i] !== word[i]) return rawWord.slice(0, i) + corrected[i] + rawWord.slice(i + 1);
-	}
-	// A substitution differs in exactly one place, so the loop always returns.
-	/* v8 ignore next */
-	return corrected;
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
+	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
+	return (cache[wordIndex] ??= buildRescueVariants(
+		rawWordOf(prepared, wordIndex),
+		prepared.queryWords[wordIndex],
+	));
 };
 
 const spliceCorrectedWord = (
@@ -311,9 +277,8 @@ const spliceCorrectedWord = (
 		prepared.normalisedQuery.slice(0, wordStart) +
 		normalisedWord +
 		prepared.normalisedQuery.slice(wordEnd);
-	const rawCorrected = offsetsAligned(prepared.query, prepared.normalisedQuery)
-		? prepared.query.slice(0, wordStart) + rawWord + prepared.query.slice(wordEnd)
-		: normalisedCorrected;
+	const raw = rawQuery(prepared);
+	const rawCorrected = raw.slice(0, wordStart) + rawWord + raw.slice(wordEnd);
 	return prepareCorrection(prepared, rawCorrected, normalisedCorrected);
 };
 
@@ -334,7 +299,11 @@ const wholeQuerySubject = (
 	variants,
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
-		prepareCorrection(prepared, rawSubstitution(prepared, corrected), corrected),
+		prepareCorrection(
+			prepared,
+			substituteRaw(rawQuery(prepared), prepared.normalisedQuery, corrected),
+			corrected,
+		),
 });
 
 const absentWordSubject = (
@@ -350,7 +319,7 @@ const absentWordSubject = (
 		spliceCorrectedWord(
 			prepared,
 			wordIndex,
-			rawWordSubstitution(prepared, wordIndex, corrected),
+			substituteRaw(rawWordOf(prepared, wordIndex), prepared.queryWords[wordIndex], corrected),
 			corrected,
 		),
 });
@@ -432,7 +401,7 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared } = rescue;
-	prepared.rescueState ??= buildRescueVariants(prepared.query, prepared.normalisedQuery);
+	prepared.rescueState ??= buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery);
 	return correctSubject(rescue, wholeQuerySubject(prepared, prepared.rescueState));
 };
 
@@ -452,11 +421,15 @@ export const missingCharRescue = (
 	const gapChar = normalisedField[firstEnd + 1];
 	if (secondStart !== firstEnd + 2 || !wordChar.test(gapChar)) return null;
 
-	const corrected = normalisedField.slice(firstStart, secondEnd + 1);
-	const rawCorrected = rawInsertion(prepared, gapChar, firstEnd - firstStart + 1);
+	const insertAt = firstEnd - firstStart + 1;
+	const raw = rawQuery(prepared);
 	return scoreCorrectedQuery(
 		rescue,
-		prepareCorrection(prepared, rawCorrected ?? corrected, corrected),
+		prepareCorrection(
+			prepared,
+			raw.slice(0, insertAt) + gapChar + raw.slice(insertAt),
+			normalisedField.slice(firstStart, secondEnd + 1),
+		),
 	);
 };
 

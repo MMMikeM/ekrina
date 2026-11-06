@@ -67,7 +67,7 @@ export const fuzzyMatch = (
 	const normalisedField = normaliseText(field);
 	const fieldMask = charMask(normalisedField);
 
-	let result = matchField(field, normalisedField, fieldMask, q, acronym);
+	let result = matchField(field, normalisedField, fieldMask, q, acronym, true);
 	if (result === null || result.score > CONTAINS_SCORE) {
 		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
 		const fallback = reading?.admitsMask(fieldMask) ? reading.match(field, normalisedField) : null;
@@ -79,9 +79,9 @@ export const fuzzyMatch = (
 };
 
 type ResolvedSpec<T> = {
-	selectField: (item: T) => string | null;
-	acronym: boolean;
-	demoteBy: number;
+	selector: (item: T) => string | null;
+	acronymTier: boolean;
+	demotion: number;
 };
 
 // Resolved once: the per-item loops run count × specs times and shouldn't
@@ -95,9 +95,9 @@ const resolveFieldSpecs = <T>(
 			? [{ selectField: selection }]
 			: selection;
 	return specs.map((spec) => ({
-		selectField: spec.selectField,
-		acronym: spec.acronym ?? false,
-		demoteBy: spec.demoteBy ?? 0,
+		selector: spec.selectField,
+		acronymTier: spec.acronym ?? false,
+		demotion: spec.demoteBy ?? 0,
 	}));
 };
 
@@ -193,7 +193,7 @@ export function createFuzzySearch<T>(
 		if (bigramsKnown[i]) return;
 		bigrams.lo = 0;
 		bigrams.hi = 0;
-		for (let f = 0; f < specCount; f++) rawFieldScan(resolvedSpecs[f].selectField(list[i]) || "", bigrams);
+		for (let f = 0; f < specCount; f++) rawFieldScan(resolvedSpecs[f].selector(list[i]) || "", bigrams);
 		bigramsLo[i] = bigrams.lo;
 		bigramsHi[i] = bigrams.hi;
 		bigramsKnown[i] = 1;
@@ -215,7 +215,7 @@ export function createFuzzySearch<T>(
 			bigrams.lo = 0;
 			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const raw = resolvedSpecs[f].selectField(list[i]) || "";
+				const raw = resolvedSpecs[f].selector(list[i]) || "";
 				const mask = withBigrams ? rawFieldScan(raw, bigrams) : rawFieldMask(raw);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
@@ -234,7 +234,7 @@ export function createFuzzySearch<T>(
 		if (normalisedFields[base] !== undefined) return;
 		const item = list[i];
 		for (let f = 0; f < specCount; f++) {
-			const raw = resolvedSpecs[f].selectField(item) || "";
+			const raw = resolvedSpecs[f].selector(item) || "";
 			const lead = raw.length - raw.trimStart().length;
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
 			const field = raw.trim();
@@ -261,8 +261,7 @@ export function createFuzzySearch<T>(
 		count: 0,
 	};
 
-	const search = (query: string, options: SearchOptions = {}): FuzzyResult<T>[] => {
-		const { limit } = options;
+	const search = (query: string, { limit }: SearchOptions = {}): FuzzyResult<T>[] => {
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
 			throw new RangeError(`limit must be a positive integer, got ${limit}`);
 		}
@@ -290,7 +289,7 @@ export function createFuzzySearch<T>(
 		// objects per call, so the demoteBy shift can mutate.
 		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
 			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
-			result.score += resolvedSpecs[f].demoteBy;
+			result.score += resolvedSpecs[f].demotion;
 			if (leads !== null) {
 				const lead = leads[at];
 				if (lead) shiftRanges(result.ranges, lead);
@@ -328,7 +327,7 @@ export function createFuzzySearch<T>(
 					normalisedFields[base + f] as string,
 					fieldMasks[base + f],
 					prepared,
-					resolvedSpecs[f].acronym,
+					resolvedSpecs[f].acronymTier,
 					mayRescue,
 					preGated,
 					literalOnly,
@@ -400,7 +399,7 @@ export function createFuzzySearch<T>(
 				const item = list[i];
 				let admitted = false;
 				for (let f = 0; f < specCount && !admitted; f++) {
-					admitted = gate.test(resolvedSpecs[f].selectField(item) || "");
+					admitted = gate.test(resolvedSpecs[f].selector(item) || "");
 				}
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
@@ -439,15 +438,14 @@ export function createFuzzySearch<T>(
 		const offerFallbacks = (
 			i: number,
 			held: FuzzyResult<T> | undefined,
-			fallbacks: (PreparedReading | null)[],
+			reading: PreparedReading,
 		): void => {
 			const base = i * specCount;
 			let entry = held;
 			for (let f = 0; f < specCount; f++) {
-				const fallback = fallbacks[f];
-				if (fallback === null || !fallback.admitsMask(fieldMasks[base + f])) continue;
+				if (!reading.admitsMask(fieldMasks[base + f])) continue;
 				materialise(i);
-				const result = fallback.match(
+				const result = reading.match(
 					trimmedFields[base + f] as string,
 					normalisedFields[base + f] as string,
 				);
@@ -472,11 +470,10 @@ export function createFuzzySearch<T>(
 				literalHits > 0 ? "literal" : matched.length > 0 ? "fuzzy" : "none";
 			const reading = readings.prepare(prepared, competition);
 			if (reading === null) return;
-			const fallbacks = resolvedSpecs.map(() => reading);
 			// A phrase's literal gates read only its words' characters; a single
 			// word's read its punctuation too, which no second-pass reading needs.
 			const survivorsOnly =
-				fallbacks.every((fallback) => fallback === null || !fallback.wholeList) &&
+				!reading.wholeList &&
 				(multiWord || normalisedQuery === prepared.queryWords[0]);
 			// Fills every item's field masks, which the readings' gate reads.
 			if (!survivorsOnly) unionMasks ??= buildUnionMasks();
@@ -498,7 +495,7 @@ export function createFuzzySearch<T>(
 				const held = heldStamps[i] === generation ? heldResults[i] : undefined;
 				if (held !== undefined && held.score <= CONTAINS_SCORE) continue;
 				if (admitsItem !== null && !admitsItem(i)) continue;
-				offerFallbacks(i, held, fallbacks);
+				offerFallbacks(i, held, reading);
 			}
 		};
 

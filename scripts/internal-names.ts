@@ -55,4 +55,9 @@ export const INTERNAL_NAMES: string[] = [
 	"gate",
 	"spare",
 	"prepare",
+	"raw",
+	"offset",
+	"selector",
+	"acronymTier",
+	"demotion",
 ];
