@@ -1,7 +1,7 @@
 import { isBoundaryChar, wordChar } from "./boundaries";
-import { charMask, escapeRegex } from "./gates";
+import { charMask } from "./gates";
 import { matchField, type PreparedQuery, prepareQuery } from "./match";
-import { SCORES, TYPO_PENALTY } from "./scores";
+import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
 // The field currently being rescued against the prepared query, allocated by
@@ -25,11 +25,7 @@ export type RescueVariant = {
 	prepared: PreparedQuery | null;
 };
 
-export type RescueState = {
-	variants: RescueVariant[];
-	variantGate: RegExp | null;
-	gate: RegExp | null;
-};
+export type RescueState = RescueVariant[];
 
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
@@ -180,8 +176,8 @@ const scoreCorrectedQuery = (
 // one edit from four characters ("colt" in "Nicolas").
 const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
 	short
-		? result.score < SCORES.CONTAINS && result.tier !== "acronym"
-		: result.score <= SCORES.CONTAINS;
+		? result.score < CONTAINS_SCORE && result.tier !== "acronym"
+		: result.score <= CONTAINS_SCORE;
 
 const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
@@ -212,28 +208,6 @@ const buildRescueVariants = (query: string, normalisedQuery: string): RescueVari
 		for (let at = 0; at < normalisedQuery.length; at++) addVariant(at, dropCharAt);
 	}
 	return variants;
-};
-
-// The broad gate carries the variant texts plus the subject's two halves, so one
-// native test rules out the enumerated and substitution families both. It may
-// only false-pass, so it leaves the field-scaled floor to the window phase.
-const buildRescueGates = (rawSubject: string, subject: string): RescueState => {
-	const variants = buildRescueVariants(rawSubject, subject);
-	// A short subject's halves are two characters, which nearly every field holds.
-	if (subject.length < MIN_TYPO_QUERY_LENGTH) return { variants, variantGate: null, gate: null };
-	const literals = variants.map((variant) => escapeRegex(variant.normalised));
-	const variantGate = new RegExp(literals.join("|"));
-	const splitAt = subject.length >> 1;
-	literals.push(escapeRegex(subject.slice(0, splitAt)), escapeRegex(subject.slice(splitAt)));
-	return { variants, variantGate, gate: new RegExp(literals.join("|")) };
-};
-
-// Null when the field holds neither a variant nor half of the subject.
-const gatedVariants = (gates: RescueState, normalisedField: string): RescueVariant[] | null => {
-	if (gates.gate !== null && !gates.gate.test(normalisedField)) return null;
-	return gates.variantGate === null || gates.variantGate.test(normalisedField)
-		? gates.variants
-		: [];
 };
 
 // By the pigeonhole principle a single substitution leaves at least one half of
@@ -303,7 +277,7 @@ const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueSt
 		const rawWord = offsetsAligned(prepared.query, prepared.normalisedQuery)
 			? prepared.query.slice(wordStart, wordStart + word.length)
 			: word;
-		state = cache[wordIndex] = buildRescueGates(rawWord, word);
+		state = cache[wordIndex] = buildRescueVariants(rawWord, word);
 	}
 	return state;
 };
@@ -450,15 +424,16 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	const absentIndex = soleAbsentWord(normalisedField, prepared.queryWords);
 	if (absentIndex === null) return null;
 	if (prepared.queryWords[absentIndex].length < MIN_RESCUE_QUERY_LENGTH) return null;
-	const variants = gatedVariants(wordRescueStateOf(prepared, absentIndex), normalisedField);
-	return variants && correctSubject(rescue, absentWordSubject(prepared, absentIndex, variants));
+	return correctSubject(
+		rescue,
+		absentWordSubject(prepared, absentIndex, wordRescueStateOf(prepared, absentIndex)),
+	);
 };
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
-	const { prepared, normalisedField } = rescue;
-	prepared.rescueState ??= buildRescueGates(prepared.query, prepared.normalisedQuery);
-	const variants = gatedVariants(prepared.rescueState, normalisedField);
-	return variants && correctSubject(rescue, wholeQuerySubject(prepared, variants));
+	const { prepared } = rescue;
+	prepared.rescueState ??= buildRescueVariants(prepared.query, prepared.normalisedQuery);
+	return correctSubject(rescue, wholeQuerySubject(prepared, prepared.rescueState));
 };
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a

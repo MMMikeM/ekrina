@@ -1,3 +1,14 @@
+// Each value on its own as well, for the library's internal use: the minifier
+// inlines a constant but not an object property.
+export const EXACT_SCORE = 0;
+export const NORMALISED_EXACT_SCORE = 0.1;
+export const PREFIX_SCORE = 0.5;
+export const BOUNDARY_CASED_SCORE = 0.9;
+export const BOUNDARY_SCORE = 1;
+export const MULTI_WORD_SCORE = 1.5;
+export const ACRONYM_SCORE = 1.8;
+export const CONTAINS_SCORE = 2;
+
 /**
  * The tier ladder as named constants. Lower = better. Every genuine tier
  * scores at or below CONTAINS, and anything above it is a `fuzzy` chain or a
@@ -5,16 +16,25 @@
  * between a literal match and a speculative one. Exported so callers can
  * filter or re-rank by tier.
  */
-export const SCORES = {
-	EXACT: 0,
-	NORMALISED_EXACT: 0.1,
-	PREFIX: 0.5,
-	BOUNDARY_CASED: 0.9,
-	BOUNDARY: 1,
-	MULTI_WORD: 1.5,
-	ACRONYM: 1.8,
-	CONTAINS: 2,
-} as const;
+export const SCORES: {
+	readonly EXACT: 0;
+	readonly NORMALISED_EXACT: 0.1;
+	readonly PREFIX: 0.5;
+	readonly BOUNDARY_CASED: 0.9;
+	readonly BOUNDARY: 1;
+	readonly MULTI_WORD: 1.5;
+	readonly ACRONYM: 1.8;
+	readonly CONTAINS: 2;
+} = {
+	EXACT: EXACT_SCORE,
+	NORMALISED_EXACT: NORMALISED_EXACT_SCORE,
+	PREFIX: PREFIX_SCORE,
+	BOUNDARY_CASED: BOUNDARY_CASED_SCORE,
+	BOUNDARY: BOUNDARY_SCORE,
+	MULTI_WORD: MULTI_WORD_SCORE,
+	ACRONYM: ACRONYM_SCORE,
+	CONTAINS: CONTAINS_SCORE,
+};
 
 /**
  * Added to a corrected match's score once per typo fixed (tier `"corrected"`):

@@ -1,21 +1,15 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
-import { bigramBit, bigramClass } from "./normalise";
 import { charMask } from "./gates";
-import { SCORES, TYPO_PENALTY } from "./scores";
+import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
 import type { MatchResult, Range } from "./types";
 
 // What one query admits under a reading, prepared once and tried against
 // fields that matched nothing else.
 export type PreparedReading = {
-	// All three may only false-pass: a field any rejects must have no match.
-	// `admitsText` reads the caller's own string, before normalisation;
-	// `admitsPairs`, absent when it could reject nothing, reads an item's bigram
-	// set (see rawFieldScan) when the searcher has one. `match` is only called
-	// on a field they admit.
+	// May only false-pass: a field it rejects must have no match. `match` is
+	// only called on a field it admits.
 	admitsMask: (fieldMask: number) => boolean;
-	admitsText: (text: string) => boolean;
-	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
 	// The reading may match fields the literal pass rejected, so every item is
 	// tried rather than its survivors. One that is not `wholeList` must match
@@ -109,75 +103,6 @@ const lacksAtMost = (counts: Int32Array, missingClasses: number, limit: number):
 		if (unmatched > limit) return false;
 	}
 	return true;
-};
-
-// `asciiSlots` maps an ASCII code unit to its slot in `counts`, or -1; a
-// non-ASCII letter needs no slot, since only non-ASCII text can match it.
-type LetterGate = { asciiSlots: Int16Array; counts: Int32Array; needed: number };
-
-// Only a substitution or a deletion leaves a query letter unmatched, so a field
-// holding a correction shares all but `MAX_EDITS` of the query's letters.
-const letterGate = (letters: string, needed: number): LetterGate => {
-	const units: number[] = [];
-	const counts: number[] = [];
-	for (let i = 0; i < letters.length; i++) {
-		const unit = letters.charCodeAt(i);
-		const at = units.indexOf(unit);
-		if (at === -1) {
-			units.push(unit);
-			counts.push(1);
-		} else counts[at]++;
-	}
-	const asciiSlots = new Int16Array(128).fill(-1);
-	for (let slot = 0; slot < units.length; slot++) {
-		if (units[slot] < 128) asciiSlots[units[slot]] = slot;
-	}
-	return { asciiSlots, counts: Int32Array.from(counts), needed };
-};
-
-let remaining = new Int32Array(0);
-
-const ASCII_UPPER_A = 65;
-const ASCII_UPPER_Z = 90;
-const ASCII_CASE_BIT = 32;
-
-// Reads the caller's own text, where a non-ASCII character may fold to any
-// letter and so counts as a match, keeping the gate false-pass only.
-const holdsLetters = (gate: LetterGate, text: string): boolean => {
-	if (remaining.length < gate.counts.length) remaining = new Int32Array(gate.counts.length);
-	remaining.set(gate.counts);
-	const { asciiSlots, needed } = gate;
-	let shared = 0;
-	for (let i = 0; i < text.length; i++) {
-		if (text.length - i < needed - shared) return false;
-		const unit = text.charCodeAt(i);
-		if (unit > 127) {
-			if (++shared >= needed) return true;
-			continue;
-		}
-		const at = asciiSlots[unit | (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z ? ASCII_CASE_BIT : 0)];
-		if (at === -1 || remaining[at] === 0) continue;
-		remaining[at]--;
-		if (++shared >= needed) return true;
-	}
-	return false;
-};
-
-// The letter gate's subsequence form, for a reading that needs every letter in
-// order: a non-ASCII character matches whichever letter comes next.
-const holdsInOrder = (word: string, text: string): boolean => {
-	let next = 0;
-	for (let i = 0; i < text.length; i++) {
-		if (text.length - i < word.length - next) return false;
-		let unit = text.charCodeAt(i);
-		if (unit > 127) {
-			if (++next === word.length) return true;
-			continue;
-		}
-		if (unit >= ASCII_UPPER_A && unit <= ASCII_UPPER_Z) unit |= ASCII_CASE_BIT;
-		if (unit === word.charCodeAt(next) && ++next === word.length) return true;
-	}
-	return false;
 };
 
 type FieldWord = { word: string; at: number };
@@ -286,7 +211,7 @@ const correctWord = (
 // each letter skipped past the first, so a word read with several letters
 // skipped falls below a correction that finishes a word, where one dropped
 // letter does not (@see docs/performance.md).
-const SCATTER_SCORE = SCORES.CONTAINS + 0.05;
+const SCATTER_SCORE = CONTAINS_SCORE + 0.05;
 const SCATTER_SKIP_WEIGHT = 1.5;
 const SCATTER_EXTRA_SKIP_PENALTY = 0.15;
 const LATER_WORD_PENALTY = 0.05;
@@ -436,65 +361,11 @@ const correctSplitWord = (
 		? correctWord(queryWords.join(""), field, normalisedField, words, 1, spare)
 		: null;
 
-// An adjacent swap breaks the three letter pairs around it; every other edit
-// breaks fewer.
-const PAIRS_ONE_EDIT_BREAKS = 3;
+type MaskGate = PreparedReading["admitsMask"];
 
-type Pairs = { lo: number; hi: number };
-
-// Only pairs of ASCII letters and digits, where a field's bigram set and the
-// normalised query are sure to agree.
-const pairsOf = (words: string[]): Pairs => {
-	const pairs = { lo: 0, hi: 0 };
-	for (const word of words) {
-		for (let at = 1; at < word.length; at++) {
-			const before = word.charCodeAt(at - 1);
-			const unit = word.charCodeAt(at);
-			if (before > 127 || unit > 127) continue;
-			const beforeClass = bigramClass(before);
-			const unitClass = bigramClass(unit);
-			if (beforeClass === 0 || unitClass === 0) continue;
-			const bit = bigramBit(beforeClass, unitClass);
-			if (bit < 32) pairs.lo |= 1 << bit;
-			else pairs.hi |= 1 << (bit - 32);
-		}
-	}
-	return pairs;
-};
-
-const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number): boolean => {
-	let missing = 0;
-	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
-	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
-	return true;
-};
-
-// A phrase word under five letters is never corrected, so its pairs all occur;
-// the rest lose at most what the edits break. Read as one word, the joined
-// query loses only what its `spare` edits beside the space break.
-const phrasePairs = (
-	queryWords: string[],
-	asPhrase: boolean,
-	spare: number,
-): NonNullable<PreparedReading["admitsPairs"]> => {
-	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
-	const all = pairsOf(queryWords);
-	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
-	return (lo, hi) =>
-		(asPhrase &&
-			lacksPairsAtMost(short, lo, hi, 0) &&
-			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
-		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
-};
-
-type Gates = Pick<PreparedReading, "admitsMask" | "admitsText">;
-
-const scatterGates = (letters: string): Gates => {
+const scatterGate = (letters: string): MaskGate => {
 	const lettersMask = charMask(letters);
-	return {
-		admitsMask: (fieldMask) => (lettersMask & ~fieldMask) === 0,
-		admitsText: (text) => holdsInOrder(letters, text),
-	};
+	return (fieldMask) => (lettersMask & ~fieldMask) === 0;
 };
 
 // A run of three or more of one letter, cut to two: a held key, whose one
@@ -537,21 +408,17 @@ const swapWord = (
 	return best;
 };
 
-const eitherGate = (a: Gates, b: Gates): Gates => ({
-	admitsMask: (fieldMask) => a.admitsMask(fieldMask) || b.admitsMask(fieldMask),
-	admitsText: (text) => a.admitsText(text) || b.admitsText(text),
-});
+const eitherGate =
+	(a: MaskGate, b: MaskGate): MaskGate =>
+	(fieldMask) =>
+		a(fieldMask) || b(fieldMask);
 
 // `unmatched` is how many of the query's letters the edits can leave without a
 // counterpart in the field.
-const editGates = (letters: string, unmatched: number): Gates => {
+const editGate = (letters: string, unmatched: number): MaskGate => {
 	const lettersMask = charMask(letters);
 	const counts = classCounts(letters);
-	const gate = letterGate(letters, letters.length - unmatched);
-	return {
-		admitsMask: (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched),
-		admitsText: (text) => holdsLetters(gate, text),
-	};
+	return (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched);
 };
 
 // Edit distance over every field word is what makes a reading expensive, so
@@ -603,15 +470,14 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	// leave a letter unmatched.
 	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
 	if (!matchable) return null;
-	const gates = editable ? editGates(letters, unmatched) : scatterGates(letters);
+	const gate = editable ? editGate(letters, unmatched) : scatterGate(letters);
 	return {
-		...(stuck !== null
-			? eitherGate(gates, editGates(stuck, MAX_EDITS - 1))
-			: swaps !== null
-				? eitherGate(gates, editGates(letters, 0))
-				: gates),
-		// A sparse reading keeps no pairs of a word together.
-		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
+		admitsMask:
+			stuck !== null
+				? eitherGate(gate, editGate(stuck, MAX_EDITS - 1))
+				: swaps !== null
+					? eitherGate(gate, editGate(letters, 0))
+					: gate,
 		wholeList: !competing,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;

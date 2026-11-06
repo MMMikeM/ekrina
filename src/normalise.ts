@@ -80,129 +80,34 @@ export const normaliseText = (text: string): string => {
 	return folded;
 };
 
-// `charMask`'s class for one folded code unit, shifted so 0 can mean "not a
-// word character": class n sets mask bit n − 1, for every class. Buckets
-// collide exactly where charMask's do, so a collision can only weaken the
-// bigram filter, never strengthen it.
-export const bigramClass = (unit: number): number => {
-	if (unit >= 97 && unit <= 122) return unit - 96;
-	// Folded text has no capitals; this keeps the classes identical to charMask's.
-	/* v8 ignore next */
-	if (unit >= 65 && unit <= 90) return unit - 64;
-	if (unit >= 48 && unit <= 57) return 27 + (unit & 3);
-	if (unit > 127) return 31 + (unit & 1);
+// `charMask`'s bit for one code unit: a letter as its lower case, digits in
+// four buckets, non-ASCII in two, and nothing for a separator.
+export const unitMask = (unit: number): number => {
+	if (unit >= 97 && unit <= 122) return 1 << (unit - 97);
+	// Raw ASCII capitals, which rawFieldScan reads before folding.
+	if (unit >= 65 && unit <= 90) return 1 << (unit - 65);
+	if (unit >= 48 && unit <= 57) return 1 << (26 + (unit & 3));
+	if (unit > 127) return 1 << (30 + (unit & 1));
 	return 0;
 };
 
-export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
-
-// A field's rescue bigram set — adjacent same-word class pairs and consecutive
-// word-initial pairs, 64 bits in two int32s.
-export type FieldBigrams = { lo: number; hi: number };
-
 /**
- * `charMask(normaliseText(raw))` without building the normalised string:
- * returns the field's char mask and accumulates its bigram set into `into`
- * (degraded = all-ones). Runs once per field, when a searcher meets its first
- * rescue-shaped query.
- *
- * Both halves may only false-pass: skipping NFC can only ADD mask bits, and a
- * combining mark — where raw adjacency stops matching normalised adjacency —
- * degrades the bigram set to all-bits while the mask keeps folding.
+ * `charMask(normaliseText(raw))` without building the normalised string. Runs
+ * once per field, when a searcher first needs a whole-list pass. May only
+ * false-pass: skipping NFC can only add mask bits.
  */
-export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
+export const rawFieldScan = (raw: string): number => {
 	let mask = 0;
-	let bigramsLo = 0;
-	let bigramsHi = 0;
-	let prevClass = 0;
-	let lastWordInitial = 0;
-	let degraded = false;
-	// The per-unit body appears twice (raw ASCII unit, folded unit), classifies
-	// inline, and writes mask bits per branch: every factored shape — shared
-	// helper, closure, module scratch, single mask-write site off
-	// `bigramClass − 1` — measured 8–15% slower on the whole-corpus build.
 	for (let i = 0; i < raw.length; i++) {
 		const unit = raw.charCodeAt(i);
 		if (unit < 128) {
-			let unitClass = 0;
-			if (unit >= 97 && unit <= 122) {
-				mask |= 1 << (unit - 97);
-				unitClass = unit - 96;
-			} else if (unit >= 65 && unit <= 90) {
-				mask |= 1 << (unit - 65);
-				unitClass = unit - 64;
-			} else if (unit >= 48 && unit <= 57) {
-				mask |= 1 << (26 + (unit & 3));
-				unitClass = 27 + (unit & 3);
-			}
-			if (unitClass !== 0 && !degraded) {
-				if (prevClass !== 0) {
-					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << (bit - 32);
-				} else {
-					if (lastWordInitial !== 0) {
-						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << (bit - 32);
-					}
-					lastWordInitial = unitClass;
-				}
-			}
-			prevClass = unitClass;
+			mask |= unitMask(unit);
 			continue;
 		}
-		if (unit >= 0x300 && unit <= 0x36f) degraded = true;
 		const codePoint = raw.codePointAt(i) as number;
 		if (codePoint > 0xffff) i++;
 		const folded = foldChar(String.fromCodePoint(codePoint));
-		for (let k = 0; k < folded.length; k++) {
-			const foldedUnit = folded.charCodeAt(k);
-			let unitClass = 0;
-			if (foldedUnit >= 97 && foldedUnit <= 122) {
-				mask |= 1 << (foldedUnit - 97);
-				unitClass = foldedUnit - 96;
-			}
-			// No code point above 127 folds to A–Z or a digit (checked over all of
-			// Unicode). These keep a new fold from dropping a mask bit, which would
-			// make the gates false-reject.
-			/* v8 ignore start */
-			else if (foldedUnit >= 65 && foldedUnit <= 90) {
-				mask |= 1 << (foldedUnit - 65);
-				unitClass = foldedUnit - 64;
-			} else if (foldedUnit >= 48 && foldedUnit <= 57) {
-				mask |= 1 << (26 + (foldedUnit & 3));
-				unitClass = 27 + (foldedUnit & 3);
-			}
-			/* v8 ignore stop */
-			else if (foldedUnit > 127) {
-				mask |= 1 << (30 + (foldedUnit & 1));
-				if (foldedUnit >= 0x300 && foldedUnit <= 0x36f) degraded = true;
-				else unitClass = 31 + (foldedUnit & 1);
-			}
-			if (unitClass !== 0 && !degraded) {
-				if (prevClass !== 0) {
-					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << (bit - 32);
-				} else {
-					if (lastWordInitial !== 0) {
-						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << (bit - 32);
-					}
-					lastWordInitial = unitClass;
-				}
-			}
-			prevClass = unitClass;
-		}
-	}
-	if (degraded) {
-		into.lo = -1;
-		into.hi = -1;
-	} else {
-		into.lo |= bigramsLo;
-		into.hi |= bigramsHi;
+		for (let k = 0; k < folded.length; k++) mask |= unitMask(folded.charCodeAt(k));
 	}
 	return mask;
 };

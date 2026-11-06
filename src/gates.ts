@@ -1,12 +1,10 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
-import { bigramBit, bigramClass } from "./normalise";
-import { unfoldTable } from "./unfold";
+import { unitMask } from "./normalise";
 
 export const escapeRegex = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Inside a character class only these four are special, and `-` needs escaping
 // there while `escapeRegex` leaves it alone.
-const escapeCharClass = (text: string): string => text.replace(/[\^\]\\-]/g, "\\$&");
 
 // One query position in the subsequence gate: `matcher` matches the position,
 // `gapBody` is the char-class body excluded from the gap before it, and
@@ -74,43 +72,12 @@ export const buildFuzzyGate = (normalisedQuery: string): Gate =>
 	subsequenceGate(
 		[...normalisedQuery].map((point) => ({
 			matcher: escapeRegex(point),
-			gapBody: escapeCharClass(point),
+			// Escaped for a character class rather than a pattern.
+			gapBody: point.replace(/[\^\]\\-]/g, "\\$&"),
 			accepts: point,
 		})),
 	);
 
-/**
- * `buildFuzzyGate` for text nothing has normalised yet: each character becomes
- * the class of code points that fold to it, so the gate runs against the
- * caller's own strings before any prepared copy of the corpus exists.
- * Null when the query holds a character the unfold table doesn't cover —
- * non-Latin scripts, mostly — and the caller takes the mask path instead:
- * slower, never wrong. No `i` flag: the classes already carry both cases.
- */
-export const buildRawGate = (normalisedQuery: string): Gate | null => {
-	const unfold = unfoldTable();
-	const positions: GatePosition[] = [];
-	for (const char of normalisedQuery) {
-		const sources = unfold[char];
-		if (sources === undefined) return null;
-		const gapBody = escapeCharClass(sources);
-		// A decomposed accent sits between letters in the raw text but not after
-		// normaliseText strips it, so the run steps over the same range it strips.
-		positions.push({ matcher: `[${gapBody}][\\u0300-\\u036f]*`, gapBody, accepts: sources });
-	}
-	return subsequenceGate(positions);
-};
-
-/**
- * `buildRawGate` for a one-character query, which matches only where it starts
- * a word. Null when the unfold table doesn't cover the character.
- */
-export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null => {
-	const sources = unfoldTable()[normalisedQuery];
-	return sources === undefined
-		? null
-		: new RegExp(`(?<![${WORD_CHARS}])[${escapeCharClass(sources)}]`, "u");
-};
 
 /**
  * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for
@@ -122,74 +89,10 @@ export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null =>
  */
 export const charMask = (normalised: string): number => {
 	let mask = 0;
-	for (let i = 0; i < normalised.length; i++) {
-		const unit = normalised.charCodeAt(i);
-		if (unit >= 97 && unit <= 122) mask |= 1 << (unit - 97);
-		else if (unit >= 48 && unit <= 57) mask |= 1 << (26 + (unit & 3));
-		else if (unit > 127) mask |= 1 << (30 + (unit & 1));
-	}
+	for (let i = 0; i < normalised.length; i++) mask |= unitMask(normalised.charCodeAt(i));
 	return mask;
 };
 
-/**
- * Query-side half of the rescue bigram gate, for fields missing exactly one of
- * the query's character classes. Such a field is only reachable by an edit at
- * the query's sole character of the missing class β (two β characters would
- * need two edits), and every rescue-eligible tier is a contiguous occurrence —
- * so every query bigram NOT touching the β position must appear in the field's
- * bigram set: `requiredLo/requiredHi[β]` hold exactly those. Two or more β
- * characters store all-ones, which no real field covers (a hazard-degraded
- * field is all-ones too and still passes). Hash collisions stay
- * false-pass-only on both sides: a required bit colliding with a touching
- * pair's is still owed by the intact remainder of the window, and field-side
- * collisions only add coverage.
- */
-export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
-
-export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate => {
-	const queryLength = normalisedQuery.length;
-	const bigramClasses = new Int32Array(queryLength);
-	const classBit = new Int32Array(queryLength).fill(-1);
-	for (let at = 0; at < queryLength; at++) {
-		const unit = normalisedQuery.charCodeAt(at);
-		bigramClasses[at] = bigramClass(unit);
-		if (unit >= 97 && unit <= 122) classBit[at] = unit - 97;
-		else if (unit >= 48 && unit <= 57) classBit[at] = 26 + (unit & 3);
-		else if (unit > 127) classBit[at] = 30 + (unit & 1);
-	}
-	const requiredLo = new Int32Array(32);
-	const requiredHi = new Int32Array(32);
-	for (let b = 0; b < 32; b++) {
-		let occurrences = 0;
-		let soleAt = -1;
-		for (let at = 0; at < queryLength; at++) {
-			if (classBit[at] === b) {
-				occurrences++;
-				soleAt = at;
-			}
-		}
-		if (occurrences === 0) continue;
-		if (occurrences > 1) {
-			requiredLo[b] = -1;
-			requiredHi[b] = -1;
-			continue;
-		}
-		for (let at = 1; at < queryLength; at++) {
-			if (
-				bigramClasses[at - 1] === 0 ||
-				bigramClasses[at] === 0 ||
-				at - 1 === soleAt ||
-				at === soleAt
-			) {
-				continue;
-			}
-			const bit = bigramBit(bigramClasses[at - 1], bigramClasses[at]);
-			if (bit < 32) requiredLo[b] |= 1 << bit;
-			else requiredHi[b] |= 1 << (bit - 32);
-		}
-	}
-	return { requiredLo, requiredHi };
-};
 
 // True when the mask is an exact distinct-char presence check: no lossy bucket
 // bits set, so the presence-gate regex could not reject anything further.

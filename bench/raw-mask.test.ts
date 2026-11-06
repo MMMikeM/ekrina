@@ -14,7 +14,7 @@ it("rawFieldScan never drops a mask bit over either corpus", { timeout: 300_000 
 		let extra = 0;
 		for (const raw of list) {
 			const eager = charMask(normaliseText(raw.trim()));
-			const lazy = rawFieldScan(raw, { lo: 0, hi: 0 });
+			const lazy = rawFieldScan(raw);
 			if (eager & ~lazy) drops.push(raw);
 			else if (eager !== lazy) extra++;
 		}

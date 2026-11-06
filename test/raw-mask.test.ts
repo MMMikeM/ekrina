@@ -10,7 +10,7 @@ import { normaliseText, rawFieldScan } from "../src/normalise";
 // and the raw form does not is a gate that false-rejects, which is the one
 // failure no tier can recover from.
 const dropped = (raw: string): number =>
-	charMask(normaliseText(raw.trim())) & ~rawFieldScan(raw, { lo: 0, hi: 0 });
+	charMask(normaliseText(raw.trim())) & ~rawFieldScan(raw);
 
 const CASES: [string, string][] = [
 	["lowercase ascii", "generic soft cheese"],

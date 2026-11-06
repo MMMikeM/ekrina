@@ -10,10 +10,10 @@
  */
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
-import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
+import { buildFuzzyGate, buildPresenceGate, charMask } from "../src/gates";
 import { isRescuableQuery } from "../src/rescue";
 import { splitWords } from "../src/boundaries";
-import { normaliseText, rawFieldScan } from "../src/normalise";
+import { normaliseText } from "../src/normalise";
 import { CORPORA } from "./corpus";
 import { withoutSecondPass } from "./ladder";
 
@@ -21,7 +21,6 @@ type FunnelRow = {
 	query: string;
 	items: number;
 	"mask cut": string;
-	"bigram cut": string;
 	"regex cut": string;
 	"ladder entered": number;
 	matched: number;
@@ -58,11 +57,6 @@ describe("pre-filter funnel", () => {
 				const list = build(size);
 				const normalised = list.map(normaliseText);
 				const masks = normalised.map(charMask);
-				const bigrams = list.map((item) => {
-					const acc = { lo: 0, hi: 0 };
-					rawFieldScan(item, acc);
-					return acc;
-				});
 
 				const rows: FunnelRow[] = [];
 				for (const query of queries) {
@@ -76,10 +70,8 @@ describe("pre-filter funnel", () => {
 					// Modelling the relaxed gate unconditionally would count items
 					// through a filter production never applies, overstating the cut.
 					const relaxed = isRescuableQuery(normalisedQuery, splitWords(normalisedQuery));
-					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery) : null;
 
 					let maskPass = 0;
-					let bigramPass = 0;
 					let gatePass = 0;
 					let matched = 0;
 					let rescued = 0;
@@ -88,18 +80,6 @@ describe("pre-filter funnel", () => {
 						const maskOk = relaxed
 							? (missingClasses & (missingClasses - 1)) === 0
 							: missingClasses === 0;
-						// The searcher's rescue-scan bigram stage: a field missing
-						// exactly one class is reachable only by an edit at that
-						// class's query position, so the query's untouched bigrams
-						// must all be present (see buildRescueBigramGate).
-						let bigramOk = maskOk;
-						if (bigramOk && missingClasses !== 0 && bigramGate !== null) {
-							const b = 31 - Math.clz32(missingClasses);
-							bigramOk =
-								((bigramGate.requiredLo[b] & ~bigrams[i].lo) |
-									(bigramGate.requiredHi[b] & ~bigrams[i].hi)) ===
-								0;
-						}
 						const result = withoutSecondPass(() => fuzzyMatch(list[i], query));
 						if (result) {
 							// A one-edit rescue matches a *corrected* query, so its hits
@@ -118,12 +98,6 @@ describe("pre-filter funnel", () => {
 								expect(["substituted", "inserted"]).toContain(
 									editKind(query, result.corrected as string),
 								);
-								// The bigram stage must never reject a field the rescue
-								// would have corrected.
-								expect(
-									bigramOk,
-									`bigram gate rejected a ${result.tier} match for "${query}": ${list[i]}`,
-								).toBe(true);
 							}
 							// The regex gate is a pre-filter, so it may only false-pass.
 							// `gatePass >= matched` below is an aggregate and can hold
@@ -142,21 +116,17 @@ describe("pre-filter funnel", () => {
 						}
 						if (!maskOk) continue;
 						maskPass++;
-						if (!bigramOk) continue;
-						bigramPass++;
 						if (!gate.test(normalised[i])) continue;
 						gatePass++;
 					}
 
-					expect(maskPass).toBeGreaterThanOrEqual(bigramPass);
-					expect(bigramPass).toBeGreaterThanOrEqual(gatePass);
+					expect(maskPass).toBeGreaterThanOrEqual(gatePass);
 					expect(gatePass).toBeGreaterThanOrEqual(matched);
 					rows.push({
 						query,
 						items: size,
 						"mask cut": pct(size - maskPass, size),
-						"bigram cut": pct(maskPass - bigramPass, maskPass),
-						"regex cut": pct(bigramPass - gatePass, bigramPass),
+						"regex cut": pct(maskPass - gatePass, maskPass),
 						"ladder entered": gatePass,
 						matched,
 						rescued,
