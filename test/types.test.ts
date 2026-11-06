@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vite-plus/test";
 import { createSearcher, fuzzyMatch, SCORES } from "../src/index";
-import type { MatchResult, SearchResult, SearchResultOf } from "../src/index";
+import type { FieldMatch, MatchResult, SearchResult, SearchResultOf } from "../src/index";
 
 type User = { name: string; email: string };
 
@@ -39,6 +39,22 @@ describe("types", () => {
 		const first = createSearcher(users, (u) => u.name)("ada")[0];
 		// @ts-expect-error
 		expect(first?.field).toBeUndefined();
+	});
+
+	it("a lone spec infers the item type and names no field", () => {
+		const users: User[] = [{ name: "Ada", email: "a@x.com" }];
+		const first = createSearcher(users, { selectField: (u) => u.name, acronym: true })("ada")[0];
+		const typed: SearchResult<User> | undefined = first;
+		// @ts-expect-error a lone spec's result has no fields
+		expect(typed?.fields).toBeUndefined();
+	});
+
+	it("fields is keyed by the field names", () => {
+		const users: User[] = [{ name: "Ada", email: "a@x.com" }];
+		const first = createSearcher(users, { name: (u) => u.name, email: (u) => u.email })("ada")[0];
+		const name: FieldMatch | undefined = first?.fields.name;
+		// @ts-expect-error a misspelt name is not a key of fields
+		expect(first?.fields.nmae ?? name).toBeDefined();
 	});
 
 	it("primitive returns MatchResult", () => {

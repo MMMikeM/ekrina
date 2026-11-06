@@ -14,6 +14,29 @@ describe("named fields", () => {
 			tier: "boundary",
 			ranges: [[6, 9]],
 			text: "Event Loop",
+			fields: { title: { tier: "boundary", ranges: [[6, 9]], text: "Event Loop" } },
+		});
+	});
+
+	it("fields holds every field that matched, in the order they were named, guesses included", () => {
+		const commands = [{ title: "Toggle Terminal", keywords: "tgl terminal" }];
+		const r = createSearcher(commands, {
+			title: (c) => c.title,
+			keywords: { selectField: (c) => c.keywords, demoteBy: SCORES.CONTAINS },
+		})("tgl")[0];
+		expect(r?.field).toBe("keywords");
+		expect(r?.fields).toEqual({
+			title: { tier: "fuzzy", ranges: [[0, 0], [3, 4]], text: "Toggle Terminal" },
+			keywords: { tier: "prefix", ranges: [[0, 2]], text: "tgl terminal" },
+		});
+		expect(Object.keys(r?.fields ?? {})).toEqual(["title", "keywords"]);
+		expect(r?.fields.title && isLiteral(r.fields.title)).toBe(false);
+	});
+
+	it("a field keeps its best match when a later reading offers a worse one", () => {
+		const r = createSearcher([{ a: "Jhelum", b: "x" }], { a: (i) => i.a, b: (i) => i.b })("jheum")[0];
+		expect(r?.fields).toEqual({
+			a: { tier: "corrected", corrected: "jhelum", ranges: [[0, 5]], text: "Jhelum" },
 		});
 	});
 
@@ -86,6 +109,23 @@ describe("a single-field search", () => {
 			text: "Open Recent",
 		});
 	});
+
+	it("takes a spec when its one field needs options, and still names none", () => {
+		const r = createSearcher([{ name: "United States" }], {
+			selectField: (c) => c.name,
+			acronym: true,
+		})("us")[0];
+		expect(r).toEqual({
+			item: { name: "United States" },
+			score: SCORES.ACRONYM,
+			tier: "acronym",
+			ranges: [
+				[0, 0],
+				[7, 7],
+			],
+			text: "United States",
+		});
+	});
 });
 
 describe("a tie between fields", () => {
@@ -120,7 +160,7 @@ describe("selections the searcher rejects", () => {
 		// @ts-expect-error an array no longer type-checks either
 		expect(() => createSearcher(items, specs)).toThrow(
 			new TypeError(
-				"createSearcher takes a function, or an object of named fields such as { title: (item) => item.title }",
+				"createSearcher takes a field, or an object of named fields such as { title: (item) => item.title }",
 			),
 		);
 	});
@@ -139,6 +179,19 @@ describe("selections the searcher rejects", () => {
 		expect(() => createSearcher(items, text)).toThrow(
 			new TypeError("field title needs selectField, which replaced text in 2.0"),
 		);
+	});
+
+	it("a field named selectField, which would read as a spec", () => {
+		const fields = { selectField: { selectField: (item: string) => item } };
+		// @ts-expect-error the name is reserved for a spec
+		expect(() => createSearcher(items, fields)).toThrow(
+			new TypeError("a field can't be named selectField"),
+		);
+	});
+
+	it("1.x's atBest on a lone spec too", () => {
+		const atBest = { selectField: (item: string) => item, atBest: SCORES.CONTAINS };
+		expect(() => createSearcher(items, atBest)).toThrow(new TypeError("atBest is demoteBy since 2.0"));
 	});
 
 	it("1.x's atBest, rather than ignoring it", () => {

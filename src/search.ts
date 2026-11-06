@@ -12,6 +12,8 @@ import { isRescuableQuery, isShortQuery } from "./rescue";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
 import type {
+	Field,
+	FieldMatch,
 	FieldSpec,
 	SearchResult,
 	Searcher,
@@ -90,38 +92,42 @@ const integerLike = /^(0|[1-9]\d*)$/;
 
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
-const resolveFieldSpecs = <T>(
-	selection?:
-		| ((item: T) => string | null)
-		| Record<string, FieldSpec<T> | ((item: T) => string | null)>,
-): ResolvedSpec<T>[] => {
+const isSpec = (value: unknown): value is FieldSpec<never> =>
+	typeof (value as FieldSpec<never> | null)?.selectField === "function";
+
+const resolveField = <T>(field: Field<T>, fieldName: string | undefined): ResolvedSpec<T> => {
+	const spec = typeof field === "function" ? { selectField: field } : field;
+	if ("atBest" in spec) throw new TypeError("atBest is demoteBy since 2.0");
+	return {
+		selector: spec.selectField,
+		acronymTier: spec.acronym ?? false,
+		demotion: spec.demoteBy ?? 0,
+		fieldName,
+	};
+};
+
+const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): ResolvedSpec<T>[] => {
 	if (!selection) selection = (item) => item as unknown as string;
-	if (typeof selection === "function") {
-		return [{ selector: selection, acronymTier: false, demotion: 0, fieldName: undefined }];
-	}
+	if (typeof selection === "function" || isSpec(selection)) return [resolveField(selection, undefined)];
 	if (typeof selection !== "object" || Array.isArray(selection)) {
 		throw new TypeError(
-			"createSearcher takes a function, or an object of named fields such as { title: (item) => item.title }",
+			"createSearcher takes a field, or an object of named fields such as { title: (item) => item.title }",
 		);
 	}
-	return Object.entries(selection).map(([name, value]) => {
+	return Object.entries(selection).map(([name, field]) => {
 		if (name === "getText") {
 			throw new TypeError("pass the function itself: createSearcher(items, (item) => item.title)");
 		}
-		if (integerLike.test(name)) {
-			throw new TypeError(`a field can't be named ${name}: integer-like names sort before the others`);
+		if (name === "selectField" || integerLike.test(name)) {
+			throw new TypeError(
+				`a field can't be named ${name}` +
+					(name === "selectField" ? "" : ": integer-like names sort before the others"),
+			);
 		}
-		const spec = typeof value === "function" ? { selectField: value } : value;
-		if (typeof spec?.selectField !== "function") {
+		if (typeof field !== "function" && !isSpec(field)) {
 			throw new TypeError(`field ${name} needs selectField, which replaced text in 2.0`);
 		}
-		if ("atBest" in spec) throw new TypeError("atBest is demoteBy since 2.0");
-		return {
-			selector: spec.selectField,
-			acronymTier: spec.acronym ?? false,
-			demotion: spec.demoteBy ?? 0,
-			fieldName: name,
-		};
+		return resolveField(field, name);
 	});
 };
 
@@ -143,9 +149,9 @@ const resolveFieldSpecs = <T>(
  * An empty object of fields leaves nothing to search, so every query returns no
  * results.
  *
- * @throws TypeError when the fields are neither a function nor an object of
- * named fields, when a field is named like an integer, or when a field lacks
- * `selectField` or uses the 1.x `atBest`.
+ * @throws TypeError when the selection is neither a field nor an object of
+ * named fields, when a field is named `selectField` or like an integer, or when
+ * a field lacks `selectField` or uses the 1.x `atBest`.
  *
  * @example
  * // Array of strings
@@ -153,8 +159,9 @@ const resolveFieldSpecs = <T>(
  * search('ban'); // [{ item: 'banana', score: 0.5, tier: 'prefix', ranges: [[0, 2]], text: 'banana' }]
  *
  * @example
- * // Objects, one field
+ * // Objects, one field, and one with options
  * const search = createSearcher(users, (u) => u.name);
+ * const countries = createSearcher(places, { selectField: (p) => p.name, acronym: true });
  *
  * @example
  * // Named fields, each a function or a spec (a body hit ranks like a title contains)
@@ -165,17 +172,14 @@ const resolveFieldSpecs = <T>(
  * search('loop')[0]?.field; // 'title' | 'body'
  */
 export function createSearcher(list: string[]): Searcher<string>;
-export function createSearcher<T>(
-	list: T[],
-	selectField: (item: T) => string | null,
-): Searcher<T>;
+export function createSearcher<T>(list: T[], field: Field<T>): Searcher<T>;
 export function createSearcher<T, F extends string>(
 	list: T[],
-	fields: Record<F, FieldSpec<T> | ((item: T) => string | null)>,
+	fields: Record<F, Field<T>> & { selectField?: never },
 ): Searcher<T, F>;
 export function createSearcher<T, F extends string>(
 	list: T[],
-	selection?: ((item: T) => string | null) | Record<F, FieldSpec<T> | ((item: T) => string | null)>,
+	selection?: Field<T> | Record<F, Field<T>>,
 ): Searcher<T, F> {
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
@@ -188,6 +192,10 @@ export function createSearcher<T, F extends string>(
 	const heldStamps = new Float64Array(count);
 	const heldEndsWord = new Uint8Array(count);
 	let generation = 0;
+	const named = specCount > 0 && resolvedSpecs[0].fieldName !== undefined;
+	// Each item's best match per field, item-major, kept only for named fields.
+	// oxlint-disable-next-line unicorn/no-new-array
+	const fieldMatches: (MatchResult | undefined)[] = new Array(named ? count * specCount : 0);
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
@@ -359,8 +367,14 @@ export function createSearcher<T, F extends string>(
 			f: number,
 			match: MatchResult,
 		): SearchResult<T, F> => {
-			const endsWord = placeFieldResult(match, i * specCount + f);
+			const at = i * specCount + f;
+			const endsWord = placeFieldResult(match, at);
 			const score = match.score + resolvedSpecs[f].demotion;
+			if (named) {
+				if (entry === undefined) fieldMatches.fill(undefined, i * specCount, (i + 1) * specCount);
+				const held = entry === undefined ? undefined : fieldMatches[at];
+				if (held === undefined || match.score < held.score) fieldMatches[at] = match;
+			}
 			if (entry === undefined) {
 				entry = resultOf(i, f, match, score);
 				record(i, entry, endsWord);
@@ -573,16 +587,30 @@ export function createSearcher<T, F extends string>(
 
 		// Within a score, a match that ends on a word boundary ranks first ("will"
 		// means "Will Smith" before "Willa"), then list order.
-		const results = matched
-			.sort(
-				(a, b) =>
-					(heldResults[a] as SearchResult<T, F>).score - (heldResults[b] as SearchResult<T, F>).score ||
-					heldEndsWord[b] - heldEndsWord[a] ||
-					a - b,
-			)
-			.map((i) => heldResults[i] as SearchResult<T, F>);
-		if (limit !== undefined && results.length > limit) results.length = limit;
-		return results;
+		matched.sort(
+			(a, b) =>
+				(heldResults[a] as SearchResult<T, F>).score - (heldResults[b] as SearchResult<T, F>).score ||
+				heldEndsWord[b] - heldEndsWord[a] ||
+				a - b,
+		);
+		if (limit !== undefined && matched.length > limit) matched.length = limit;
+		return matched.map((i) => (named ? withFields(i) : (heldResults[i] as SearchResult<T, F>)));
+	};
+
+	const withFields = (i: number): SearchResult<T, F> => {
+		const fields: Record<string, FieldMatch> = {};
+		for (let f = 0; f < specCount; f++) {
+			const match = fieldMatches[i * specCount + f];
+			if (match === undefined) continue;
+			const entry: FieldMatch = {
+				tier: match.tier,
+				ranges: match.ranges,
+				text: resolvedSpecs[f].selector(list[i]) as string,
+			};
+			if (match.corrected !== undefined) entry.corrected = match.corrected;
+			fields[resolvedSpecs[f].fieldName as string] = entry;
+		}
+		return Object.assign(heldResults[i] as SearchResult<T, F>, { fields });
 	};
 
 	// Asked for up front, the index takes every item's bigram set too, so no

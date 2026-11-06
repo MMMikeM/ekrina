@@ -70,16 +70,36 @@ export type FieldSpec<T = unknown> = {
 };
 
 /**
+ * One searchable field: a function that returns its string, or a spec when the
+ * field needs options. Pass one alone, or several in an object that names them.
+ */
+export type Field<T = unknown> = FieldSpec<T> | ((item: T) => string | null);
+
+/**
  * A ranked search result: one item, and how its best-matching text matched.
  * `score` ranks it, lower = better, and includes the field's `demoteBy`.
- * With named fields, `field` names the one that matched best; a single-field
- * search has none.
+ * With named fields, `field` names the one that matched best and `fields` holds
+ * every field that matched; a single-field search has neither.
  */
 export type SearchResult<T, F extends string = never> = MatchResult & {
 	item: T;
 	/** The text `ranges` index into: the string the best field returned. */
 	text: string;
-} & ([F] extends [never] ? unknown : { field: F });
+} & ([F] extends [never] ? unknown : { field: F; fields: Partial<Record<F, FieldMatch>> });
+
+/**
+ * How one named field matched, in the field's own text. Fuzzy and corrected
+ * matches are included; `isLiteral` tells them apart.
+ */
+export type FieldMatch = {
+	tier: Tier;
+	/** The characters of `text` that matched, to highlight. */
+	ranges: HighlightRanges;
+	/** The text `ranges` index into: the string this field returned. */
+	text: string;
+	/** On a `corrected` match, the query as it was read, spelt as the field spells it. */
+	corrected?: string;
+};
 
 /**
  * Options for one search.

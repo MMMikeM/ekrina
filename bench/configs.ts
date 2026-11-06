@@ -174,7 +174,7 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "ekrina (acronym)",
 		make: () => {
-			const spec = { label: { selectField: (x: string) => x, acronym: true } };
+			const spec = { selectField: (x: string) => x, acronym: true };
 			const acronym = createSearcher(list, spec);
 			return {
 				count: (q) => acronym(q).length,
