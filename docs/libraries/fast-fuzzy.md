@@ -14,7 +14,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fast-fuzzy-scorecard-native -->
-| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **fast-fuzzy**        | 0.81 |  24% |    42.28 |   18.74 |   167.00 |        6.20 |
 | fast-fuzzy (all opts) | 0.81 |  24% |    47.32 |   16.09 |   200.72 |        7.08 |
@@ -23,7 +23,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **en corpus:**
 
 <!-- bench:library-fast-fuzzy-scorecard-en -->
-| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **fast-fuzzy**        | 0.80 |  26% |    27.40 |   19.49 |   140.97 |        4.98 |
 | fast-fuzzy (all opts) | 0.80 |  26% |    28.56 |   23.31 |   132.83 |        4.69 |
@@ -32,7 +32,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-fast-fuzzy-scorecard-emoji -->
-| Library               |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **fast-fuzzy**        | 0.84 |  26% |        — |       — |        — |           — |
 | fast-fuzzy (all opts) | 0.84 |  26% |        — |       — |        — |           — |

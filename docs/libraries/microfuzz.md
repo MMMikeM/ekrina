@@ -14,7 +14,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-microfuzz-scorecard-native -->
-| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **@nozbe/microfuzz**        | 0.41 |   7% |     7.74 |    3.53 |    56.01 |        2.10 |
 | @nozbe/microfuzz (all opts) | 0.41 |   7% |     6.43 |    3.45 |    52.25 |        1.95 |
@@ -23,7 +23,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **en corpus:**
 
 <!-- bench:library-microfuzz-scorecard-en -->
-| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **@nozbe/microfuzz**        | 0.40 |   3% |     4.99 |    3.61 |    40.30 |        1.49 |
 | @nozbe/microfuzz (all opts) | 0.40 |   3% |     4.53 |    3.30 |    36.92 |        1.39 |
@@ -32,7 +32,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-microfuzz-scorecard-emoji -->
-| Library                     |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **@nozbe/microfuzz**        | 0.47 |  24% |        — |       — |        — |           — |
 | @nozbe/microfuzz (all opts) | 0.47 |  24% |        — |       — |        — |           — |

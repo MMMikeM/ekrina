@@ -27,7 +27,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fuse-scorecard-native -->
-| Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **Fuse.js (tuned)** | 0.76 |  47% |     1.16 |   16.02 |   309.48 |       12.21 |
 | Fuse.js (all opts)  | 0.75 |  91% |     1.11 |   19.00 |   462.38 |       18.31 |
@@ -37,7 +37,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **en corpus:**
 
 <!-- bench:library-fuse-scorecard-en -->
-| Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **Fuse.js (tuned)** | 0.76 |  46% |     1.14 |   15.64 |   275.27 |       10.83 |
 | Fuse.js (all opts)  | 0.76 |  95% |     1.09 |   18.85 |   323.75 |       12.70 |
@@ -47,7 +47,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-fuse-scorecard-emoji -->
-| Library             |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | **Fuse.js (tuned)** | 0.71 |  35% |        — |       — |        — |           — |
 | Fuse.js (all opts)  | 0.67 |  85% |        — |       — |        — |           — |

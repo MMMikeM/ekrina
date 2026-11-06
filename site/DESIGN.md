@@ -190,11 +190,11 @@ Dark values sit on `:root`; every `-light` key is the same role under `[data-the
 - **Caption** (mono 400, 0.8125rem, tabular figures): table headers, status lines, tier chips, result tags, footer.
 
 ### Named Rules
-**The Margin Note Rule.** If a reader operates it or measures with it (nav, button, tab, legend, subhead, figure, code), it is mono; if they read it, it is serif.
+**The Margin Note Rule.** If a reader operates it or measures with it (nav, button, tab, legend, subhead, code), it is mono; if they read it, it is serif. Measurement tables are the exception: they read as one block, so the whole table is serif.
 
 **The Scale-Only Rule.** Every size comes from `--text-xs` through `--text-4xl` or `--text-display`; Starlight's own `--sl-text-*` are remapped onto that scale rather than used beside it.
 
-**The Tabular Rule.** Numbers in measurement tables are mono, right-aligned, tabular and unwrapped.
+**The Tabular Rule.** A measurement table is one family, the body serif, with tabular figures; numbers are right-aligned, every cell after the label stays on one line, and units live in the header, not the cells.
 
 ## Layout
 
@@ -266,7 +266,9 @@ The exception is the explorer's Log/Linear switch, which stays hidden until its 
 A single 8px-rounded Hairline outline holding `$ npm install ekrina` in mono, the prompt in Muted Ink, and a 2.75rem icon button whose copy icon swaps for a Pen Blue tick drawn by a 0.3s stroke animation (skipped under reduced motion).
 
 ### Measurement tables (signature)
-Tables with right-aligned columns size to their numbers, set in 0.875rem with tabular figures, Hairline row rules, mono 0.8125rem Muted Ink headers, mono unwrapped figures, a sticky first column on Paper with an inset Hairline edge, and a 5% Ink row hover tint.
+Tables with right-aligned columns size to their numbers, set in the body serif at 0.875rem with tabular figures, Hairline row rules, 0.8125rem Muted Ink headers, unwrapped cells after the label, a sticky first column on Paper separated by padding rather than a rule, and a 5% Ink row hover tint.
+Ekrina's own rows (the ones the bench bolds) carry a 10% Ekrina Series Blue tint, and cells that say "no" or "none" are Muted Ink, so "yes" and the figures lead while the words still carry the meaning.
+Columns run in order of importance: match quality, then query time, then size, then the rest.
 Every chart has one of these as its twin on the same page.
 
 ### Scoreline (explorer)

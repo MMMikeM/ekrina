@@ -14,7 +14,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-ekrina-scorecard-native -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | Ekrina           | 0.91 |   0% |     0.18 |    6.13 |    35.76 |        1.06 |
 | Ekrina (indexed) | 0.91 |   0% |     3.68 |    2.81 |    33.82 |        1.11 |
@@ -24,7 +24,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **en corpus:**
 
 <!-- bench:library-ekrina-scorecard-en -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | Ekrina           | 0.92 |   0% |     0.19 |    5.55 |    30.28 |        0.92 |
 | Ekrina (indexed) | 0.92 |   0% |     1.85 |    2.80 |    27.07 |        0.87 |
@@ -34,7 +34,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only; the list is too short for the timing cells):
 
 <!-- bench:library-ekrina-scorecard-emoji -->
-| Library          |  MRR | junk | index ms | cold ms | batch ms | batch/query |
+| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
 | Ekrina           | 0.91 |   0% |        — |       — |        — |           — |
 | Ekrina (indexed) | 0.91 |   0% |        — |       — |        — |           — |

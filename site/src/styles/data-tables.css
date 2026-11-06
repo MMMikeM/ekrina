@@ -21,19 +21,32 @@
 
 .sl-markdown-content table:has(th[style*="right"]) thead th {
 	color: var(--ink-muted);
-	font-family: var(--__sl-font-mono);
 	font-size: var(--text-xs);
 	font-weight: 400;
 	vertical-align: bottom;
+	white-space: nowrap;
 }
 
-.sl-markdown-content table:has(th[style*="right"]) td[style*="right"] {
-	font-family: var(--__sl-font-mono);
+/* One line per row, so every row is the same height. */
+.sl-markdown-content table:has(th[style*="right"]) td:not(:first-child) {
 	white-space: nowrap;
+}
+
+.sl-markdown-content table:has(th[style*="right"]) td.quiet {
+	color: var(--ink-muted);
 }
 
 .sl-markdown-content table:has(th[style*="right"]) tbody tr:hover > * {
 	background: color-mix(in oklab, var(--ink) 5%, var(--sl-color-bg));
+}
+
+/* The bench bolds Ekrina's own rows. */
+.sl-markdown-content table:has(th[style*="right"]) tbody tr:has(> td:first-child strong) > * {
+	background: color-mix(in oklab, var(--chart-ekrina) 10%, var(--sl-color-bg));
+}
+
+.sl-markdown-content table:has(th[style*="right"]) tbody tr:has(> td:first-child strong):hover > * {
+	background: color-mix(in oklab, var(--chart-ekrina) 16%, var(--sl-color-bg));
 }
 
 /* The label column stays put while a wide table scrolls under it. */
@@ -43,7 +56,6 @@
 	left: 0;
 	z-index: 1;
 	min-width: 9rem;
-	padding-inline-start: 0;
+	padding-inline: 0 var(--space-s);
 	background: var(--sl-color-bg);
-	box-shadow: inset -1px 0 var(--line);
 }

@@ -5,6 +5,8 @@ import { defineConfig } from "astro/config";
 import { fileURLToPath } from "node:url";
 import starlightLlmsTxt from "starlight-llms-txt";
 import { markdownPages } from "./src/integrations/markdown-pages.ts";
+import { satteri } from "@astrojs/markdown-satteri";
+import { quietCells } from "./src/quiet-cells.ts";
 import { lastModified } from "./src/last-modified.ts";
 import { project } from "./src/project.ts";
 import { SITE_ORIGIN } from "./src/site-origin.ts";
@@ -28,6 +30,7 @@ export default defineConfig({
 			dedupe: ["react", "react-dom"],
 		},
 	},
+	markdown: { processor: satteri({ hastPlugins: [quietCells] }) },
 	integrations: [
 		starlight({
 			title: "Ekrina",
