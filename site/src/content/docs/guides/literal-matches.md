@@ -8,7 +8,7 @@ sidebar:
 Every match of the query as typed scores at or below `SCORES.CONTAINS`, and every fuzzy chain or corrected typo scores above it:
 
 ```ts
-import { SCORES, type MatchResult } from "ekrina";
+import { SCORES } from "ekrina";
 
 const literal = search(query).filter(
 	(result) => result.score <= SCORES.CONTAINS,
@@ -32,6 +32,8 @@ search(query).filter((result) => result.fields[0]?.tier !== "corrected"); // kee
 Filter those by tier:
 
 ```ts
+import type { MatchResult } from "ekrina";
+
 const isLiteral = (field: MatchResult | null) =>
 	field !== null && field.tier !== "fuzzy" && field.tier !== "corrected";
 

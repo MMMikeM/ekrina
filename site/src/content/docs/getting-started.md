@@ -88,12 +88,11 @@ highlight(top.item.title, top.fields[0]?.ranges ?? []);
 A corrected match carries the query it fixed:
 
 ```ts
-const [top] = search("recnet");
-top.fields[0];
+const match = search("recnet")[0]?.fields[0];
 // { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
 
-if (top?.fields[0]?.tier === "corrected") {
-	showNotice(`Showing results for ${top.fields[0].corrected}`);
+if (match?.tier === "corrected") {
+	showNotice(`Showing results for ${match.corrected}`);
 }
 ```
 

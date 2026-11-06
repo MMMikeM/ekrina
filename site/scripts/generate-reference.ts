@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 import { format } from "oxfmt";
 import { API, SignatureKind, SymbolFlags, TypeFlags, TypeFormatFlags } from "typescript/sync";
 import type { Checker, Signature, Symbol, Type } from "typescript/sync";
+import { SITE_ORIGIN } from "../src/site-origin.ts";
 
 const ROOT = "index";
 // Links are root-absolute, so they survive in the per-page Markdown and
 // llms-full.txt, which are read away from the page they were written for.
-const SITE_URL = "https://ekrina.thelazyweb.dev/";
+const SITE_URL = `${SITE_ORIGIN}/`;
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const outDir = join(repoRoot, "site/src/content/docs/reference");

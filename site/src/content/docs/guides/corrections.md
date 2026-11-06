@@ -27,7 +27,7 @@ const notice =
 	best?.tier === "corrected" ? `Showing results for ${best.corrected}` : null;
 ```
 
-With several fields, read the field that matched: `results[0]?.fields.find((field) => field !== null)`.
+With several fields, read the field that set the result's score: `results[0]?.fields.find((field) => field?.score === results[0].score)`.
 
 ## Label corrected rows
 

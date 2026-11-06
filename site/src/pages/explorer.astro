@@ -114,7 +114,7 @@ const strips = Object.fromEntries(
 					</svg>
 				</span>
 			</div>
-			<fieldset class="corpus">
+			<fieldset class="labelled-switch">
 				<legend>Corpus</legend>
 				<div class="segmented">
 					{
@@ -197,7 +197,7 @@ const strips = Object.fromEntries(
 		<section aria-labelledby="speed">
 			<div class="section-head">
 				<h2 id="speed">Speed</h2>
-				<fieldset class="corpus decoration">
+				<fieldset class="labelled-switch decoration">
 					<legend>Scale</legend>
 					<div class="segmented">
 						<label>
@@ -531,13 +531,13 @@ const strips = Object.fromEntries(
 		pointer-events: none;
 	}
 
-	.corpus {
+	.labelled-switch {
 		display: flex;
 		align-items: center;
 		gap: var(--space-xs);
 	}
 
-	.corpus legend {
+	.labelled-switch legend {
 		float: left;
 		color: var(--ink-muted);
 		font-family: var(--__sl-font-mono);

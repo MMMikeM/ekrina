@@ -26,19 +26,8 @@ A word typed sparsely is a `corrected` match too, starting just above `contains`
 A correction is a guess at what you meant, so the literal hit always ranks first.
 `score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 
-Import `SCORES` for thresholds and `demoteBy` values; or read `tier` directly:
-
-```typescript
-results.filter((r) => r.score <= SCORES.CONTAINS); // drop fuzzy chains and corrections
-results.filter((r) => r.fields[0]?.tier !== "fuzzy"); // drop fuzzy chains only, categorically
-```
-
-A `corrected` match carries the fixed query, so you can say what you searched for:
-
-```typescript
-const top = results[0]?.fields[0];
-if (top?.tier === "corrected") notice(`Showing results for ${top.corrected}`);
-```
+Import `SCORES` for thresholds and `demoteBy` values, or read `tier` directly.
+[Keep only literal matches](/guides/literal-matches/) filters by either, and [Handle corrections](/guides/corrections/) shows a "Showing results for" notice from a `corrected` match.
 
 `demoteBy` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
 Corrected matches also score above `CONTAINS` (a corrected contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.

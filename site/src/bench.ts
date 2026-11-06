@@ -23,8 +23,9 @@ const mrrRange = (config: string) => {
 	return range([en, native, emoji]);
 };
 
-const [ekrina, ...others] = [...explorer.libraries].sort((a, b) => b.headline.all - a.headline.all);
-const runnerUp = others[0]!;
+const runnerUp = explorer.libraries
+	.filter((library) => library.config !== "ekrina")
+	.sort((a, b) => b.headline.all - a.headline.all)[0]!;
 
 const junkOf = (config: string) =>
 	artifact.scorecard.corpora[CORPUS]!.find((row) => row.library === config)!.junk ?? 0;
@@ -74,7 +75,7 @@ export const bench = {
 	libraries: COUNTS[explorer.libraries.length - 1],
 	emoji: emoji.length.toLocaleString("en-GB"),
 	ekrina: {
-		mrr: mrrRange(ekrina!.config),
+		mrr: mrrRange("ekrina"),
 		junk: percent(junkOf("ekrina")),
 		msPerQuery: batchOf("ekrina", SIZE).restMs!.toFixed(1),
 		msPerQuery100k: batchOf("ekrina", "100000").restMs!.toFixed(1),

@@ -1,7 +1,8 @@
 import type { Plugin } from "vite-plus";
 import { markdownUrl } from "../site/src/markdown-path.ts";
+import { SITE_ORIGIN } from "../site/src/site-origin.ts";
 
-const HOME = "https://ekrina.thelazyweb.dev/";
+const HOME = `${SITE_ORIGIN}/`;
 const RULES_PAGE = "site/src/content/docs/ai-agents.md";
 
 type PackageJson = {
@@ -39,7 +40,6 @@ const exportsSection = (pkg: PackageJson, exportsByFile: Map<string, string[]>):
 	if (!values || !declared) {
 		throw new Error("the ESM build emitted no index.mjs and index.d.mts to list exports from");
 	}
-	// The declaration file lists types as well as values; what isn't a value is a type.
 	const types = declared.filter((name) => !values.includes(name));
 	return [
 		"## Exports",
@@ -70,14 +70,13 @@ export const agentsMd = (): Plugin => ({
 					: [],
 			),
 		);
-		const marker = pkg.name;
 		const source = [
-			`<!-- ${marker} START -->`,
+			`<!-- ${pkg.name} START -->`,
 			`# ${pkg.name} ${pkg.version}`,
 			pkg.description,
 			exportsSection(pkg, exportsByFile),
 			rulesFrom(await this.fs.readFile(RULES_PAGE, { encoding: "utf8" })),
-			`<!-- ${marker} END -->`,
+			`<!-- ${pkg.name} END -->`,
 		].join("\n\n");
 		this.emitFile({ type: "asset", fileName: "AGENTS.md", source: `${source}\n` });
 	},

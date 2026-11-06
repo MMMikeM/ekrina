@@ -14,7 +14,6 @@ type Page = {
 	description: string;
 	body: string;
 	order: number;
-	frontmatter?: string[];
 };
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -33,42 +32,39 @@ const titleOf = (markdown: string, source: string) => {
 	return { title: heading[1], body: markdown.slice(heading[0].length) };
 };
 
-const docsPage = (source: string, route: string, description: (title: string) => string, order: number): Page => {
+const docsPage = (source: string, route: string, description: string, order: number): Page => {
 	const { title, body } = titleOf(read(source), source);
-	return { route, source, title, description: description(title), body, order };
+	return { route, source, title, description, body, order };
 };
 
 const pages: Page[] = [
 	docsPage(
 		"docs/benchmarks.md",
 		"benchmarks",
-		() =>
-			"How ekrina compares with Fuse.js, fuzzysort, uFuzzy and four more: MRR by query family on real corpora, junk results, speed, build time and memory.",
+		"How ekrina compares with Fuse.js, fuzzysort, uFuzzy and four more: MRR by query family on real corpora, junk results, speed, build time and memory.",
 		0,
 	),
 	docsPage(
 		"docs/compare.md",
 		"compare",
-		() =>
-			"Ekrina against Fuse.js, fast-fuzzy, uFuzzy, fuzzysort, microfuzz, match-sorter and fuzzy: match quality, junk, speed, size and what to pick.",
+		"Ekrina against Fuse.js, fast-fuzzy, uFuzzy, fuzzysort, microfuzz, match-sorter and fuzzy: match quality, junk, speed, size and what to pick.",
 		2,
 	),
 	...readdirSync(join(repoRoot, "docs/libraries"))
 		.filter((file) => file.endsWith(".md"))
-		.map((file) =>
-			docsPage(
-				`docs/libraries/${file}`,
+		.map((file) => {
+			const source = `docs/libraries/${file}`;
+			const { title } = titleOf(read(source), source);
+			return docsPage(
+				source,
 				`libraries/${file.replace(/\.md$/, "")}`,
-				(title) =>
-					`Every ${title} configuration the ekrina bench runs, scored for match quality, junk, speed and memory on the same corpora and query families.`,
+				`Every ${title} configuration the ekrina bench runs, scored for match quality, junk, speed and memory on the same corpora and query families.`,
 				file === "ekrina.md" ? 0 : 1,
-			),
-		),
+			);
+		}),
 ];
 
 const routeOfDoc = new Map(pages.map((page) => [page.source, page.route]));
-
-const pageUrl = (route: string) => (route === "index" ? "/" : `/${route}/`);
 
 const resolveLink = (page: Page, target: string): string => {
 	if (/^([a-z]+:|\/)/i.test(target)) {
@@ -77,12 +73,9 @@ const resolveLink = (page: Page, target: string): string => {
 	const [path = "", anchor] = target.split("#");
 	const resolved = path ? posix.normalize(posix.join(posix.dirname(page.source), path)) : page.source;
 	const hash = anchor === undefined ? "" : `#${anchor}`;
-	if (resolved === "README.md") {
-		return "/";
-	}
 	const route = routeOfDoc.get(resolved);
 	if (route) {
-		return route === page.route && hash ? hash : `${pageUrl(route)}${hash}`;
+		return route === page.route && hash ? hash : `/${route}/${hash}`;
 	}
 	if (resolved.startsWith("docs/") && resolved.endsWith(".svg")) {
 		return `/charts/${posix.basename(resolved)}`;
@@ -123,7 +116,6 @@ const frontmatterOf = (page: Page) => {
 		...(committedAt ? [`lastUpdated: ${committedAt}`] : []),
 		"sidebar:",
 		`  order: ${page.order}`,
-		...(page.frontmatter ?? []),
 		"---",
 		"",
 	].join("\n");

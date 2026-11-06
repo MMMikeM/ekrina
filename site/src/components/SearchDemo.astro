@@ -45,9 +45,9 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 	const LIMIT = 8;
 	const LABEL_FIELD = 0;
 	const TAGS_SEPARATOR = " — ";
+	const TAG_SEPARATOR = ", ";
 
 	let searcher: Promise<Searcher> | undefined;
-	let ready = false;
 
 	const loadSearcher = (): Promise<Searcher> =>
 		(searcher ??= Promise.all([
@@ -57,13 +57,11 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 		]).then(([{ createFuzzySearch, SCORES }, { default: corpus }, { default: glyphs }]) => {
 			const items = corpus.map((item, i): Emoji => {
 				const at = item.indexOf(TAGS_SEPARATOR);
-				return at < 0
-					? { glyph: glyphs[i]!, label: item, tags: null }
-					: {
-							glyph: glyphs[i]!,
-							label: item.slice(0, at),
-							tags: item.slice(at + TAGS_SEPARATOR.length),
-						};
+				return {
+					glyph: glyphs[i]!,
+					label: at < 0 ? item : item.slice(0, at),
+					tags: at < 0 ? null : item.slice(at + TAGS_SEPARATOR.length),
+				};
 			});
 			// A tag hit ranks level with a contains in a name, so a name that starts with the query comes first.
 			const search = createFuzzySearch(items, [
@@ -71,7 +69,6 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 				{ selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS },
 			]);
 			search.buildIndex();
-			ready = true;
 			return (query: string) => search(query, { limit: LIMIT });
 		}).catch((error: unknown) => {
 			searcher = undefined;
@@ -82,11 +79,8 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 		loadSearcher().catch(() => {});
 	};
 
-	const bestField = ({ fields }: FuzzyResult<Emoji>): { index: number; match: MatchResult } => {
-		let index = fields.findIndex((match) => match !== null);
-		fields.forEach((match, i) => {
-			if (match && match.score < fields[index]!.score) index = i;
-		});
+	const bestField = ({ fields, score }: FuzzyResult<Emoji>): { index: number; match: MatchResult } => {
+		const index = fields.findIndex((match) => match?.score === score);
 		return { index, match: fields[index]! };
 	};
 
@@ -116,13 +110,13 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 		const line = document.createElement("span");
 		line.className = "tags";
 		let start = 0;
-		for (const tag of tags.split(", ")) {
+		for (const tag of tags.split(TAG_SEPARATOR)) {
 			const end = start + tag.length;
 			if (ranges.some(([from, to]) => from < end && to >= start)) {
-				if (line.childNodes.length) line.append(", ");
+				if (line.childNodes.length) line.append(TAG_SEPARATOR);
 				appendHighlighted(line, tags, ranges, start, end);
 			}
-			start = end + 2;
+			start = end + TAG_SEPARATOR.length;
 		}
 		return line;
 	};
@@ -154,14 +148,11 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 		return item;
 	};
 
-	const countText = (query: string, count: number): string =>
-		count === 0
-			? `No emoji match “${query}”`
-			: count === LIMIT
-				? `Best ${LIMIT} matches`
-				: count === 1
-					? "1 match"
-					: `${count} matches`;
+	const countText = (query: string, count: number): string => {
+		if (count === 0) return `No emoji match “${query}”`;
+		if (count === LIMIT) return `Best ${LIMIT} matches`;
+		return count === 1 ? "1 match" : `${count} matches`;
+	};
 
 	const setUp = (root: HTMLElement): void => {
 		const input = root.querySelector("input")!;
@@ -184,7 +175,8 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy"];
 			const query = input.value.trim();
 			if (query === "") return render("", []);
 			root.setAttribute("data-used", "");
-			if (!ready) status.textContent = "Loading the emoji…";
+			// Overwritten before paint once the emoji have loaded, since a settled promise resumes in a microtask.
+			status.textContent = "Loading the emoji…";
 			let search: Searcher;
 			try {
 				search = await loadSearcher();

@@ -3,6 +3,9 @@ import { geoCircle } from "d3-geo";
 import { scaleLinear, scalePoint } from "d3-scale";
 import { JSDOM } from "jsdom";
 
+// Plot only uses the document as an element factory, and each chart is serialised at once.
+const document = new JSDOM("").window.document;
+
 export type CorpusView = "all" | "en" | "native" | "emoji";
 
 export type ExplorerLibrary = {
@@ -156,7 +159,6 @@ const libraryMarks = (
  * shows Ekrina and the picked library. Each library's marks carry `data-lib`.
  */
 export const radarSvg = (data: ExplorerData, view: CorpusView): string => {
-	const document = new JSDOM("").window.document;
 	const longitude = scalePoint(data.axes, [180, -180]).padding(0.5).align(1);
 	const verticesOf = (library: ExplorerLibrary): Vertex[] =>
 		data.axes.map((axis, k) => ({ library, axis, value: library.values[view][k] ?? 0 }));
@@ -351,16 +353,13 @@ const quantile = (sorted: number[], p: number) => {
 	return sorted[lo]! + (sorted[Math.ceil(at)]! - sorted[lo]!) * (at - lo);
 };
 
-const candleOf = (times: number[]) => {
-	const sorted = [...times].sort((a, b) => a - b);
-	return {
-		min: sorted[0]!,
-		q1: quantile(sorted, 0.25),
-		median: quantile(sorted, 0.5),
-		q3: quantile(sorted, 0.75),
-		max: sorted.at(-1)!,
-	};
-};
+const candleOf = (sorted: number[]) => ({
+	min: sorted[0]!,
+	q1: quantile(sorted, 0.25),
+	median: quantile(sorted, 0.5),
+	q3: quantile(sorted, 0.75),
+	max: sorted.at(-1)!,
+});
 
 const rowKey = (size: ListSize, isEkrina: boolean) => `${size}-${isEkrina ? "ekrina" : "picked"}`;
 
@@ -389,7 +388,6 @@ export const stripSvg = (
 	layout: "wide" | "narrow",
 	scale: { type: "log" } | { type: "linear"; picked: ExplorerLibrary } = { type: "log" },
 ): string => {
-	const document = new JSDOM("").window.document;
 	const wide = layout === "wide";
 	const first = size === "10000";
 	const rows = [rowKey(size, true), rowKey(size, false)];
@@ -404,10 +402,10 @@ export const stripSvg = (
 	// The y scale only places a candle's parts around its row's centre line.
 	const BODY = 0.45;
 	const candleFor = (library: ExplorerLibrary): Plot.Markish[] => {
-		const times = queryTimes(data, library, corpus, size);
+		const times = queryTimes(data, library, corpus, size).sort((a, b) => a.ms - b.ms);
 		const c = { ...candleOf(times.map((t) => t.ms)), row: rowKey(size, library === ekrina) };
-		const slowest = times.reduce((a, b) => (b.ms > a.ms ? b : a));
-		const fastest = times.reduce((a, b) => (b.ms < a.ms ? b : a));
+		const fastest = times[0]!;
+		const slowest = times.at(-1)!;
 		const common = { fy: "row", ariaLabel: tag(library) } as const;
 		const label = { ...common, fill: "var(--ink)", fontSize: 12 } as const;
 		return [

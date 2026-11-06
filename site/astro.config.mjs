@@ -7,8 +7,9 @@ import starlightLlmsTxt from "starlight-llms-txt";
 import { markdownPages } from "./src/integrations/markdown-pages.ts";
 import { lastModified } from "./src/last-modified.ts";
 import { project } from "./src/project.ts";
+import { SITE_ORIGIN } from "./src/site-origin.ts";
 
-const site = "https://ekrina.thelazyweb.dev";
+const site = SITE_ORIGIN;
 
 // Both cards show the same thing, so they share an alt; change it with them.
 const socialImage = {
