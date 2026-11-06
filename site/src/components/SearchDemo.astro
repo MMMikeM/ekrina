@@ -174,6 +174,11 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		const update = async (): Promise<void> => {
 			const query = input.value.trim();
 			if (query === "") return render("", []);
+			// On a phone the results start near the bottom of the screen, where the
+			// keyboard covers them, so the first keystroke brings the field to the top.
+			if (!root.hasAttribute("data-used") && list.getBoundingClientRect().top > innerHeight * 0.6) {
+				root.querySelector(".field")!.scrollIntoView({ block: "start" });
+			}
 			root.setAttribute("data-used", "");
 			// Overwritten before paint once the emoji have loaded, since a settled promise resumes in a microtask.
 			status.textContent = "Loading the emoji…";
@@ -209,6 +214,7 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 	}
 
 	.field {
+		scroll-margin-top: calc(var(--sl-nav-height) + var(--space-s));
 		display: grid;
 		gap: var(--space-2xs);
 	}

@@ -81,6 +81,16 @@ const faster = explorer.libraries
 	.filter((config) => config !== "ekrina" && msOf(config) < msOf("ekrina"))
 	.sort((a, b) => msOf(a) - msOf(b));
 
+// The other libraries that, like Ekrina, answer none of the no-answer queries on
+// any of the three lists, for "So does uFuzzy (all opts), at 0.66 MRR."
+const junkFree = explorer.libraries
+	.map((library) => library.config)
+	.filter(
+		(config) =>
+			config !== "ekrina" &&
+			Object.values(artifact.scorecard.corpora).every((rows) => !rows.find((row) => row.library === config)?.junk),
+	);
+
 export const bench = {
 	libraries: COUNTS[explorer.libraries.length - 1],
 	ekrina: {
@@ -103,6 +113,10 @@ export const bench = {
 		junk: percent(junkOf("fuse.js (tuned)")),
 	},
 	size: sizeStanding(),
+	alsoJunkFree:
+		junkFree.length === 0
+			? ""
+			: `So does ${junkFree.map((config) => `${displayName(config)}, at ${nativeMrrOf(config)} MRR`).join(", and ")}.`,
 	faster: faster
 		.map((config) => `${displayName(config)}, at ${msOf(config).toFixed(2)} ms with ${nativeMrrOf(config)} MRR,`)
 		.join(" and "),
