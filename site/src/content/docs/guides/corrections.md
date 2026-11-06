@@ -21,13 +21,13 @@ Check the top result, since a correction only reaches the top when nothing typed
 
 ```ts
 const results = search(query);
-const best = results[0]?;
+const best = results[0];
 
 const notice =
 	best?.tier === "corrected" ? `Showing results for ${best.corrected}` : null;
 ```
 
-With several fields, read the field that set the result's score: `results[0]?.fields.find((field) => field?.score === results[0].score)`.
+With named fields, `best.field` names the field the correction was read from.
 
 ## Label corrected rows
 

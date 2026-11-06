@@ -22,10 +22,10 @@ The change is building a searcher once instead of sorting the whole list on ever
 - matchSorter(items, query, {
 -   keys: ["title", { key: "body", maxRanking: rankings.CONTAINS }],
 - });
-+ const search = createSearcher(items, [
-+   { selectField: (item) => item.title },
-+   { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
-+ ]);
++ const search = createSearcher(items, {
++   title: (item) => item.title,
++   body: { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
++ });
 
   // close matches only
 - matchSorter(items, query, { keys: ["title"], threshold: rankings.CONTAINS });
@@ -64,7 +64,7 @@ Behavioural differences:
   match-sorter matches the query as one string, so `code visual` finds nothing; Ekrina finds "Visual Studio Code".
 - **Results carry ranges.**
   match-sorter returns the items alone.
-  Ekrina returns `{ item, score, fields }`, with each field's `ranges` ready to highlight.
+  Ekrina returns `{ item, score, tier, ranges, text }`, with `ranges` ready to highlight in `text`.
 - **The searcher remembers the last query.**
   A query that extends the previous one starts from the items that could have matched the previous one, which is what search-as-you-type sends, so build the searcher once per list rather than once per keystroke.
 - **No `baseSort` or `sorter`.**

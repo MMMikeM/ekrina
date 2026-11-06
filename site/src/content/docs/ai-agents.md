@@ -22,10 +22,11 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
   createSearcher(items, (item) => item.title);
   ```
 
-  There is no default export, in ESM or CJS, and an options object throws a `TypeError`.
-- **Several fields take an array of field specs.**
-  `[{ selectField: (item) => item.title }, { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS }]` searches both, ranking body matches below title ones.
-  There is no `key`, `keys` or `strategy` option.
+  There is no default export, in ESM or CJS, and an options object such as `{ getText }` throws a `TypeError`.
+- **Several fields take an object that names them.**
+  `{ title: (item) => item.title, body: { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS } }` searches both, ranking body matches below title ones.
+  Each field is a function, or a spec when it needs options; one spec alone, `{ selectField, acronym: true }`, is a single field.
+  An array of field specs, the 1.x form, throws a `TypeError`, and there is no `key`, `keys` or `strategy` option.
 - **The 1.x names throw.**
   A field spec's function is `selectField` and its demotion is `demoteBy`; the 1.x names `text` and `atBest` throw a `TypeError` that names the replacement.
 - **Create the searcher once and reuse it, not once per keystroke.**
@@ -40,22 +41,20 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
   A field matched the query as typed when its `tier` is anything but `"fuzzy"` or `"corrected"`: the query itself, each of its words in any order, or, with `acronym`, its word initials, ignoring case and diacritics (`fuzzyMatch("CAFÉ", "cafe")` is `normalised-exact` at 0.1).
 
   ```ts
-  import type { MatchResult } from "ekrina";
+  import { isLiteral } from "ekrina";
 
-  const isLiteral = (field: MatchResult | null) =>
-  	field !== null && field.tier !== "fuzzy" && field.tier !== "corrected";
-
-  search(query).filter((result) => result.fields.some(isLiteral));
+  search(query).filter(isLiteral);
   ```
 
   With no `demoteBy`, that keeps exactly the results with `score <= SCORES.CONTAINS`.
   `demoteBy` adds to every score its field produces and never changes `tier`, so a demoted prefix hit reports `score: 2.5, tier: "prefix"`, which the score filter drops and the `tier` filter keeps.
   See [scores and tiers](/how-it-works/scores/), [literal matches only](/guides/literal-matches/) and [searching several fields](/guides/several-fields/).
-- **`fields[i]` lines up with the field specs, and is `null` where that field didn't match.**
-  A list of strings or a single `selectField` function has one field, read as `fields[0]`.
-  An item's `score` is its best field's, so read `fields[i]?.tier` and `fields[i]?.ranges` per field rather than assuming the first one matched.
+- **A result describes its best field's match.**
+  `tier`, `ranges` and `text` sit on the result itself, so a single-field search has no `fields` to read.
+  With named fields, `field` names the best one and `fields` holds every field that matched under its name, each with its own `tier`, `ranges` and `text`; a field that didn't match is absent.
+  An item's `score` is its best field's, so read `fields.body?.ranges` to highlight a field other than the best one.
 - **`ranges` are inclusive `[start, end]` pairs into your own string.**
-  They index the string `selectField` returned, not a normalised copy, so `text.slice(start, end + 1)` is the matched text, accents, casing and leading whitespace included.
+  They index `text`, the string the field returned, not a normalised copy, so `text.slice(start, end + 1)` is the matched text, accents, casing and leading whitespace included.
   Escape each slice, and the text between them, before building HTML, since the text is whatever your list holds.
   See [highlighting matches](/guides/highlight/).
 - **Every query word must match.**

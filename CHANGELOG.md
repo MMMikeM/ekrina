@@ -2,8 +2,8 @@
 
 ## 2.0.0 (unreleased)
 
-One matcher, which corrects far more than one character, and seven renames.
-Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the seven names below.
+One matcher, which corrects far more than one character, named fields with one match per result, and seven renames.
+Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, the shape of a result, and the seven names below.
 
 - **`createFuzzySearch` is `createSearcher`, and its types are `Searcher` and `SearchResult`.**
   The old function name is shared with another library's default export, so code written for that library looked right here and failed at runtime; `Searcher` names what the function returns.
@@ -16,7 +16,15 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   Rename `text:` to `selectField:` in each field spec.
 - **`FieldSpec.atBest` is `demoteBy`.**
   The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
-  A field spec using `text` or `atBest`, or an options object passed in place of a function or field specs, throws a `TypeError` naming the replacement; before, `atBest` was ignored and the others failed with an unreadable message.
+  A field spec using `text` or `atBest`, an array of field specs, or an options object such as `{ getText }`, throws a `TypeError` naming the replacement; before, `atBest` was ignored and the others failed with an unreadable message.
+- **Several fields are named, and a result is its best field's match.**
+  An object that names each field replaces the array of field specs: `createSearcher(posts, { title: (p) => p.title, body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS } })`.
+  A field is a function, or a spec when it needs options, and one spec alone, `{ selectField, acronym: true }`, is a single field with options.
+  A result is `{ item, score, tier, ranges, text, corrected? }`, the best field's match with `text` the string `ranges` index, where 1.x returned `fields: (MatchResult | null)[]` and left the caller to find the field that set the score.
+  With named fields, `field` names the best one and `fields` holds every field that matched, by name, each with its own `tier`, `ranges` and `text`.
+  A tied score goes to the field whose match ends on a word boundary, then to the one named first, so a field can't be named like an integer, which JavaScript orders before the others, nor `selectField`, which marks a lone spec.
+  `isLiteral(match)` says whether a match is of the query as typed, on demoted fields too.
+  Pass an object where you passed an array, and read `result.tier` and `result.ranges` where you read `result.fields[0]`.
 - **The `boundary-exact` tier is `boundary-cased`, and `SCORES.BOUNDARY_EXACT` is `SCORES.BOUNDARY_CASED`.**
   Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`); this tier means a word starts with the query in the same case.
   Its score, 0.9, is unchanged.

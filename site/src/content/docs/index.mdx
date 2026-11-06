@@ -30,12 +30,10 @@ search("recnet");
 // [{
 //   item: "Open Recent",
 //   score: 3.1,
-//   fields: [{
-//     score: 3.1,
-//     tier: "corrected",
-//     corrected: "recent",
-//     ranges: [[5, 10]],
-//   }],
+//   tier: "corrected",
+//   corrected: "recent",
+//   ranges: [[5, 10]],
+//   text: "Open Recent",
 // }]
 
 search("qxzwkv");
@@ -44,7 +42,7 @@ search("qxzwkv");
 
 Every match says how it matched.
 `tier` names the kind of match, from `exact` down to `fuzzy` and `corrected`, so you can rank, filter or label results without decoding a number.
-`ranges` are the characters to highlight, as inclusive `[start, end]` pairs of UTF-16 indices into the string you passed in, accents and casing included, so a range's text is `text.slice(start, end + 1)`.
+`ranges` are the characters to highlight, as inclusive `[start, end]` pairs of UTF-16 indices into `text`, the string you passed in, accents and casing included, so a range's text is `text.slice(start, end + 1)`.
 They are inclusive because Fuse.js and microfuzz ranges are, so a highlight helper written for either keeps working.
 A correction carries the query it fixed, which is your "Showing results for recent" in one line.
 

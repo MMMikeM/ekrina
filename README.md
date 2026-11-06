@@ -57,17 +57,19 @@ search("settings");
 // [{
 //   item: { id: "settings.open", title: "Preferences: Open User Settings" },
 //   score: 1,
-//   fields: [{ score: 1, tier: "boundary", ranges: [[23, 30]] }],
+//   tier: "boundary",
+//   ranges: [[23, 30]],
+//   text: "Preferences: Open User Settings",
 // }]
 ```
 
-`ranges` index the string you passed in, so highlighting is slicing it, escaped if it goes into HTML ([highlighting](https://ekrina.thelazyweb.dev/guides/highlight/)).
+`ranges` index `text`, the string your function returned, so highlighting is slicing it, escaped if it goes into HTML ([highlighting](https://ekrina.thelazyweb.dev/guides/highlight/)).
 
 **3. Say when it corrected a typo.**
 
 ```typescript
 const [top] = search("recnet");
-// top.fields[0]: { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
+// top: { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]], text: "Open Recent" }
 
 if (top?.tier === "corrected") {
 	showNotice(`Showing results for ${top.corrected}`);

@@ -21,30 +21,31 @@ Both build a searcher once over a list and return each `item` with a `score` whe
 - const fuse = new Fuse(items, {
 -   keys: [{ name: "title", weight: 2 }, "body"],
 - });
-+ const search = createSearcher(items, [
-+   { selectField: (item) => item.title },
-+   { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
-+ ]);
++ const search = createSearcher(items, {
++   title: (item) => item.title,
++   body: { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS },
++ });
 
   // nested and array keys
 - keys: ["author.name", "tags"]
-+ [
-+   { selectField: (item) => item.author.name },
-+   { selectField: (item) => item.tags.join(" ") },
-+ ]
++ {
++   author: (item) => item.author.name,
++   tags: (item) => item.tags.join(" "),
++ }
 
   // reading a result
 - for (const { item, matches } of fuse.search(query, { limit: 10 }))
 -   highlight(item.title, matches?.[0]?.indices);
-+ for (const { item, fields } of search(query, { limit: 10 }))
-+   highlight(item.title, fields[0]?.ranges);
++ for (const { text, ranges } of search(query, { limit: 10 }))
++   highlight(text, ranges);
 ```
 
 Behavioural differences:
 
-- **`matches` becomes `fields`.**
-  Fuse returns `matches` only with `includeMatches: true`, one entry per key that matched, with the ranges at `indices`.
-  Ekrina always returns `fields`, one entry per field spec in the order you gave them, `null` where that field didn't match, with the ranges at `fields[i].ranges` beside that field's own `score` and `tier`.
+- **`matches` becomes the result's own `ranges`, and `fields`.**
+  Fuse returns `matches` only with `includeMatches: true`, one entry per key that matched, with the ranges at `indices` and the key at `key`.
+  Ekrina always returns the best field's match on the result itself: `tier`, `ranges`, and `text`, the string they index, with its name in `field`.
+  With named fields, `fields` holds every field that matched under its name, each with its own `tier`, `ranges` and `text`.
   Both use `[start, end]` inclusive, so a highlight helper keeps working: `recent` in "Open Recent" is `[[5, 10]]` in both.
 - **Lower is still better, on a different scale.**
   Fuse's `score` runs from 0, a perfect match, to 1, and appears only with `includeScore: true`.

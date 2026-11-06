@@ -17,23 +17,24 @@ import { bench } from "../../../bench.ts";
 
   // several fields
 - const search = createFuzzySearch(items, { getText: (i) => [i.title, i.body] });
-+ const search = createSearcher(items, [
-+   { selectField: (i) => i.title },
-+   { selectField: (i) => i.body },
-+ ]);
++ const search = createSearcher(items, {
++   title: (i) => i.title,
++   body: (i) => i.body,
++ });
 
   // reading a result
 - for (const { item, matches } of search(query))
 -   highlight(item.title, matches[0]);
 + for (const { item, fields } of search(query))
-+   highlight(item.title, fields[0]?.ranges);
++   highlight(item.title, fields.title?.ranges);
 ```
 
 Behavioural differences:
 
-- **`matches` became `fields`, and carries more than ranges.**
+- **`matches` became `fields`, keyed by name, and carries more than ranges.**
   microfuzz returns `Array<HighlightRanges | null>`, one entry per `getText` string.
-  Ekrina returns `Array<MatchResult | null>`, with the ranges at `fields[i].ranges` next to that field's own `score` and `tier`.
+  Ekrina's `fields` holds each named field that matched, with its `ranges`, its `tier` and the `text` they index; a field that didn't match is absent.
+  The result itself carries the best field's `tier`, `ranges` and `text`, and its name in `field`, so a single-field search reads `result.ranges` with no `fields` at all.
   The `[start, end]` inclusive convention is unchanged, so an existing highlight helper keeps working once it reads `.ranges`.
 - **The scores are an API contract here.**
   microfuzz documents its values as "not an API contract, can change between releases"; the shared tiers happen to agree today.

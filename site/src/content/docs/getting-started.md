@@ -39,19 +39,21 @@ An empty query returns `[]`.
 
 ## 2. Read how it matched
 
-Each result holds the `item`, its `score`, and one entry in `fields` per field searched:
+Each result holds the `item`, its `score`, and how it matched:
 
 ```ts
 search("settings");
 // [{
 //   item: { id: "settings.open", title: "Preferences: Open User Settings" },
 //   score: 1,
-//   fields: [{ score: 1, tier: "boundary", ranges: [[23, 30]] }],
+//   tier: "boundary",
+//   ranges: [[23, 30]],
+//   text: "Preferences: Open User Settings",
 // }]
 ```
 
 - **`tier`** says what kind of match it was: `exact` for the whole text, `prefix` for its start, `boundary` here, for the start of a later word, `fuzzy` for letters in order, `corrected` for a typo fixed, and [a few more](/how-it-works/scores/).
-- **`ranges`** are the characters that matched, as `[start, end]` pairs with both ends included, indexed into your own string.
+- **`ranges`** are the characters that matched, as `[start, end]` pairs with both ends included, indexed into `text`, the string your function returned.
 - **`score`** sorts the results, and _lower is better_, with `0` for an exact match.
 
 Results come back sorted best first, so `tier` and `ranges` are usually all there is to read.
@@ -59,7 +61,7 @@ Results come back sorted best first, so `tier` and `ranges` are usually all ther
 ## 3. Highlight the match
 
 A range includes its `end`, so the slice that highlights it stops at `end + 1`.
-Slice your original string at each range, and escape every slice before it goes into HTML:
+Slice `text` at each range, and escape every slice before it goes into HTML:
 
 ```ts
 import type { HighlightRanges } from "ekrina";
@@ -80,7 +82,7 @@ const highlight = (text: string, ranges: HighlightRanges): string => {
 
 const [top] = search("settings");
 if (top) {
-	highlight(top.item.title, top?.ranges ?? []);
+	highlight(top.text, top.ranges);
 	// "Preferences: Open User <mark>Settings</mark>"
 }
 ```
@@ -94,8 +96,8 @@ A corrected match carries the query it fixed:
 ```ts
 declare const showNotice: (message: string) => void;
 
-const match = search("recnet")[0]?;
-// { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
+const match = search("recnet")[0];
+// { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]], text: "Open Recent" }
 
 if (match?.tier === "corrected") {
 	showNotice(`Showing results for ${match.corrected}`);
