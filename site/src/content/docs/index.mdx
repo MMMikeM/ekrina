@@ -44,11 +44,12 @@ search("qxzwkv");
 
 Every match says how it matched.
 `tier` names the kind of match, from `exact` down to `fuzzy` and `corrected`, so you can rank, filter or label results without decoding a number.
-`ranges` are the characters to highlight, as inclusive `[start, end]` pairs indexed into the string you passed in, accents and casing included.
+`ranges` are the characters to highlight, as inclusive `[start, end]` pairs of UTF-16 indices into the string you passed in, accents and casing included, so a range's text is `text.slice(start, end + 1)`.
+They are inclusive because Fuse.js and microfuzz ranges are, so a highlight helper written for either keeps working.
 A correction carries the query it fixed, which is your "Showing results for recent" in one line.
 
-Lower scores are better, the other way round to most libraries, and anything at or below `SCORES.CONTAINS` is the query as typed.
-A correction always scores above that line, so a real match is never outranked by a guess.
+Lower scores are better, as in Fuse.js and microfuzz, while match-sorter, fuzzysort and fast-fuzzy rank higher scores first.
+Any score up to `SCORES.CONTAINS` means the query matched as typed, and a correction always scores above that, so a real match is never outranked by a guess.
 
 ## 2. What it forgives
 
@@ -59,7 +60,7 @@ A correction always scores above that line, so a real match is never outranked b
 | `kyebaord`    | **Keyboard** Shortcuts | two swaps in one word                     |
 | `keybord shrotcuts` | **Keyboard Shortcuts** | a mistake in each word           |
 | `twaaain`     | Mark **Twain**       | a key held down                             |
-| `hget`        | **H**u**g**u**et**te | a word typed with letters missing           |
+| `dwnld`       | **D**o**wnl**oa**d** Manager | a word typed without its vowels     |
 | `tahn`        | **Than**             | a swap in a four-letter word                |
 | `vsc`         | **V**isual **S**tudio **C**ode | the letters in order, in pieces    |
 | `user open`   | Preferences: **Open User** Settings | every word, in any order     |
@@ -74,18 +75,20 @@ A query with one word the item lacks returns nothing, so for an OR-style search,
 Creating a searcher reads nothing.
 Each item is prepared the first time a query matches it, and the index over the whole list is built the first time a query needs it.
 Each keystroke that extends the last one rescans only the previous keystroke's survivors, so a word gets faster as it is typed.
-Corrections are tried only while fewer than ten items match the query as typed, since past that a guess could never reach the top of the list.
+Corrections are tried only while fewer than ten items match the query as typed, or fewer than `limit` when that is smaller, since a correction always comes after every one of those matches.
+So the same typo can be corrected in a short list and left alone in a long one, where enough items match it as typed.
 
 Over 10,000 items a query takes about {bench.ekrina.msPerQuery} ms once the searcher has answered its first, and about {bench.ekrina.msPerQuery100k} ms over 100,000.
 The first query that needs the index builds it; [search as you type](/guides/search-as-you-type/) shows how to build it ahead of time instead.
 
 ## 4. How it compares
 
-Each library at its best-scoring configuration over 10,000 native names, with the best value in each column marked:
+Each library at its best-scoring configuration, over 10,000 Wikidata names each in its own language, with the best value in each column marked:
 
 <CompareTable />
 
 **MRR** is mean reciprocal rank, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
+The queries are families of real-world mistakes, Wikipedia's list of common misspellings among them, weighted before anything was measured, and `pnpm bench` reruns every cell from the frozen lists in the repository.
 Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
 It answers none of the queries with no right answer on any of the three lists{bench.alsoJunkFree}.
 It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.

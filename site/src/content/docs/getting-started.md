@@ -33,8 +33,9 @@ search("open").map((result) => result.item.id);
 
 A list of strings needs no function: `createFuzzySearch(["apple", "banana", "cherry"])`.
 
-Create the searcher once and keep it.
-It prepares each item the first time a query matches it and reuses that work for every query after, and a keystroke that extends the last query only rescans the items the last one matched.
+Create the searcher once and keep it, since it reuses its work between queries.
+When the list changes, create a new one, which takes as little time as the first ([search as you type](/guides/search-as-you-type/)).
+An empty query returns `[]`.
 
 ## 2. Read how it matched
 
@@ -49,7 +50,7 @@ search("settings");
 // }]
 ```
 
-- **`tier`** says what kind of match it was: `boundary` here, for the start of a later word, `prefix` for the start of the text, `fuzzy` for letters in order, `corrected` for a typo fixed, and [a few more](/how-it-works/scores/).
+- **`tier`** says what kind of match it was: `exact` for the whole text, `prefix` for its start, `boundary` here, for the start of a later word, `fuzzy` for letters in order, `corrected` for a typo fixed, and [a few more](/how-it-works/scores/).
 - **`ranges`** are the characters that matched, as `[start, end]` pairs with both ends included, indexed into your own string.
 - **`score`** sorts the results, and _lower is better_, with `0` for an exact match.
 
@@ -57,6 +58,7 @@ Results come back sorted best first, so `tier` and `ranges` are usually all ther
 
 ## 3. Highlight the match
 
+A range includes its `end`, so the slice that highlights it stops at `end + 1`.
 Slice your original string at each range, and escape every slice before it goes into HTML:
 
 ```ts
@@ -69,16 +71,18 @@ const highlight = (text: string, ranges: HighlightRanges): string => {
 	let html = "";
 	let cursor = 0;
 	for (const [start, end] of ranges) {
-		const before = escapeHtml(text.slice(cursor, start));
-		html += `${before}<mark>${escapeHtml(text.slice(start, end + 1))}</mark>`;
-		cursor = end + 1;
+		const after = end + 1;
+		html += `${escapeHtml(text.slice(cursor, start))}<mark>${escapeHtml(text.slice(start, after))}</mark>`;
+		cursor = after;
 	}
 	return html + escapeHtml(text.slice(cursor));
 };
 
 const [top] = search("settings");
-highlight(top.item.title, top.fields[0]?.ranges ?? []);
-// "Preferences: Open User <mark>Settings</mark>"
+if (top) {
+	highlight(top.item.title, top.fields[0]?.ranges ?? []);
+	// "Preferences: Open User <mark>Settings</mark>"
+}
 ```
 
 [Highlight matches](/guides/highlight/) does the same for React, without building HTML at all.
@@ -88,6 +92,8 @@ highlight(top.item.title, top.fields[0]?.ranges ?? []);
 A corrected match carries the query it fixed:
 
 ```ts
+declare const showNotice: (message: string) => void;
+
 const match = search("recnet")[0]?.fields[0];
 // { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
 
@@ -96,8 +102,8 @@ if (match?.tier === "corrected") {
 }
 ```
 
-A correction always ranks below every match of the query as typed, so it only reaches the top when nothing matches the query as typed.
-And a query nothing in the list could mean returns `[]`.
+A correction always comes after every match of the query as typed, so it only reaches the top when nothing matches the query as typed.
+And a query that can't mean anything in the list returns `[]`.
 
 ## Next
 

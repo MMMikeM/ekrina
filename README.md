@@ -74,7 +74,7 @@ if (top?.fields[0]?.tier === "corrected") {
 }
 ```
 
-A correction always ranks below every match of the query as typed, and `search("qxzwkv")` returns `[]`.
+A correction always comes after every match of the query as typed, and `search("qxzwkv")` returns `[]`.
 
 ## How it compares
 

@@ -33,8 +33,9 @@ It is not general edit distance, which keeps it small and fast.
 ## When it tries
 
 - **Only while few items match as typed.**
-  Corrections are tried while fewer than ten items match the query as typed, or fewer than `limit` when you pass one.
-  Past that, a correction could never reach the top of the list, so none is computed.
+  Corrections are tried while fewer than ten items match the query as typed, or fewer than `limit` when that is smaller.
+  Past that, a correction would come after ten matches of the query as typed, so none is computed.
+  So the same typo can be corrected in a short list and left alone in a long one, where enough items match it as typed.
 - **Short queries only when nothing matches.**
   A query under five characters is corrected only when no item matches it at all, not even fuzzily.
   The exception is a swap in a four-letter word, which is undone when no item contains it literally, even if some match it fuzzily.
@@ -45,7 +46,7 @@ Separately from corrections, a one-character query matches only where it starts 
 
 ## How a correction ranks
 
-A corrected match scores as the tier the fixed query reached plus 2.1 for each mistake fixed, so even a corrected exact match ranks below a match of the query as typed.
+A corrected match scores as the tier the fixed query reached plus 2.1 for each mistake fixed, so even a corrected exact match comes after a match of the query as typed.
 A word typed sparsely is a `corrected` match too, starting just above `contains` and scoring higher, so ranking lower, the more of the word it skipped: `hget` for "Huguette" scores 3.25.
 Its `tier` is `"corrected"`, and `corrected` holds the fixed query, for a "Showing results for" notice ([Handle corrections](/guides/corrections/)).
 
