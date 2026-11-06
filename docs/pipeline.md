@@ -1,7 +1,6 @@
 # The pipeline, and where the time goes
 
 What `createFuzzySearch` builds, what a `search(query)` call does, how many of your records reach each stage, and how long each stage takes.
-Companion to [optimisation.md](./optimisation.md) (what moved the numbers) and [measurement.md](./measurement.md) (how the harness came to be wrong).
 
 Counts and timings come from `pnpm --filter=ekrina-bench exec vp test run stages.test.ts`, over the sixteen single-word probes at 100k, both corpora, on a machine under some load, so read the times as approximate.
 Stage times are measured by difference, so they overlap slightly.
@@ -85,7 +84,7 @@ Once the gate has run, the literal path takes almost no time.
 The rescue is a different pipeline.
 It admits _2.3% of the corpus_, about 25 times what the literal gate lets through, and it is the only thing that needs a whole-corpus index.
 Twelve of the sixteen probes take it on both corpora, because the probe set is deliberately typo-heavy.
-The bigram stage keeps that set small: a field missing one character class is only reachable by an edit at that class's query position, so every query bigram away from that position must be present, and the class test alone admitted 19.3% when it was measured.
+The bigram stage keeps that set small: a field missing one character class is only reachable by an edit at that class's query position, so every query bigram away from that position must be present.
 
 ## Stages that only some sessions run
 
@@ -121,6 +120,6 @@ The rescue path deliberately ignores the cache: it scans all N, because the near
 ## Where the remaining time is
 
 For a query that returns a lot, the time goes elsewhere.
-0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is no longer the slow part.
+0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part.
 What remains is proportional to how many results a query has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `gra`, the widest query, takes 2.28 ms per keystroke and `grady` 0.58.
 `limit` saves the fuzzy and correction work once enough items match literally; the literal results are still built and sorted.
