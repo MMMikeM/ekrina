@@ -20,7 +20,7 @@ const holdsInOrder = (text: string, accepted: string[]): boolean => {
 };
 
 // Greedy earliest placement, which finds an in-order run whenever one exists.
-const holdsInOrderFrom = (text: string, query: string, k: number, from: number): boolean => {
+export const holdsInOrderFrom = (text: string, query: string, k: number, from: number): boolean => {
 	while (k < query.length && (from = text.indexOf(query[k], from) + 1)) k++;
 	return k >= query.length;
 };

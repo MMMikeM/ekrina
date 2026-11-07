@@ -15,7 +15,7 @@ export type RescueContext = {
 	missingClasses: number;
 };
 
-export type RescueVariant = {
+type RescueVariant = {
 	normalised: string;
 	raw: string;
 	isDrop: boolean;
@@ -69,21 +69,16 @@ export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boo
 
 const SCORE_EPSILON = 1e-9;
 
-// Ties keep the incumbent unless it is a fuzzy chain: the one-edit reading
-// names the character the user got wrong, where a chain only says the letters
-// appear in order.
+// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
+// the one-edit reading names the character the user got wrong, where a chain
+// only says the letters appear in order.
 export const preferBetter = (
 	incumbent: MatchResult | null,
 	challenger: MatchResult | null,
 ): MatchResult | null => {
 	if (incumbent === null) return challenger;
 	if (challenger === null) return incumbent;
-	if (challenger.score < incumbent.score - SCORE_EPSILON) return challenger;
-	if (incumbent.score < challenger.score - SCORE_EPSILON) return incumbent;
-	// Every caller passes the fuzzy chain as the challenger, so only the
-	// correction side of this tie runs today.
-	/* v8 ignore next */
-	return incumbent.tier === "fuzzy" ? challenger : incumbent;
+	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
 };
 
 // The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
@@ -213,7 +208,7 @@ const correctionAnchors = (subjectText: string): string[] => {
 // testing. Position must not rank the corrections — the rerun rescans the field.
 const substitutedWindows = (
 	normalisedField: string,
-	{ queryText: subjectText, anchors: [head, tail] }: RescueState,
+	{ queryText: subjectText, anchors: [head, tail] }: CorrectionSubject,
 	atWordStart: boolean,
 ): string[] => {
 	const subjectLength = subjectText.length;
@@ -270,8 +265,8 @@ const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
 	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };
 
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => {
+	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => undefined));
 	return (cache[wordIndex] ??= absentWordSubject(prepared, wordIndex));
 };
 
@@ -294,7 +289,7 @@ const spliceCorrectedWord = (
 
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
-export type RescueState = {
+export type CorrectionSubject = {
 	queryText: string;
 	anchors: string[];
 	variants: RescueVariant[];
@@ -302,7 +297,7 @@ export type RescueState = {
 	fromWindow: (corrected: string) => PreparedQuery;
 };
 
-const wholeQuerySubject = (prepared: PreparedQuery): RescueState => ({
+const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
 	queryText: prepared.normalisedQuery,
 	anchors: correctionAnchors(prepared.normalisedQuery),
 	variants: buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery),
@@ -315,7 +310,7 @@ const wholeQuerySubject = (prepared: PreparedQuery): RescueState => ({
 		),
 });
 
-const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): RescueState => ({
+const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => ({
 	queryText: prepared.queryWords[wordIndex],
 	anchors: correctionAnchors(prepared.queryWords[wordIndex]),
 	variants: buildRescueVariants(rawWordOf(prepared, wordIndex), prepared.queryWords[wordIndex]),
@@ -332,7 +327,7 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): RescueSt
 
 const scoreEnumeratedVariants = (
 	rescue: RescueContext,
-	subject: RescueState,
+	subject: CorrectionSubject,
 	fieldFloor: number,
 	short: boolean,
 ): MatchResult | null => {
@@ -352,7 +347,7 @@ const scoreEnumeratedVariants = (
 
 const scoreSubstitutedWindows = (
 	rescue: RescueContext,
-	subject: RescueState,
+	subject: CorrectionSubject,
 	incumbent: MatchResult | null,
 	short: boolean,
 ): MatchResult | null => {
@@ -370,7 +365,7 @@ const scoreSubstitutedWindows = (
 // ("ergonomiq" is a substitution, but dropping the "q" leaves a prefix), and
 // stopping after the enumerated family would let the worse one win by default.
 // A corrected exact hit is unbeatable and exits early.
-const correctSubject = (rescue: RescueContext, subject: RescueState): MatchResult | null => {
+const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
 	if (!subject.anchors.some((anchor) => rescue.normalisedField.includes(anchor))) return null;
 	const fieldLength = rescue.normalisedField.length;
 	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;

@@ -9,15 +9,16 @@ import {
 	missingCharRescue,
 	type RescueContext,
 	rescueField,
-	type RescueState,
+	type CorrectionSubject,
 } from "./rescue";
 import { ACRONYM_SCORE, BOUNDARY_SCORE, BOUNDARY_CASED_SCORE, CONTAINS_SCORE, EXACT_SCORE, MULTI_WORD_SCORE, NORMALISED_EXACT_SCORE, PREFIX_SCORE } from "./scores";
+import type { PreparedReading } from "./readings";
 import type { MatchResult, HighlightRange } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
-// lazy rescue fields share one protocol: undefined = not built yet, null = the
-// query admits none. Declared required so every PreparedQuery keeps one object
-// shape as rescue.ts fills them in.
+// lazy fields share one protocol: undefined = not built yet, null = the query
+// admits none. Declared required so every PreparedQuery keeps one object shape
+// as rescue.ts and readings.ts fill them in.
 export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;
@@ -26,10 +27,12 @@ export type PreparedQuery = {
 	queryMask: number;
 	presenceGate: Gate | null;
 	fuzzyGate: Gate;
-	rescueState: RescueState | undefined;
+	rescueState: CorrectionSubject | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
-	wordRescueStates: (RescueState | null)[] | undefined;
+	wordRescueStates: (CorrectionSubject | undefined)[] | undefined;
+	// Indexed by whether the reading competes with matches as typed.
+	readings: (PreparedReading | null | undefined)[] | undefined;
 };
 
 // The raw query is stored trimmed so the exact-case tiers treat padding as
@@ -52,6 +55,7 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		lastCorrection: undefined,
 		wordStarts: undefined,
 		wordRescueStates: undefined,
+		readings: undefined,
 	};
 };
 

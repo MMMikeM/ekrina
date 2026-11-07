@@ -36,7 +36,7 @@ const denseFolds: (string | undefined)[] = new Array(DENSE_FOLDS_MAX + 1).fill(u
 const rareFolds = new Map<string, string>();
 const RARE_FOLDS_MAX = 65_536;
 
-export const foldChar = (char: string): string => {
+const foldChar = (char: string): string => {
 	const codePoint = char.codePointAt(0) as number;
 	if (codePoint <= DENSE_FOLDS_MAX) {
 		let folded = denseFolds[codePoint];

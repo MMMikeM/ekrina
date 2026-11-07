@@ -1,6 +1,6 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
-import { charMask } from "./gates";
+import { charMask, holdsInOrderFrom } from "./gates";
 import { bigramBit, bigramClass } from "./normalise";
 import { swapAdjacentAt } from "./rescue";
 import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
@@ -262,14 +262,6 @@ const scatterWord = (
 	return best;
 };
 
-const lettersInOrder = (text: string, word: string): boolean => {
-	for (let k = 0, at = 0; k < word.length; k++) {
-		at = text.indexOf(word[k], at) + 1;
-		if (at === 0) return false;
-	}
-	return true;
-};
-
 type Placement = { candidate: FieldWord; edits: number };
 
 const editsAllowed = (word: string, budget: number): number =>
@@ -521,7 +513,7 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 			if (
 				!editable &&
 				stuck === null &&
-				!lettersInOrder(normalisedField, letters) &&
+				!holdsInOrderFrom(normalisedField, letters, 0, 0) &&
 				!swaps?.some((form) => normalisedField.includes(form))
 			) {
 				return null;
@@ -536,13 +528,6 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	};
 };
 
-// Indexed by `competing`; undefined until that reading is first prepared.
-type Readings = { query: string; byCompeting: (PreparedReading | null | undefined)[] };
-
-// fuzzyMatch prepares its query per call, and a list matched one call per row
-// would otherwise rebuild the same gates for every row, competing or not.
-let lastReadings: Readings | null = null;
-
 // A short word with only fuzzy chains beside it is read in full, swaps and
 // all, since a swap is the one edit worth trying that short and its target
 // never passes the literal gates.
@@ -551,11 +536,7 @@ const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 
 const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
-	if (lastReadings?.query !== prepared.query) {
-		lastReadings = { query: prepared.query, byCompeting: [] };
-	}
-	const slot = competing ? 1 : 0;
-	return (lastReadings.byCompeting[slot] ??= prepareReading(prepared, competing));
+	return ((prepared.readings ??= [])[+competing] ??= prepareReading(prepared, competing));
 };
 
 // The second pass, tried on fields up to 512 characters once the ladder and
