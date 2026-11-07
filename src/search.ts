@@ -184,14 +184,18 @@ export function createSearcher<T, F extends string>(
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
-	// Which result each item holds in the current matches, so a second-pass
-	// match can replace a weaker one; a stamp from an earlier generation means
-	// none. Float64 so the generation count never wraps.
+	// Each matched item's best match so far, so a second-pass match can replace
+	// a weaker one. Results are built only for the page the sort keeps.
 	// oxlint-disable-next-line unicorn/no-new-array
-	const heldResults: (SearchResult<T, F> | undefined)[] = new Array(count);
-	const heldStamps = new Float64Array(count);
+	const heldMatches: (MatchResult | undefined)[] = new Array(count);
+	const heldScores = new Float64Array(count);
 	const heldEndsWord = new Uint8Array(count);
-	let generation = 0;
+	const heldFields = specCount > 1 ? new Uint32Array(count) : null;
+	let matched: number[] = [];
+	const forgetMatches = (): void => {
+		for (const i of matched) heldMatches[i] = undefined;
+		matched = [];
+	};
 	const named = specCount > 0 && resolvedSpecs[0].fieldName !== undefined;
 	// Each item's best match per field, item-major, kept only for named fields.
 	// oxlint-disable-next-line unicorn/no-new-array
@@ -304,7 +308,7 @@ export function createSearcher<T, F extends string>(
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
-		generation++;
+		forgetMatches();
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -314,8 +318,6 @@ export function createSearcher<T, F extends string>(
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
 		let survivorCount = 0;
-		// The items holding a match this generation.
-		let matched: number[] = [];
 		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_CUTOFF
 		// literal hits sit at or below SCORES.CONTAINS (2) no correction can reach
 		// the page — the rescue becomes provably invisible work. Fuzzy hits score
@@ -333,56 +335,26 @@ export function createSearcher<T, F extends string>(
 			return endsWord;
 		};
 
-		const record = (i: number, entry: SearchResult<T, F>, endsWord: boolean): void => {
-			matched.push(i);
-			heldResults[i] = entry;
-			heldStamps[i] = generation;
-			heldEndsWord[i] = endsWord ? 1 : 0;
-		};
-
-		const forgetMatches = (): void => {
-			matched = [];
-			generation++;
-		};
-
-		const resultOf = (i: number, f: number, match: MatchResult, score: number): SearchResult<T, F> => {
-			const spec = resolvedSpecs[f];
-			const result: SearchResult<T> & { field?: string } = {
-				item: list[i],
-				score,
-				tier: match.tier,
-				ranges: match.ranges,
-				text: spec.selector(list[i]) as string,
-			};
-			if (spec.fieldName !== undefined) result.field = spec.fieldName;
-			if (match.corrected !== undefined) result.corrected = match.corrected;
-			return result as SearchResult<T, F>;
-		};
-
 		// An item reports its best field. On a tied score the field whose match
 		// ends on a word boundary wins, as it does in the sort, then the earlier one.
-		const offerField = (
-			i: number,
-			entry: SearchResult<T, F> | undefined,
-			f: number,
-			match: MatchResult,
-		): SearchResult<T, F> => {
+		const offerField = (i: number, f: number, match: MatchResult): void => {
 			const at = i * specCount + f;
 			const endsWord = placeFieldResult(match, at);
 			const score = match.score + resolvedSpecs[f].demotion;
+			const held = heldMatches[i] !== undefined;
 			if (named) {
-				if (entry === undefined) fieldMatches.fill(undefined, i * specCount, (i + 1) * specCount);
-				const held = entry === undefined ? undefined : fieldMatches[at];
-				if (held === undefined || match.score < held.score) fieldMatches[at] = match;
+				if (!held) fieldMatches.fill(undefined, i * specCount, (i + 1) * specCount);
+				const fieldBest = fieldMatches[at];
+				if (fieldBest === undefined || match.score < fieldBest.score) fieldMatches[at] = match;
 			}
-			if (entry === undefined) {
-				entry = resultOf(i, f, match, score);
-				record(i, entry, endsWord);
-			} else if (score < entry.score || (score === entry.score && endsWord && !heldEndsWord[i])) {
-				heldEndsWord[i] = endsWord ? 1 : 0;
-				entry = heldResults[i] = resultOf(i, f, match, score);
+			if (!held) matched.push(i);
+			else if (!(score < heldScores[i] || (score === heldScores[i] && endsWord && !heldEndsWord[i]))) {
+				return;
 			}
-			return entry;
+			heldMatches[i] = match;
+			heldScores[i] = score;
+			heldEndsWord[i] = endsWord ? 1 : 0;
+			if (heldFields !== null) heldFields[i] = f;
 		};
 
 		const scoreItem = (
@@ -393,7 +365,6 @@ export function createSearcher<T, F extends string>(
 		): void => {
 			materialise(i);
 			const base = i * specCount;
-			let entry: SearchResult<T, F> | undefined;
 			for (let f = 0; f < specCount; f++) {
 				const result = matchField(
 					trimmedFields[base + f] as string,
@@ -405,9 +376,9 @@ export function createSearcher<T, F extends string>(
 					preGated,
 					literalOnly,
 				);
-				if (result) entry = offerField(i, entry, f, result);
+				if (result) offerField(i, f, result);
 			}
-			if (entry !== undefined && entry.score <= CONTAINS_SCORE) literalHits++;
+			if (heldMatches[i] !== undefined && heldScores[i] <= CONTAINS_SCORE) literalHits++;
 		};
 
 		const narrowed =
@@ -497,11 +468,9 @@ export function createSearcher<T, F extends string>(
 		// corrected one; a literal match is never touched.
 		const offerFallbacks = (
 			i: number,
-			held: SearchResult<T, F> | undefined,
 			reading: PreparedReading,
 		): void => {
 			const base = i * specCount;
-			let entry = held;
 			for (let f = 0; f < specCount; f++) {
 				if (!reading.admitsMask(fieldMasks[base + f])) continue;
 				materialise(i);
@@ -509,7 +478,7 @@ export function createSearcher<T, F extends string>(
 					trimmedFields[base + f] as string,
 					normalisedFields[base + f] as string,
 				);
-				if (result) entry = offerField(i, entry, f, result);
+				if (result) offerField(i, f, result);
 			}
 		};
 
@@ -540,10 +509,9 @@ export function createSearcher<T, F extends string>(
 			const scanned = survivorsOnly ? survivorCount : count;
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
-				const held = heldStamps[i] === generation ? heldResults[i] : undefined;
-				if (held !== undefined && held.score <= CONTAINS_SCORE) continue;
+				if (heldMatches[i] !== undefined && heldScores[i] <= CONTAINS_SCORE) continue;
 				if (admitsItem !== null && !admitsItem(i)) continue;
-				offerFallbacks(i, held, reading);
+				offerFallbacks(i, reading);
 			}
 		};
 
@@ -586,15 +554,28 @@ export function createSearcher<T, F extends string>(
 		// means "Will Smith" before "Willa"), then list order.
 		matched.sort(
 			(a, b) =>
-				(heldResults[a] as SearchResult<T, F>).score - (heldResults[b] as SearchResult<T, F>).score ||
-				heldEndsWord[b] - heldEndsWord[a] ||
-				a - b,
+				heldScores[a] - heldScores[b] || heldEndsWord[b] - heldEndsWord[a] || a - b,
 		);
-		if (limit !== undefined && matched.length > limit) matched.length = limit;
-		return matched.map((i) => (named ? withFields(i) : (heldResults[i] as SearchResult<T, F>)));
+		return matched.slice(0, limit).map(resultOf);
 	};
 
-	const withFields = (i: number): SearchResult<T, F> => {
+	const resultOf = (i: number): SearchResult<T, F> => {
+		const f = heldFields === null ? 0 : heldFields[i];
+		const match = heldMatches[i] as MatchResult;
+		const result: SearchResult<T> & { field?: string; fields?: Record<string, FieldMatch> } = {
+			item: list[i],
+			score: heldScores[i],
+			tier: match.tier,
+			ranges: match.ranges,
+			text: resolvedSpecs[f].selector(list[i]) as string,
+		};
+		if (named) result.field = resolvedSpecs[f].fieldName;
+		if (match.corrected !== undefined) result.corrected = match.corrected;
+		if (named) result.fields = fieldsOf(i);
+		return result as SearchResult<T, F>;
+	};
+
+	const fieldsOf = (i: number): Record<string, FieldMatch> => {
 		const fields: Record<string, FieldMatch> = {};
 		for (let f = 0; f < specCount; f++) {
 			const match = fieldMatches[i * specCount + f];
@@ -607,7 +588,7 @@ export function createSearcher<T, F extends string>(
 			if (match.corrected !== undefined) entry.corrected = match.corrected;
 			fields[resolvedSpecs[f].fieldName as string] = entry;
 		}
-		return Object.assign(heldResults[i] as SearchResult<T, F>, { fields });
+		return fields;
 	};
 
 	// Asked for up front, the index takes every item's bigram set too, so no
