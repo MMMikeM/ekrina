@@ -37,8 +37,6 @@ export type Config = {
 	probe: (query: string) => Probe;
 	/** Constructor time alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
 	index: (() => number) | null;
-	/** Carries cross-query state, so timing loops must bust it between samples. */
-	stateful?: boolean;
 };
 
 const FUSE_ALL: IFuseOptions<string> = {
@@ -149,7 +147,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => ekrina(q).length,
 				probe: (q) => rankedOnly(ekrina(q).map((r) => r.item)),
 				index: () => consume(createSearcher(list)),
-				stateful: true,
 			};
 		},
 	},
@@ -166,7 +163,6 @@ const definitions = (list: string[]): Definition[] => [
 					fresh.buildIndex();
 					return consume(fresh);
 				},
-				stateful: true,
 			};
 		},
 	},
@@ -179,7 +175,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
 				index: () => consume(createSearcher(list, spec)),
-				stateful: true,
 			};
 		},
 	},
