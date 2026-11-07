@@ -79,6 +79,10 @@ What breaks is the seven names below, what a result holds, and the same query re
   - the 24 queries of a 100k session take 11–18% less, and a first answer 6–45% less;
   - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
 
+- **A fuzzy chain enters a later word only at its start.**
+  `prow` no longer matches "mobile **p**hone with ar**row**", while "**p**erson **row**ing boat", `vsc` and initials such as `tfts` still match; inside one word a piece may still start mid-word.
+  That trims the tail of weak fuzzy rows (a three-letter prefix's median result set 51 → 41 on en) and halves long-text fuzzy junk, with no family's MRR lower (docs/performance.md).
+  A short query's wrong-letter correction is now tried after its swap and sparse readings, and only when they find nothing, so `tahn` still reads as "Than" rather than "Taha".
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
   - 100,000 well-known Wikidata entities, under their English names and again under their native names;

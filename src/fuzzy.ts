@@ -59,6 +59,17 @@ const admitsChunk = (
 	);
 };
 
+const opensWord = (normalisedField: string, at: number): boolean =>
+	at === 0 || isBoundaryChar(normalisedField[at - 1]);
+
+const nextBoundary = (normalisedField: string, from: number): number => {
+	let at = from;
+	while (at < normalisedField.length && !isBoundaryChar(normalisedField[at])) at++;
+	return at;
+};
+
+// A later chunk in the same word may start mid-word (admitsChunk); one in a
+// later word must open it, or "prow" assembles across "phone with arrow".
 // Assemble the whole query from a chunk at `start` (already admitted), taking
 // the leftmost admissible placement for every later chunk; null when the chain
 // dead-ends.
@@ -86,8 +97,14 @@ const chainFrom = (
 		// indexOf from past each rejected occurrence, never one char at a time —
 		// stepping would re-find the same occurrence per step and turn a far-away
 		// reject into O(gap²).
+		const wordEnd = nextBoundary(normalisedField, chunkEnd);
 		let at = normalisedField.indexOf(queryChar, chunkEnd);
-		while (at > -1 && !admitsChunk(normalisedField, at, normalisedQuery, queryAt)) {
+		while (
+			at > -1 &&
+			!(at > wordEnd
+				? opensWord(normalisedField, at)
+				: admitsChunk(normalisedField, at, normalisedQuery, queryAt))
+		) {
 			at = normalisedField.indexOf(queryChar, at + 1);
 		}
 		if (at === -1) return null;

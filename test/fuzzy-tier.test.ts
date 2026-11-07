@@ -42,6 +42,14 @@ describe("fuzzy chunk scoring", () => {
 	it("rejects short mid-word chunks", () => {
 		expect(fuzzyMatch("abcdef", "adf")).toBeNull();
 	});
+
+	it("enters a later word only at its start", () => {
+		expect(fuzzyMatch("mobile phone with arrow", "prow")).toBeNull();
+		expect(fuzzyMatch("person rowing boat", "prow")?.ranges).toEqual([
+			[0, 0],
+			[7, 9],
+		]);
+	});
 });
 
 describe("scorer honours the same word boundaries as the matcher", () => {
@@ -184,8 +192,8 @@ describe("chunk assembly reconsiders its first choice", () => {
 			// Load-bearing bound, not a speed knob (see MAX_CHUNK_STARTS): four
 			// decoy initials is past the cap, so this buried match is refused —
 			// the price of holding the long-text junk rate at zero.
-			expect(fuzzyMatch("Tasty Tidy Trim Tall Tow Wls", "towls")).toBeNull();
-			expect(fuzzyMatch("Tasty Tidy Trim Tow Wls", "towls")?.tier).toBe("fuzzy");
+			expect(fuzzyMatch("Tasty Tidy Trim Tall Tow Ls", "towls")).toBeNull();
+			expect(fuzzyMatch("Tasty Tidy Trim Tow Ls", "towls")?.tier).toBe("fuzzy");
 		});
 
 		it("leaves the documented zebra hazard scored exactly as before", () => {
