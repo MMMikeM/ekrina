@@ -25,6 +25,7 @@ const CASES: [string, string][] = [
 	["final sigma folds to medial", "ΟΔΟΣ ὀδός"],
 	["dotted capital I lowercases to two units", "İstanbul"],
 	["Hangul stays whole", "한국어 문서"],
+	["decomposed Hangul beside a combining mark, which NFC composes", "까 café".normalize("NFD")],
 	["astral plane", "𝔘nicode 🎉 emoji"],
 	["lone surrogates", "ab\ud800cd \udc00ef"],
 	["lone combining mark", "́̀ stranded"],

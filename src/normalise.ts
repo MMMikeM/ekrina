@@ -127,10 +127,15 @@ const NON_ASCII_BITS = 3 << 30;
 
 const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
 
+const isCombiningMark = (unit: number): boolean => unit >= 0x300 && unit <= 0x36f;
+
 /**
  * `charMask(normaliseText(raw))` without building the normalised string. Runs
  * once per field, when a searcher first needs a whole-list pass. May only
- * false-pass: skipping NFC can only add mask bits.
+ * false-pass: skipping NFC can only add mask bits, except that NFC, which
+ * normaliseText applies to a field holding a combining mark, can compose units
+ * (Hangul jamo) into one of the other non-ASCII bucket, so such a field takes
+ * both non-ASCII bits.
  */
 export const rawFieldMask = (raw: string): number => {
 	let mask = 0;
@@ -138,7 +143,12 @@ export const rawFieldMask = (raw: string): number => {
 		const unit = raw.charCodeAt(i);
 		// A surrogate's fold depends on its partner, so it takes both non-ASCII
 		// bits, which can only false-pass.
-		mask |= isSurrogate(unit) ? NON_ASCII_BITS : standInMasks[unit < 128 ? unit : standIn(unit)];
+		mask |=
+			unit < 128
+				? standInMasks[unit]
+				: isSurrogate(unit) || isCombiningMark(unit)
+					? NON_ASCII_BITS
+					: standInMasks[standIn(unit)];
 	}
 	return mask;
 };
@@ -149,9 +159,9 @@ export const rawFieldMask = (raw: string): number => {
  * (degraded = all-ones). Runs per item the first time a gate asks for its
  * pairs, or over every item when the caller builds the index up front.
  *
- * Both halves may only false-pass: skipping NFC can only ADD mask bits, and a
- * combining mark — where raw adjacency stops matching normalised adjacency —
- * degrades the bigram set to all-bits while the mask keeps folding.
+ * Both halves may only false-pass: a combining mark, where NFC may compose the
+ * field and raw adjacency stops matching normalised adjacency, degrades the
+ * bigram set to all-bits and gives the mask both non-ASCII bits (rawFieldMask).
  */
 export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	let mask = 0;
@@ -167,7 +177,7 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 		let unit = raw.charCodeAt(i);
 		let folded = "";
 		if (unit > 127) {
-			if (unit >= 0x300 && unit <= 0x36f) degraded = true;
+			if (isCombiningMark(unit)) degraded = true;
 			if (isSurrogate(unit)) {
 				const codePoint = raw.codePointAt(i) as number;
 				if (codePoint > 0xffff) i++;
@@ -210,9 +220,9 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	if (degraded) {
 		into.lo = -1;
 		into.hi = -1;
-	} else {
-		into.lo |= bigramsLo;
-		into.hi |= bigramsHi;
+		return mask | NON_ASCII_BITS;
 	}
+	into.lo |= bigramsLo;
+	into.hi |= bigramsHi;
 	return mask;
 };
