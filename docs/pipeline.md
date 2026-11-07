@@ -98,7 +98,7 @@ Run by any query that cannot narrow: the first one, and any later one that isn't
 A typed sequence runs it on its first keystroke, and each unrelated query runs it again.
 
 Building the masks only when a query needs them, and gating the raw text until then, makes the first query faster than an index built up front would, and a long run of unrelated queries slower.
-`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 6.7–9.2 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
+`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 6.6–8.7 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 
@@ -116,5 +116,5 @@ The rescue path deliberately ignores the cache: it scans all N, because the near
 ## Large result sets
 
 0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part of a query that returns a lot.
-The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.59 ms and `hinto` 0.29.
+The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.73 ms and `hinto` 0.29.
 Even with a `limit`, every literal result is built and sorted before the list is cut.

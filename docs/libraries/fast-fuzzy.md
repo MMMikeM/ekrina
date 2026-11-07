@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fast-fuzzy-scorecard-native -->
 | Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.81 |  24% |    28.62 |   14.28 |   128.89 |        4.72 |
-| fast-fuzzy (all opts) | 0.81 |  24% |    30.10 |   14.53 |   126.66 |        4.62 |
+| **fast-fuzzy**        | 0.81 |  24% |    29.25 |   15.13 |   120.77 |        4.41 |
+| fast-fuzzy (all opts) | 0.81 |  24% |    28.99 |   14.72 |   122.12 |        4.43 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -25,11 +25,11 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fast-fuzzy-scorecard-en -->
 | Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fast-fuzzy**        | 0.80 |  26% |    25.05 |   19.51 |   109.66 |        3.78 |
-| fast-fuzzy (all opts) | 0.80 |  26% |    24.60 |   20.16 |   110.81 |        3.83 |
+| **fast-fuzzy**        | 0.80 |  26% |    25.41 |   20.72 |   123.14 |        4.29 |
+| fast-fuzzy (all opts) | 0.80 |  26% |    25.33 |   20.72 |   128.48 |        4.40 |
 <!-- bench:end -->
 
-**emoji corpus** (quality only; the list is too short for the timing cells):
+**emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-fast-fuzzy-scorecard-emoji -->
 | Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
@@ -41,24 +41,24 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 ## Speed at 100k
 
 The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
-Only the en corpus is shown, because the native tables list only configurations that fold diacritics and this library has no folding option ([native corpus](../benchmarks.md#native-corpus)); the emoji corpus is too short to time.
+Only the en corpus is shown, because the native tables list only configurations that fold diacritics and this library has no folding option ([native corpus](../benchmarks.md#native-corpus)); the emoji corpus is timed only unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked).
 
 **en corpus:**
 
 <!-- bench:library-fast-fuzzy-speed-en -->
 | Library               |     index | cold query |     total | total rel |
 |-----------------------|----------:|-----------:|----------:|----------:|
-| **Ekrina**            |   0.32 ms |    7.82 ms |   8.14 ms |  **100%** |
-| fast-fuzzy            | 221.32 ms |   72.13 ms | 312.62 ms |     3842% |
-| fast-fuzzy (all opts) | 300.76 ms |   76.96 ms | 314.82 ms |     3869% |
+| **Ekrina**            |   0.27 ms |    8.37 ms |   8.67 ms |  **100%** |
+| fast-fuzzy            | 255.32 ms |   79.87 ms | 331.12 ms |     3820% |
+| fast-fuzzy (all opts) | 232.62 ms |   79.16 ms | 332.51 ms |     3836% |
 <!-- bench:end -->
 
 <!-- bench:library-fast-fuzzy-batch-en -->
 | Library               | batch/query | batch total | batch rel |
 |-----------------------|------------:|------------:|----------:|
-| **Ekrina**            |     1.79 ms |    47.52 ms |  **100%** |
-| fast-fuzzy            |    37.81 ms |   978.96 ms |     2060% |
-| fast-fuzzy (all opts) |    38.04 ms |   963.08 ms |     2027% |
+| **Ekrina**            |     1.76 ms |    51.04 ms |  **100%** |
+| fast-fuzzy            |    38.24 ms |  1017.77 ms |     1994% |
+| fast-fuzzy (all opts) |    38.55 ms |  1019.06 ms |     1997% |
 <!-- bench:end -->
 
 ## Match quality, by query family

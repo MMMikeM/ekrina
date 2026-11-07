@@ -73,8 +73,8 @@ What breaks is the seven names below, what a result holds, and the same query re
   - With `limit`, once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
 
   Against the 1.1.2 run in `bench/results.json`'s history:
-  - a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k);
-  - a 100k session takes 11–16% less, and a first answer 17–45% less;
+  - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);
+  - the 24 queries of a 100k session take 11–18% less, and a first answer 6–45% less;
   - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
