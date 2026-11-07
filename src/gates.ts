@@ -1,4 +1,4 @@
-import { wordChar } from "./boundaries";
+import { wordChar, wordStartOccurrence } from "./boundaries";
 import { bigramBit, bigramClass, unitMask } from "./normalise";
 import { unfoldTable } from "./unfold";
 
@@ -45,8 +45,7 @@ export const buildFuzzyGate = (normalisedQuery: string): Gate => {
 	const run = normalisedQuery.slice(0, 3);
 	return {
 		test: (text) => {
-			let at = text.indexOf(first);
-			while (at > 0 && wordChar.test(text[at - 1])) at = text.indexOf(first, at + 1);
+			let at = wordStartOccurrence(text, first);
 			return (
 				(at > -1 && holdsInOrderFrom(text, normalisedQuery, 1, at + 1)) ||
 				((at = text.indexOf(run)) > -1 && holdsInOrderFrom(text, normalisedQuery, 3, at + 3))

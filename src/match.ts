@@ -1,4 +1,4 @@
-import { splitWords, WORD_CHARS, wordChar } from "./boundaries";
+import { splitWords, WORD_CHARS, wordStartOccurrence } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import { normaliseText } from "./normalise";
@@ -98,15 +98,6 @@ const longestFirst = (words: string[]): string[] =>
 // Word-internal apostrophes don't end a run: "people's" is one word with
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = new RegExp(`[${WORD_CHARS}]+(?:'[${WORD_CHARS}]+)*`, "gu");
-
-const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
-	let at = haystack.indexOf(needle, from);
-	while (at > -1) {
-		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
-		at = haystack.indexOf(needle, at + 1);
-	}
-	return -1;
-};
 
 const boundaryTier = (
 	haystack: string,
