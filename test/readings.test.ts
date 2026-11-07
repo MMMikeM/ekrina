@@ -221,6 +221,12 @@ describe("a swap in a four-letter word", () => {
 		});
 	});
 
+	it("is read before a substitution, which would land on another word", () => {
+		expect(search(["Taha Hussein", "Louder Than Bombs"])("tahn").map((r) => r.corrected)).toEqual([
+			"Than",
+		]);
+	});
+
 	it("is not tried once a field matches it literally", () => {
 		expect(search(["Louder Than Bombs", "Tahnee Welch"])("tahn").map((r) => r.item)).toEqual([
 			"Tahnee Welch",
@@ -338,12 +344,9 @@ describe("a space counts as one edit", () => {
 		expect(fuzzyMatch("Hillside", "hil sidx")).toBeNull();
 	});
 
-	it("rejoins a split word beside weaker matches", () => {
+	it("rejoins a split word, which keeps a short query's substitutions out", () => {
 		const items = ["Mlle Anne Marty", "Marianne Lowe"];
-		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual([
-			"Marianne Lowe",
-			"Mlle Anne Marty",
-		]);
+		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe"]);
 		const typed = searcher(["Mari Annx Shop", "Marianne Lowe"])("mari annx");
 		expect(typed.map((r) => r.item)).toEqual(["Mari Annx Shop"]);
 	});

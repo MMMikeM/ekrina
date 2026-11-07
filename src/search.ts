@@ -568,17 +568,18 @@ export function createSearcher<T, F extends string>(
 		// correction only stands in for a missing match (see isShortQuery).
 		// Taken before the relaxed pass, which rescores the literal hits.
 		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
-		const rescuing =
-			rescuable &&
-			(isShortQuery(normalisedQuery, prepared.queryWords)
-				? matched.length === 0
-				: offeringSecondPass);
+		const shortQuery = isShortQuery(normalisedQuery, prepared.queryWords);
+		const rescuingFirst = rescuable && !shortQuery && offeringSecondPass;
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
-		if (rescuing) relaxedPass();
+		if (rescuingFirst) relaxedPass();
 		if (offeringSecondPass) secondPass();
-		commitSurvivorCache(!rescuing && !singleChar);
+		// A short query's substitution is the last resort: a swap or a sparse word
+		// the second pass read is likelier what was meant ("tahn" is "than", not "taha").
+		const rescuingLast = rescuable && shortQuery && matched.length === 0;
+		if (rescuingLast) relaxedPass();
+		commitSurvivorCache(!rescuingFirst && !rescuingLast && !singleChar);
 
 		// Within a score, a match that ends on a word boundary ranks first ("will"
 		// means "Will Smith" before "Willa"), then list order.

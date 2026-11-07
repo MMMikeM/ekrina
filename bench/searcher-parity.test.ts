@@ -70,26 +70,33 @@ it(
 );
 
 // The second pass, without its gates and without scanning only the literal
-// pass's survivors: what the searcher must return, item for item.
+// pass's survivors: what the searcher must return, item for item. A short
+// query's rescue runs after it, and only when it found nothing, so a plain
+// search that is all rescue gives the second pass an empty field.
 const withSecondPass = (
 	list: string[],
 	query: string,
-	plain: Map<string, number>,
+	plain: { item: string; score: number; tier: string }[],
 ): Map<string, number> => {
+	const scores = new Map(plain.map((r) => [r.item, r.score]));
 	const prepared = prepareBoundedQuery(query);
-	const literal = [...plain.values()].some((score) => score <= SCORES.CONTAINS);
-	const reading =
-		prepared && secondPass(prepared, literal ? "literal" : plain.size > 0 ? "fuzzy" : "none");
-	const expected = new Map(plain);
-	if (!reading) return expected;
-	for (const item of list) {
-		const held = plain.get(item);
-		if (held !== undefined && held <= SCORES.CONTAINS) continue;
-		const field = item.trim();
-		const score = reading.match(field, normaliseText(field))?.score;
-		if (score !== undefined && score < (held ?? Infinity)) expected.set(item, score);
+	if (!prepared) return scores;
+	const allRescue = plain.length > 0 && plain.every((r) => r.tier === "corrected");
+	const rescuedLast = isShortQuery(prepared.normalisedQuery, prepared.queryWords) && allRescue;
+	const before = rescuedLast ? new Map<string, number>() : scores;
+	const literal = [...before.values()].some((score) => score <= SCORES.CONTAINS);
+	const reading = secondPass(prepared, literal ? "literal" : before.size > 0 ? "fuzzy" : "none");
+	const expected = new Map(before);
+	if (reading) {
+		for (const item of list) {
+			const held = before.get(item);
+			if (held !== undefined && held <= SCORES.CONTAINS) continue;
+			const field = item.trim();
+			const score = reading.match(field, normaliseText(field))?.score;
+			if (score !== undefined && score < (held ?? Infinity)) expected.set(item, score);
+		}
 	}
-	return expected;
+	return rescuedLast && expected.size === 0 ? scores : expected;
 };
 
 it("a searcher's second pass returns exactly what its reading admits", { timeout: 600_000 }, () => {
@@ -101,7 +108,7 @@ it("a searcher's second pass returns exactly what its reading admits", { timeout
 			const scores = (results: { item: string; score: number }[]) =>
 				new Map(results.map((r) => [r.item, r.score]));
 			const got = scores(createSearcher(list)(query));
-			const expected = withSecondPass(list, query, scores(plainResults));
+			const expected = withSecondPass(list, query, plainResults);
 			expect(got, `[${name}-10000] "${query}"`).toEqual(expected);
 		}
 	}
