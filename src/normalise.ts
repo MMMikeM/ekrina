@@ -104,15 +104,20 @@ export type FieldBigrams = { lo: number; hi: number };
 // Every BMP code point folds to exactly one unit (computeFold's length check),
 // so each unit's fold has a fixed class, learned once and stored as a stand-in
 // unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
-// non-ASCII buckets. 0 until first seen.
+// non-ASCII buckets. 0 until first seen; the table itself waits for the first
+// non-ASCII unit, so a list of ASCII never allocates it.
 const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
-const standIns = new Uint8Array(0x10000);
+let standIns: Uint8Array | null = null;
 
-const standIn = (unit: number): number =>
-	standIns[unit] ||
-	(standIns[unit] = STAND_INS.charCodeAt(
-		bigramClass(foldChar(String.fromCharCode(unit)).charCodeAt(0)),
-	));
+const standIn = (unit: number): number => {
+	const table = (standIns ??= new Uint8Array(0x10000));
+	return (
+		table[unit] ||
+		(table[unit] = STAND_INS.charCodeAt(
+			bigramClass(foldChar(String.fromCharCode(unit)).charCodeAt(0)),
+		))
+	);
+};
 
 // `unitMask` for every ASCII unit and both non-ASCII stand-ins.
 const standInMasks = new Int32Array(130);
