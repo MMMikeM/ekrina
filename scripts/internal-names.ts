@@ -53,5 +53,8 @@ export const INTERNAL_NAMES: string[] = [
 	"offset",
 	"selector",
 	"acronymTier",
+	"unmatched",
+	"holds",
+	"matchWords",
 	"demotion",
 ];

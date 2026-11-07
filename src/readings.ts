@@ -59,6 +59,17 @@ const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 
 type FieldWord = { word: string; offset: number };
 
+// One way of reading the query: how many of its letters a field may lack, the
+// pairs and the cheap test a field must pass first, and the reading itself.
+type Reading = {
+	unmatched: number;
+	// Absent when it could reject nothing.
+	admitsPairs?: NonNullable<PreparedReading["admitsPairs"]>;
+	// Absent when the reading has no test cheaper than reading the field.
+	holds?: (normalisedField: string) => boolean;
+	matchWords: (field: string, normalisedField: string, words: FieldWord[]) => MatchResult | null;
+};
+
 // The regex's own word split, with a plain scan for the all-ASCII fields that
 // make up nearly every list.
 const fieldWords = (normalisedField: string): FieldWord[] => {
@@ -129,28 +140,29 @@ const correction = (
 // A space typed or forgotten, or a key held down, counts as one edit: `spent` is
 // how many the reading already spent, `spare` how many more it may, and two
 // adjacent field words read joined spend one of those.
-const correctWord = (
-	word: string,
-	field: string,
-	normalisedField: string,
-	words: FieldWord[],
-	spent: number,
-	spare: number,
-): MatchResult | null => {
-	let best: MatchResult | null = null;
-	const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
-		const budget = spare - joinedEdits;
-		const edits = withinEdits(word, first === last ? first.word : first.word + last.word, budget);
-		if (edits > budget) return;
-		const candidate = correction(edits + spent + joinedEdits, field, normalisedField, first, last);
-		best = better(best, candidate);
+const correctWord =
+	(word: string, spent: number, spare: number): Reading["matchWords"] =>
+	(field, normalisedField, words) => {
+		let best: MatchResult | null = null;
+		const consider = (first: FieldWord, last: FieldWord, joinedEdits: number): void => {
+			const budget = spare - joinedEdits;
+			const edits = withinEdits(word, first === last ? first.word : first.word + last.word, budget);
+			if (edits > budget) return;
+			const candidate = correction(
+				edits + spent + joinedEdits,
+				field,
+				normalisedField,
+				first,
+				last,
+			);
+			best = better(best, candidate);
+		};
+		for (let i = 0; i < words.length; i++) {
+			consider(words[i], words[i], 0);
+			if (spent === 0 && i + 1 < words.length) consider(words[i], words[i + 1], 1);
+		}
+		return best;
 	};
-	for (let i = 0; i < words.length; i++) {
-		consider(words[i], words[i], 0);
-		if (spent === 0 && i + 1 < words.length) consider(words[i], words[i + 1], 1);
-	}
-	return best;
-};
 
 // Just above CONTAINS and ranked by the share of the word left untyped, and by
 // each letter skipped past the first, so a word read with several letters
@@ -183,32 +195,29 @@ const scatterRuns = (word: string, candidate: string): HighlightRange[] | null =
 	return next === word.length && !isStrayLastLetter(runs, word) ? runs : null;
 };
 
-const scatterWord = (
-	word: string,
-	field: string,
-	normalisedField: string,
-	words: FieldWord[],
-): MatchResult | null => {
-	let best: MatchResult | null = null;
-	for (const candidate of words) {
-		const runs = scatterRuns(word, candidate.word);
-		if (runs === null) continue;
-		const score =
-			SCATTER_SCORE +
-			SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
-			SCATTER_EXTRA_SKIP_PENALTY * Math.max(0, candidate.word.length - word.length - 1) +
-			(candidate.offset === 0 ? 0 : LATER_WORD_PENALTY);
-		if (best !== null && best.score <= score) continue;
-		shiftRanges(runs, candidate.offset);
-		best = {
-			score,
-			tier: "corrected",
-			corrected: spelling(field, normalisedField, candidate),
-			ranges: runs,
-		};
-	}
-	return best;
-};
+const scatterWord =
+	(word: string): Reading["matchWords"] =>
+	(field, normalisedField, words) => {
+		let best: MatchResult | null = null;
+		for (const candidate of words) {
+			const runs = scatterRuns(word, candidate.word);
+			if (runs === null) continue;
+			const score =
+				SCATTER_SCORE +
+				SCATTER_SKIP_WEIGHT * (1 - word.length / candidate.word.length) +
+				SCATTER_EXTRA_SKIP_PENALTY * Math.max(0, candidate.word.length - word.length - 1) +
+				(candidate.offset === 0 ? 0 : LATER_WORD_PENALTY);
+			if (best !== null && best.score <= score) continue;
+			shiftRanges(runs, candidate.offset);
+			best = {
+				score,
+				tier: "corrected",
+				corrected: spelling(field, normalisedField, candidate),
+				ranges: runs,
+			};
+		}
+		return best;
+	};
 
 type Placement = { candidate: FieldWord; edits: number };
 
@@ -246,86 +255,90 @@ const placeWord = (
 	return { candidate: words[pick], edits: pickEdits };
 };
 
-const correctPhrase = (
-	prepared: PreparedQuery,
-	field: string,
-	normalisedField: string,
-	words: FieldWord[],
-): MatchResult | null => {
-	const taken = words.map(() => false);
-	const placements = new Map<string, Placement[]>();
-	let edits = 0;
-	for (const word of prepared.wordsLongestFirst) {
-		const placement = placeWord(word, words, taken, MAX_EDITS - edits);
-		if (placement === null) return null;
-		edits += placement.edits;
-		placements.set(word, [...(placements.get(word) ?? []), placement]);
-	}
-	const { query, normalisedQuery, queryWords } = prepared;
-	const typed = composed(query, normalisedQuery);
-	const starts = wordStartsOf(prepared);
-	let corrected = "";
-	let normalisedCorrected = "";
-	let from = 0;
-	for (let k = 0; k < queryWords.length; k++) {
-		const word = queryWords[k];
-		const at = starts[k];
-		const { candidate, edits: wordEdits } = (placements.get(word) as Placement[]).shift()!;
-		corrected +=
-			typed.slice(from, at) +
-			(wordEdits ? spelling(field, normalisedField, candidate) : typed.slice(at, at + word.length));
-		normalisedCorrected += normalisedQuery.slice(from, at) + (wordEdits ? candidate.word : word);
-		from = at + word.length;
-	}
-	normalisedCorrected += normalisedQuery.slice(from);
-	return scoreCorrection(
-		edits,
-		field,
-		normalisedField,
-		prepareQuery(normalisedCorrected, normalisedCorrected),
-		corrected + typed.slice(from),
-	);
-};
+const correctPhrase =
+	(prepared: PreparedQuery): Reading["matchWords"] =>
+	(field, normalisedField, words) => {
+		const taken = words.map(() => false);
+		const placements = new Map<string, Placement[]>();
+		let edits = 0;
+		for (const word of prepared.wordsLongestFirst) {
+			const placement = placeWord(word, words, taken, MAX_EDITS - edits);
+			if (placement === null) return null;
+			edits += placement.edits;
+			placements.set(word, [...(placements.get(word) ?? []), placement]);
+		}
+		const { query, normalisedQuery, queryWords } = prepared;
+		const typed = composed(query, normalisedQuery);
+		const starts = wordStartsOf(prepared);
+		let corrected = "";
+		let normalisedCorrected = "";
+		let from = 0;
+		for (let k = 0; k < queryWords.length; k++) {
+			const word = queryWords[k];
+			const at = starts[k];
+			const { candidate, edits: wordEdits } = (placements.get(word) as Placement[]).shift()!;
+			corrected +=
+				typed.slice(from, at) +
+				(wordEdits
+					? spelling(field, normalisedField, candidate)
+					: typed.slice(at, at + word.length));
+			normalisedCorrected += normalisedQuery.slice(from, at) + (wordEdits ? candidate.word : word);
+			from = at + word.length;
+		}
+		normalisedCorrected += normalisedQuery.slice(from);
+		return scoreCorrection(
+			edits,
+			field,
+			normalisedField,
+			prepareQuery(normalisedCorrected, normalisedCorrected),
+			corrected + typed.slice(from),
+		);
+	};
 
-const mayBeOneWord = (queryWords: string[]): boolean =>
-	queryWords.length === 2 && queryWords[0].length + queryWords[1].length >= MIN_REJOINED_LENGTH;
-
-// The edits a two-word query read as one word may spend beside the space.
-const spareBesideSpace = (queryWords: string[]): number =>
-	queryWords.join("").length >= MIN_TWO_EDIT_WORD_LENGTH ? MAX_EDITS - 1 : 0;
-
-// A two-word query is also read as one word with a stray space in it.
-const correctSplitWord = (
-	queryWords: string[],
-	spare: number,
-	field: string,
-	normalisedField: string,
-	words: FieldWord[],
-): MatchResult | null =>
-	mayBeOneWord(queryWords)
-		? correctWord(queryWords.join(""), field, normalisedField, words, 1, spare)
-		: null;
+const inOrder =
+	(letters: string) =>
+	(normalisedField: string): boolean =>
+		holdsInOrderFrom(normalisedField, letters, 0, 0);
 
 // An adjacent swap breaks the three letter pairs around it; every other edit
 // breaks fewer.
 const PAIRS_ONE_EDIT_BREAKS = 3;
 
-// A phrase word under five letters is never corrected, so its pairs all occur;
-// the rest lose at most what the edits break. Read as one word, the joined
-// query loses only what its `spare` edits beside the space break.
-const phrasePairs = (
-	queryWords: string[],
-	asPhrase: boolean,
-	spare: number,
-): NonNullable<PreparedReading["admitsPairs"]> => {
-	const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
-	const all = pairsOf(queryWords);
-	const joined = mayBeOneWord(queryWords) ? pairsOf([queryWords.join("")]) : null;
-	return (lo, hi) =>
-		(asPhrase &&
-			lacksPairsAtMost(short, lo, hi, 0) &&
-			lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS)) ||
-		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
+// Beside other matches a phrase is read only as one word split by a stray
+// space, the one mistake cheap enough to look for there.
+const phraseReadings = (prepared: PreparedQuery, joined: string, competing: boolean): Reading[] => {
+	const { queryWords } = prepared;
+	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
+	const rejoinable = queryWords.length === 2 && joined.length >= MIN_REJOINED_LENGTH;
+	const applicable: Reading[] = [];
+	if (!competing && (correctable || rejoinable)) {
+		// A phrase word under five letters is never corrected, so its pairs all
+		// occur; the rest lose at most what the edits break.
+		const short = pairsOf(queryWords.filter((word) => word.length < MIN_PHRASE_CORRECTION_LENGTH));
+		const all = pairsOf(queryWords);
+		applicable.push({
+			unmatched: correctable ? MAX_EDITS : 0,
+			admitsPairs: (lo, hi) =>
+				lacksPairsAtMost(short, lo, hi, 0) &&
+				lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS),
+			matchWords: correctPhrase(prepared),
+		});
+	}
+	// A two-word query is also read as one word with a stray space in it.
+	if (rejoinable) {
+		const spareBesideSpace =
+			!competing && joined.length >= MIN_TWO_EDIT_WORD_LENGTH ? MAX_EDITS - 1 : 0;
+		const pairs = pairsOf([joined]);
+		applicable.push({
+			unmatched: spareBesideSpace,
+			admitsPairs: (lo, hi) =>
+				lacksPairsAtMost(pairs, lo, hi, spareBesideSpace * PAIRS_ONE_EDIT_BREAKS),
+			// With no edit to spend, the joined word is a field word as typed.
+			holds: spareBesideSpace === 0 ? inOrder(joined) : undefined,
+			matchWords: correctWord(joined, 1, spareBesideSpace),
+		});
+	}
+	return applicable;
 };
 
 // A run of three or more of one letter, cut to two: a held key, whose one
@@ -359,18 +372,53 @@ const swapForms = (word: string, typedWord: string): Swap[] => {
 // A swap undone only where the form starts a field word, so it lands at a word
 // start as the default's short corrections do. Like the default's, it keeps the
 // caller's casing, so both price a swap the same.
-const swapWord = (
-	swaps: Swap[],
-	field: string,
-	normalisedField: string,
-	words: FieldWord[],
-): MatchResult | null => {
-	let best: MatchResult | null = null;
-	for (const { normalised, asTyped } of swaps) {
-		if (!words.some((candidate) => candidate.word.startsWith(normalised))) continue;
-		best = better(best, scoreCorrection(1, field, normalisedField, asTyped, asTyped.query));
+const swapWord =
+	(swaps: Swap[]): Reading["matchWords"] =>
+	(field, normalisedField, words) => {
+		let best: MatchResult | null = null;
+		for (const { normalised, asTyped } of swaps) {
+			if (!words.some((candidate) => candidate.word.startsWith(normalised))) continue;
+			best = better(best, scoreCorrection(1, field, normalisedField, asTyped, asTyped.query));
+		}
+		return best;
+	};
+
+const wordReadings = (
+	prepared: PreparedQuery,
+	word: string,
+	stuck: string | null,
+	competing: boolean,
+): Reading[] => {
+	const applicable: Reading[] = [];
+	if (!competing && word.length >= MIN_TWO_EDIT_WORD_LENGTH) {
+		applicable.push({
+			unmatched: MAX_EDITS,
+			matchWords: correctWord(word, 0, MAX_EDITS),
+		});
 	}
-	return best;
+	// A sparse reading keeps no pairs of a word together, so no word is gated on
+	// its pairs.
+	if (word.length >= MIN_SCATTER_LENGTH) {
+		applicable.push({
+			unmatched: 0,
+			holds: inOrder(word),
+			matchWords: scatterWord(word),
+		});
+	}
+	if (stuck !== null) {
+		applicable.push({
+			unmatched: MAX_EDITS - 1,
+			matchWords: correctWord(stuck, 1, MAX_EDITS - 1),
+		});
+	} else if (!competing && readsSwaps(prepared)) {
+		const swaps = swapForms(word, rawWordOf(prepared, 0));
+		applicable.push({
+			unmatched: 0,
+			holds: (normalisedField) => swaps.some((swap) => normalisedField.includes(swap.normalised)),
+			matchWords: swapWord(swaps),
+		});
+	}
+	return applicable;
 };
 
 // Edit distance over every field word is what makes a reading expensive, so
@@ -378,76 +426,42 @@ const swapWord = (
 // for a query that matched nothing.
 const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedReading | null => {
 	const { queryWords } = prepared;
-	if (queryWords.length === 0 || queryWords.some((word) => word.length > MAX_RESCUE_WORD_LENGTH)) {
-		return null;
-	}
+	if (queryWords.some((word) => word.length > MAX_RESCUE_WORD_LENGTH)) return null;
 	const phrase = queryWords.length > 1;
-	// Beside other matches a phrase is read only as one word split by a stray
-	// space, the one mistake cheap enough to look for there.
-	if (phrase && competing && !mayBeOneWord(queryWords)) return null;
-	const asPhrase = phrase && !competing;
-	const spare = competing ? 0 : spareBesideSpace(queryWords);
 	const letters = queryWords.join("");
-	const editable = !competing && (phrase || letters.length >= MIN_TWO_EDIT_WORD_LENGTH);
 	// Gated on the form it corrects, since a long run would fail a gate built
 	// from the letters as typed.
 	const stuck = phrase || competing ? null : stuckKeyForm(letters);
-	const swaps =
-		competing || !readsSwaps(prepared) ? null : swapForms(letters, rawWordOf(prepared, 0));
-	const matchWord = (
-		word: string,
-		field: string,
-		normalisedField: string,
-		words: FieldWord[],
-	): MatchResult | null =>
-		better(
-			better(
-				editable ? correctWord(word, field, normalisedField, words, 0, MAX_EDITS) : null,
-				scatterWord(word, field, normalisedField, words),
-			),
-			stuck !== null
-				? correctWord(stuck, field, normalisedField, words, 1, MAX_EDITS - 1)
-				: swaps !== null
-					? swapWord(swaps, field, normalisedField, words)
-					: null,
-		);
-	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
-	const matchable = phrase
-		? correctable || mayBeOneWord(queryWords)
-		: letters.length >= MIN_SCATTER_LENGTH;
-	// With no word long enough to correct, only an edit beside a stray space can
-	// leave a letter unmatched.
-	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
-	if (!matchable) return null;
+	const applicable = phrase
+		? phraseReadings(prepared, letters, competing)
+		: wordReadings(prepared, letters, stuck, competing);
+	if (applicable.length === 0) return null;
 	// A held key's cut form holds the classes of the word as typed and no more
 	// of any, so its counts admit every field either reading does.
 	const counted = stuck ?? letters;
 	return {
 		needed: charMask(counted),
 		counts: classCounts(counted),
-		// A swap or a sparse reading leaves no letter unmatched.
-		spare: editable ? unmatched : stuck !== null ? MAX_EDITS - 1 : 0,
-		// A sparse reading keeps no pairs of a word together.
-		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
+		spare: Math.max(...applicable.map((reading) => reading.unmatched)),
+		admitsPairs: applicable.every((reading) => reading.admitsPairs)
+			? (lo, hi) => applicable.some((reading) => reading.admitsPairs!(lo, hi))
+			: null,
 		wholeList: !competing,
 		match: (field, normalisedField) => {
-			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
-			// Without edits a word is read only sparsely, swapped or rejoined whole,
-			// and each needs its letters in the field before any word is split out.
 			if (
-				!editable &&
-				stuck === null &&
-				!holdsInOrderFrom(normalisedField, letters, 0, 0) &&
-				!swaps?.some((swap) => normalisedField.includes(swap.normalised))
+				normalisedField.length > MAX_FIELD_LENGTH ||
+				applicable.every((reading) => reading.holds?.(normalisedField) === false)
 			) {
 				return null;
 			}
 			const words = fieldWords(normalisedField);
-			if (!phrase) return matchWord(queryWords[0], field, normalisedField, words);
-			return (
-				(asPhrase ? correctPhrase(prepared, field, normalisedField, words) : null) ??
-				correctSplitWord(queryWords, spare, field, normalisedField, words)
-			);
+			let best: MatchResult | null = null;
+			for (const reading of applicable) {
+				// A phrase's first reading to match stands; a word's compete on score.
+				if (phrase && best !== null) break;
+				best = better(best, reading.matchWords(field, normalisedField, words));
+			}
+			return best;
 		},
 	};
 };
