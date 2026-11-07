@@ -86,7 +86,7 @@ What breaks is the seven names below, what a result holds, and the same query re
 
   The query families are drawn from how people mistype, Wikipedia's list of common misspellings included, and were weighted by group before anything was measured.
   Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
-  On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
+  On real text the long-text junk rate is 2–3% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
   The typing session times each keystroke once, in a fresh process, as a user types it.
   Before, it repeated each query in one process, which let V8 reuse the regexes it had compiled.
 
