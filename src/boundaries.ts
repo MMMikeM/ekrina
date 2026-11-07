@@ -22,3 +22,14 @@ const wordSeparators = new RegExp(`[^${WORD_CHARS}]+`, "u");
 export const splitWords = (text: string): string[] => text.split(wordSeparators).filter(Boolean);
 
 export const isBoundaryChar = (char: string): boolean => !wordChar.test(char);
+
+// Shared by the fuzzy gate and the boundary tiers, which must agree on where a
+// word starts or the gate rejects a field a tier would match.
+export const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
+	let at = haystack.indexOf(needle, from);
+	while (at > -1) {
+		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
+		at = haystack.indexOf(needle, at + 1);
+	}
+	return -1;
+};

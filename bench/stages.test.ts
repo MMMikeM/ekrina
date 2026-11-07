@@ -16,10 +16,11 @@ import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createSearcher } from "../src/search";
 import { CORPORA } from "./corpus";
+import { REPEAT } from "./passes.ts";
 
-const REPS = 10;
+const REPS = REPEAT ? 10 : 1;
 const time = (fn: () => void): number => {
-	for (let i = 0; i < 3; i++) fn();
+	for (let i = 0; i < (REPEAT ? 3 : 0); i++) fn();
 	const t = performance.now();
 	for (let i = 0; i < REPS; i++) fn();
 	return (performance.now() - t) / REPS;

@@ -1,6 +1,6 @@
 import type { Artifact, ColdCell, ProbeTable } from "./artifact.ts";
 import { PUBLISHED_SIZE } from "./artifact.ts";
-import { META, bySize, displayName, foldsFor } from "./libraries.ts";
+import { META, displayName, foldsFor, gzipKB } from "./libraries.ts";
 import { headlineMrr } from "./mrr.ts";
 
 type Align = "left" | "right" | "center";
@@ -47,6 +47,7 @@ const geomean = (xs: number[]): number =>
 const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 /** The library a configuration belongs to: its name without the option suffix. */
+/** @public Read by site/scripts/explorer-data.ts, outside knip's workspaces. */
 export const libraryOf = (config: string): string =>
 	config.replace(/ \((all opts|acronym|indexed|tuned)\)$/, "");
 
@@ -87,7 +88,7 @@ const configsOf = (a: Artifact, library: string): string[] =>
 		.sort((x, y) => Number(x !== library) - Number(y !== library) || (x < y ? -1 : 1));
 
 /** The page slug of a library with more than one configuration. */
-export const librarySlug = (library: string): string =>
+const librarySlug = (library: string): string =>
 	library.replace(/^@nozbe\//, "").replace(/\.js$/, "").toLowerCase();
 
 /** Corpus the per-probe tables are drawn from; the docs say so in prose. */
@@ -154,18 +155,46 @@ const buildTable = (a: Artifact): string => {
 	]);
 };
 
-const librariesTable = (): string =>
+const gzipBytesOf = (a: Artifact, library: string): number => {
+	const bytes = a.gzipBytes?.[library];
+	if (bytes === undefined) {
+		throw new Error(`no measured size for '${library}': run \`pnpm bench --size --all\``);
+	}
+	return bytes;
+};
+
+const gzipLabel = (a: Artifact, library: string): string => `~${gzipKB(gzipBytesOf(a, library))} kB`;
+
+// Ekrina first, then ascending size.
+const bySize = (a: Artifact): string[] =>
+	Object.keys(META).sort(
+		(x, y) =>
+			Number(y === "ekrina") - Number(x === "ekrina") || gzipBytesOf(a, x) - gzipBytesOf(a, y),
+	);
+
+const librariesTable = (a: Artifact): string =>
 	mdTable(
 		["Library", "Gzip", "Deps", "Type"],
-		Object.keys(META)
-			.sort(bySize)
-			.map((name) => {
-				const m = META[name];
-				const label = name === "ekrina" ? "**Ekrina**" : displayName(name);
-				return [label, `~${m.gzipKB} kB`, String(m.deps), m.type];
-			}),
+		bySize(a).map((name) => {
+			const m = META[name];
+			const label = name === "ekrina" ? "**Ekrina**" : displayName(name);
+			return [label, gzipLabel(a, name), String(m.deps), m.type];
+		}),
 		["left", "left", "left", "left"],
 	);
+
+const COUNTS = ["none", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+const ORDINALS = ["", "second-", "third-", "fourth-", "fifth-", "sixth-", "seventh-", "eighth-"];
+
+const ekrinaSizeStanding = (a: Artifact): string => {
+	const ekrina = gzipBytesOf(a, "ekrina");
+	const larger = bySize(a).filter((name) => gzipBytesOf(a, name) > ekrina);
+	const named = larger.map((name) => `${displayName(name)}, at ${gzipLabel(a, name)}`);
+	const standing = `${gzipLabel(a, "ekrina")} gzip it is the ${ORDINALS[larger.length]}largest of the ${COUNTS[Object.keys(META).length]}`;
+	if (named.length === 0) return standing;
+	const list = named.length === 1 ? named[0] : `${named.slice(0, -1).join(", ")}, and ${named.at(-1)}`;
+	return `${standing}, and only ${list}, ${named.length === 1 ? "is" : "are"} larger`;
+};
 
 const isEkrinaVariant = (config: string): boolean =>
 	libraryOf(config) === "ekrina" && config !== "ekrina";
@@ -192,7 +221,7 @@ const compareTable = (a: Artifact): string => {
 				r.library === "ekrina" ? "**Ekrina**" : displayName(r.library),
 				r.mrr.toFixed(2),
 				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
-				meta.gzipKB.toFixed(1),
+				gzipKB(gzipBytesOf(a, libraryOf(r.library))).toFixed(1),
 				r.junk === undefined ? "—" : percent(r.junk),
 				meta.typoReach ?? "none",
 				meta.features.tier,
@@ -454,7 +483,9 @@ const memoryTable = (a: Artifact): string => {
 export const regions = (a: Artifact): Record<string, string> => {
 	const out: Record<string, string> = {};
 	if (Object.keys(a.coldMatrix).length) out.build = buildTable(a);
-	out.libraries = librariesTable();
+	out.libraries = librariesTable(a);
+	out["ekrina-gzip"] = gzipLabel(a, "ekrina");
+	out["ekrina-size-standing"] = ekrinaSizeStanding(a);
 	if (a.scorecard.corpora[PROBE_CORPUS]) out.compare = compareTable(a);
 	const headline = headlineConfigs(a);
 	for (const corpus of Object.keys(a.coldMatrix)) {

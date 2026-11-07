@@ -1,3 +1,5 @@
+import { combiningMarks } from "./normalise";
+
 // Every code point that folds to ASCII lives in these ranges; test/unfold.test.ts
 // walks the whole BMP and fails if a fold source ever appears outside them.
 const SOURCE_RANGES: readonly (readonly [number, number])[] = [
@@ -8,8 +10,6 @@ const SOURCE_RANGES: readonly (readonly [number, number])[] = [
 	[0x1e00, 0x1eff],
 	[0x212a, 0x212b],
 ];
-
-const combiningMarks = /[\u0300-\u036f]/g;
 
 let table: Record<string, string> | null = null;
 

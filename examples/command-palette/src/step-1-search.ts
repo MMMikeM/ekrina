@@ -1,14 +1,17 @@
 import { createSearcher } from "ekrina";
-import type { SearchResult } from "ekrina";
+import type { SearchResultOf } from "ekrina";
 import type { Command } from "./commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [{ selectField: (command) => command.title }]);
+	const search = createSearcher(commands, (command) => command.title);
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
+
+type Result = SearchResultOf<typeof createSearch>;
 
 const element = <K extends keyof HTMLElementTagNameMap>(
 	tag: K,
@@ -21,7 +24,7 @@ const element = <K extends keyof HTMLElementTagNameMap>(
 	return node;
 };
 
-const option = (result: SearchResult<Command>): HTMLLIElement => {
+const option = (result: Result): HTMLLIElement => {
 	const { title, category } = result.item;
 	const text = element("span", "text", element("span", "title", title));
 	return element("li", "option", text, element("span", "category", category));
@@ -47,7 +50,7 @@ export const createPalette = (
 	root.classList.add("palette");
 	root.append(input, list);
 
-	let results: SearchResult<Command>[] = [];
+	let results: Result[] = [];
 
 	const update = (): void => {
 		const query = input.value.trim();

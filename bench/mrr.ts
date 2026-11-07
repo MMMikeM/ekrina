@@ -126,7 +126,7 @@ export const headlineMrr = (families: FamilyRow[], library: string): number => {
 };
 
 /** The share of junk probes a config answers, over every refusal row that measured it. */
-export const junkRate = (families: FamilyRow[], library: string): number | undefined => {
+const junkRate = (families: FamilyRow[], library: string): number | undefined => {
 	const shares = families.flatMap((family) => (family.answered?.[library] === undefined ? [] : [family.answered[library]]));
 	return shares.length ? mean(shares) : undefined;
 };

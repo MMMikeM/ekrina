@@ -1,27 +1,30 @@
 import { createSearcher, SCORES } from "ekrina";
-import type { SearchResult } from "ekrina";
+import type { SearchResultOf } from "ekrina";
 import { useMemo, useState } from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [
-		{ selectField: (command) => command.title, acronym: true },
-		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
-	]);
+	const search = createSearcher(commands, {
+		title: { selectField: (command) => command.title, acronym: true },
+		keywords: { selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
+	});
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
 
-const Option = ({ result, onChoose }: { result: SearchResult<Command>; onChoose: () => void }) => {
+type Result = SearchResultOf<typeof createSearch>;
+
+const Option = ({ result, onChoose }: { result: Result; onChoose: () => void }) => {
 	const { title, category, keywords } = result.item;
-	const [titleMatch, keywordMatch] = result.fields;
+	const keywordsMatched = result.field === "keywords";
 	return (
 		<li className="option" onClick={onChoose}>
 			<span className="text">
 				<span className="title">{title}</span>
-				{!titleMatch && keywordMatch && keywords && <span className="keywords">{keywords}</span>}
+				{keywordsMatched && keywords && <span className="keywords">{keywords}</span>}
 			</span>
 			<span className="category">{category}</span>
 		</li>

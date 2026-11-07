@@ -147,9 +147,13 @@ describe(`a query an attacker controls`, () => {
 
 	it("costs no more than a short query when matched against every row of a list", () => {
 		const rows = Array.from({ length: 10_000 }, (_, i) => `Blue Wooden Chair ${i}`);
-		const matchEveryRow = (query: string) => () => rows.map((row) => fuzzyMatch(row, query));
-		const short = fastestMsToRun(matchEveryRow("chair"));
-		expect(fastestMsToRun(matchEveryRow(mixedWord(256)))).toBeLessThan(short * 4);
+		// Two queries in turn, so every call prepares its query: fuzzyMatch keeps
+		// only the last one prepared.
+		const matchEveryRow = (queries: [string, string]) => () =>
+			rows.map((row, i) => fuzzyMatch(row, queries[i & 1]));
+		const short = fastestMsToRun(matchEveryRow(["chair", "table"]));
+		const long = mixedWord(256);
+		expect(fastestMsToRun(matchEveryRow([long, withTypo(long)]))).toBeLessThan(short * 4);
 	});
 
 	it("walks a field once for a repeated word, however many mid-word hits it skips", () => {

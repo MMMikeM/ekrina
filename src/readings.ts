@@ -1,6 +1,6 @@
 import { WORD_CHARS, wordChar } from "./boundaries";
 import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
-import { charMask } from "./gates";
+import { charMask, holdsInOrderFrom } from "./gates";
 import { bigramBit, bigramClass } from "./normalise";
 import { swapAdjacentAt } from "./rescue";
 import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
@@ -9,9 +9,15 @@ import type { MatchResult, HighlightRange } from "./types";
 // What one query admits under a reading, prepared once and tried against
 // fields that matched nothing else.
 export type PreparedReading = {
-	// May only false-pass: a field it rejects must have no match. `match` is
-	// only called on a field it admits.
-	admitsMask: (fieldMask: number) => boolean;
+	// A gate, so it may only false-pass. A field lacking any `needed` bit lacks a
+	// letter of the query, and `counts` credits each letter to one bit: a field
+	// whose missing bits hold more than `spare` letters has no match, and `match`
+	// is only called on one that does not (see readingAdmits). A surrogate pair
+	// sets two `needed` bits, so a count of missing bits is not a count of
+	// missing letters.
+	needed: number;
+	counts: Int32Array;
+	spare: number;
 	// Absent when it could reject nothing; reads an item's bigram set (see
 	// rawFieldPairs).
 	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
@@ -53,22 +59,22 @@ const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 // Optimal string alignment distance: insertions, deletions, substitutions and
 // adjacent swaps, each one edit. Capped at `limit + 1`. A shared first
 // character is always matched: no cheaper alignment edits it.
-const editDistance = (a: string, b: string, limit: number): number => {
-	let i = 0;
-	while (i < a.length && i < b.length && a[i] === b[i]) i++;
-	if (i === a.length || i === b.length) {
-		return Math.min(Math.max(a.length, b.length) - i, limit + 1);
+const editDistance = (a: string, b: string, limit: number, i = 0, j = 0): number => {
+	while (i < a.length && j < b.length && a[i] === b[j]) {
+		i++;
+		j++;
+	}
+	if (i === a.length || j === b.length) {
+		return Math.min(Math.max(a.length - i, b.length - j), limit + 1);
 	}
 	if (limit === 0) return 1;
-	const restA = a.slice(i + 1);
-	const restB = b.slice(i + 1);
 	let fewest = Math.min(
-		editDistance(restA, restB, limit - 1),
-		editDistance(restA, b.slice(i), limit - 1),
-		editDistance(a.slice(i), restB, limit - 1),
+		editDistance(a, b, limit - 1, i + 1, j + 1),
+		editDistance(a, b, limit - 1, i + 1, j),
+		editDistance(a, b, limit - 1, i, j + 1),
 	);
-	if (a[i] === b[i + 1] && a[i + 1] === b[i]) {
-		fewest = Math.min(fewest, editDistance(a.slice(i + 2), b.slice(i + 2), limit - 1));
+	if (a[i] === b[j + 1] && a[i + 1] === b[j]) {
+		fewest = Math.min(fewest, editDistance(a, b, limit - 1, i + 2, j + 2));
 	}
 	return fewest + 1;
 };
@@ -87,11 +93,11 @@ const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
-const lacksAtMost = (counts: Int32Array, missingClasses: number, limit: number): boolean => {
+export const readingAdmits = ({ needed, counts, spare }: PreparedReading, fieldMask: number): boolean => {
 	let unmatched = 0;
-	for (let missing = missingClasses; missing !== 0; missing &= missing - 1) {
+	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
-		if (unmatched > limit) return false;
+		if (unmatched > spare) return false;
 	}
 	return true;
 };
@@ -400,13 +406,6 @@ const phrasePairs = (
 		(joined !== null && lacksPairsAtMost(joined, lo, hi, spare * PAIRS_ONE_EDIT_BREAKS));
 };
 
-type MaskGate = PreparedReading["admitsMask"];
-
-const scatterGate = (letters: string): MaskGate => {
-	const lettersMask = charMask(letters);
-	return (fieldMask) => (lettersMask & ~fieldMask) === 0;
-};
-
 // A run of three or more of one letter, cut to two: a held key, whose one
 // mistake leaves the word itself or one edit from it (`twaaain`, `cleeean`,
 // `coffffee`). A word with two runs is left to the other readings.
@@ -445,19 +444,6 @@ const swapWord = (
 		}
 	}
 	return best;
-};
-
-const eitherGate =
-	(a: MaskGate, b: MaskGate): MaskGate =>
-	(fieldMask) =>
-		a(fieldMask) || b(fieldMask);
-
-// `unmatched` is how many of the query's letters the edits can leave without a
-// counterpart in the field.
-const editGate = (letters: string, unmatched: number): MaskGate => {
-	const lettersMask = charMask(letters);
-	const counts = classCounts(letters);
-	return (fieldMask) => lacksAtMost(counts, lettersMask & ~fieldMask, unmatched);
 };
 
 // Edit distance over every field word is what makes a reading expensive, so
@@ -509,19 +495,29 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	// leave a letter unmatched.
 	const unmatched = phrase && !correctable ? spare : MAX_EDITS;
 	if (!matchable) return null;
-	const gate = editable ? editGate(letters, unmatched) : scatterGate(letters);
+	// A held key's cut form holds the classes of the word as typed and no more
+	// of any, so its counts admit every field either reading does.
+	const counted = stuck ?? letters;
 	return {
-		admitsMask:
-			stuck !== null
-				? eitherGate(gate, editGate(stuck, MAX_EDITS - 1))
-				: swaps !== null
-					? eitherGate(gate, editGate(letters, 0))
-					: gate,
+		needed: charMask(counted),
+		counts: classCounts(counted),
+		// A swap or a sparse reading leaves no letter unmatched.
+		spare: editable ? unmatched : stuck !== null ? MAX_EDITS - 1 : 0,
 		// A sparse reading keeps no pairs of a word together.
 		admitsPairs: phrase ? phrasePairs(queryWords, asPhrase, spare) : null,
 		wholeList: !competing,
 		match: (field, normalisedField) => {
 			if (normalisedField.length > MAX_FIELD_LENGTH) return null;
+			// Without edits a word is read only sparsely, swapped or rejoined whole,
+			// and each needs its letters in the field before any word is split out.
+			if (
+				!editable &&
+				stuck === null &&
+				!holdsInOrderFrom(normalisedField, letters, 0, 0) &&
+				!swaps?.some((form) => normalisedField.includes(form))
+			) {
+				return null;
+			}
 			const words = fieldWords(normalisedField);
 			if (!phrase) return matchWord(queryWords[0], field, normalisedField, words);
 			return (
@@ -532,13 +528,6 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	};
 };
 
-// Indexed by `competing`; undefined until that reading is first prepared.
-type Readings = { query: string; byCompeting: (PreparedReading | null | undefined)[] };
-
-// fuzzyMatch prepares its query per call, and a list matched one call per row
-// would otherwise rebuild the same gates for every row, competing or not.
-let lastReadings: Readings | null = null;
-
 // A short word with only fuzzy chains beside it is read in full, swaps and
 // all, since a swap is the one edit worth trying that short and its target
 // never passes the literal gates.
@@ -547,11 +536,7 @@ const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 
 const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
-	if (lastReadings?.query !== prepared.query) {
-		lastReadings = { query: prepared.query, byCompeting: [undefined, undefined] };
-	}
-	const slot = competing ? 1 : 0;
-	return (lastReadings.byCompeting[slot] ??= prepareReading(prepared, competing));
+	return ((prepared.readings ??= [])[+competing] ??= prepareReading(prepared, competing));
 };
 
 // The second pass, tried on fields up to 512 characters once the ladder and

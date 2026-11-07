@@ -7,6 +7,7 @@ It is written for whoever next changes `bench/`, so they do not repeat it.
 
 The publish ritual kept tripping its own contamination guard.
 That guard asserts a physical invariant: `ekrina (acronym)` runs strictly more code per query than base `ekrina`, so base measuring slower means garbage collection or thermal throttling disturbed the run.
+The acronym query is the one exception and is left out of the sum: the acronym tier matches it literally, so `ekrina (acronym)` never builds the whole-list index that base `ekrina` builds for it.
 It fired repeatedly, sometimes fatally, and the numbers behind it were incoherent, base and acronym would sit 38% apart in one run and 0.5% apart in the next, in either direction.
 
 Individual cells looked like this:

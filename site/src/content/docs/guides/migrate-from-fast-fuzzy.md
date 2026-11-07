@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Both build a searcher once over a list and take a function that picks each item's text, so the constructor carries over as it is.
-fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
+fast-fuzzy returns the items, and Ekrina returns `{ item, score, tier, ranges, text }`.
 
 ```diff
 - import { Searcher } from "fast-fuzzy";
@@ -19,10 +19,10 @@ fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
 
   // several keys
 - new Searcher(items, { keySelector: (item) => [item.title, item.body] });
-+ createSearcher(items, [
-+   { selectField: (item) => item.title },
-+   { selectField: (item) => item.body },
-+ ]);
++ createSearcher(items, {
++   title: (item) => item.title,
++   body: (item) => item.body,
++ });
 
   // match data
 - const searcher = new Searcher(items, {
@@ -31,8 +31,8 @@ fast-fuzzy returns the items, and Ekrina returns `{ item, score, fields }`.
 - });
 - for (const { item, match } of searcher.search(query))
 -   highlight(item.title, [[match.index, match.index + match.length - 1]]);
-+ for (const { item, fields } of search(query))
-+   highlight(item.title, fields[0]?.ranges);
++ for (const { text, ranges } of search(query))
++   highlight(text, ranges);
 ```
 
 Behavioural differences:

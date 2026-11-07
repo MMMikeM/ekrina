@@ -22,23 +22,23 @@ That keeps exact, prefix, word-start, multi-word, acronym and contains matches, 
 The tier says the same thing without a number, and lets you drop one kind and keep the other:
 
 ```ts
-search(query).filter((result) => result.fields[0]?.tier !== "fuzzy"); // keep corrections
-search(query).filter((result) => result.fields[0]?.tier !== "corrected"); // keep fuzzy chains
+search(query).filter((result) => result?.tier !== "fuzzy"); // keep corrections
+search(query).filter((result) => result?.tier !== "corrected"); // keep fuzzy chains
 ```
 
 ## On demoted fields
 
 `demoteBy` shifts a field's scores, so a demoted field's literal match can score above `SCORES.CONTAINS`.
-Filter those by tier:
+Filter those by tier, which `isLiteral` reads:
 
 ```ts
-import type { MatchResult } from "ekrina";
+import { isLiteral } from "ekrina";
 
-const isLiteral = (field: MatchResult | null) =>
-	field !== null && field.tier !== "fuzzy" && field.tier !== "corrected";
-
-search(query).filter((result) => result.fields.some(isLiteral));
+search(query).filter(isLiteral);
 ```
+
+That tests the best field's match.
+To keep an item when any of its named fields matched as typed, test `fields` instead: `search(query).filter((result) => Object.values(result.fields).some(isLiteral))`.
 
 ## Why there's no switch
 

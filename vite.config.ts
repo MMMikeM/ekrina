@@ -62,7 +62,7 @@ export default defineConfig({
 	run: {
 		tasks: {
 			verify: {
-				command: ["vp lint", "vp test run --coverage"],
+				command: ["vp lint", "knip", "vp test run --coverage"],
 				dependsOn: ["types"],
 			},
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
@@ -80,7 +80,11 @@ export default defineConfig({
 				command: "vp test run",
 				cwd: "bench",
 				dependsOn: ["build"],
-				cache: { input: [{ auto: true }, "!bench/node_modules/.vite/**"] },
+				// Without these the task runs in a clean environment and never sees them.
+				cache: {
+					input: [{ auto: true }, "!bench/node_modules/.vite/**"],
+					env: ["BENCH_ONLY", "BENCH_REPEAT"],
+				},
 			},
 		},
 	},

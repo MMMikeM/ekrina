@@ -37,8 +37,6 @@ export type Config = {
 	probe: (query: string) => Probe;
 	/** Constructor time alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
 	index: (() => number) | null;
-	/** Carries cross-query state, so timing loops must bust it between samples. */
-	stateful?: boolean;
 };
 
 const FUSE_ALL: IFuseOptions<string> = {
@@ -68,20 +66,19 @@ const UFUZZY_ALL: uFuzzy.Options = {
 // configuration every rank it would otherwise have.
 const OUT_OF_ORDER = 5;
 
-// `pnpm bench --only=ekrina` narrows a run to the configurations whose name
-// contains one of these tokens, so a change to one library can be re-measured
-// without re-timing the other thirteen. Comma-separated, case-insensitive
-// substrings. Read here rather than passed down because every stage reaches its
-// configurations through `configs()`, and a stage that missed the filter would
-// silently measure the full matrix.
-const ONLY: string[] = (process.env.BENCH_ONLY ?? "")
+// The configurations whose name contains one of these comma-separated,
+// case-insensitive tokens: ekrina's own rows unless BENCH_ONLY says otherwise,
+// and every library only for BENCH_ONLY=all. Read here rather than passed down
+// because every stage reaches its configurations through `configs()`, and a
+// stage that missed the filter would silently measure the full matrix.
+const ONLY: string[] = (process.env.BENCH_ONLY || "ekrina")
 	.toLowerCase()
 	.split(",")
 	.map((t) => t.trim())
 	.filter(Boolean);
 
 const selected = (name: string): boolean =>
-	ONLY.length === 0 || ONLY.some((token) => name.toLowerCase().includes(token));
+	ONLY.includes("all") || ONLY.some((token) => name.toLowerCase().includes(token));
 
 // Consume a constructed object so creation can't be elided.
 const consume = (o: object): number => o.constructor.name.length;
@@ -150,7 +147,6 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => ekrina(q).length,
 				probe: (q) => rankedOnly(ekrina(q).map((r) => r.item)),
 				index: () => consume(createSearcher(list)),
-				stateful: true,
 			};
 		},
 	},
@@ -167,20 +163,18 @@ const definitions = (list: string[]): Definition[] => [
 					fresh.buildIndex();
 					return consume(fresh);
 				},
-				stateful: true,
 			};
 		},
 	},
 	{
 		name: "ekrina (acronym)",
 		make: () => {
-			const spec = [{ selectField: (x: string) => x, acronym: true }];
+			const spec = { selectField: (x: string) => x, acronym: true };
 			const acronym = createSearcher(list, spec);
 			return {
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
 				index: () => consume(createSearcher(list, spec)),
-				stateful: true,
 			};
 		},
 	},
@@ -331,6 +325,9 @@ const definitions = (list: string[]): Definition[] => [
 
 /** Every configuration name, in table order, without constructing anything. */
 export const CONFIG_NAMES: string[] = definitions([]).map((d) => d.name);
+
+/** The names BENCH_ONLY selects, in table order. */
+export const SELECTED_NAMES: string[] = CONFIG_NAMES.filter(selected);
 
 /**
  * Every configuration against `list`, or just the one named by `only`.

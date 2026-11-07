@@ -2,23 +2,46 @@
 
 ## 2.0.0 (unreleased)
 
-One matcher, which corrects far more than one character, and seven renames.
-Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in; what breaks is that the same query returns more `corrected` matches than 1.1.2 did, and the seven names below.
+One matcher, which corrects far more than one character, named fields with one match per result, and seven renames.
+Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAINS` still selects exactly the matches the query text appears in.
+What breaks is the seven names below, what a result holds, and the same query returning more `corrected` matches than 1.1.2 did.
 
 - **`createFuzzySearch` is `createSearcher`, and its types are `Searcher` and `SearchResult`.**
-  The old function name is shared with another library's default export, so code written for that library looked right here and failed at runtime; `Searcher` names what the function returns.
-  `FuzzySearcher` is `Searcher` and `FuzzyResult` is `SearchResult`, because "fuzzy" is also the name of one tier, and every result, an `exact` match included, was typed as fuzzy.
+  The old function name is shared with another library's default export, so code written for that library looked right here and failed at runtime.
+  `Searcher` names what the function returns.
+  `FuzzySearcher` is `Searcher` and `FuzzyResult` is `SearchResult`.
+  "Fuzzy" is also the name of one tier, and every result was typed as fuzzy, an `exact` match included.
   Rename the import and the two types; the behaviour is unchanged.
 - **`Range` is `HighlightRange`.**
-  `Range` is also the DOM's global type, which is half-open where these pairs are inclusive, and in a project with the DOM library an unimported `Range` meant the DOM's.
+  `Range` is also the DOM's global type, which is half-open where these pairs are inclusive.
+  In a project with the DOM library, an unimported `Range` meant the DOM's.
 - **`FieldSpec.text` is `selectField`.**
-  It was the one function on the public surface named like a value, and `text` is also the string `fuzzyMatch(text, query)` takes; the single-field form's parameter is `selectField` too.
+  It was the one function on the public surface named like a value, and `text` is also the string `fuzzyMatch(text, query)` takes.
+  The single-field form's parameter is `selectField` too.
   Rename `text:` to `selectField:` in each field spec.
 - **`FieldSpec.atBest` is `demoteBy`.**
   The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
-  A field spec using `text` or `atBest`, or an options object passed in place of a function or field specs, throws a `TypeError` naming the replacement; before, `atBest` was ignored and the others failed with an unreadable message.
+  These now throw a `TypeError`:
+  - a field spec with any key but `selectField`, `acronym` and `demoteBy`, such as the 1.x `text` and `atBest` or a misspelt `demotBy`;
+  - a field without `selectField`;
+  - a field written beside a lone spec's `selectField`;
+  - anything but a field or a plain object of fields in their place, such as an array of field specs, a `Map`, a class instance or a string.
+
+  Before, `atBest` and a misspelt option were ignored, and the others failed with an unreadable message.
+  A negative, infinite or non-number `demoteBy` throws a `RangeError`, since a negative shift would carry a fuzzy or corrected match to or below `SCORES.CONTAINS`.
+- **Several fields are named, and a result is its best field's match.**
+  An object that names each field replaces the array of field specs: `createSearcher(posts, { title: (p) => p.title, body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS } })`.
+  A field is a function, or a spec when it needs options, and one spec alone, `{ selectField, acronym: true }`, is a single field with options.
+  A result is the best field's match, `{ item, score, tier, ranges, text, corrected? }`, with `text` the string `ranges` index.
+  1.x returned `fields: (MatchResult | null)[]` and left the caller to find the field that set the score.
+  With named fields, `field` names the best one and `fields` holds every field that matched, by name, each with its own `tier`, `ranges` and `text`.
+  A tied score goes to the field whose match ends on a word boundary, then to the one named first.
+  A field can't be named like an integer, since JavaScript orders those names before the others, or `selectField`, which marks a lone spec.
+  `isLiteral(match)` says whether a match is of the query as typed, on demoted fields too.
+  Pass an object where you passed an array, and read `result.tier` and `result.ranges` where you read `result.fields[0]`.
 - **The `boundary-exact` tier is `boundary-cased`, and `SCORES.BOUNDARY_EXACT` is `SCORES.BOUNDARY_CASED`.**
-  Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`); this tier means a word starts with the query in the same case.
+  Everywhere else on the ladder "exact" means the whole field equals the query (`exact`, `normalised-exact`).
+  This tier means a word starts with the query in the same case.
   Its score, 0.9, is unchanged.
 
 - **Corrections reach further, when the query as typed matches poorly.**
@@ -27,17 +50,42 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   - a space typed inside a word or left out between two, as one mistake;
   - a word typed sparsely, at least four of its letters in order from its first and covering half of it (`hget` for "Huguette"), scored just above `contains`;
   - a key held down, a run of three or more of one letter, as one mistake (`twaaain`);
-  - two neighbouring letters swapped in a four-letter word, undone where the fix starts a word (`tahn` for "Than"), even beside a fuzzy chain that keeps other short corrections from running.
+  - two neighbouring letters swapped in a four-letter word (`tahn` for "Than"):
+    - undone only where the fix starts a word;
+    - tried even beside a fuzzy chain, which keeps other short corrections from running.
 
   A word read any of these ways reports `corrected` spelt as the field spells it.
-  On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
-  The cost is about a third more per query once a searcher is warm (0.54–0.64 → 0.74–0.88 ms at 10k), 24–34% more per 100k session, about the same first answer, and 1.6 MB more held at 100k; literal hits take no longer, since the second pass runs only while fewer than ten items match literally (docs/benchmarks.md, docs/performance.md).
-  The bundle grows from ~6.4 kB to ~7.7 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are where it goes.
-  The build mangles internal property names, and duplicated paths are merged into one; together they took the bundle from ~9.3 kB with every result unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
+  On the benchmark below:
+  - MRR rises 0.70 → 0.91–0.92 on all three corpora;
+  - MRR on held-out queries rises with it (`bench/held-out.test.ts`);
+  - the share of unanswerable queries answered stays at zero on every corpus.
+
+  A query with ten or more literal matches skips these corrections entirely (docs/performance.md).
+  The bundle grows from ~6.4 kB to ~8.4 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
+  The build mangles internal property names, which takes ~0.3 kB off, and duplicated paths are merged into one.
+  Every result is unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
+- **Searching is faster than 1.1.2, corrections included, and holds about as much.**
+  - A single-word query is gated by an `indexOf` scan instead of a compiled regex, and the scan tests as fast as the regex did.
+  - The raw-text gates other queries compile anchor on `\w`, which compiles in a fraction of the time a `\p{L}` class does.
+  - Results are built once, and only for the page `limit` returns.
+  - The searcher keeps no per-item copy of trimmed text or of scores.
+  - The raw scans look up each non-ASCII character's class in a table instead of folding it.
+  - With `limit`, once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
+
+  Against the 1.1.2 run in `bench/results.json`'s history:
+  - a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k);
+  - a 100k session takes 11–16% less, and a first answer 17–45% less;
+  - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
 - **The benchmark measures real data.**
-  The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.
+  The synthetic corpora are replaced by real ones:
+  - 100,000 well-known Wikidata entities, under their English names and again under their native names;
+  - an emoji picker's labels and tags.
+
+  The query families are drawn from how people mistype, Wikipedia's list of common misspellings included, and were weighted by group before anything was measured.
   Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
   On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
+  The typing session times each keystroke once, in a fresh process, as a user types it.
+  Before, it repeated each query in one process, which let V8 reuse the regexes it had compiled.
 - **The package ships `dist/AGENTS.md`.**
   It lists the exports and the rules a coding agent needs to use them correctly, built from the docs site's page for AI coding agents.
 
@@ -133,4 +181,4 @@ Design decisions worth recording, with the measurements that made them:
   Later chunks stay leftmost-greedy, because reconsidering those starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never runs it.
-  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.3 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.3 → 0.6 ms per keystroke (the session table in docs/benchmarks.md at this release).

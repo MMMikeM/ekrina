@@ -10,8 +10,10 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldMask, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { CONTAINS_SCORE } from "./scores";
-import { type Competition, type PreparedReading, readings } from "./readings";
+import { type Competition, type PreparedReading, readingAdmits, readings } from "./readings";
 import type {
+	Field,
+	FieldMatch,
 	FieldSpec,
 	SearchResult,
 	Searcher,
@@ -20,7 +22,6 @@ import type {
 	SearchOptions,
 } from "./types";
 
-const { MAX_SAFE_INTEGER } = Number;
 
 // Ten because that is the slice a picker shows, and the cutoff the published
 // MRR uses; a correction that cannot reach the top ten is work no caller can
@@ -70,7 +71,8 @@ export const fuzzyMatch = (
 	let result = matchField(field, normalisedField, fieldMask, q, acronym, true);
 	if (result === null || result.score > CONTAINS_SCORE) {
 		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
-		const fallback = reading?.admitsMask(fieldMask) ? reading.match(field, normalisedField) : null;
+		const fallback =
+			reading && readingAdmits(reading, fieldMask) ? reading.match(field, normalisedField) : null;
 		if (fallback && (result === null || fallback.score < result.score)) result = fallback;
 	}
 	const lead = text.length - text.trimStart().length;
@@ -82,31 +84,65 @@ type ResolvedSpec<T> = {
 	selector: (item: T) => string | null;
 	acronymTier: boolean;
 	demotion: number;
+	fieldName: string | undefined;
+};
+
+// JavaScript orders integer-like keys before all others, which would reorder the
+// fields and so the tie rule.
+const integerLike = /^(0|[1-9]\d*)$/;
+
+const isField = (value: unknown): value is Field<never> =>
+	typeof value === "function" || typeof (value as FieldSpec<never> | null)?.selectField === "function";
+
+const SPEC_KEYS = ["selectField", "acronym", "demoteBy"];
+
+// Any other key is a typo or a 1.x name, which would otherwise be ignored.
+const checkSpecKeys = (spec: object, where: string): void => {
+	for (const key of Object.keys(spec)) {
+		if (!SPEC_KEYS.includes(key)) {
+			throw new TypeError(`${where} takes selectField, acronym and demoteBy, not ${key}`);
+		}
+	}
 };
 
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
-const resolveFieldSpecs = <T>(
-	selection?: ((item: T) => string | null) | FieldSpec<T>[],
-): ResolvedSpec<T>[] => {
-	if (selection && typeof selection !== "function" && !Array.isArray(selection)) {
-		throw new TypeError("createSearcher takes a function or an array of field specs");
+const resolveField = <T>(field: Field<T>, fieldName: string | undefined): ResolvedSpec<T> => {
+	if (typeof field === "function") return { selector: field, acronymTier: false, demotion: 0, fieldName };
+	const where = fieldName === undefined ? "a field spec" : `field ${fieldName}`;
+	checkSpecKeys(field, where);
+	const demotion = field.demoteBy ?? 0;
+	// A negative or NaN shift would carry a guess to or below SCORES.CONTAINS.
+	if (!(typeof demotion === "number" && demotion >= 0 && demotion < Infinity)) {
+		throw new RangeError(`${where}: demoteBy must be a finite number of at least 0, got ${demotion}`);
 	}
-	const specs: FieldSpec<T>[] = !selection
-		? [{ selectField: (item) => item as unknown as string }]
-		: typeof selection === "function"
-			? [{ selectField: selection }]
-			: selection;
-	return specs.map((spec) => {
-		if (typeof spec.selectField !== "function") {
-			throw new TypeError("a field spec needs selectField, which replaced text in 2.0");
+	return { selector: field.selectField, acronymTier: field.acronym ?? false, demotion, fieldName };
+};
+
+const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): ResolvedSpec<T>[] => {
+	if (!selection) selection = (item) => item as unknown as string;
+	if (typeof selection === "function") return [resolveField(selection, undefined)];
+	// A Map, an array or a class instance would read as an object of no fields.
+	const proto = typeof selection === "object" ? Object.getPrototypeOf(selection) : undefined;
+	if (proto !== Object.prototype && proto !== null) {
+		throw new TypeError(
+			"createSearcher takes a field, or an object of named fields such as { title: (item) => item.title }",
+		);
+	}
+	// A selectField key makes the object one spec, so a field beside it is an
+	// unknown key rather than a second field.
+	if ("selectField" in selection) {
+		if (!isField(selection)) throw new TypeError("a field can't be named selectField");
+		return [resolveField(selection, undefined)];
+	}
+	return Object.entries(selection).map(([name, field]) => {
+		if (integerLike.test(name)) {
+			throw new TypeError(`a field can't be named ${name}: integer-like names sort before the others`);
 		}
-		if ("atBest" in spec) throw new TypeError("atBest is demoteBy since 2.0");
-		return {
-			selector: spec.selectField,
-			acronymTier: spec.acronym ?? false,
-			demotion: spec.demoteBy ?? 0,
-		};
+		if (!isField(field)) {
+			throw new TypeError(`field ${name} needs selectField`);
+		}
+		return resolveField(field, name);
 	});
 };
 
@@ -123,57 +159,96 @@ const resolveFieldSpecs = <T>(
  * match beside them.
  * A query is matched on its first 256 characters, and one holding a word over
  * 64 characters is never corrected.
- * An empty spec array leaves the searcher with no searchable fields, so every
- * query returns no results.
+ * With named fields, a result says which one matched best in `field`; a tie goes
+ * to the field whose match ends on a word boundary, then to the one named first.
+ * An empty object of fields leaves nothing to search, so every query returns no
+ * results.
+ *
+ * @throws TypeError when the selection is neither a field nor an object of
+ * named fields, when a field is named `selectField` or like an integer, when a
+ * field lacks `selectField`, or when a field spec carries any key but
+ * `selectField`, `acronym` and `demoteBy`.
+ * @throws RangeError when a field's `demoteBy` is negative, infinite or not a
+ * number.
  *
  * @example
  * // Array of strings
  * const search = createSearcher(['apple', 'banana']);
- * search('ban'); // [{ item: 'banana', score: 0.5, fields: [{ score: 0.5, tier: 'prefix', ranges: [[0, 2]] }] }]
+ * search('ban'); // [{ item: 'banana', score: 0.5, tier: 'prefix', ranges: [[0, 2]], text: 'banana' }]
  *
  * @example
- * // Objects, one field
+ * // Objects, one field, and one with options
  * const search = createSearcher(users, (u) => u.name);
+ * const countries = createSearcher(places, { selectField: (p) => p.name, acronym: true });
  *
  * @example
- * // Multiple fields, per-field config (a body hit ranks like a title contains)
- * const search = createSearcher(posts, [
- *   { selectField: (p) => p.title },
- *   { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
- * ]);
+ * // Named fields, each a function or a spec (a body hit ranks like a title contains)
+ * const search = createSearcher(posts, {
+ *   title: (p) => p.title,
+ *   body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS },
+ * });
+ * search('loop')[0]?.field; // 'title' | 'body'
  */
 export function createSearcher(list: string[]): Searcher<string>;
-export function createSearcher<T>(
+export function createSearcher<T>(list: T[], field: Field<T>): Searcher<T>;
+export function createSearcher<T, F extends string>(
 	list: T[],
-	selectField: (item: T) => string | null,
-): Searcher<T>;
-export function createSearcher<T>(list: T[], specs: FieldSpec<T>[]): Searcher<T>;
-export function createSearcher<T>(
+	fields: Record<F, Field<T>> & { selectField?: never },
+): Searcher<T, F>;
+export function createSearcher<T, F extends string>(
 	list: T[],
-	selection?: ((item: T) => string | null) | FieldSpec<T>[],
-): Searcher<T> {
+	selection?: Field<T> | Record<F, Field<T>>,
+): Searcher<T, F> {
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
-	// Which result each item holds in the current matches, so a second-pass
-	// match can replace a weaker one; a stamp from an earlier generation means
-	// none. Float64 so the generation count never wraps.
-	// oxlint-disable-next-line unicorn/no-new-array
-	const heldResults: (SearchResult<T> | undefined)[] = new Array(count);
-	const heldStamps = new Float64Array(count);
-	const heldEndsWord = new Uint8Array(count);
-	let generation = 0;
-	// Where an item's best match ends follows its best field, as scoreItem sets it.
-	const regroupHeld = (i: number, score: number, bestScore: number, endsWord: boolean): void => {
-		if (score < bestScore) heldEndsWord[i] = endsWord ? 1 : 0;
-		else if (score === bestScore && endsWord) heldEndsWord[i] = 1;
+	const named = specCount > 0 && resolvedSpecs[0].fieldName !== undefined;
+	// Each field's best match so far, item-major. A field keeps its first match on
+	// a tie, as fuzzyMatch does, and an item's best field is derived from these, so
+	// a result and its `fields` entry are always the same match.
+	// Allocated by the first search, so a searcher that is never queried holds none.
+	let fieldMatches: (MatchResult | undefined)[] = [];
+	let fieldEndsWord = new Uint8Array(0);
+	// Each matched item's best field, taken once before the sort.
+	const bestFields = specCount > 1 ? new (specCount < 256 ? Uint8Array : Uint32Array)(count) : null;
+	let matched: number[] = [];
+	const forgetMatches = (): void => {
+		for (const i of matched) fieldMatches.fill(undefined, i * specCount, (i + 1) * specCount);
+		matched = [];
+	};
+	const fieldScore = (i: number, f: number): number =>
+		(fieldMatches[i * specCount + f] as MatchResult).score + resolvedSpecs[f].demotion;
+	// Lower score, then a match ending on a word boundary, then the field named
+	// first; -1 when no field matched.
+	const bestFieldOf = (i: number): number => {
+		const base = i * specCount;
+		let best = -1;
+		for (let f = 0; f < specCount; f++) {
+			if (fieldMatches[base + f] === undefined) continue;
+			if (best !== -1) {
+				const lead = fieldScore(i, f) - fieldScore(i, best);
+				if (lead > 0 || (lead === 0 && fieldEndsWord[base + f] <= fieldEndsWord[base + best])) continue;
+			}
+			best = f;
+		}
+		return best;
+	};
+	const sortedField = (i: number): number => (bestFields === null ? 0 : bestFields[i]);
+	const hasMatch = (i: number): boolean => {
+		for (let f = 0; f < specCount; f++) if (fieldMatches[i * specCount + f] !== undefined) return true;
+		return false;
+	};
+	// The best field's score is at most CONTAINS exactly when any field's is.
+	const holdsLiteral = (i: number): boolean => {
+		for (let f = 0; f < specCount; f++) {
+			if (fieldMatches[i * specCount + f] !== undefined && fieldScore(i, f) <= CONTAINS_SCORE) return true;
+		}
+		return false;
 	};
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
 	// are a few percent of the corpus and recur across keystrokes, so this warms
 	// to the working set instead of the whole list.
-	// oxlint-disable-next-line unicorn/no-new-array
-	const trimmedFields: (string | undefined)[] = new Array(count * specCount);
 	// oxlint-disable-next-line unicorn/no-new-array
 	const normalisedFields: (string | undefined)[] = new Array(count * specCount);
 	const fieldMasks = new Int32Array(count * specCount);
@@ -187,25 +262,27 @@ export function createSearcher<T>(
 	// is built by the first multi-word query or rescue, and never for a session
 	// of single words that all match literally.
 	let unionMasks: Int32Array | null = null;
+
+	const rawFieldOf = (i: number, f: number): string => resolvedSpecs[f].selector(list[i]) || "";
 	// Each item's bigram set across its fields, computed the first time a gate
-	// reads it: only items that already passed the mask gate ever need one.
+	// reads it: only items that already passed the mask gate ever need one. An
+	// empty set reads as not yet computed, so an item without a single letter
+	// pair is rescanned each time it is asked about, instead of every item
+	// paying a byte for a known flag.
 	let bigramsLo = new Int32Array(0);
 	let bigramsHi = new Int32Array(0);
-	let bigramsKnown = new Uint8Array(0);
 	const bigrams = { lo: 0, hi: 0 };
 	const knowBigrams = (i: number): void => {
-		if (bigramsKnown.length === 0) {
+		if (bigramsLo.length === 0) {
 			bigramsLo = new Int32Array(count);
 			bigramsHi = new Int32Array(count);
-			bigramsKnown = new Uint8Array(count);
 		}
-		if (bigramsKnown[i]) return;
+		if (bigramsLo[i] | bigramsHi[i]) return;
 		bigrams.lo = 0;
 		bigrams.hi = 0;
-		for (let f = 0; f < specCount; f++) rawFieldScan(resolvedSpecs[f].selector(list[i]) || "", bigrams);
+		for (let f = 0; f < specCount; f++) rawFieldScan(rawFieldOf(i, f), bigrams);
 		bigramsLo[i] = bigrams.lo;
 		bigramsHi[i] = bigrams.hi;
-		bigramsKnown[i] = 1;
 	};
 
 	// `withBigrams` takes every item's bigram set in the same pass as its masks,
@@ -217,14 +294,13 @@ export function createSearcher<T>(
 		if (withBigrams) {
 			bigramsLo = new Int32Array(count);
 			bigramsHi = new Int32Array(count);
-			bigramsKnown = new Uint8Array(count).fill(1);
 		}
 		for (let i = 0; i < count; i++) {
 			let union = 0;
 			bigrams.lo = 0;
 			bigrams.hi = 0;
 			for (let f = 0; f < specCount; f++) {
-				const raw = resolvedSpecs[f].selector(list[i]) || "";
+				const raw = rawFieldOf(i, f);
 				const mask = withBigrams ? rawFieldScan(raw, bigrams) : rawFieldMask(raw);
 				fieldMasks[i * specCount + f] = mask;
 				union |= mask;
@@ -238,17 +314,16 @@ export function createSearcher<T>(
 		return masks;
 	};
 
+	const trimmedField = (i: number, f: number): string => rawFieldOf(i, f).trim();
+
 	const materialise = (i: number): void => {
 		const base = i * specCount;
 		if (normalisedFields[base] !== undefined) return;
-		const item = list[i];
 		for (let f = 0; f < specCount; f++) {
-			const raw = resolvedSpecs[f].selector(item) || "";
+			const raw = rawFieldOf(i, f);
 			const lead = raw.length - raw.trimStart().length;
 			if (lead) (leads ??= new Int32Array(count * specCount))[base + f] = lead;
-			const field = raw.trim();
-			trimmedFields[base + f] = field;
-			const normalisedField = normaliseText(field);
+			const normalisedField = normaliseText(raw.trim());
 			normalisedFields[base + f] = normalisedField;
 			// Already filled, with strictly more bits, if the union scan ran.
 			if (unionMasks === null) fieldMasks[base + f] = charMask(normalisedField);
@@ -270,13 +345,18 @@ export function createSearcher<T>(
 		count: 0,
 	};
 
-	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T>[] => {
+	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T, F>[] => {
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
 			throw new RangeError(`limit must be a positive integer, got ${limit}`);
 		}
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
-		generation++;
+		forgetMatches();
+		if (fieldEndsWord.length < count * specCount) {
+			// oxlint-disable-next-line unicorn/no-new-array
+			fieldMatches = new Array(count * specCount);
+			fieldEndsWord = new Uint8Array(count * specCount);
+		}
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -286,19 +366,20 @@ export function createSearcher<T>(
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
 		let survivorCount = 0;
-		// The items holding a match this generation.
-		let matched: number[] = [];
 		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_CUTOFF
 		// literal hits sit at or below SCORES.CONTAINS (2) no correction can reach
 		// the page — the rescue becomes provably invisible work. Fuzzy hits score
 		// above 2.1 too, so they cannot crowd a correction out of the count.
 		let literalHits = 0;
+		// Fuzzy and corrected matches score above SCORES.CONTAINS, so once a page
+		// of items matches literally, no chain found after it can reach the page.
+		// Only a lone field skips them: with several, `fields` reports every match.
+		const pageSize = limit ?? Infinity;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
-		// objects per call, so the demoteBy shift can mutate.
-		const placeFieldResult = (result: MatchResult, at: number, f: number): boolean => {
+		// objects per call, so their ranges can shift in place.
+		const placeFieldResult = (result: MatchResult, at: number): boolean => {
 			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, result.ranges);
-			result.score += resolvedSpecs[f].demotion;
 			if (leads !== null) {
 				const lead = leads[at];
 				if (lead) shiftRanges(result.ranges, lead);
@@ -306,55 +387,23 @@ export function createSearcher<T>(
 			return endsWord;
 		};
 
-		const record = (i: number, entry: SearchResult<T>, endsWord: boolean): void => {
-			matched.push(i);
-			heldResults[i] = entry;
-			heldStamps[i] = generation;
-			heldEndsWord[i] = endsWord ? 1 : 0;
+		const offerField = (i: number, f: number, match: MatchResult): void => {
+			const at = i * specCount + f;
+			const endsWord = placeFieldResult(match, at);
+			const best = fieldMatches[at];
+			if (best !== undefined && !(match.score < best.score)) return;
+			if (best === undefined && !hasMatch(i)) matched.push(i);
+			fieldMatches[at] = match;
+			fieldEndsWord[at] = endsWord ? 1 : 0;
 		};
 
-		const forgetMatches = (): void => {
-			matched = [];
-			generation++;
-		};
-
-		// A field's match joins the item's entry, or replaces a weaker one. Where
-		// an item's match ends follows its best field.
-		const offerField = (
-			i: number,
-			entry: SearchResult<T> | undefined,
-			f: number,
-			result: MatchResult,
-		): SearchResult<T> => {
-			const endsWord = placeFieldResult(result, i * specCount + f, f);
-			if (entry === undefined) {
-				// The literal is faster than new Array().fill(), and runs once per result.
-				const fields: (MatchResult | null)[] =
-					// oxlint-disable-next-line unicorn/no-new-array
-					specCount === 1 ? [result] : new Array(specCount).fill(null);
-				fields[f] = result;
-				entry = { item: list[i], score: result.score, fields };
-				record(i, entry, endsWord);
-			} else if (result.score < (entry.fields[f]?.score ?? MAX_SAFE_INTEGER)) {
-				entry.fields[f] = result;
-				regroupHeld(i, result.score, entry.score, endsWord);
-				entry.score = Math.min(entry.score, result.score);
-			}
-			return entry;
-		};
-
-		const scoreItem = (
-			i: number,
-			mayRescue: boolean,
-			preGated: boolean,
-			literalOnly: boolean,
-		): void => {
+		const scoreItem = (i: number, mayRescue: boolean, preGated: boolean): void => {
+			const literalOnly = !mayRescue && specCount === 1 && literalHits >= pageSize;
 			materialise(i);
 			const base = i * specCount;
-			let entry: SearchResult<T> | undefined;
 			for (let f = 0; f < specCount; f++) {
 				const result = matchField(
-					trimmedFields[base + f] as string,
+					trimmedField(i, f),
 					normalisedFields[base + f] as string,
 					fieldMasks[base + f],
 					prepared,
@@ -363,9 +412,9 @@ export function createSearcher<T>(
 					preGated,
 					literalOnly,
 				);
-				if (result) entry = offerField(i, entry, f, result);
+				if (result) offerField(i, f, result);
 			}
-			if (entry !== undefined && entry.score <= CONTAINS_SCORE) literalHits++;
+			if (holdsLiteral(i)) literalHits++;
 		};
 
 		const narrowed =
@@ -375,7 +424,7 @@ export function createSearcher<T>(
 
 		// Every field the ladder can match outright, none of the near-misses only
 		// a correction reaches.
-		const literalPass = (literalOnly: boolean): void => {
+		const literalPass = (): void => {
 			if (narrowed) {
 				// The gate runs out here because its verdict is what shrinks the
 				// cached set for the next keystroke; `preGated` stops matchField
@@ -391,7 +440,7 @@ export function createSearcher<T>(
 					}
 					if (!admitted) continue;
 					survivors[survivorCount++] = i;
-					scoreItem(i, false, specCount === 1, literalOnly);
+					scoreItem(i, false, specCount === 1);
 				}
 				return;
 			}
@@ -409,19 +458,16 @@ export function createSearcher<T>(
 				for (let i = 0; i < count; i++) {
 					if ((queryMask & ~masks[i]) !== 0) continue;
 					survivors[survivorCount++] = i;
-					scoreItem(i, false, false, literalOnly);
+					scoreItem(i, false, false);
 				}
 				return;
 			}
 			for (let i = 0; i < count; i++) {
-				const item = list[i];
 				let admitted = false;
-				for (let f = 0; f < specCount && !admitted; f++) {
-					admitted = gate.test(resolvedSpecs[f].selector(item) || "");
-				}
+				for (let f = 0; f < specCount && !admitted; f++) admitted = gate.test(rawFieldOf(i, f));
 				if (!admitted) continue;
 				survivors[survivorCount++] = i;
-				scoreItem(i, false, false, literalOnly);
+				scoreItem(i, false, false);
 			}
 		};
 
@@ -447,7 +493,7 @@ export function createSearcher<T>(
 						continue;
 					}
 				}
-				scoreItem(i, true, false, false);
+				scoreItem(i, true, false);
 			}
 		};
 
@@ -455,19 +501,17 @@ export function createSearcher<T>(
 		// corrected one; a literal match is never touched.
 		const offerFallbacks = (
 			i: number,
-			held: SearchResult<T> | undefined,
 			reading: PreparedReading,
 		): void => {
 			const base = i * specCount;
-			let entry = held;
 			for (let f = 0; f < specCount; f++) {
-				if (!reading.admitsMask(fieldMasks[base + f])) continue;
+				if (!readingAdmits(reading, fieldMasks[base + f])) continue;
 				materialise(i);
 				const result = reading.match(
-					trimmedFields[base + f] as string,
+					trimmedField(i, f),
 					normalisedFields[base + f] as string,
 				);
-				if (result) entry = offerField(i, entry, f, result);
+				if (result) offerField(i, f, result);
 			}
 		};
 
@@ -486,22 +530,20 @@ export function createSearcher<T>(
 			const masks = unionMasks;
 			// An item's union mask and bigram set span all its fields, so it is
 			// skipped only when no field's reading admits both.
-			const admitsPairs = reading.admitsPairs;
-			const admitsItem =
-				masks === null || admitsPairs === null
-					? null
-					: (i: number) => {
-							if (!reading.admitsMask(masks[i])) return false;
-							knowBigrams(i);
-							return admitsPairs(bigramsLo[i], bigramsHi[i]);
-						};
+			const { needed, spare, admitsPairs } = reading;
 			const scanned = survivorsOnly ? survivorCount : count;
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
-				const held = heldStamps[i] === generation ? heldResults[i] : undefined;
-				if (held !== undefined && held.score <= CONTAINS_SCORE) continue;
-				if (admitsItem !== null && !admitsItem(i)) continue;
-				offerFallbacks(i, held, reading);
+				if (masks !== null) {
+					const missing = needed & ~masks[i];
+					if (missing !== 0 && (spare === 0 || !readingAdmits(reading, masks[i]))) continue;
+					if (admitsPairs !== null) {
+						knowBigrams(i);
+						if (!admitsPairs(bigramsLo[i], bigramsHi[i])) continue;
+					}
+				}
+				if (holdsLiteral(i)) continue;
+				offerFallbacks(i, reading);
 			}
 		};
 
@@ -517,44 +559,69 @@ export function createSearcher<T>(
 			}
 		};
 
-		// Fuzzy and corrected matches score above SCORES.CONTAINS, so once `limit`
-		// items match literally none of them can reach the page.
-		literalPass(limit !== undefined);
-		if (limit !== undefined && literalHits < limit) {
-			forgetMatches();
-			literalHits = 0;
-			for (let k = 0; k < survivorCount; k++) scoreItem(survivors[k], false, false, false);
-		}
+		literalPass();
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at. A short query's
 		// correction only stands in for a missing match (see isShortQuery).
+		// Taken before the relaxed pass, which rescores the literal hits.
+		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		const rescuing =
 			rescuable &&
-			(isShortQuery(normalisedQuery, prepared.queryWords)
-				? matched.length === 0
-				: literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF));
+			(isShortQuery(normalisedQuery, prepared.queryWords) ? matched.length === 0 : offeringSecondPass);
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
-		// Taken before the relaxed pass, which rescores the literal hits.
-		const offeringSecondPass =
-			literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		if (rescuing) relaxedPass();
 		if (offeringSecondPass) secondPass();
 		commitSurvivorCache(!rescuing && !singleChar);
 
 		// Within a score, a match that ends on a word boundary ranks first ("will"
 		// means "Will Smith" before "Willa"), then list order.
-		const results = matched
-			.sort(
-				(a, b) =>
-					(heldResults[a] as SearchResult<T>).score - (heldResults[b] as SearchResult<T>).score ||
-					heldEndsWord[b] - heldEndsWord[a] ||
-					a - b,
-			)
-			.map((i) => heldResults[i] as SearchResult<T>);
-		if (limit !== undefined && results.length > limit) results.length = limit;
-		return results;
+		if (bestFields !== null) for (const i of matched) bestFields[i] = bestFieldOf(i);
+		matched.sort((a, b) => {
+			const fa = sortedField(a);
+			const fb = sortedField(b);
+			return (
+				fieldScore(a, fa) - fieldScore(b, fb) ||
+				fieldEndsWord[b * specCount + fb] - fieldEndsWord[a * specCount + fa] ||
+				a - b
+			);
+		});
+		return matched.slice(0, limit).map(resultOf);
+	};
+
+	const fieldMatchOf = (i: number, f: number, match: MatchResult): FieldMatch => {
+		const entry: FieldMatch = { tier: match.tier, ranges: match.ranges, text: rawFieldOf(i, f) };
+		if (match.corrected !== undefined) entry.corrected = match.corrected;
+		return entry;
+	};
+
+	// Callers can see key order, so it stays item, score, tier, ranges, text, field,
+	// corrected, fields.
+	const resultOf = (i: number): SearchResult<T, F> => {
+		const f = sortedField(i);
+		const match = fieldMatches[i * specCount + f] as MatchResult;
+		const { tier, ranges, text, corrected } = fieldMatchOf(i, f, match);
+		const result: SearchResult<T> & { field?: string; fields?: Record<string, FieldMatch> } = {
+			item: list[i],
+			score: fieldScore(i, f),
+			tier,
+			ranges,
+			text,
+		};
+		if (named) result.field = resolvedSpecs[f].fieldName;
+		if (corrected !== undefined) result.corrected = corrected;
+		if (named) result.fields = fieldsOf(i);
+		return result as SearchResult<T, F>;
+	};
+
+	const fieldsOf = (i: number): Record<string, FieldMatch> => {
+		const fields: Record<string, FieldMatch> = {};
+		for (let f = 0; f < specCount; f++) {
+			const match = fieldMatches[i * specCount + f];
+			if (match !== undefined) fields[resolvedSpecs[f].fieldName as string] = fieldMatchOf(i, f, match);
+		}
+		return fields;
 	};
 
 	// Asked for up front, the index takes every item's bigram set too, so no

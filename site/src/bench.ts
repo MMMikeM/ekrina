@@ -1,5 +1,5 @@
 import type { Artifact } from "../../bench/artifact.ts";
-import { displayName, META, metaFor } from "../../bench/libraries.ts";
+import { baseName, displayName, gzipKB, META } from "../../bench/libraries.ts";
 import results from "../../bench/results.json" with { type: "json" };
 import data from "./data/explorer.json" with { type: "json" };
 import type { ExplorerData } from "./explorer.ts";
@@ -46,15 +46,17 @@ const at100k = () => {
 	};
 };
 
-const gzipOf = (config: string) => `~${META[config]!.gzipKB} kB`;
+const gzipBytesOf = (library: string) => artifact.gzipBytes[library]!;
+
+const gzipOf = (library: string) => `~${gzipKB(gzipBytesOf(library))} kB`;
 
 const COUNTS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
 
 const ORDINALS = ["", "second-", "third-", "fourth-", "fifth-", "sixth-", "seventh-", "eighth-"];
 
-// "the third-largest of the eight", from the bundle sizes bench/libraries.ts records.
+// "the third-largest of the eight", from the bundle sizes the bench measured.
 const sizeRank = () => {
-	const larger = Object.values(META).filter((meta) => meta.gzipKB > META.ekrina!.gzipKB).length;
+	const larger = Object.keys(META).filter((library) => gzipBytesOf(library) > gzipBytesOf("ekrina")).length;
 	return `the ${ORDINALS[larger]}largest of the ${COUNTS[Object.keys(META).length]}`;
 };
 
@@ -89,7 +91,7 @@ const compareRows: CompareRow[] = [...explorer.libraries]
 		mrr: library.headline.native,
 		junk: junkOf(library.config),
 		ms: msOf(library.config),
-		gzipKB: metaFor(library.config)!.gzipKB,
+		gzipKB: gzipKB(gzipBytesOf(baseName(library.config))),
 	}));
 
 export const bench = {
@@ -104,6 +106,7 @@ export const bench = {
 		mrr: mrrRange(runnerUp.config),
 	},
 	size: sizeRank(),
+	gzipOf,
 	compareRows,
 	alsoJunkFree:
 		junkFree.length === 0
