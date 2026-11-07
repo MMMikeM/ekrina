@@ -123,7 +123,16 @@ const meanOneShotOf = (a: Artifact, corpus: string, size: string, lib: string): 
 };
 
 const variantsOf = (a: Artifact, corpus: string): string[] =>
-	Object.keys(a.coldMatrix[corpus]?.batch?.[PROBE_SIZE] ?? {});
+	Object.keys(Object.values(a.coldMatrix[corpus]?.batch ?? {})[0] ?? {});
+
+// A list too short for the published size is timed at its own length, and is
+// then shown without a geomean row and kept off the library pages' rankings.
+const timedSizeOf = (a: Artifact, corpus: string): string => {
+	const sizes = Object.keys(a.coldMatrix[corpus]?.batch ?? {});
+	return sizes.includes(String(PUBLISHED_SIZE)) ? String(PUBLISHED_SIZE) : (sizes[0] ?? "");
+};
+const isRanked = (a: Artifact, corpus: string): boolean =>
+	timedSizeOf(a, corpus) === String(PUBLISHED_SIZE);
 
 const BUILD_COLUMNS: Array<[library: string, label: string]> = [
 	["ekrina", "Ekrina"],
@@ -242,7 +251,7 @@ const speedRowsOf = (a: Artifact, corpus: string, configs: Set<string>): string[
 // measurement (constructor, mean first answer, and their measured sum); the
 // batch table is the session (warmup match + 24 probes, one process).
 const scaleTable = (a: Artifact, corpus: string, configs: Set<string>, aggregate = true): string => {
-	const size = String(PUBLISHED_SIZE);
+	const size = timedSizeOf(a, corpus);
 	const shown = speedRowsOf(a, corpus, configs);
 	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
 	if (!ekrinaBatch)
@@ -290,7 +299,7 @@ const scaleTable = (a: Artifact, corpus: string, configs: Set<string>, aggregate
 };
 
 const batchTable = (a: Artifact, corpus: string, configs: Set<string>, aggregate = true): string => {
-	const size = String(PUBLISHED_SIZE);
+	const size = timedSizeOf(a, corpus);
 	const shown = speedRowsOf(a, corpus, configs);
 	const ekrinaBatch = cellOf(a, corpus, "batch", size, "ekrina");
 	if (!ekrinaBatch)
@@ -489,8 +498,8 @@ export const regions = (a: Artifact): Record<string, string> => {
 	if (a.scorecard.corpora[PROBE_CORPUS]) out.compare = compareTable(a);
 	const headline = headlineConfigs(a);
 	for (const corpus of Object.keys(a.coldMatrix)) {
-		out[`speed-${corpus}`] = scaleTable(a, corpus, headline);
-		out[`batch-${corpus}`] = batchTable(a, corpus, headline);
+		out[`speed-${corpus}`] = scaleTable(a, corpus, headline, isRanked(a, corpus));
+		out[`batch-${corpus}`] = batchTable(a, corpus, headline, isRanked(a, corpus));
 	}
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
 		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline);
@@ -517,7 +526,7 @@ export const regions = (a: Artifact): Record<string, string> => {
 		// Ekrina's base row is the 100% every rel cell is measured against.
 		const timed = new Set([...configs, "ekrina"]);
 		for (const corpus of Object.keys(a.coldMatrix)) {
-			if (speedRowsOf(a, corpus, new Set(configs)).length < 2) continue;
+			if (!isRanked(a, corpus) || speedRowsOf(a, corpus, new Set(configs)).length < 2) continue;
 			out[`library-${slug}-speed-${corpus}`] = scaleTable(a, corpus, timed, false);
 			out[`library-${slug}-batch-${corpus}`] = batchTable(a, corpus, timed, false);
 		}
