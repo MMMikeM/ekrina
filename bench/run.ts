@@ -73,17 +73,16 @@ const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length
 
 type Test = { id: string; corpus: string; queries: string[] };
 
-// The batch opens with the short-word probe as a warmup: a guaranteed literal
-// match that absorbs JIT and first-scan time, so the 24 probes after it
-// are the session's steady tail. It is timed (it is the first answer — the
-// one-shot column is index + this), published as the batch's `first`.
+// The batch opens with a warmup match that absorbs JIT and first-scan time, so
+// the 24 probes after it are the session's steady tail. It is timed (it is the
+// first answer — the one-shot column is index + this), published as the
+// batch's `first`.
 const tests: Test[] = CORPORA.flatMap((c) => {
-	const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 	return [
 		...c.specs
 			.filter((s) => TIMED_KINDS.includes(s.kind))
 			.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query] })),
-		{ id: `${c.name}/batch`, corpus: c.name, queries: [warmup, ...c.specs.map((s) => s.query)] },
+		{ id: `${c.name}/batch`, corpus: c.name, queries: [c.warmup, ...c.specs.map((s) => s.query)] },
 	];
 });
 
@@ -92,12 +91,11 @@ const tests: Test[] = CORPORA.flatMap((c) => {
 const catalogueTests = (): Test[] =>
 	CORPORA.map((c) => {
 		const items = c.build(SAMPLE_SIZE);
-		const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 		const queries = [
 			...c.samples.map((s) => s.query),
 			...junkProbes(items).flatMap((p) => p.queries),
 		];
-		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [warmup, ...queries] };
+		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [c.warmup, ...queries] };
 	});
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));

@@ -90,7 +90,7 @@ const substitute = (w: string): string => {
 // plain words, a long enough word, a word few items hold. A query a library
 // ranks inside a block of identical candidates measures list order, so every
 // word the probes are built on is held by at most two items of the 10k list.
-const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
+const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; warmup: string } => {
 	const sample = build(2000);
 	const list = build(10_000);
 	const holding = new Map<string, Set<number>>();
@@ -160,7 +160,7 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		return word ? stripAccents(word) : null;
 	});
 
-	return [
+	const specs: QuerySpec[] = [
 		{ query: longWord, kind: "long-word", source: longSource },
 		{ query: shortWord, kind: "short-word", source: shortSource },
 		{ query: `${a} ${b}`, kind: "two-words", source: pairSource },
@@ -201,6 +201,14 @@ const deriveQueries = (build: (n: number) => string[]): QuerySpec[] => {
 		{ query: accentStripped, kind: "accent-stripped", source: accentSource },
 		{ query: "qxzwkv", kind: "miss", source: null },
 	];
+	// A batch opens on a literal hit like the short-word probe but none of the
+	// probes, so no probe it times is answered twice in one process.
+	const probes = new Set(specs.map((s) => s.query));
+	const [warmup] = firstFrom(500, (item) => {
+		const word = firstWord(4, 6)(item);
+		return word !== null && !probes.has(word) ? word : null;
+	});
+	return { specs, warmup };
 };
 
 // The kinds timed cold, one process per cell: each takes a different path
@@ -221,6 +229,7 @@ export type Corpus = {
 	name: "en" | "native";
 	build: (n: number) => string[];
 	specs: QuerySpec[];
+	warmup: string;
 	queries: string[];
 	samples: CatalogueSample[];
 };
@@ -229,13 +238,16 @@ export type Corpus = {
 // build a list, and would otherwise pay for queries it never runs.
 const makeCorpus = (name: Corpus["name"]): Corpus => {
 	const build = slicer(loadJson<string[]>(`./corpus-${name}.json`));
-	let specs: QuerySpec[] | undefined;
+	let derived: ReturnType<typeof deriveQueries> | undefined;
 	let samples: CatalogueSample[] | undefined;
 	return {
 		name,
 		build,
 		get specs() {
-			return (specs ??= deriveQueries(build));
+			return (derived ??= deriveQueries(build)).specs;
+		},
+		get warmup() {
+			return (derived ??= deriveQueries(build)).warmup;
 		},
 		get queries() {
 			return this.specs.map((s) => s.query);
