@@ -22,13 +22,12 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
   createSearcher(items, (item) => item.title);
   ```
 
-  There is no default export, in ESM or CJS, and an options object such as `{ getText }` throws a `TypeError`.
+  There is no default export, in ESM or CJS, and an options object such as `{ getText }` fails to type-check, since a field returns a string.
 - **Several fields take an object that names them.**
   `{ title: (item) => item.title, body: { selectField: (item) => item.body, demoteBy: SCORES.CONTAINS } }` searches both, ranking body matches below title ones.
   Each field is a function, or a spec when it needs options; one spec alone, `{ selectField, acronym: true }`, is a single field.
   An array of field specs, the 1.x form, throws a `TypeError`, and there is no `key`, `keys` or `strategy` option.
-- **The 1.x names throw.**
-  A field spec's function is `selectField` and its demotion is `demoteBy`; the 1.x names `text` and `atBest` throw a `TypeError` that names the replacement.
+  A spec takes only `selectField`, `acronym` and `demoteBy`; any other key, the 1.x `text` and `atBest` included, throws a `TypeError`, a `demoteBy` that is negative or not finite throws a `RangeError`, and an object with `selectField` is always one spec, never a record of fields.
 - **Create the searcher once and reuse it, not once per keystroke.**
   It caches each item's preparation the first time a query matches it, and a query that extends the previous one rescans only the previous one's survivors.
   Rebuild it when the list changes: an item it has already prepared keeps its old text, and an item pushed onto the array afterwards is never searched.

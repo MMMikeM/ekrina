@@ -47,14 +47,20 @@ Every pre-filter (the bitmask, the regex gates, the bigram gate, the survivor ca
 A gate that rejects a field some tier would have matched is a correctness bug, not a tuning question.
 `bench/funnel.test.ts` asserts the property per bench query, and `bench/searcher-parity.test.ts` asserts the searcher returns exactly what per-item `fuzzyMatch` accepts.
 
-### Reject with an integer, then a regex, then the ladder
+### Reject with an integer, then a subsequence test, then the ladder
 
-Stage 0 is a 32-bit character-class mask per item (`charMask`); one integer AND rejects an item before any regex runs.
+Stage 0 is a 32-bit character-class mask per item (`charMask`); one integer AND rejects an item before any other test runs.
 Bucketed classes (digits, non-ASCII) can only merge bits, so a collision weakens the filter, never inverts it.
-Stage 1 is one native regex chosen by query type.
-Multi-word queries get an order-independent presence gate, because the multi-word tier matches words in any order and a subsequence gate would falsely reject `"foo bar"` against `"bar … foo"` (pinned by `bench/correctness.test.ts`).
+Stage 1 is one test chosen by query type.
+Multi-word queries get an order-independent presence regex, because the multi-word tier matches words in any order and a subsequence gate would falsely reject `"foo bar"` against `"bar … foo"` (pinned by `bench/correctness.test.ts`).
 Single-word queries get a subsequence gate: with one word there is no ordering concern, and one in-order pass is both stricter and faster than the presence gate's k lookaheads.
 For pure a–z queries the mask is already an exact distinct-character presence check, so the presence regex is skipped as redundant (`needsPresenceGate` in `prepareQuery`).
+
+The single-word gate on normalised text is an `indexOf` scan rather than a regex, because compiling was the cost, not testing.
+In a fresh process a regex holding `[\p{L}\p{N}_]` took 0.165 ms to construct and 0.106 ms more on its first test, against 0.009 + 0.043 ms for `\w`, and a query compiled 2.4 gates on average (its own and its corrections'): 982 compiles over 400 distinct en@10k queries, against 156k tests.
+Per test the scan matches the regex (70 vs 69 ns on `hinton`, 80 vs 74 on `ameri`, 57 vs 44 on `gensler`, over every en@100k mask survivor), with no verdict different, and it stays linear at any length, so it needs no long-text fallback.
+The raw-text gates keep a regex, anchored on `(?<!\w)`: ASCII `\w` is a strict subset of the word characters, so the anchor admits a superset and still only false-passes.
+On distinct queries at en@10k this took a query from 0.79 ms to 0.28.
 
 The substitution rescue needs the mask relaxed by one character class, and that relaxation is slow because it widens the survivor set, which the scan's speed depends on keeping small.
 A bigram gate re-tightens it.

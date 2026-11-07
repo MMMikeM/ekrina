@@ -54,7 +54,7 @@ requestIdleCallback(() => search.buildIndex());
 
 Over 100,000 items it takes {bench.at100k.buildIndexMs} ms, and a session of 24 queries then takes {bench.at100k.sessionIndexedMs} ms instead of {bench.at100k.sessionMs}.
 Results are identical either way.
-A searcher that answers one query and is thrown away is slightly slower with `buildIndex()`, so leave that one lazy.
+A searcher that answers one query and is thrown away gains nothing from `buildIndex()`: over 10,000 items it comes out level or a little slower, and over 100,000 building the index makes that one search take a fifth to a quarter longer, so leave that one lazy.
 
 ## Text in other scripts
 

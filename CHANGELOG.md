@@ -16,7 +16,9 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   Rename `text:` to `selectField:` in each field spec.
 - **`FieldSpec.atBest` is `demoteBy`.**
   The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
-  A field spec using `text` or `atBest`, an array of field specs, or an options object such as `{ getText }`, throws a `TypeError` naming the replacement; before, `atBest` was ignored and the others failed with an unreadable message.
+  A field spec with any key but `selectField`, `acronym` and `demoteBy`, the 1.x `text` and `atBest` included, a field without `selectField`, or an array of field specs throws a `TypeError`; before, `atBest` was ignored and the others failed with an unreadable message.
+  So a misspelt `demotBy`, or a field written beside a lone spec's `selectField`, is an error rather than silently ignored.
+  A negative, infinite or non-number `demoteBy` throws a `RangeError`, since a negative shift would carry a fuzzy or corrected match to or below `SCORES.CONTAINS`.
 - **Several fields are named, and a result is its best field's match.**
   An object that names each field replaces the array of field specs: `createSearcher(posts, { title: (p) => p.title, body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS } })`.
   A field is a function, or a spec when it needs options, and one spec alone, `{ selectField, acronym: true }`, is a single field with options.
@@ -39,13 +41,19 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
 
   A word read any of these ways reports `corrected` spelt as the field spells it.
   On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
-  The cost is about a third more per query once a searcher is warm (0.54–0.64 → 0.74–0.88 ms at 10k), 24–34% more per 100k session, about the same first answer, and 1.6 MB more held at 100k; literal hits take no longer, since the second pass runs only while fewer than ten items match literally (docs/benchmarks.md, docs/performance.md).
-  The bundle grows from ~6.4 kB to ~8.2 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
+  A query with ten or more literal matches skips them entirely, since the second pass runs only while fewer than ten items match literally (docs/performance.md).
+  The bundle grows from ~6.4 kB to ~8.3 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
   The build mangles internal property names, and duplicated paths are merged into one; together they took the bundle from ~9.3 kB with every result unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
+- **Searching is faster than 1.1.2, corrections included, and holds about as much.**
+  No query compiles a gate regex any more: a single word is gated by an `indexOf` scan, which ties the regex per test, and the raw-text gates anchor on `\w`, which compiles in a fraction of the time a `\p{L}` class does.
+  Results are built once, for the page the sort keeps; the searcher keeps no per-item copy of trimmed text or of scores; and the raw scans read a table of non-ASCII character classes instead of folding each character.
+  Against 1.1.2 a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k), a 100k session 11–16% less and a first answer 17–45% less, and a 100k searcher holds 0.1–0.2 MB more (docs/benchmarks.md).
+  Passing `limit` costs nothing: once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.
   Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
   On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
+  The typing session times each keystroke once, in a fresh process, as a user types it: repeating one query in a process let V8 reuse the regexes it compiled, which no real keystroke can.
 - **The package ships `dist/AGENTS.md`.**
   It lists the exports and the rules a coding agent needs to use them correctly, built from the docs site's page for AI coding agents.
 
@@ -141,4 +149,4 @@ Design decisions worth recording, with the measurements that made them:
   Later chunks stay leftmost-greedy, because reconsidering those starts leaking junk.
 - **The searcher prepares nothing up front and rescans survivors while you type.**
   Construction only allocates (~1 ms for a 100k list); a field is normalised and masked the first time it survives a gate, and the one whole-corpus pass (the union-and-bigram masks) waits for the first query that needs it (a second word, a character the raw scan cannot fold, or a correction), so a session of single words that match literally never runs it.
-  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.3 → 0.6 ms per keystroke (docs/benchmarks.md, session table).
+  A query extending the previous one rescans only the previous gate survivors, sound because every gate is monotone under query extension; typing `gra` → `grad` → `grady` over 100k items runs 2.3 → 1.3 → 0.6 ms per keystroke (the session table in docs/benchmarks.md at this release).

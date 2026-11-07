@@ -16,8 +16,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuzzy-scorecard-native -->
 | Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.30 |   7% |     0.05 |    1.94 |    52.72 |        2.10 |
-| fuzzy (all opts) | 0.30 |   7% |     0.13 |    2.12 |    62.44 |        2.44 |
+| **fuzzy**        | 0.30 |   7% |     0.03 |    1.80 |    38.82 |        1.53 |
+| fuzzy (all opts) | 0.30 |   7% |     0.03 |    1.89 |    39.81 |        1.57 |
 <!-- bench:end -->
 
 **en corpus:**
@@ -25,8 +25,8 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 <!-- bench:library-fuzzy-scorecard-en -->
 | Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
 |------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.29 |   3% |     0.04 |    1.81 |    36.12 |        1.42 |
-| fuzzy (all opts) | 0.29 |   3% |     0.04 |    1.97 |    38.13 |        1.50 |
+| **fuzzy**        | 0.29 |   3% |     0.03 |    1.70 |    34.66 |        1.37 |
+| fuzzy (all opts) | 0.29 |   3% |     0.03 |    1.75 |    35.89 |        1.42 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only; the list is too short for the timing cells):
@@ -48,17 +48,17 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:library-fuzzy-speed-en -->
 | Library          |   index | cold query |    total | total rel |
 |------------------|--------:|-----------:|---------:|----------:|
-| **Ekrina**       | 0.42 ms |   14.55 ms | 15.42 ms |  **100%** |
-| fuzzy            | 0.04 ms |   15.13 ms | 15.18 ms |       98% |
-| fuzzy (all opts) | 0.04 ms |   14.88 ms | 14.92 ms |       97% |
+| **Ekrina**       | 0.32 ms |    7.82 ms |  8.14 ms |  **100%** |
+| fuzzy            | 0.03 ms |   13.69 ms | 13.72 ms |      169% |
+| fuzzy (all opts) | 0.03 ms |   14.09 ms | 14.13 ms |      174% |
 <!-- bench:end -->
 
 <!-- bench:library-fuzzy-batch-en -->
 | Library          | batch/query | batch total | batch rel |
 |------------------|------------:|------------:|----------:|
-| **Ekrina**       |     3.14 ms |    81.24 ms |  **100%** |
-| fuzzy            |    13.96 ms |   351.98 ms |      433% |
-| fuzzy (all opts) |    14.14 ms |   357.31 ms |      440% |
+| **Ekrina**       |     1.79 ms |    47.52 ms |  **100%** |
+| fuzzy            |    13.10 ms |   330.51 ms |      695% |
+| fuzzy (all opts) |    13.65 ms |   344.46 ms |      725% |
 <!-- bench:end -->
 
 ## Match quality, by query family

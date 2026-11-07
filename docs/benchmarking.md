@@ -86,7 +86,7 @@ flowchart LR
     HITS[("hits.json<br/>ranks, counts")] --> PT
     HITS --> SC
     HITS -->|"MRR"| PA
-    SESS[("session.json")] --> SES["session table<br/>typing `grady`, prefix cache"]
+    SESS[("session.json")] --> SES["session table<br/>typing `hinton`, prefix cache"]
     LT[("longtext.json")] --> LTT["long-text table<br/>junk rate 0%"]
 ```
 

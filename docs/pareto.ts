@@ -1,6 +1,6 @@
 // Pareto-frontier charts: accuracy (MRR) vs time, one chart per workload.
-// - pareto-query-*.svg — query ms with the index prebuilt (frontend workload:
-//   the index is built eagerly at load, keystrokes run the query only).
+// - pareto-query-*.svg — mean ms per query over one searcher's 24-query session after a
+//   warm-up (frontend workload); lazy Ekrina's index build falls inside that mean.
 // - pareto-total-*.svg — total ms = index + first (cold) query (backend one-shot workload).
 // All styling is inlined because GitHub strips <style> blocks from SVGs.
 import { writeFileSync } from "node:fs";
@@ -65,7 +65,7 @@ const METRICS: Record<
 			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
 		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
-		tail: "Ekrina owns the accurate end of the frontier; the faster points on it are markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Ekrina owns the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -76,7 +76,7 @@ const METRICS: Record<
 		subtitle: (families) => `MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
-		tail: "The no-index engines own the fastest cold one-shots; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, Ekrina (indexed) moves the mask build into construction and lands level with them, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and Fuse.js is dominated.",
+		tail: "A no-index substring scan, fuzzy, owns the fastest cold one-shot; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, where Ekrina (acronym) answers the acronym query without building the whole-list mask index, Ekrina (indexed) moves the mask build into construction and lands a little behind Ekrina, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and every other configuration, including Fuse.js, is dominated.",
 	},
 };
 
@@ -159,7 +159,7 @@ const render = (
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
 	const desc =
 		`Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR ` +
-		`(how highly each ranks the queried item) against ${metric === "query" ? "query milliseconds with indexes prebuilt" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
+		`(how highly each ranks the queried item) against ${metric === "query" ? "mean milliseconds per query across one searcher's 24-query session, after a warm-up that takes each library's one-time setup except lazy Ekrina's index build" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
 		`on a log scale, on the native 10k corpus over ${families} query families. ` +
 		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
 		M.tail;
