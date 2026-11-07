@@ -221,24 +221,24 @@ export function createSearcher<T, F extends string>(
 	// of single words that all match literally.
 	let unionMasks: Int32Array | null = null;
 	// Each item's bigram set across its fields, computed the first time a gate
-	// reads it: only items that already passed the mask gate ever need one.
+	// reads it: only items that already passed the mask gate ever need one. An
+	// empty set reads as not yet computed, so an item without a single letter
+	// pair is rescanned each time it is asked about, instead of every item
+	// paying a byte for a known flag.
 	let bigramsLo = new Int32Array(0);
 	let bigramsHi = new Int32Array(0);
-	let bigramsKnown = new Uint8Array(0);
 	const bigrams = { lo: 0, hi: 0 };
 	const knowBigrams = (i: number): void => {
-		if (bigramsKnown.length === 0) {
+		if (bigramsLo.length === 0) {
 			bigramsLo = new Int32Array(count);
 			bigramsHi = new Int32Array(count);
-			bigramsKnown = new Uint8Array(count);
 		}
-		if (bigramsKnown[i]) return;
+		if (bigramsLo[i] | bigramsHi[i]) return;
 		bigrams.lo = 0;
 		bigrams.hi = 0;
 		for (let f = 0; f < specCount; f++) rawFieldScan(resolvedSpecs[f].selector(list[i]) || "", bigrams);
 		bigramsLo[i] = bigrams.lo;
 		bigramsHi[i] = bigrams.hi;
-		bigramsKnown[i] = 1;
 	};
 
 	// `withBigrams` takes every item's bigram set in the same pass as its masks,
@@ -250,7 +250,6 @@ export function createSearcher<T, F extends string>(
 		if (withBigrams) {
 			bigramsLo = new Int32Array(count);
 			bigramsHi = new Int32Array(count);
-			bigramsKnown = new Uint8Array(count).fill(1);
 		}
 		for (let i = 0; i < count; i++) {
 			let union = 0;

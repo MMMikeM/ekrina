@@ -26,6 +26,7 @@ const CASES: [string, string][] = [
 	["dotted capital I lowercases to two units", "İstanbul"],
 	["Hangul stays whole", "한국어 문서"],
 	["astral plane", "𝔘nicode 🎉 emoji"],
+	["lone surrogates", "ab\ud800cd \udc00ef"],
 	["lone combining mark", "́̀ stranded"],
 	["typographic quotes", "‘single’ “double”"],
 	["cyrillic", "Привет мир"],

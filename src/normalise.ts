@@ -101,6 +101,27 @@ export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur
 // word-initial pairs, 64 bits in two int32s.
 export type FieldBigrams = { lo: number; hi: number };
 
+// Every BMP code point folds to exactly one unit (computeFold's length check),
+// so each unit's fold has a fixed class, learned once and stored as a stand-in
+// unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
+// non-ASCII buckets. 0 until first seen.
+const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
+const standIns = new Uint8Array(0x10000);
+
+const standIn = (unit: number): number =>
+	standIns[unit] ||
+	(standIns[unit] = STAND_INS.charCodeAt(
+		bigramClass(foldChar(String.fromCharCode(unit)).charCodeAt(0)),
+	));
+
+// `unitMask` for every ASCII unit and both non-ASCII stand-ins.
+const standInMasks = new Int32Array(130);
+for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
+
+const NON_ASCII_BITS = 3 << 30;
+
+const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
+
 /**
  * `charMask(normaliseText(raw))` without building the normalised string. Runs
  * once per field, when a searcher first needs a whole-list pass. May only
@@ -110,14 +131,9 @@ export const rawFieldMask = (raw: string): number => {
 	let mask = 0;
 	for (let i = 0; i < raw.length; i++) {
 		const unit = raw.charCodeAt(i);
-		if (unit < 128) {
-			mask |= unitMask(unit);
-			continue;
-		}
-		const codePoint = raw.codePointAt(i) as number;
-		if (codePoint > 0xffff) i++;
-		const folded = foldChar(String.fromCodePoint(codePoint));
-		for (let k = 0; k < folded.length; k++) mask |= unitMask(folded.charCodeAt(k));
+		// A surrogate's fold depends on its partner, so it takes both non-ASCII
+		// bits, which can only false-pass.
+		mask |= isSurrogate(unit) ? NON_ASCII_BITS : standInMasks[unit < 128 ? unit : standIn(unit)];
 	}
 	return mask;
 };
@@ -147,10 +163,12 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 		let folded = "";
 		if (unit > 127) {
 			if (unit >= 0x300 && unit <= 0x36f) degraded = true;
-			const codePoint = raw.codePointAt(i) as number;
-			if (codePoint > 0xffff) i++;
-			folded = foldChar(String.fromCodePoint(codePoint));
-			unit = folded.charCodeAt(0);
+			if (isSurrogate(unit)) {
+				const codePoint = raw.codePointAt(i) as number;
+				if (codePoint > 0xffff) i++;
+				folded = foldChar(String.fromCodePoint(codePoint));
+				unit = folded.charCodeAt(0);
+			} else unit = standIn(unit);
 		}
 		for (let k = 0; ; ) {
 			let unitClass = 0;
@@ -165,22 +183,19 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 				unitClass = 27 + (unit & 3);
 			} else if (unit > 127) {
 				mask |= 1 << (30 + (unit & 1));
-				if (unit >= 0x300 && unit <= 0x36f) degraded = true;
-				else unitClass = 31 + (unit & 1);
+				unitClass = 31 + (unit & 1);
 			}
-			if (unitClass !== 0 && !degraded) {
-				if (prevClass !== 0) {
-					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << bit;
-				} else {
-					if (lastWordInitial !== 0) {
-						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << bit;
-					}
-					lastWordInitial = unitClass;
+			if (unitClass !== 0) {
+				const pairStart = prevClass !== 0 ? prevClass : lastWordInitial;
+				if (pairStart !== 0) {
+					// Branchless: which half the bit lands in is data-dependent, and
+					// branching on it made the whole-corpus scan ~40% slower.
+					const bit = (pairStart * 37 + unitClass) & 63;
+					const inLow = (bit >> 5) - 1;
+					bigramsLo |= (1 << bit) & inLow;
+					bigramsHi |= (1 << bit) & ~inLow;
 				}
+				if (prevClass === 0) lastWordInitial = unitClass;
 			}
 			prevClass = unitClass;
 			if (++k >= folded.length) break;
