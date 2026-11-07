@@ -724,7 +724,7 @@ The **cold query** column is where Ekrina's laziness shows up: 8–10 ms mean at
 An eager-index engine does that work up front instead: fast-fuzzy's constructor runs for 255–324 ms before its first answer.
 The **index** column plus the first answer is the one-shot measurement: at 100k Ekrina takes it from uFuzzy (all opts) on both corpora, 8.67 ms against 11.48 on en and 10.15 against 11.90 on native (117%), even though Ekrina's first answer carries the mask build.
 Cross-_type_ speed isn't apples-to-apples: **typo-tolerant** libs (Fuse.js, fast-fuzzy) do far more work per query, and non-folding configurations are omitted from the native table entirely (they would be timing a different task).
-Results are identical in any script, but the mask index cannot tell non-Latin letters apart, so on non-Latin text it admits every item and each query scans the whole list (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
+Results are identical in any script, but the mask index cannot tell non-Latin letters apart, so on non-Latin text a keystroke that scans the whole list scores every item in it, though an extending keystroke still rescans only the items the last one let through (`bench/non-latin.test.ts`, over a Cyrillic copy of the corpus).
 
 ## Typing `hinton` at 100k
 

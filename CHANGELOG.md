@@ -47,7 +47,7 @@ What breaks is the seven names below, what a result holds, and the same query re
 
 - **Corrections reach further, when the query as typed matches poorly.**
   As well as one wrong, missing, extra or swapped character:
-  - two mistakes in a word of eight letters or more, or one in each phrase word of five or more, at 2.1 each;
+  - two mistakes in a word of eight letters or more, or one in a word of five or more, up to two in a query, at 2.1 each;
   - a space typed inside a word or left out between two, as one mistake;
   - a word typed sparsely, at least four of its letters in order from its first and covering half of it (`hget` for "Huguette"), scored just above `contains`;
   - a key held down, a run of three or more of one letter, as one mistake (`twaaain`);
@@ -55,7 +55,7 @@ What breaks is the seven names below, what a result holds, and the same query re
     - undone only where the fix starts a word;
     - tried even beside a fuzzy chain, which keeps other short corrections from running.
 
-  A word read any of these ways reports `corrected` spelt as the field spells it.
+  A word read any of these ways but the four-letter swap reports `corrected` spelt as the field spells it; a single fixed character keeps the caller's casing.
   On the benchmark below:
   - MRR rises 0.70 → 0.91–0.92 on all three corpora;
   - MRR on held-out queries rises with it (`bench/held-out.test.ts`);
