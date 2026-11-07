@@ -25,8 +25,6 @@ export type RescueVariant = {
 	prepared: PreparedQuery | null;
 };
 
-export type RescueState = RescueVariant[];
-
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
 const MIN_RESCUE_QUERY_LENGTH = 4;
@@ -133,7 +131,9 @@ const prepareCorrection = (
 // Only a real-tier hit (`score <= SCORES.CONTAINS`) counts: rescuing a fuzzy
 // chain is an invented edit on top of a speculative assembly
 // (@see docs/benchmarks.md). The rerun passes `mayRescue: false`, disabling
-// every rescue inside it, so the penalty cannot apply twice.
+// every rescue inside it, so the penalty cannot apply twice. It skips the front
+// gate and the chain too: the gate passes every literal hit, and a chain is
+// refused anyway, so a correction never pays to compile its own gate.
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
@@ -146,6 +146,8 @@ const scoreCorrectedQuery = (
 		correctedQuery,
 		rescue.acronymTier,
 		false,
+		true,
+		true,
 	);
 	return result && acceptsCorrection(result, short)
 		? {
@@ -194,19 +196,30 @@ const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVarian
 	return variants;
 };
 
+// A drop, a substitution or a swap leaves one half of the subject intact, unless
+// the swap straddles the split, so a field holding none of the three holds no
+// correction. The halves come first: substitutedWindows reads them.
+const correctionAnchors = (subjectText: string): string[] => {
+	const splitAt = subjectText.length >> 1;
+	return [
+		subjectText.slice(0, splitAt),
+		subjectText.slice(splitAt),
+		swapAdjacentAt(subjectText, splitAt - 1),
+	];
+};
+
 // By the pigeonhole principle a single substitution leaves at least one half of
 // the subject intact, so those halves' occurrences are the only windows worth
 // testing. Position must not rank the corrections — the rerun rescans the field.
 const substitutedWindows = (
 	normalisedField: string,
-	subjectText: string,
+	{ queryText: subjectText, anchors: [head, tail] }: RescueState,
 	atWordStart: boolean,
 ): string[] => {
 	const subjectLength = subjectText.length;
-	const splitAt = subjectLength >> 1;
 	const halves: [offset: number, half: string][] = [
-		[0, subjectText.slice(0, splitAt)],
-		[splitAt, subjectText.slice(splitAt)],
+		[0, head],
+		[head.length, tail],
 	];
 	const windows: string[] = [];
 	for (const [offset, half] of halves) {
@@ -259,10 +272,7 @@ const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
 
 const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
 	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
-	return (cache[wordIndex] ??= buildRescueVariants(
-		rawWordOf(prepared, wordIndex),
-		prepared.queryWords[wordIndex],
-	));
+	return (cache[wordIndex] ??= absentWordSubject(prepared, wordIndex));
 };
 
 const spliceCorrectedWord = (
@@ -284,19 +294,18 @@ const spliceCorrectedWord = (
 
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
-type CorrectionSubject = {
+export type RescueState = {
 	queryText: string;
+	anchors: string[];
 	variants: RescueVariant[];
 	fromVariant: (variant: RescueVariant) => PreparedQuery;
 	fromWindow: (corrected: string) => PreparedQuery;
 };
 
-const wholeQuerySubject = (
-	prepared: PreparedQuery,
-	variants: RescueVariant[],
-): CorrectionSubject => ({
+const wholeQuerySubject = (prepared: PreparedQuery): RescueState => ({
 	queryText: prepared.normalisedQuery,
-	variants,
+	anchors: correctionAnchors(prepared.normalisedQuery),
+	variants: buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery),
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
 		prepareCorrection(
@@ -306,13 +315,10 @@ const wholeQuerySubject = (
 		),
 });
 
-const absentWordSubject = (
-	prepared: PreparedQuery,
-	wordIndex: number,
-	variants: RescueVariant[],
-): CorrectionSubject => ({
+const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): RescueState => ({
 	queryText: prepared.queryWords[wordIndex],
-	variants,
+	anchors: correctionAnchors(prepared.queryWords[wordIndex]),
+	variants: buildRescueVariants(rawWordOf(prepared, wordIndex), prepared.queryWords[wordIndex]),
 	fromVariant: (variant) =>
 		spliceCorrectedWord(prepared, wordIndex, variant.raw, variant.normalised),
 	fromWindow: (corrected) =>
@@ -326,7 +332,7 @@ const absentWordSubject = (
 
 const scoreEnumeratedVariants = (
 	rescue: RescueContext,
-	subject: CorrectionSubject,
+	subject: RescueState,
 	fieldFloor: number,
 	short: boolean,
 ): MatchResult | null => {
@@ -346,12 +352,12 @@ const scoreEnumeratedVariants = (
 
 const scoreSubstitutedWindows = (
 	rescue: RescueContext,
-	subject: CorrectionSubject,
+	subject: RescueState,
 	incumbent: MatchResult | null,
 	short: boolean,
 ): MatchResult | null => {
 	let best = incumbent;
-	for (const corrected of substitutedWindows(rescue.normalisedField, subject.queryText, short)) {
+	for (const corrected of substitutedWindows(rescue.normalisedField, subject, short)) {
 		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
 		if (isUnbeatableCorrection(best)) return best;
 	}
@@ -364,7 +370,8 @@ const scoreSubstitutedWindows = (
 // ("ergonomiq" is a substitution, but dropping the "q" leaves a prefix), and
 // stopping after the enumerated family would let the worse one win by default.
 // A corrected exact hit is unbeatable and exits early.
-const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
+const correctSubject = (rescue: RescueContext, subject: RescueState): MatchResult | null => {
+	if (!subject.anchors.some((anchor) => rescue.normalisedField.includes(anchor))) return null;
 	const fieldLength = rescue.normalisedField.length;
 	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;
 	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
@@ -393,16 +400,12 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	const absentIndex = soleAbsentWord(normalisedField, prepared.queryWords);
 	if (absentIndex === null) return null;
 	if (prepared.queryWords[absentIndex].length < MIN_RESCUE_QUERY_LENGTH) return null;
-	return correctSubject(
-		rescue,
-		absentWordSubject(prepared, absentIndex, wordRescueStateOf(prepared, absentIndex)),
-	);
+	return correctSubject(rescue, wordRescueStateOf(prepared, absentIndex));
 };
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared } = rescue;
-	prepared.rescueState ??= buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery);
-	return correctSubject(rescue, wholeQuerySubject(prepared, prepared.rescueState));
+	return correctSubject(rescue, (prepared.rescueState ??= wholeQuerySubject(prepared)));
 };
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a

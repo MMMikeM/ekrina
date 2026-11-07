@@ -44,6 +44,7 @@ export const INTERNAL_NAMES: string[] = [
 	"word",
 	"rawField",
 	"queryText",
+	"anchors",
 	"fieldName",
 	"count",
 	"lo",
