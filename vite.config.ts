@@ -64,6 +64,12 @@ export default defineConfig({
 			verify: {
 				command: ["vp lint", "knip", "vp test run --coverage"],
 				dependsOn: ["types"],
+				// Coverage writes temp files the run then reads back, which otherwise
+				// marks every run as having changed its own inputs.
+				cache: {
+					input: [{ auto: true }, "!coverage/**"],
+					output: [{ auto: true }, "!coverage/**"],
+				},
 			},
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
 			// so a cached run would replay a pass over code it never read.
