@@ -12,8 +12,8 @@ It fired repeatedly, sometimes fatally, and the numbers behind it were incoheren
 
 Individual cells looked like this:
 
-| cell             | samples |   median | spread (max/min) |   rme |
-| ---------------- | ------: | -------: | ---------------: | ----: |
+| cell              | samples |   median | spread (max/min) |   rme |
+| ----------------- | ------: | -------: | ---------------: | ----: |
 | ascii 10k ekrina  |      20 | 0.293 ms |             214% | 21.4% |
 | ascii 100k ekrina |      12 | 3.912 ms |            46.8% |  9.5% |
 | mixed 10k ekrina  |      20 | 0.307 ms |             115% |  8.4% |
@@ -69,11 +69,11 @@ Every intermediate explanation was wrong, and each was plausible enough to act o
 
 Running the same cell two ways, minutes apart on the same machine:
 
-| ascii 10k    | full matrix | scoped to one group |
-| ------------ | ----------: | ------------------: |
+| ascii 10k     | full matrix | scoped to one group |
+| ------------- | ----------: | ------------------: |
 | ekrina spread |        214% |               28.5% |
 | ekrina rme    |       21.4% |            **3.0%** |
-| acronym rme  |       12.3% |            **2.7%** |
+| acronym rme   |       12.3% |            **2.7%** |
 
 Seven times better from isolation alone, and the scoped numbers were physically sensible for the first time: ekrina 0.281 ms against acronym 0.315 ms, acronym slower by 12%, which is the direction the guard exists to assert.
 
@@ -89,7 +89,7 @@ Measured cold, in a fresh process, with nothing warmed (ascii 10k):
 
 | library          |   build | cold first query |     warm | cold / warm |
 | ---------------- | ------: | ---------------: | -------: | ----------: |
-| ekrina            |  3.7 ms |          3.25 ms | 0.249 ms |     **13×** |
+| ekrina           |  3.7 ms |          3.25 ms | 0.249 ms |     **13×** |
 | uFuzzy           |  5.2 ms |          2.12 ms | 0.220 ms |         10× |
 | fuzzysort        |  0.1 ms |     **18.43 ms** | 0.212 ms |     **87×** |
 | @nozbe/microfuzz | 12.2 ms |          3.15 ms | 1.145 ms |        2.8× |

@@ -87,7 +87,7 @@ flowchart LR
     HITS --> SC
     HITS -->|"MRR"| PA
     SESS[("session.json")] --> SES["session table<br/>typing `hinton`, prefix cache"]
-    LT[("longtext.json")] --> LTT["long-text table<br/>junk rate 0%"]
+    LT[("longtext.json")] --> LTT["long-text table<br/>junk rate"]
 ```
 
 Ranks are deterministic, so quality is measured once, untimed; time and quality never contaminate each other's measurement.

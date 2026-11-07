@@ -22,7 +22,6 @@ import type {
 	SearchOptions,
 } from "./types";
 
-
 // Ten because that is the slice a picker shows, and the cutoff the published
 // MRR uses; a correction that cannot reach the top ten is work no caller can
 // observe through the ranking (@see docs/benchmarks.md).
@@ -92,7 +91,8 @@ type ResolvedSpec<T> = {
 const integerLike = /^(0|[1-9]\d*)$/;
 
 const isField = (value: unknown): value is Field<never> =>
-	typeof value === "function" || typeof (value as FieldSpec<never> | null)?.selectField === "function";
+	typeof value === "function" ||
+	typeof (value as FieldSpec<never> | null)?.selectField === "function";
 
 const SPEC_KEYS = ["selectField", "acronym", "demoteBy"];
 
@@ -108,18 +108,23 @@ const checkSpecKeys = (spec: object, where: string): void => {
 // Resolved once: the per-item loops run count × specs times and shouldn't
 // re-default options or capture per-item closures.
 const resolveField = <T>(field: Field<T>, fieldName: string | undefined): ResolvedSpec<T> => {
-	if (typeof field === "function") return { selector: field, acronymTier: false, demotion: 0, fieldName };
+	if (typeof field === "function")
+		return { selector: field, acronymTier: false, demotion: 0, fieldName };
 	const where = fieldName === undefined ? "a field spec" : `field ${fieldName}`;
 	checkSpecKeys(field, where);
 	const demotion = field.demoteBy ?? 0;
 	// A negative or NaN shift would carry a guess to or below SCORES.CONTAINS.
 	if (!(typeof demotion === "number" && demotion >= 0 && demotion < Infinity)) {
-		throw new RangeError(`${where}: demoteBy must be a finite number of at least 0, got ${demotion}`);
+		throw new RangeError(
+			`${where}: demoteBy must be a finite number of at least 0, got ${demotion}`,
+		);
 	}
 	return { selector: field.selectField, acronymTier: field.acronym ?? false, demotion, fieldName };
 };
 
-const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): ResolvedSpec<T>[] => {
+const resolveFieldSpecs = <T>(
+	selection?: Field<T> | Record<string, Field<T>>,
+): ResolvedSpec<T>[] => {
 	if (!selection) selection = (item) => item as unknown as string;
 	if (typeof selection === "function") return [resolveField(selection, undefined)];
 	// A Map, an array or a class instance would read as an object of no fields.
@@ -137,7 +142,9 @@ const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): 
 	}
 	return Object.entries(selection).map(([name, field]) => {
 		if (integerLike.test(name)) {
-			throw new TypeError(`a field can't be named ${name}: integer-like names sort before the others`);
+			throw new TypeError(
+				`a field can't be named ${name}: integer-like names sort before the others`,
+			);
 		}
 		if (!isField(field)) {
 			throw new TypeError(`field ${name} needs selectField`);
@@ -227,7 +234,8 @@ export function createSearcher<T, F extends string>(
 			if (fieldMatches[base + f] === undefined) continue;
 			if (best !== -1) {
 				const lead = fieldScore(i, f) - fieldScore(i, best);
-				if (lead > 0 || (lead === 0 && fieldEndsWord[base + f] <= fieldEndsWord[base + best])) continue;
+				if (lead > 0 || (lead === 0 && fieldEndsWord[base + f] <= fieldEndsWord[base + best]))
+					continue;
 			}
 			best = f;
 		}
@@ -235,13 +243,15 @@ export function createSearcher<T, F extends string>(
 	};
 	const sortedField = (i: number): number => (bestFields === null ? 0 : bestFields[i]);
 	const hasMatch = (i: number): boolean => {
-		for (let f = 0; f < specCount; f++) if (fieldMatches[i * specCount + f] !== undefined) return true;
+		for (let f = 0; f < specCount; f++)
+			if (fieldMatches[i * specCount + f] !== undefined) return true;
 		return false;
 	};
 	// The best field's score is at most CONTAINS exactly when any field's is.
 	const holdsLiteral = (i: number): boolean => {
 		for (let f = 0; f < specCount; f++) {
-			if (fieldMatches[i * specCount + f] !== undefined && fieldScore(i, f) <= CONTAINS_SCORE) return true;
+			if (fieldMatches[i * specCount + f] !== undefined && fieldScore(i, f) <= CONTAINS_SCORE)
+				return true;
 		}
 		return false;
 	};
@@ -499,18 +509,12 @@ export function createSearcher<T, F extends string>(
 
 		// A fallback match joins the item's results, or replaces a weaker fuzzy or
 		// corrected one; a literal match is never touched.
-		const offerFallbacks = (
-			i: number,
-			reading: PreparedReading,
-		): void => {
+		const offerFallbacks = (i: number, reading: PreparedReading): void => {
 			const base = i * specCount;
 			for (let f = 0; f < specCount; f++) {
 				if (!readingAdmits(reading, fieldMasks[base + f])) continue;
 				materialise(i);
-				const result = reading.match(
-					trimmedField(i, f),
-					normalisedFields[base + f] as string,
-				);
+				const result = reading.match(trimmedField(i, f), normalisedFields[base + f] as string);
 				if (result) offerField(i, f, result);
 			}
 		};
@@ -523,8 +527,7 @@ export function createSearcher<T, F extends string>(
 			// A phrase's literal gates read only its words' characters; a single
 			// word's read its punctuation too, which no second-pass reading needs.
 			const survivorsOnly =
-				!reading.wholeList &&
-				(multiWord || normalisedQuery === prepared.queryWords[0]);
+				!reading.wholeList && (multiWord || normalisedQuery === prepared.queryWords[0]);
 			// Fills every item's field masks, which the readings' gate reads.
 			if (!survivorsOnly) unionMasks ??= buildUnionMasks();
 			const masks = unionMasks;
@@ -567,7 +570,9 @@ export function createSearcher<T, F extends string>(
 		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		const rescuing =
 			rescuable &&
-			(isShortQuery(normalisedQuery, prepared.queryWords) ? matched.length === 0 : offeringSecondPass);
+			(isShortQuery(normalisedQuery, prepared.queryWords)
+				? matched.length === 0
+				: offeringSecondPass);
 		// The relaxed set is not a gate-passing set, so it cannot seed the cache;
 		// the next query starts from a full pass. Nor can a single character's
 		// word-start set: the next keystroke may match mid-word.
@@ -619,7 +624,8 @@ export function createSearcher<T, F extends string>(
 		const fields: Record<string, FieldMatch> = {};
 		for (let f = 0; f < specCount; f++) {
 			const match = fieldMatches[i * specCount + f];
-			if (match !== undefined) fields[resolvedSpecs[f].fieldName as string] = fieldMatchOf(i, f, match);
+			if (match !== undefined)
+				fields[resolvedSpecs[f].fieldName as string] = fieldMatchOf(i, f, match);
 		}
 		return fields;
 	};

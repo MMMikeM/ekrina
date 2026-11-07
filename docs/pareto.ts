@@ -78,7 +78,8 @@ const METRICS: Record<
 		X1: 120,
 		ticks: [1, 2, 5, 10, 20, 50, 100],
 		heading: "Ranking quality vs. cold search time",
-		subtitle: (families) => `MRR over ${families} query families · native 10k corpus · fresh process per search`,
+		subtitle: (families) =>
+			`MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
 		tail: "A no-index substring scan, fuzzy, owns the fastest cold one-shot; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, where Ekrina (acronym) answers the acronym query without building the whole-list mask index, Ekrina (indexed) moves the mask build into construction and lands a little behind Ekrina, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and every other configuration, including Fuse.js, is dominated.",
@@ -298,17 +299,21 @@ export const renderPareto = (artifact: Artifact): void => {
 	if (!scorecard?.length) throw new Error("no native scorecard — run the quality stage first");
 	const kinds = Object.keys(artifact.coldMatrix.native ?? {}).filter((k) => k !== "batch");
 	const headline = headlineConfigs(artifact);
-	const data: Point[] = scorecard.filter((r) => headline.has(r.library)).map((r) => {
-		const batch = artifact.coldMatrix.native?.batch?.["10000"]?.[r.library];
-		if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
-		const oneShots = kinds.map((k) => artifact.coldMatrix.native[k]["10000"][r.library].oneShotMs);
-		return {
-			name: r.library,
-			mrr: r.mrr,
-			query: batch.restMs ?? batch.queryMs,
-			total: oneShots.reduce((a, b) => a + b, 0) / oneShots.length,
-		};
-	});
+	const data: Point[] = scorecard
+		.filter((r) => headline.has(r.library))
+		.map((r) => {
+			const batch = artifact.coldMatrix.native?.batch?.["10000"]?.[r.library];
+			if (!batch) throw new Error(`no batch cell for '${r.library}' — run the cold stage first`);
+			const oneShots = kinds.map(
+				(k) => artifact.coldMatrix.native[k]["10000"][r.library].oneShotMs,
+			);
+			return {
+				name: r.library,
+				mrr: r.mrr,
+				query: batch.restMs ?? batch.queryMs,
+				total: oneShots.reduce((a, b) => a + b, 0) / oneShots.length,
+			};
+		});
 	const families = artifact.families?.native?.filter((family) => family.scored).length ?? 0;
 	const queries = artifact.probes.native?.length ?? 0;
 	for (const metric of Object.keys(METRICS) as Metric[]) {

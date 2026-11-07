@@ -161,8 +161,7 @@ export const gzipKB = (bytes: number): number => Number((bytes / 1000).toFixed(1
 /** @public Read by site/src/bench.ts, outside knip's workspaces. */
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
-const metaFor = (name: string): LibraryMeta | undefined =>
-	META[name] ?? META[baseName(name)];
+const metaFor = (name: string): LibraryMeta | undefined => META[name] ?? META[baseName(name)];
 
 const DISPLAY: Record<string, string> = { ekrina: "Ekrina", "fuse.js": "Fuse.js" };
 

@@ -50,20 +50,24 @@ it("searcher agrees with per-item fuzzyMatch on every bench query", { timeout: 6
 	}
 });
 
-it("an indexed searcher answers every bench query as a fresh lazy one does", { timeout: 600_000 }, () => {
-	for (const { name, build, queries } of CORPORA) {
-		for (const size of [10_000, 100_000]) {
-			const list = build(size);
-			const indexed = createSearcher(list);
-			indexed.buildIndex();
-			for (const query of queries) {
-				expect(indexed(query), `[${name}-${size}] "${query}"`).toEqual(
-					createSearcher(list)(query),
-				);
+it(
+	"an indexed searcher answers every bench query as a fresh lazy one does",
+	{ timeout: 600_000 },
+	() => {
+		for (const { name, build, queries } of CORPORA) {
+			for (const size of [10_000, 100_000]) {
+				const list = build(size);
+				const indexed = createSearcher(list);
+				indexed.buildIndex();
+				for (const query of queries) {
+					expect(indexed(query), `[${name}-${size}] "${query}"`).toEqual(
+						createSearcher(list)(query),
+					);
+				}
 			}
 		}
-	}
-});
+	},
+);
 
 // The second pass, without its gates and without scanning only the literal
 // pass's survivors: what the searcher must return, item for item.
@@ -74,7 +78,8 @@ const withSecondPass = (
 ): Map<string, number> => {
 	const prepared = prepareBoundedQuery(query);
 	const literal = [...plain.values()].some((score) => score <= SCORES.CONTAINS);
-	const reading = prepared && secondPass(prepared, literal ? "literal" : plain.size > 0 ? "fuzzy" : "none");
+	const reading =
+		prepared && secondPass(prepared, literal ? "literal" : plain.size > 0 ? "fuzzy" : "none");
 	const expected = new Map(plain);
 	if (!reading) return expected;
 	for (const item of list) {

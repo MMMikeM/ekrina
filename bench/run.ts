@@ -86,7 +86,12 @@ const testsOf = (
 	...c.specs
 		.filter((s) => TIMED_KINDS.includes(s.kind))
 		.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query], size })),
-	{ id: `${c.name}/batch`, corpus: c.name, queries: [c.warmup, ...c.specs.map((s) => s.query)], size },
+	{
+		id: `${c.name}/batch`,
+		corpus: c.name,
+		queries: [c.warmup, ...c.specs.map((s) => s.query)],
+		size,
+	},
 ];
 
 const tests: Test[] = [

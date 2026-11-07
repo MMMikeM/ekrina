@@ -56,7 +56,8 @@ const LIBRARIES = ONLY || (ALL ? "all" : "ekrina");
 
 const measures = !DOCS_ONLY && !CHECK;
 const DRY = SCOPE !== "" || (measures && !ALL && !ONLY);
-const named = flags.has("--speed") || flags.has("--quality") || flags.has("--memory") || flags.has("--size");
+const named =
+	flags.has("--speed") || flags.has("--quality") || flags.has("--memory") || flags.has("--size");
 const stages = {
 	cold: measures && (flags.has("--speed") || !named),
 	quality: measures && (flags.has("--quality") || (!named && !DRY)),
@@ -207,7 +208,11 @@ const runQuality = (artifact: Artifact): void => {
 	if (DRY) return;
 
 	const hits = readRaw<HitsRun>("hits.json");
-	const fresh: { scorecard: Artifact["scorecard"]["corpora"]; probes: Artifact["probes"]; families: NonNullable<Artifact["families"]> } = {
+	const fresh: {
+		scorecard: Artifact["scorecard"]["corpora"];
+		probes: Artifact["probes"];
+		families: NonNullable<Artifact["families"]>;
+	} = {
 		scorecard: {},
 		probes: {},
 		families: {},
@@ -255,7 +260,9 @@ const runSize = (artifact: Artifact): void => {
 	for (const library of libraries) {
 		const bytes = gzipBytes(library);
 		const committed = artifact.gzipBytes[library];
-		console.error(`size ${library}: ${bytes} B gzipped${committed === undefined || committed === bytes ? "" : ` (was ${committed} B)`}`);
+		console.error(
+			`size ${library}: ${bytes} B gzipped${committed === undefined || committed === bytes ? "" : ` (was ${committed} B)`}`,
+		);
 		artifact.gzipBytes[library] = bytes;
 	}
 };
@@ -289,7 +296,9 @@ if (stages.memory) runMemory(artifact);
 if (stages.size) runSize(artifact);
 
 if (DRY) {
-	console.error("\nartifact and docs left untouched; `--all` measures every library and publishes.");
+	console.error(
+		"\nartifact and docs left untouched; `--all` measures every library and publishes.",
+	);
 	process.exit(0);
 }
 

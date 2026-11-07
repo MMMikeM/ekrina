@@ -11,7 +11,16 @@ import {
 	rescueField,
 	type CorrectionSubject,
 } from "./rescue";
-import { ACRONYM_SCORE, BOUNDARY_SCORE, BOUNDARY_CASED_SCORE, CONTAINS_SCORE, EXACT_SCORE, MULTI_WORD_SCORE, NORMALISED_EXACT_SCORE, PREFIX_SCORE } from "./scores";
+import {
+	ACRONYM_SCORE,
+	BOUNDARY_SCORE,
+	BOUNDARY_CASED_SCORE,
+	CONTAINS_SCORE,
+	EXACT_SCORE,
+	MULTI_WORD_SCORE,
+	NORMALISED_EXACT_SCORE,
+	PREFIX_SCORE,
+} from "./scores";
 import type { PreparedReading } from "./readings";
 import type { MatchResult, HighlightRange } from "./types";
 
@@ -94,7 +103,6 @@ const longestFirst = (words: string[]): string[] =>
 		? [...words].sort((a, b) => b.length - a.length || Number(a > b) - Number(a < b))
 		: words;
 
-
 // Word-internal apostrophes don't end a run: "people's" is one word with
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = new RegExp(`[${WORD_CHARS}]+(?:'[${WORD_CHARS}]+)*`, "gu");
@@ -130,7 +138,11 @@ const multiWordTier = (normalisedField: string, words: string[]): MatchResult | 
 		from = at + 1;
 		ranges.push([at, at + word.length - 1]);
 	}
-	return { score: MULTI_WORD_SCORE, tier: "multi-word", ranges: ranges.sort((a, b) => a[0] - b[0]) };
+	return {
+		score: MULTI_WORD_SCORE,
+		tier: "multi-word",
+		ranges: ranges.sort((a, b) => a[0] - b[0]),
+	};
 };
 
 const acronymTier = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
@@ -249,7 +261,14 @@ export const matchField = (
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
-		(rescue ??= { rawField: field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
+		(rescue ??= {
+			rawField: field,
+			normalisedField,
+			fieldMask,
+			prepared,
+			acronymTier: acronym,
+			missingClasses,
+		});
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 

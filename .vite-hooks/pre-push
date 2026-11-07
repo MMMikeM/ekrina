@@ -1,1 +1,1 @@
-vp run gate
+vp fmt --check && vp run gate

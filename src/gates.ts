@@ -112,7 +112,6 @@ export const charMask = (normalised: string): number => {
 	return mask;
 };
 
-
 // True when the mask is an exact distinct-char presence check: no lossy bucket
 // bits set, so the presence-gate regex could not reject anything further.
 export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;

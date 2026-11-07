@@ -85,14 +85,14 @@ Each library at its best-scoring configuration, on 10,000 real Wikidata names un
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  0.36 |     8.4 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
-| fast-fuzzy        | 0.81 |  4.72 |    11.1 |  24% | any       |  no   | partial |    1 |
-| Fuse.js (tuned)   | 0.76 | 10.78 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
-| uFuzzy (all opts) | 0.66 |  0.59 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
+| **Ekrina**        | 0.91 |  0.35 |     8.4 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| fast-fuzzy        | 0.81 |  4.41 |    11.1 |  24% | any       |  no   | partial |    1 |
+| Fuse.js (tuned)   | 0.76 | 11.03 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
+| uFuzzy (all opts) | 0.66 |  0.63 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
 | fuzzysort         | 0.46 |  0.24 |     3.7 |   7% | none      |  no   |   yes   |    0 |
-| @nozbe/microfuzz  | 0.41 |  1.40 |     1.7 |   7% | none      |  no   |   yes   |    0 |
+| @nozbe/microfuzz  | 0.41 |  1.37 |     1.7 |   7% | none      |  no   |   yes   |    0 |
 | match-sorter      | 0.39 |  2.14 |     3.6 |   7% | none      |  yes  |   no    |    2 |
-| fuzzy             | 0.30 |  1.53 |     0.8 |   7% | none      |  no   | partial |    0 |
+| fuzzy             | 0.30 |  1.52 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
 **MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **Junk** is the share of queries with no right answer that a library answers anyway.

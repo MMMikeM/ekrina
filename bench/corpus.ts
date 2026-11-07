@@ -9,22 +9,31 @@
  * so hits.test.ts can check each library surfaces it, and where.
  */
 import { readFileSync } from "node:fs";
-import { type CatalogueSample, catalogueSamples, HELD_OUT_SEED, type Misspellings } from "./catalogue.ts";
+import {
+	type CatalogueSample,
+	catalogueSamples,
+	HELD_OUT_SEED,
+	type Misspellings,
+} from "./catalogue.ts";
 import { foldedWords, stripAccents, wordsOf } from "./words.ts";
 
 // readFileSync, not JSON module imports: import attributes differ between
 // vitest's bundler and plain node (bench/run.ts children).
-const loadJson = <T>(file: string): T => JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as T;
+const loadJson = <T>(file: string): T =>
+	JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as T;
 
 /** Correct word → misspellings seen in the wild, from Wikipedia's list (misspellings.json). */
-const MISSPELLINGS: Misspellings = loadJson<{ misspellings: Misspellings }>("./misspellings.json").misspellings;
+const MISSPELLINGS: Misspellings = loadJson<{ misspellings: Misspellings }>(
+	"./misspellings.json",
+).misspellings;
 
 // Interleaved at generation, so a prefix slice keeps the corpus's mix
 // (1k ⊂ 10k ⊂ 100k) and queries derived from a small slice hit at any size.
 const slicer =
 	(data: string[]) =>
 	(n: number): string[] => {
-		if (n > data.length) throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
+		if (n > data.length)
+			throw new Error(`corpus snapshot has ${data.length} items; asked for ${n}`);
 		return data.slice(0, n);
 	};
 
@@ -59,7 +68,8 @@ export type QuerySpec = {
 	source: string | null;
 };
 
-const plain = (word: string | undefined): word is string => word !== undefined && /^[a-z]+$/.test(word);
+const plain = (word: string | undefined): word is string =>
+	word !== undefined && /^[a-z]+$/.test(word);
 const everyOther = (w: string): string => [...w].filter((_, k) => k % 2 === 0).join("");
 
 // Swaps at/after the middle, breaking the subsequence property on purpose:
@@ -95,13 +105,16 @@ const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; wa
 	const list = build(10_000);
 	const holding = new Map<string, Set<number>>();
 	for (const [at, item] of list.entries()) {
-		for (const word of foldedWords(item)) holding.set(word, (holding.get(word) ?? new Set()).add(at));
+		for (const word of foldedWords(item))
+			holding.set(word, (holding.get(word) ?? new Set()).add(at));
 	}
 	const vocabulary = new Set(holding.keys());
 	const holders = (first: string, ...rest: string[]): number =>
-		[...(holding.get(first) ?? [])].filter((at) => rest.every((word) => holding.get(word)?.has(at))).length;
+		[...(holding.get(first) ?? [])].filter((at) => rest.every((word) => holding.get(word)?.has(at)))
+			.length;
 	const isNearUnique = (first: string, ...rest: string[]): boolean => holders(first, ...rest) <= 2;
-	const isTypo = (query: string): boolean => !query.split(" ").every((word) => vocabulary.has(word));
+	const isTypo = (query: string): boolean =>
+		!query.split(" ").every((word) => vocabulary.has(word));
 	const firstFrom = <T>(start: number, pick: (item: string) => T | null): [T, string] => {
 		for (let i = start; i < sample.length; i++) {
 			const found = pick(sample[i]);
@@ -109,21 +122,29 @@ const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; wa
 		}
 		throw new Error(`no item from ${start} carries this probe`);
 	};
-	const firstWord = (min: number, max = Infinity) => (item: string): string | null => {
-		const word = foldedWords(item)[0];
-		return plain(word) && word.length >= min && word.length <= max && isNearUnique(word) ? word : null;
-	};
+	const firstWord =
+		(min: number, max = Infinity) =>
+		(item: string): string | null => {
+			const word = foldedWords(item)[0];
+			return plain(word) && word.length >= min && word.length <= max && isNearUnique(word)
+				? word
+				: null;
+		};
 
 	const [longWord, longSource] = firstFrom(4, firstWord(7));
 	const [shortWord, shortSource] = firstFrom(500, firstWord(4, 6));
 	const [[a, b], pairSource] = firstFrom(8, (item) => {
 		const [x, y] = foldedWords(item);
 		const typed = plain(x) && plain(y) && x.length >= 5 && y.length >= 5;
-		return typed && isNearUnique(x, y) && isTypo(substitute(x)) && isTypo(substitute(y)) ? [x, y] : null;
+		return typed && isNearUnique(x, y) && isTypo(substitute(x)) && isTypo(substitute(y))
+			? [x, y]
+			: null;
 	});
 	const [extra] = firstFrom(4, (item) => {
 		const word = foldedWords(item)[0];
-		return plain(word) && word.length >= 5 && word !== a && word !== b && holders(a, b, word) === 0 ? word : null;
+		return plain(word) && word.length >= 5 && word !== a && word !== b && holders(a, b, word) === 0
+			? word
+			: null;
 	});
 	const [prefix, prefixSource] = firstFrom(42, (item) => {
 		const word = foldedWords(item)[0];
@@ -136,7 +157,9 @@ const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; wa
 	// A plural against a singular-only corpus: one deletion. The plural must be
 	// absent, or the probe measures nothing.
 	const [plural, pluralSource] = firstFrom(0, (item) => {
-		const word = foldedWords(item).find((w) => plain(w) && w.length >= 5 && !w.endsWith("s") && isNearUnique(w));
+		const word = foldedWords(item).find(
+			(w) => plain(w) && w.length >= 5 && !w.endsWith("s") && isNearUnique(w),
+		);
 		return word && !vocabulary.has(`${word}s`) ? `${word}s` : null;
 	});
 	// Below ekrina's five-character typo floor on purpose: what the floor loses.
@@ -148,12 +171,16 @@ const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; wa
 	// surfacing the source is its effective fuzzy limit.
 	const [scatterWord, scatterSource] = firstFrom(1300, (item) => {
 		const word = firstWord(7)(item);
-		return word && [substitute(word), transpose(word), doubleChar(word)].every(isTypo) ? word : null;
+		return word && [substitute(word), transpose(word), doubleChar(word)].every(isTypo)
+			? word
+			: null;
 	});
 	const mid = Math.floor(scatterWord.length / 2);
 	const [acronym, acronymSource] = firstFrom(0, (item) => {
 		const words = foldedWords(item);
-		return words.length >= 3 && words.length <= 4 && words.every(plain) ? words.map((w) => w[0]).join("") : null;
+		return words.length >= 3 && words.length <= 4 && words.every(plain)
+			? words.map((w) => w[0]).join("")
+			: null;
 	});
 	const [accentStripped, accentSource] = firstFrom(0, (item) => {
 		const word = wordsOf(item.toLowerCase()).find((w) => w.length >= 4 && stripAccents(w) !== w);
@@ -181,15 +208,27 @@ const deriveQueries = (build: (n: number) => string[]): { specs: QuerySpec[]; wa
 		{ query: `${substitute(a)} ${b}`, kind: "two-words-typo", source: pairSource },
 		{ query: `${a} ${substitute(b)}`, kind: "two-words-typo-second", source: pairSource },
 		{ query: `${b} ${substitute(a)}`, kind: "two-words-typo-reversed", source: pairSource },
-		{ query: `${substitute(a)} ${substitute(b)}`, kind: "two-words-double-typo", source: pairSource },
+		{
+			query: `${substitute(a)} ${substitute(b)}`,
+			kind: "two-words-double-typo",
+			source: pairSource,
+		},
 		{ query: prefix, kind: "prefix", source: prefixSource },
 		// An interior slice, never a prefix: separates contains-anywhere matching
 		// from start-anchored ranking.
 		{ query: infix, kind: "infix", source: infixSource },
 		{ query: plural, kind: "plural-to-singular", source: pluralSource },
 		{ query: shortTypo, kind: "short-word-typo", source: shortTypoSource },
-		{ query: scatterWord.slice(0, mid) + scatterWord.slice(mid + 1), kind: "scatter-light", source: scatterSource },
-		{ query: [...scatterWord].filter((_, k) => k % 3 !== 2).join(""), kind: "scatter-medium", source: scatterSource },
+		{
+			query: scatterWord.slice(0, mid) + scatterWord.slice(mid + 1),
+			kind: "scatter-light",
+			source: scatterSource,
+		},
+		{
+			query: [...scatterWord].filter((_, k) => k % 3 !== 2).join(""),
+			kind: "scatter-medium",
+			source: scatterSource,
+		},
 		{ query: everyOther(scatterWord), kind: "scatter-heavy", source: scatterSource },
 		// The three edits that break the subsequence property outright — only
 		// edit-distance matching recovers these.

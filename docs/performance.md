@@ -151,8 +151,8 @@ Teaching the searcher the four-character rescue was measured both ways it can be
 
 | Build                            | mixed acronym @100k | mixed scatter-heavy @100k | mixed accent-stripped @10k |
 | -------------------------------- | ------------------: | ------------------------: | -------------------------: |
-| rescue pass over the union index |   5.74 → 20.32 ms   |      4.97 → 18.93 ms      |       2.10 → 4.42 ms       |
-| raw-text swap gate, no index     |   5.63 → 16.16 ms   |      4.88 → 14.17 ms      |       2.08 → 5.15 ms       |
+| rescue pass over the union index |     5.74 → 20.32 ms |           4.97 → 18.93 ms |             2.10 → 4.42 ms |
+| raw-text swap gate, no index     |     5.63 → 16.16 ms |           4.88 → 14.17 ms |             2.08 → 5.15 ms |
 
 Neither build changed a single result, rank or tier on those probes.
 Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex time of that test is the whole slowdown.
@@ -179,12 +179,12 @@ MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` k
 Rescored over the sampled query families that replaced single probes ([benchmarks.md](./benchmarks.md#match-quality-by-query-family)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
 Only four-character queries that match nothing get slower (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
 
-| Query                 | Cold             | After `buildIndex()` |
-| --------------------- | ---------------: | -------------------: |
-| `anxe`, mixed @10k    |  2.19 → 8.18 ms  |      0.67 → 4.49 ms  |
-| `zzzz`, mixed @100k   |  4.43 → 24.04 ms |      4.99 → 9.58 ms  |
-| `zzzzz`, mixed @100k  | 20.96 → 21.35 ms |      7.56 → 8.23 ms  |
-| `rsaw`, mixed @100k   |  5.92 → 5.98 ms  |      3.96 → 4.08 ms  |
+| Query                |             Cold | After `buildIndex()` |
+| -------------------- | ---------------: | -------------------: |
+| `anxe`, mixed @10k   |   2.19 → 8.18 ms |       0.67 → 4.49 ms |
+| `zzzz`, mixed @100k  |  4.43 → 24.04 ms |       4.99 → 9.58 ms |
+| `zzzzz`, mixed @100k | 20.96 → 21.35 ms |       7.56 → 8.23 ms |
+| `rsaw`, mixed @100k  |   5.92 → 5.98 ms |       3.96 → 4.08 ms |
 
 A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
 `fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.

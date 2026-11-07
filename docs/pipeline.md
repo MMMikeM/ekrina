@@ -63,16 +63,16 @@ With a `limit`, the ladder runs in full until `limit` items have matched literal
 
 en 100k, mean over sixteen single-word probes:
 
-| stage                                 | records in |      records out |                           time |
-| ------------------------------------- | ---------: | ---------------: | -----------------------------: |
-| construction                          |          — |                — |       under half a millisecond |
-| raw gate (first query)                |    100,000 |    **92 — 0.09%** |                        2.20 ms |
-| materialise survivors                 |         92 |               92 |                        0.03 ms |
-| tier ladder                           |         92 |   **34 results** |                        0.03 ms |
-| — rescue path only —                  |            |                  |                                |
-| union mask build                      |    100,000 |                — | **3.47 ms**, once per searcher |
-| bigram sets, items one class short    |      7,005 |                — |    0.54 ms, once per item read |
-| relaxed scan + rescue                 |    100,000 | **2,322 — 2.3%** |                        0.64 ms |
+| stage                              | records in |      records out |                           time |
+| ---------------------------------- | ---------: | ---------------: | -----------------------------: |
+| construction                       |          — |                — |       under half a millisecond |
+| raw gate (first query)             |    100,000 |   **92 — 0.09%** |                        2.20 ms |
+| materialise survivors              |         92 |               92 |                        0.03 ms |
+| tier ladder                        |         92 |   **34 results** |                        0.03 ms |
+| — rescue path only —               |            |                  |                                |
+| union mask build                   |    100,000 |                — | **3.47 ms**, once per searcher |
+| bigram sets, items one class short |      7,005 |                — |    0.54 ms, once per item read |
+| relaxed scan + rescue              |    100,000 | **2,322 — 2.3%** |                        0.64 ms |
 
 Native 100k behaves the same: the raw gate leaves _92 records, 0.09%_, at 2.64 ms; the ladder produces 34 results in 0.03 ms; the rescue's mask build is 3.68 ms, the bigram sets of the 6,865 items one class short take 0.61 ms, and its relaxed scan admits 2,357 records (2.4%) at 0.66 ms.
 
@@ -98,7 +98,7 @@ Run by any query that cannot narrow: the first one, and any later one that isn't
 A typed sequence runs it on its first keystroke, and each unrelated query runs it again.
 
 Building the masks only when a query needs them, and gating the raw text until then, makes the first query faster than an index built up front would, and a long run of unrelated queries slower.
-`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 6.7–9.2 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
+`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 6.6–8.7 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 
@@ -116,5 +116,5 @@ The rescue path deliberately ignores the cache: it scans all N, because the near
 ## Large result sets
 
 0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part of a query that returns a lot.
-The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.59 ms and `hinto` 0.29.
+The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.73 ms and `hinto` 0.29.
 Even with a `limit`, every literal result is built and sorted before the list is cut.

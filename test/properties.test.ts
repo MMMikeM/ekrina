@@ -11,12 +11,17 @@ const list = fc.array(text, { minLength: 1, maxLength: 30 });
 
 // A random query rarely lands near a random field, so half the cases type a
 // word the field holds, mistyped: the near misses the corrections exist for.
-const word = fc.string({ unit: fc.constantFrom(..."abcdeéAB1".split("")), minLength: 4, maxLength: 12 });
+const word = fc.string({
+	unit: fc.constantFrom(..."abcdeéAB1".split("")),
+	minLength: 4,
+	maxLength: 12,
+});
 const edit = fc.record({ kind: fc.constantFrom("drop", "swap", "change", "double"), at: fc.nat() });
 const mistype = (typed: string, { kind, at }: { kind: string; at: number }): string => {
 	const k = at % typed.length;
 	if (kind === "drop") return typed.length > 1 ? typed.slice(0, k) + typed.slice(k + 1) : typed;
-	if (kind === "swap") return typed.slice(0, k) + typed.slice(k + 1, k + 2) + typed[k] + typed.slice(k + 2);
+	if (kind === "swap")
+		return typed.slice(0, k) + typed.slice(k + 1, k + 2) + typed[k] + typed.slice(k + 2);
 	if (kind === "change") return typed.slice(0, k) + "x" + typed.slice(k + 1);
 	return typed.slice(0, k) + typed[k] + typed.slice(k);
 };
@@ -29,7 +34,9 @@ const nearMiss = fc
 const fieldAndQuery = fc.oneof(fc.tuple(text, query), nearMiss);
 const listAndQuery = fc.oneof(
 	fc.tuple(list, query),
-	fc.tuple(list, nearMiss).map(([items, [field, typed]]): [string[], string] => [[...items, field], typed]),
+	fc
+		.tuple(list, nearMiss)
+		.map(([items, [field, typed]]): [string[], string] => [[...items, field], typed]),
 );
 
 describe("properties that hold for any input", () => {
