@@ -5,6 +5,7 @@ import { bigramBit, bigramClass, type FieldBigrams } from "./normalise";
 import {
 	MAX_RESCUE_WORD_LENGTH,
 	MIN_TYPO_QUERY_LENGTH,
+	rawWordOf,
 	swapAdjacentAt,
 	wordStartsOf,
 } from "./rescue";
@@ -144,8 +145,9 @@ const scoreCorrection = (
 	normalisedField: string,
 	normalisedCorrected: string,
 	corrected: string,
+	typed: string = normalisedCorrected,
 ): MatchResult | null => {
-	const asTyped = prepareQuery(normalisedCorrected, normalisedCorrected);
+	const asTyped = prepareQuery(typed, normalisedCorrected);
 	const landed = literalTiers(field, normalisedField, asTyped, false);
 	/* v8 ignore next -- spelt from the field's own words, the corrected query always appears in it */
 	if (landed === null) return null;
@@ -410,31 +412,33 @@ const stuckKeyForm = (word: string): string | null => {
 	return form.length >= MIN_TYPO_QUERY_LENGTH ? form : null;
 };
 
+type Swap = { normalised: string; typed: string };
+
 // Every adjacent swap of a short word. Swaps at different places change
 // different letters, so only a swap of two equal ones repeats a form: the word.
-const swapForms = (word: string): string[] => {
-	const forms: string[] = [];
+const swapForms = (word: string, typedWord: string): Swap[] => {
+	const forms: Swap[] = [];
 	for (let k = 0; k + 1 < word.length; k++) {
-		if (word[k] !== word[k + 1]) forms.push(swapAdjacentAt(word, k));
+		if (word[k] !== word[k + 1]) {
+			forms.push({ normalised: swapAdjacentAt(word, k), typed: swapAdjacentAt(typedWord, k) });
+		}
 	}
 	return forms;
 };
 
 // A swap undone only where the form starts a field word, so it lands at a word
-// start as the default's short corrections do.
+// start as the default's short corrections do. Like the default's, it keeps the
+// caller's casing, so both price a swap the same.
 const swapWord = (
-	forms: string[],
+	swaps: Swap[],
 	field: string,
 	normalisedField: string,
 	words: FieldWord[],
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
-	for (const form of forms) {
-		for (const candidate of words) {
-			if (!candidate.word.startsWith(form)) continue;
-			const corrected = spelling(field, normalisedField, { word: form, offset: candidate.offset });
-			best = better(best, scoreCorrection(1, field, normalisedField, form, corrected));
-		}
+	for (const { normalised, typed } of swaps) {
+		if (!words.some((candidate) => candidate.word.startsWith(normalised))) continue;
+		best = better(best, scoreCorrection(1, field, normalisedField, normalised, typed, typed));
 	}
 	return best;
 };
@@ -458,7 +462,8 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	// Gated on the form it corrects, since a long run would fail a gate built
 	// from the letters as typed.
 	const stuck = phrase || competing ? null : stuckKeyForm(letters);
-	const swaps = competing || !readsSwaps(prepared) ? null : swapForms(letters);
+	const swaps =
+		competing || !readsSwaps(prepared) ? null : swapForms(letters, rawWordOf(prepared, 0));
 	const matchWord = (
 		word: string,
 		field: string,
@@ -503,7 +508,7 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 				!editable &&
 				stuck === null &&
 				!holdsInOrderFrom(normalisedField, letters, 0, 0) &&
-				!swaps?.some((form) => normalisedField.includes(form))
+				!swaps?.some((swap) => normalisedField.includes(swap.normalised))
 			) {
 				return null;
 			}

@@ -40,8 +40,9 @@ export type MatchResult = {
 	score: number;
 	tier: Tier;
 	/** The query with its mistyped characters fixed. Present only when `tier`
-	 *  is `"corrected"`. A single mistyped character fixed keeps the caller's
-	 *  own casing; a word read any other way is spelt as the field spells it. */
+	 *  is `"corrected"`. A single mistyped character fixed, or two swapped back,
+	 *  keeps the caller's own casing; a word read any other way is spelt as the
+	 *  field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };

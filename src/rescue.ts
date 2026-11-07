@@ -241,7 +241,7 @@ export const wordStartsOf = (prepared: PreparedQuery): number[] => {
 	return starts;
 };
 
-const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
+export const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
 	const wordStart = wordStartsOf(prepared)[wordIndex];
 	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };

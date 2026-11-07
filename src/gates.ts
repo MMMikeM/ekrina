@@ -1,4 +1,4 @@
-import { wordChar, wordStartOccurrence } from "./boundaries";
+import { isBoundaryAt, wordChar, wordStartOccurrence } from "./boundaries";
 import { bigramBit, bigramClass, unitMask } from "./normalise";
 import { unfoldTable } from "./unfold";
 
@@ -141,7 +141,9 @@ export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate
 	const requiredLo = new Int32Array(32);
 	const requiredHi = new Int32Array(32);
 	const occurrences = new Int32Array(32);
-	const classAt = (at: number): number => bigramClass(normalisedQuery.charCodeAt(at));
+	// A separator outside ASCII has a class, but no field need hold it.
+	const classAt = (at: number): number =>
+		isBoundaryAt(normalisedQuery, at) ? 0 : bigramClass(normalisedQuery.charCodeAt(at));
 	for (let soleAt = 0; soleAt < normalisedQuery.length; soleAt++) {
 		// A class's mask bit is its bigram class less one.
 		const b = classAt(soleAt) - 1;

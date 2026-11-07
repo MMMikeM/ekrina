@@ -53,8 +53,10 @@ export type PreparedQuery = {
 
 // Trimmed, so the exact-case tiers ignore padding as the normalised ones do.
 export const prepareQuery = (query: string, normalisedQuery: string): PreparedQuery => {
-	const queryMask = charMask(normalisedQuery);
 	const queryWords = splitWords(normalisedQuery);
+	// From the words alone: a separator outside ASCII would otherwise set a class
+	// bit, and every field spelt with another separator would lack it.
+	const queryMask = charMask(queryWords.join(""));
 	const needsPresenceGate = queryWords.length > 1 && !isExactMask(queryMask);
 	return {
 		query: query.trim(),

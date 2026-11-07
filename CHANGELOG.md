@@ -85,6 +85,9 @@ What breaks is the seven names below, what a result holds, and the same query re
   `prow` no longer matches "mobile **p**hone with ar**row**", while "**p**erson **row**ing boat", `vsc` and initials such as `tfts` still match; inside one word a piece may still start mid-word.
   That trims the tail of weak fuzzy rows (a three-letter prefix's median result set 51 → 41 on en) and halves long-text fuzzy junk, with no family's MRR lower (docs/performance.md).
   A short query's wrong-letter correction is now tried after its swap and sparse readings, and only when they find nothing, so `tahn` still reads as "Than" rather than "Taha".
+  The swap keeps the caller's casing, as every other swap does, so `Tahn` scores 2.1 against "Than" in a searcher and in `fuzzyMatch` alike.
+- **A no-break space or a dash outside ASCII in a query is a separator like any other.**
+  It counted as a character the field had to hold, so `new` + no-break space + `york` found neither "new york" nor "new-york" in a searcher, and `fuzzyMatch` returned "New York" as a correction at 1.5.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
   - 100,000 well-known Wikidata entities, under their English names and again under their native names;

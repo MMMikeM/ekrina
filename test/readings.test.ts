@@ -208,22 +208,36 @@ describe("a swap in a four-letter word", () => {
 			item: "Louder Than Bombs",
 			score: SCORES.BOUNDARY + TYPO_PENALTY,
 			tier: "corrected",
-			corrected: "Than",
+			corrected: "than",
 			ranges: [[7, 10]],
 			text: "Louder Than Bombs",
+		});
+	});
+
+	it("scores as fuzzyMatch scores it, in the caller's casing", () => {
+		const items = ["Than", "Taha Hussein"];
+		expect(search(items)("Tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "Tahn"),
+			score: SCORES.EXACT + TYPO_PENALTY,
+			corrected: "Than",
+		});
+		expect(search(items)("tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "tahn"),
+			score: SCORES.NORMALISED_EXACT + TYPO_PENALTY,
+			corrected: "than",
 		});
 	});
 
 	it("finishes a longer word it starts", () => {
 		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]).toMatchObject({
 			score: SCORES.PREFIX + TYPO_PENALTY,
-			corrected: "Than",
+			corrected: "than",
 		});
 	});
 
 	it("is read before a substitution, which would land on another word", () => {
 		expect(search(["Taha Hussein", "Louder Than Bombs"])("tahn").map((r) => r.corrected)).toEqual([
-			"Than",
+			"than",
 		]);
 	});
 
