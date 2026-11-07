@@ -37,7 +37,7 @@ type Family = {
 
 const SAMPLES_PER_FAMILY = 10;
 // Clear of every other seed range: limits 2000, frontier 3000.
-export const PUBLISHED_SEED = 4_000;
+const PUBLISHED_SEED = 4_000;
 export const HELD_OUT_SEED = 5_000;
 
 const plain = (word: string | undefined): word is string => word !== undefined && /^[a-z]+$/.test(word);

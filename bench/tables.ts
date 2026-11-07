@@ -47,6 +47,7 @@ const geomean = (xs: number[]): number =>
 const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 /** The library a configuration belongs to: its name without the option suffix. */
+/** @public Read by site/scripts/explorer-data.ts, outside knip's workspaces. */
 export const libraryOf = (config: string): string =>
 	config.replace(/ \((all opts|acronym|indexed|tuned)\)$/, "");
 
@@ -87,7 +88,7 @@ const configsOf = (a: Artifact, library: string): string[] =>
 		.sort((x, y) => Number(x !== library) - Number(y !== library) || (x < y ? -1 : 1));
 
 /** The page slug of a library with more than one configuration. */
-export const librarySlug = (library: string): string =>
+const librarySlug = (library: string): string =>
 	library.replace(/^@nozbe\//, "").replace(/\.js$/, "").toLowerCase();
 
 /** Corpus the per-probe tables are drawn from; the docs say so in prose. */

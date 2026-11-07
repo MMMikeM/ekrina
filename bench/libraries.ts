@@ -1,7 +1,7 @@
 // Hand-maintained: every `features` cell is verified against that library's
 // current source. Sizes are measured from `api` (bench/size.ts).
 
-export type Features = {
+type Features = {
 	ranges: "yes" | "opt-in" | "partial" | "no";
 	tier: "yes" | "no";
 	diacritics: "yes" | "opt-in" | "no";
@@ -158,9 +158,10 @@ export const gzipKB = (bytes: number): number => Number((bytes / 1000).toFixed(1
 
 // "ekrina (acronym)", "<lib> (all opts)" and "<lib> (tuned)" are configurations of a base library
 // and share its size, deps and type.
+/** @public Read by site/src/bench.ts, outside knip's workspaces. */
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
-export const metaFor = (name: string): LibraryMeta | undefined =>
+const metaFor = (name: string): LibraryMeta | undefined =>
 	META[name] ?? META[baseName(name)];
 
 const DISPLAY: Record<string, string> = { ekrina: "Ekrina", "fuse.js": "Fuse.js" };

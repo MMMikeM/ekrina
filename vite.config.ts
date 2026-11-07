@@ -62,7 +62,7 @@ export default defineConfig({
 	run: {
 		tasks: {
 			verify: {
-				command: ["vp lint", "vp test run --coverage"],
+				command: ["vp lint", "knip", "vp test run --coverage"],
 				dependsOn: ["types"],
 			},
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,

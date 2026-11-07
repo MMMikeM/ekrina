@@ -17,7 +17,7 @@ import { foldedWords, stripAccents, wordsOf } from "./words.ts";
 const loadJson = <T>(file: string): T => JSON.parse(readFileSync(new URL(file, import.meta.url), "utf8")) as T;
 
 /** Correct word → misspellings seen in the wild, from Wikipedia's list (misspellings.json). */
-export const MISSPELLINGS: Misspellings = loadJson<{ misspellings: Misspellings }>("./misspellings.json").misspellings;
+const MISSPELLINGS: Misspellings = loadJson<{ misspellings: Misspellings }>("./misspellings.json").misspellings;
 
 // Interleaved at generation, so a prefix slice keeps the corpus's mix
 // (1k ⊂ 10k ⊂ 100k) and queries derived from a small slice hit at any size.

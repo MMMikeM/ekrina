@@ -212,6 +212,8 @@ for (const size of sizes) {
 
 // Physical invariant: the acronym configuration runs strictly more code per
 // query, so base ekrina measuring slower than it means the run absorbed load.
+// The acronym query is the exception: the acronym tier matches it literally,
+// so that searcher never builds the whole-list index base ekrina builds for it.
 // Summed over every cell, because one process per cell leaves a single cell
 // ~15% noisy, while load that lasts shows up across the whole run.
 {
@@ -219,6 +221,7 @@ for (const size of sizes) {
 	let acronymMs = 0;
 	for (const size of sizes) {
 		for (const t of chosen) {
+			if (t.id.endsWith("/acronym")) continue;
 			const base = results.get(key(t.id, size, "ekrina"));
 			const acr = results.get(key(t.id, size, "ekrina (acronym)"));
 			if (!base || !acr) continue;

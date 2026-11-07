@@ -30,7 +30,7 @@ export type ColdMatrix = Record<string, Record<string, Record<string, Record<str
 export type ScorecardRow = { library: string; mrr: number; junk?: number };
 // `tiedRanks` spans the ranks the source shares with items the library scored
 // the same, which only list order puts in any sequence.
-export type ProbeCell = { count: number; rank: number | null; tiedRanks?: [number, number] };
+type ProbeCell = { count: number; rank: number | null; tiedRanks?: [number, number] };
 export type ProbeTable = {
 	kind: string;
 	query: string;
@@ -94,8 +94,8 @@ export type MemoryCell = {
 	collected: boolean;
 };
 
-export const ARTIFACT = new URL("./results.json", import.meta.url);
-export const RAW_DIR = new URL("./.raw/", import.meta.url);
+const ARTIFACT = new URL("./results.json", import.meta.url);
+const RAW_DIR = new URL("./.raw/", import.meta.url);
 export const rawFile = (name: string): URL => new URL(name, RAW_DIR);
 
 const METHOD = {
