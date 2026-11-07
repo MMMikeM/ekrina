@@ -15,7 +15,8 @@ type Metric = "query" | "total";
 const lab = (a: Anchor, dy: number): Placement => ({ a, dy });
 
 // Tried around each dot in order: beside it, then above and below, then the
-// diagonals. The first that clears every dot, every placed label and the plot
+// diagonals, then a line further out for dots too close together to label
+// beside. The first that clears every dot, every placed label and the plot
 // edge wins, so labels follow the points when a rerun moves them.
 const CANDIDATES: Placement[] = [
 	lab("start", 4),
@@ -26,6 +27,10 @@ const CANDIDATES: Placement[] = [
 	lab("start", 18),
 	lab("end", -10),
 	lab("end", 18),
+	lab("start", 32),
+	lab("end", 32),
+	lab("start", -24),
+	lab("end", -24),
 ];
 
 type Box = { x0: number; y0: number; x1: number; y1: number };
