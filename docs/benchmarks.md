@@ -209,24 +209,25 @@ Ekrina (indexed), the same searcher with its mask index built up front, moves th
 <!-- bench:memory -->
 | Library           | built MB | + `hinton` | + `qxzwkv` | + `gensler` | dropped MB |
 |-------------------|---------:|-----------:|-----------:|------------:|-----------:|
-| Ekrina            |     1.18 |       2.60 |       3.74 |        4.08 |       0.70 |
-| Ekrina (acronym)  |     1.18 |       2.61 |       3.75 |        4.10 |       0.72 |
-| Ekrina (indexed)  |     2.34 |       4.05 |       4.05 |        4.31 |       0.69 |
+| Ekrina            |     1.18 |       2.60 |       3.48 |        3.81 |       0.44 |
+| Ekrina (acronym)  |     1.18 |       2.61 |       3.48 |        3.83 |       0.45 |
+| Ekrina (indexed)  |     2.07 |       3.79 |       3.79 |        4.05 |       0.43 |
 | @nozbe/microfuzz  |    45.94 |      46.00 |      46.00 |       46.00 |       0.12 |
-| fast-fuzzy        |   189.67 |     191.64 |     191.64 |      191.64 |       0.18 |
+| fast-fuzzy        |   189.63 |     191.60 |     191.60 |      191.60 |       0.18 |
 | Fuse.js (tuned)   |     6.92 |       7.04 |       7.12 |        7.07 |       0.18 |
 | fuzzy             |     0.02 |       0.05 |       0.05 |        0.05 |       0.05 |
 | fuzzysort         |     0.02 |      43.17 |      43.18 |       43.23 |      43.23 |
-| match-sorter      |     0.02 |       0.10 |       0.13 |        0.13 |       0.13 |
+| match-sorter      |     0.02 |       0.10 |       0.13 |        0.14 |       0.13 |
 | uFuzzy (all opts) |     1.15 |       1.22 |       1.22 |        1.23 |       0.10 |
 <!-- bench:end -->
 
 What each configuration retains at 100k on the native corpus: `heapUsed + external` over a baseline taken with the list already in memory, so typed arrays count and the caller's own strings don't.
 Each row is one fresh process ([`bench/memory.ts`](../bench/memory.ts)): the searcher is built, then answers `hinton`, `qxzwkv` and `gensler` warm in that order, so each column includes every query before it.
 **dropped MB** is what is still retained once the searcher is unreachable and collected.
-Ekrina allocates its per-item caches empty at construction; `hinton` allocates a match slot per item and prepares the items it matches (~1.4 MB), and `qxzwkv`, the first query to reach the typo rescue, adds the mask index's bigram arrays (~1.1 MB).
-Ekrina (indexed) builds that index at construction instead (2.34 MB built), so `qxzwkv` adds only 0.001 MB.
-Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.7 MB of process-wide state stays behind on native and 0.4 MB on en: it grows with the characters a corpus holds rather than its items, consistent with the module-level cache of rare-character folds in [`src/normalise.ts`](../src/normalise.ts).
+Ekrina allocates its per-item caches empty at construction; `hinton` allocates a match slot per item and prepares the items it matches (~1.4 MB), and `qxzwkv`, the first query to reach the typo rescue, adds the mask index's bigram arrays (~0.9 MB).
+Ekrina (indexed) builds that index at construction instead (2.07 MB built), so `qxzwkv` adds only 0.001 MB.
+Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.4 MB stays behind on both corpora.
+Most of it is V8's compiled code for Ekrina's own functions, which lives as long as the module is loaded ([performance.md](./performance.md#what-a-dropped-searcher-leaves-behind)).
 fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, which is process-wide and unevicted, so its **dropped** column equals its footprint until you call `cleanup()`.
 Every other library gives its index back, leaving under 0.2 MB.
 The en cells, in [`bench/results.json`](../bench/results.json), tell the same story.
