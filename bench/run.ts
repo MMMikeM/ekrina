@@ -25,7 +25,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { junkProbes } from "./catalogue.ts";
 import { CONFIG_NAMES, configs } from "./configs.ts";
-import { CORPORA, SAMPLE_SIZE, TIMED_KINDS } from "./corpus.ts";
+import { CORPORA, PICKERS, SAMPLE_SIZE, TIMED_KINDS, type QuerySpec } from "./corpus.ts";
 
 type ChildOut = {
 	indexMs: number;
@@ -43,9 +43,10 @@ if (cell) {
 		variant: string;
 		queries: string[];
 	};
-	const corp = CORPORA.find((c) => c.name === corpus);
-	if (!corp) throw new Error(`no corpus '${corpus}'`);
-	const list = corp.build(size);
+	const list =
+		CORPORA.find((c) => c.name === corpus)?.build(size) ??
+		PICKERS.find((p) => p.name === corpus)?.items;
+	if (!list) throw new Error(`no corpus '${corpus}'`);
 	// Parse garbage must not land in the build window; the build keeps its own.
 	(globalThis as { gc?: () => void }).gc?.();
 
@@ -71,20 +72,27 @@ if (cell) {
 const self = fileURLToPath(import.meta.url);
 const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length >> 1];
 
-type Test = { id: string; corpus: string; queries: string[] };
+// A picker's tests carry their list's own length; a corpus is timed at every size.
+type Test = { id: string; corpus: string; queries: string[]; size?: number };
 
 // The batch opens with a warmup match that absorbs JIT and first-scan time, so
 // the 24 probes after it are the session's steady tail. It is timed (it is the
 // first answer — the one-shot column is index + this), published as the
 // batch's `first`.
-const tests: Test[] = CORPORA.flatMap((c) => {
-	return [
-		...c.specs
-			.filter((s) => TIMED_KINDS.includes(s.kind))
-			.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query] })),
-		{ id: `${c.name}/batch`, corpus: c.name, queries: [c.warmup, ...c.specs.map((s) => s.query)] },
-	];
-});
+const testsOf = (
+	c: { name: string; specs: QuerySpec[]; warmup: string },
+	size?: number,
+): Test[] => [
+	...c.specs
+		.filter((s) => TIMED_KINDS.includes(s.kind))
+		.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query], size })),
+	{ id: `${c.name}/batch`, corpus: c.name, queries: [c.warmup, ...c.specs.map((s) => s.query)], size },
+];
+
+const tests: Test[] = [
+	...CORPORA.flatMap((c) => testsOf(c)),
+	...PICKERS.flatMap((p) => testsOf(p, p.items.length)),
+];
 
 // Every catalogue query and junk probe in one batch, behind the same warmup.
 // Not part of `all`: the published matrix times the representative queries.
@@ -167,44 +175,53 @@ const aggregate = (runs: ChildOut[]): CellStats => {
 	};
 };
 
+// A --size run is for the corpora's own sizes, so it leaves the pickers out.
+const cells: Array<[Test, number]> = [
+	...sizes.flatMap((size) =>
+		chosen.filter((t) => t.size === undefined).map((t): [Test, number] => [t, size]),
+	),
+	...(sizeFlag
+		? []
+		: chosen.filter((t) => t.size !== undefined).map((t): [Test, number] => [t, t.size as number])),
+];
+if (!cells.length) throw new Error(`no cell matches '${testSel}' at ${sizeFlag}`);
+
 const results = new Map<string, CellStats>();
 const key = (t: string, size: number, v: string): string => `${t}@${size / 1000}k ${v}`;
 
-for (const size of sizes) {
-	for (const t of chosen) {
-		const runs = new Map<string, ChildOut[]>(variants.map((v) => [v, []]));
-		for (let rep = 0; rep < count; rep++) {
-			// Rotate the variant order per rep so drift lands evenly.
-			for (let i = 0; i < variants.length; i++) {
-				const v = variants[(i + rep) % variants.length];
-				(runs.get(v) as ChildOut[]).push(sample(t, size, v));
-				// One dot per finished child, so a long run is visibly alive.
-				process.stderr.write(".");
-			}
+for (const [t, size] of cells) {
+	const runs = new Map<string, ChildOut[]>(variants.map((v) => [v, []]));
+	for (let rep = 0; rep < count; rep++) {
+		// Rotate the variant order per rep so drift lands evenly.
+		for (let i = 0; i < variants.length; i++) {
+			const v = variants[(i + rep) % variants.length];
+			(runs.get(v) as ChildOut[]).push(sample(t, size, v));
+			// One dot per finished child, so a long run is visibly alive.
+			process.stderr.write(".");
 		}
-		process.stderr.write("\n");
-		for (const v of variants) {
-			const cellRuns = runs.get(v) as ChildOut[];
-			const stats = aggregate(cellRuns);
-			// Result counts must agree across fresh processes — a variant whose
-			// answer changes between runs is not timing comparable work.
-			for (const r of cellRuns) {
-				r.queries.forEach((q, i) => {
-					if (q.count !== stats.counts[i]) {
-						throw new Error(`${key(t.id, size, v)}: result count drifted (${q.query})`);
-					}
-				});
-			}
-			results.set(key(t.id, size, v), stats);
-			const one = stats.restMs === null;
-			console.error(
-				`${key(t.id, size, v).padEnd(46)} index ${stats.indexMs.toFixed(2).padStart(8)}  ` +
-					(one
-						? `query ${stats.queryMs.toFixed(2).padStart(8)}  (min ${stats.minQueryMs.toFixed(2)})`
-						: `batch ${stats.queryMs.toFixed(2).padStart(8)}  first ${stats.firstMs.toFixed(2)}  rest ${(stats.restMs as number).toFixed(3)}`) +
-					`  heap ${stats.heapMB.toFixed(0)}MB`,
-			);
+	}
+	process.stderr.write("\n");
+	for (const v of variants) {
+		const cellRuns = runs.get(v) as ChildOut[];
+		const stats = aggregate(cellRuns);
+		// Result counts must agree across fresh processes — a variant whose
+		// answer changes between runs is not timing comparable work.
+		for (const r of cellRuns) {
+			r.queries.forEach((q, i) => {
+				if (q.count !== stats.counts[i]) {
+					throw new Error(`${key(t.id, size, v)}: result count drifted (${q.query})`);
+				}
+			});
 		}
+		results.set(key(t.id, size, v), stats);
+		const one = stats.restMs === null;
+		console.error(
+			`${key(t.id, size, v).padEnd(46)} index ${stats.indexMs.toFixed(2).padStart(8)}  ` +
+				(one
+					? `query ${stats.queryMs.toFixed(2).padStart(8)}  (min ${stats.minQueryMs.toFixed(2)})`
+					: `batch ${stats.queryMs.toFixed(2).padStart(8)}  first ${stats.firstMs.toFixed(2)}  rest ${(stats.restMs as number).toFixed(3)}`) +
+				`  heap ${stats.heapMB.toFixed(0)}MB`,
+		);
 	}
 }
 
@@ -217,15 +234,13 @@ for (const size of sizes) {
 {
 	let baseMs = 0;
 	let acronymMs = 0;
-	for (const size of sizes) {
-		for (const t of chosen) {
-			if (t.id.endsWith("/acronym")) continue;
-			const base = results.get(key(t.id, size, "ekrina"));
-			const acr = results.get(key(t.id, size, "ekrina (acronym)"));
-			if (!base || !acr) continue;
-			baseMs += base.queryMs;
-			acronymMs += acr.queryMs;
-		}
+	for (const [t, size] of cells) {
+		if (t.id.endsWith("/acronym")) continue;
+		const base = results.get(key(t.id, size, "ekrina"));
+		const acr = results.get(key(t.id, size, "ekrina (acronym)"));
+		if (!base || !acr) continue;
+		baseMs += base.queryMs;
+		acronymMs += acr.queryMs;
 	}
 	if (acronymMs > 0 && baseMs > acronymMs * 1.1) {
 		console.error(
@@ -239,9 +254,8 @@ for (const size of sizes) {
 
 // Drift canary: the first cell again, after everything.
 {
-	const t = chosen[0];
+	const [t, size] = cells[0];
 	const v = variants[0];
-	const size = sizes[0];
 	const before = results.get(key(t.id, size, v)) as CellStats;
 	const after = aggregate([sample(t, size, v), sample(t, size, v), sample(t, size, v)]);
 	const drift = Math.abs(after.queryMs - before.queryMs) / Math.min(after.queryMs, before.queryMs);
@@ -262,13 +276,11 @@ const shaped = (): Record<
 		string,
 		Record<string, Record<string, Record<string, Omit<CellStats, "counts">>>>
 	> = {};
-	for (const size of sizes) {
-		for (const t of chosen) {
-			const kind = t.id.slice(t.corpus.length + 1);
-			for (const v of variants) {
-				const { counts: _counts, ...stats } = results.get(key(t.id, size, v)) as CellStats;
-				(((out[t.corpus] ??= {})[kind] ??= {})[String(size)] ??= {})[v] = stats;
-			}
+	for (const [t, size] of cells) {
+		const kind = t.id.slice(t.corpus.length + 1);
+		for (const v of variants) {
+			const { counts: _counts, ...stats } = results.get(key(t.id, size, v)) as CellStats;
+			(((out[t.corpus] ??= {})[kind] ??= {})[String(size)] ??= {})[v] = stats;
 		}
 	}
 	return out;

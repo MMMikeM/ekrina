@@ -272,17 +272,33 @@ export const heldOut = (corpus: Corpus): HeldOut => {
 
 export const CORPORA: Corpus[] = [makeCorpus("en"), makeCorpus("native")];
 
-/** A whole list too short for the 10k and 100k cells, so it is scored for quality only. */
-export type Picker = { name: "emoji"; items: string[]; samples: CatalogueSample[] };
+/**
+ * A whole list too short for the 10k and 100k cells: timed at its own length,
+ * and kept out of every speed ranking.
+ */
+export type Picker = {
+	name: "emoji";
+	items: string[];
+	samples: CatalogueSample[];
+	specs: QuerySpec[];
+	warmup: string;
+};
 
 const makePicker = (name: Picker["name"]): Picker => {
 	const items = loadJson<string[]>(`./corpus-${name}.json`);
 	let samples: CatalogueSample[] | undefined;
+	let derived: ReturnType<typeof deriveQueries> | undefined;
 	return {
 		name,
 		items,
 		get samples() {
 			return (samples ??= catalogueSamples(items, MISSPELLINGS));
+		},
+		get specs() {
+			return (derived ??= deriveQueries((n) => items.slice(0, n))).specs;
+		},
+		get warmup() {
+			return (derived ??= deriveQueries((n) => items.slice(0, n))).warmup;
 		},
 	};
 };
