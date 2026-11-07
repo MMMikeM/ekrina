@@ -58,7 +58,7 @@ const mrrOf = (a: Artifact, config: string): number =>
 
 /**
  * The configurations the main pages show: each library at its best-scoring
- * configuration across both corpora, its defaults on a tie, plus every Ekrina
+ * configuration across every scored corpus, its defaults on a tie, plus every Ekrina
  * row. The others are on each library's page in docs/libraries/.
  */
 export const headlineConfigs = (a: Artifact): Set<string> => {

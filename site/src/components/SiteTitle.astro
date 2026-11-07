@@ -1,5 +1,6 @@
 ---
 import EkrinaMark from "./EkrinaMark.astro";
+import { project } from "../project.ts";
 
 const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
 const [scope, name] = siteTitle.includes("/") ? siteTitle.split("/") : ["", siteTitle];
@@ -8,6 +9,7 @@ const [scope, name] = siteTitle.includes("/") ? siteTitle.split("/") : ["", site
 <a href={siteTitleHref} class="site-title" translate="no">
 	<EkrinaMark />
 	<span>{scope && <span class="scope">{scope}/</span>}{name}</span>
+	<span class="version" title={`These docs describe ekrina ${project.majorVersion}`}>v{project.majorVersion}</span>
 </a>
 
 <style>
@@ -31,6 +33,16 @@ const [scope, name] = siteTitle.includes("/") ? siteTitle.split("/") : ["", site
 
 	.scope {
 		color: var(--ink-muted);
+		font-weight: 400;
+	}
+
+	.version {
+		flex-shrink: 0;
+		padding: 0 0.375em;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		color: var(--ink-muted);
+		font-size: 0.7em;
 		font-weight: 400;
 	}
 

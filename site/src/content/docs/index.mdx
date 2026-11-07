@@ -31,9 +31,9 @@ search("recnet");
 //   item: "Open Recent",
 //   score: 3.1,
 //   tier: "corrected",
-//   corrected: "recent",
 //   ranges: [[5, 10]],
 //   text: "Open Recent",
+//   corrected: "recent",
 // }]
 
 search("qxzwkv");
@@ -92,7 +92,7 @@ It answers none of the queries with no right answer on any of the three lists{be
 It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.
 
 It trails when a query has a word the item lacks, since every word of the query has to match, and when a query drops a silent letter.
-On emoji, fast-fuzzy scores higher on a few typo and phonetic families.
+On a few other families another library scores higher, by less than a tenth, most often fast-fuzzy on emoji typos.
 [The benchmarks](/benchmarks/) have the numbers for those query families, and every number on this page, and [Compare two libraries](/explorer/) puts any one library beside Ekrina.
 
 ## 5. Runs anywhere
@@ -103,7 +103,7 @@ Browsers, Node, Deno, Bun and edge runtimes all run the same build, as ESM or Co
 ## 6. Install it
 
 ```bash
-npm install ekrina
+npm install ekrina@^2
 ```
 
 The [quickstart](/getting-started/) goes from there to highlighted results and correction notices, and [the tutorial](/tutorial/) builds a command palette.

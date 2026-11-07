@@ -1,7 +1,6 @@
 // Query families drawn from how people mistype and misspell, each capped at a
 // strength people actually reach, and weighted by group before any library is
-// measured. Diagnostic until it replaces corpus.ts's families: catalogue.test.ts
-// reports it, and no published number reads it.
+// measured. Every published MRR is scored over these families.
 import {
 	answeredByFew,
 	foldedWords,

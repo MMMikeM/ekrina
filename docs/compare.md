@@ -5,7 +5,7 @@ Every library runs in a fresh process, so no cache survives from an earlier run,
 On that measure a 24-query session over 100,000 items averages ~1.8–2.1 ms per query, and ~0.3–0.4 ms over 10,000, and `fuzzyMatch` over a 16,000-character document takes 0.39 ms.
 Between the libraries, the differences are _match quality_, _what they answer that they shouldn't_, and _what you get back_.
 
-Each library at its best-scoring configuration, native corpus at 10k items, measured November 2026 (the exact versions are the devDependencies in [`bench/package.json`](../bench/package.json)).
+Each library at its best-scoring configuration, native corpus at 10k items, measured November 2026 (the versions are the devDependencies in [`bench/package.json`](../bench/package.json), as the lockfile resolves them).
 That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on; uFuzzy's defaults score 0.21 and Fuse.js's 0.72 ([how each was configured](./benchmarks.md#libraries)):
 
 <!-- bench:compare -->

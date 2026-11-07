@@ -10,9 +10,9 @@ A corrected match has `tier: "corrected"`, and `corrected` holds the query as it
 ```ts
 const search = createSearcher(["Open File…", "Open Recent", "Close Editor"]);
 
-const [top] = search("recnet");
-top?;
-// { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
+search("recnet")[0];
+// { item: "Open Recent", score: 3.1, tier: "corrected", ranges: [[5, 10]],
+//   text: "Open Recent", corrected: "recent" }
 ```
 
 ## Say what was searched for
@@ -31,7 +31,7 @@ With named fields, `best.field` names the field the correction was read from.
 
 ## Label corrected rows
 
-Further down the list, a corrected row sits below every row that matched the query as typed.
+Further down the list, a corrected row sits below every row that matched the query as typed in a field without `demoteBy`.
 Its `tier` is enough to mark it differently, for example in a muted colour, so it reads as a suggestion.
 
 ## Leave corrections out
@@ -44,10 +44,10 @@ import { SCORES } from "ekrina";
 search(query).filter((result) => result.score <= SCORES.CONTAINS);
 ```
 
-To drop corrections but keep fuzzy matches, filter on the tier instead: `result?.tier !== "corrected"`.
+To drop corrections but keep fuzzy matches, filter on the tier instead: `result.tier !== "corrected"`.
 [Keep only literal matches](/guides/literal-matches/) covers fields with `demoteBy`, where the score test no longer works.
 
 ## When it corrects
 
-It tries a correction only while the query as typed comes up short, and for a short query only when nothing matches it at all.
+It tries a correction only while the query as typed comes up short, and for most mistakes in a short query only when nothing matches it at all.
 [What it corrects](/how-it-works/corrections/) has every rule.

@@ -42,7 +42,7 @@ Behavioural differences:
 - **There is no `strategy` option.**
   `'smart'` is the always-on behaviour.
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
-  `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–4%.
+  `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to 2–3%.
 - **Typos match.**
   On the same queries microfuzz scores 0.40–0.47 MRR and Ekrina 0.91–0.92 ([the scorecard](/benchmarks/#scorecard)).
 - **`normalizeText` is `normaliseText`.**

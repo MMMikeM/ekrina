@@ -34,14 +34,15 @@ That matters most for one- and two-character queries over a large list.
 
 ## Which keystrokes rescan
 
-A keystroke that extends the last query rescans only the items the last one matched, so a word gets faster as it is typed.
-A few keystrokes rescan the whole list instead:
+A keystroke that extends the last query rescans only the items that could have matched the last one, so a word gets faster as it is typed.
+The second character is the exception: a one-character query matches only where a word starts, and the second character may match mid-word.
+A few other keystrokes rescan the whole list as well:
 
 - starting a second word;
-- five or more characters that fewer than ten items match as typed, since they might be a typo;
-- four characters that nothing matches.
+- five or more characters that fewer than ten items match as typed, or fewer than `limit` when that is smaller, since they might be a typo;
+- four characters that nothing matches as typed.
 
-The first of those also builds the searcher's index over the whole list, once.
+Whichever of those comes first also builds the searcher's index over the whole list, once.
 
 ## Build the index ahead of time
 
@@ -54,9 +55,9 @@ requestIdleCallback(() => search.buildIndex());
 
 Over 100,000 items it takes {bench.at100k.buildIndexMs} ms, and a session of 24 queries then takes {bench.at100k.sessionIndexedMs} ms instead of {bench.at100k.sessionMs}.
 Results are identical either way.
-A searcher that answers one query and is thrown away gains nothing from `buildIndex()`: over 10,000 items it comes out level or a little slower, and over 100,000 building the index makes that one search take a fifth to a quarter longer, so leave that one lazy.
+A searcher that answers one query and is thrown away gains nothing from `buildIndex()`: over 10,000 items it comes out level or a little slower, and over 100,000 building the index makes that one search take a sixth to a fifth longer, so leave that one lazy.
 
 ## Text in other scripts
 
 Results are the same in any script, but the index can't tell non-Latin letters apart.
-On Greek, Cyrillic or CJK text it lets every item through, so each query scans the whole list, which is slower over a large list.
+On Greek, Cyrillic or CJK text it lets every item through, so a keystroke that scans the whole list scores every item in it, which is slower over a large list.
