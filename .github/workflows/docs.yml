@@ -34,10 +34,9 @@ jobs:
         with:
           node-version: "24"
           cache: pnpm
-          cache-dependency-path: site/pnpm-lock.yaml
-      # site/ is its own pnpm root; its build copies the bench's pages from docs/
-      # and generates the API reference from ../src before running astro build.
-      - run: pnpm --dir site install --frozen-lockfile
+      # Its build copies the bench's pages from docs/ and generates the API
+      # reference from ../src before running astro build.
+      - run: pnpm install --frozen-lockfile --filter ekrina-docs
       - run: pnpm --dir site build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -65,8 +64,7 @@ jobs:
         with:
           node-version: "24"
           cache: pnpm
-          cache-dependency-path: site/pnpm-lock.yaml
-      - run: pnpm --dir site install --frozen-lockfile --ignore-scripts
+      - run: pnpm install --frozen-lockfile --ignore-scripts --filter ekrina-docs
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: site-dist

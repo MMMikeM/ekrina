@@ -8,7 +8,7 @@ runs:
       with:
         node-version: "24"
         cache: pnpm
-    - run: pnpm install --frozen-lockfile
+    - run: pnpm install --frozen-lockfile --filter '!ekrina-docs'
       shell: bash
     - run: pnpm build && pnpm pack
       shell: bash

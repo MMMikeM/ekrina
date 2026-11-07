@@ -28,7 +28,7 @@ jobs:
           node-version: "24"
           check-latest: true # a cached older 24.x could ship an npm without `npm stage`
           registry-url: "https://registry.npmjs.org"
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --filter '!ekrina-docs'
 
       # 1.2.0-beta.0 publishes under the dist-tag "beta", never "latest".
       - name: Version and dist-tag

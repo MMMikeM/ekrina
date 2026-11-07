@@ -21,7 +21,7 @@ export default defineConfig({
 		categories: { correctness: "error" },
 		rules: {},
 		env: { builtin: true },
-		// The site is its own pnpm root, linted and typechecked by its own toolchain.
+		// The site is typechecked by Astro and keeps its own style.
 		ignorePatterns: ["site"],
 	},
 	pack: {
