@@ -4,7 +4,7 @@ import {
 	buildRescueBigramGate,
 	buildWordStartRawGate,
 	charMask,
-	lacksAtMostOneClass,
+	lacksAtMostOneLetter,
 	rawFieldMask,
 	rawFieldScan,
 	readingAdmits,
@@ -13,7 +13,7 @@ import { shiftRanges } from "./ladder";
 import { matchField } from "./match";
 import { normaliseText } from "./normalise";
 import { frontGate, prepareBoundedQuery } from "./query";
-import { rescueTurn } from "./correction";
+import { rescueCounts, rescueTurn } from "./correction";
 import { resolveFieldSpecs } from "./fields";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
@@ -345,19 +345,19 @@ export function createSearcher<T, F extends string>(
 			}
 		};
 
-		// Restart from the whole corpus, tolerating one missing character class —
+		// Restart from the whole corpus, tolerating one missing query letter —
 		// what a substitution typo looks like from a mask (see matchField).
 		const relaxedPass = (): void => {
 			const masks = (unionMasks ??= buildUnionMasks());
-			const bigramGate = buildRescueBigramGate(normalisedQuery);
+			const counts = rescueCounts(prepared);
+			const bigramGate = buildRescueBigramGate(normalisedQuery, counts);
 			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
-				if (!lacksAtMostOneClass(missingClasses)) continue;
+				if (!lacksAtMostOneLetter(missingClasses, counts)) continue;
 				if (missingClasses !== 0) {
-					// Exactly one class absent: only an edit at that class's position
-					// can rescue, so the query's remaining bigrams must all be present
-					// (see buildRescueBigramGate).
+					// The one absent letter is where the edit must be, so the query's
+					// remaining pairs must all be present (see buildRescueBigramGate).
 					const b = 31 - Math.clz32(missingClasses);
 					knowBigrams(i);
 					if (

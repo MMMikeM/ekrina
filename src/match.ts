@@ -1,10 +1,10 @@
 import { fuzzyChainMatch } from "./fuzzy";
-import { charMask, lacksAtMostOneClass, readingAdmits } from "./gates";
+import { charMask, lacksAtMostOneLetter, readingAdmits } from "./gates";
 import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
 import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
 import { readings } from "./readings";
-import { rescueTurn } from "./correction";
+import { rescueCounts, rescueTurn } from "./correction";
 import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
 import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
 import type { MatchOptions, MatchResult } from "./types";
@@ -38,7 +38,9 @@ export const matchField = (
 	const { normalisedQuery } = prepared;
 
 	const missingClasses = prepared.queryMask & ~fieldMask;
-	if (rescuable ? !lacksAtMostOneClass(missingClasses) : missingClasses) return null;
+	if (rescuable ? !lacksAtMostOneLetter(missingClasses, rescueCounts(prepared)) : missingClasses) {
+		return null;
+	}
 
 	const rescueContext = (): RescueContext => ({
 		rawField: field,

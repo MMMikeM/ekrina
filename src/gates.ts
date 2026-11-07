@@ -102,9 +102,13 @@ export const charMask = (normalised: string): number => {
 // No bucketed bits: the mask alone is the presence gate.
 export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
 
-// Only a substitution or a drop can account for one absent class.
-export const lacksAtMostOneClass = (missingClasses: number): boolean =>
-	(missingClasses & (missingClasses - 1)) === 0;
+// The one-edit rescue's letter budget: a substitution or a drop leaves out a
+// single query unit, so a field may lack only a class the query holds once.
+// `counts` is `classCounts` of the query's words, which holds at least one unit
+// for every class the mask names.
+export const lacksAtMostOneLetter = (missingClasses: number, counts: Int32Array): boolean =>
+	(missingClasses & (missingClasses - 1)) === 0 &&
+	(missingClasses === 0 || counts[31 - Math.clz32(missingClasses)] === 1);
 
 /**
  * Order-independent presence gate: every distinct word-character of the query
@@ -128,30 +132,29 @@ export const buildPresenceGate = (normalisedQuery: string): RegExp => {
  * Query-side half of the rescue bigram gate, for fields missing exactly one of
  * the query's character classes, β. Only an edit at the query's sole β
  * character can reach such a field, and every rescue-eligible tier is a
- * contiguous occurrence, so every query bigram not touching that position must
- * be in the field's bigram set. Two or more β characters store all-ones, which
- * only a degraded field covers. A required bit colliding with a touching
- * pair's is still owed by the intact rest of the window, so collisions only
- * false-pass.
+ * contiguous occurrence, so every pair inside a query word not touching that
+ * position must be in the field's bigram set. A class the query holds more
+ * than once has no entry: `lacksAtMostOneLetter` already rejects a field
+ * lacking it. A required bit colliding with a touching pair's is still owed by
+ * the intact rest of the window, so collisions only false-pass.
  */
 export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
 
-export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate => {
+export const buildRescueBigramGate = (
+	normalisedQuery: string,
+	counts: Int32Array,
+): RescueBigramGate => {
 	const requiredLo = new Int32Array(32);
 	const requiredHi = new Int32Array(32);
-	const occurrences = new Int32Array(32);
-	// A separator outside ASCII has a class, but no field need hold it.
+	// A separator outside ASCII has a class, but no field need hold it. Nor need
+	// it hold either half of a surrogate pair, which reads as a boundary: that
+	// only false-passes.
 	const classAt = (at: number): number =>
 		isBoundaryAt(normalisedQuery, at) ? 0 : bigramClass(normalisedQuery.charCodeAt(at));
 	for (let soleAt = 0; soleAt < normalisedQuery.length; soleAt++) {
 		// A class's mask bit is its bigram class less one.
 		const b = classAt(soleAt) - 1;
-		if (b < 0) continue;
-		if (occurrences[b]++) {
-			requiredLo[b] = -1;
-			requiredHi[b] = -1;
-			continue;
-		}
+		if (b < 0 || counts[b] !== 1) continue;
 		for (let at = 1; at < normalisedQuery.length; at++) {
 			const before = classAt(at - 1);
 			const unitClass = classAt(at);
@@ -309,15 +312,17 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 };
 
 // A gate, so it may only false-pass: a field whose missing `needed` bits hold
-// more than `spare` of the query's letters has no match. A surrogate pair sets
-// two bits, so missing bits do not count letters.
+// more than `spare` of the query's code units has no match. Units, not code
+// points, because every correction edits units: an absent unit costs an edit.
 export type LetterBudget = { needed: number; counts: Int32Array; spare: number };
 
-// How many of the query's letters each character class holds, so a field
-// lacking a class leaves that many letters unmatched.
+// How many of the query's code units each character class holds, so a field
+// lacking a class leaves that many units unmatched.
 export const classCounts = (letters: string): Int32Array => {
 	const counts = new Int32Array(32);
-	for (const char of letters) counts[31 - Math.clz32(charMask(char))]++;
+	for (let at = 0; at < letters.length; at++) {
+		counts[31 - Math.clz32(unitMask(letters.charCodeAt(at)))]++;
+	}
 	return counts;
 };
 

@@ -75,6 +75,7 @@ What breaks is the seven names below, what a result holds, and the same query re
   - With `limit`, once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
   - A keystroke that ran a correction still narrows the next one to its literal survivors, word boundaries in ASCII text are read from a table, and only the page `limit` returns is put in order: typing takes about 15% less and document-length fields about 11% less, with identical results.
   - A searcher lets go of the last query's matches once it has returned them, up to 4 MB after a two-letter query over 100k items.
+  - A field lacking a letter the query holds twice is turned away before the one-edit rescue looks at it, which no edit could fix: `fuzzyMatch` over a list takes about 29% less.
 
   Against the 1.1.2 run in `bench/results.json`'s history:
   - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);

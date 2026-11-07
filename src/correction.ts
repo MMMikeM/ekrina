@@ -1,3 +1,4 @@
+import { classCounts } from "./gates";
 import type { PreparedQuery } from "./query";
 
 // Below this a correction describes the field rather than the query: almost
@@ -34,6 +35,10 @@ const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: numb
 export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH) &&
 	queryWords.every((word) => word.length <= MAX_RESCUE_WORD_LENGTH);
+
+// Built lazily: every correction prepares a query too, and none is rescued.
+export const rescueCounts = (prepared: PreparedQuery): Int32Array =>
+	(prepared.rescueCounts ??= classCounts(prepared.queryWords.join("")));
 
 // A short query's correction stands in for a missing match and never competes
 // with one: finding it means testing every item that holds the query's

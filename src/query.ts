@@ -17,6 +17,7 @@ export type PreparedQuery = {
 	presenceGate: Gate | null;
 	fuzzyGate: Gate;
 	rescueState: CorrectionSubject | undefined;
+	rescueCounts: Int32Array | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
 	wordRescueStates: (CorrectionSubject | undefined)[] | undefined;
@@ -40,6 +41,7 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalisedQuery),
 		rescueState: undefined,
+		rescueCounts: undefined,
 		lastCorrection: undefined,
 		wordStarts: undefined,
 		wordRescueStates: undefined,
