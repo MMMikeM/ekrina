@@ -53,12 +53,11 @@
 		"lint:fix": "vp lint --fix",
 		"format": "vp fmt",
 		"lint:dead": "knip",
-		"lint:types": "tsc --noEmit && tsc -p bench --noEmit && tsc -p examples/command-palette --noEmit",
+		"lint:types": "vp run types",
 		"test": "vp test run",
 		"gate": "vp run verify",
 		"bench": "pnpm build && node bench/pipeline.ts",
 		"bench:test": "vp run suite",
-		"prepublishOnly": "pnpm lint:types && pnpm test && pnpm build",
 		"release": "git tag -a \"v$npm_package_version\" -m \"v$npm_package_version\" && git push origin \"v$npm_package_version\""
 	},
 	"devDependencies": {
