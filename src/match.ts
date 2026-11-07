@@ -46,8 +46,8 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		queryWords,
 		wordsLongestFirst: longestFirst(queryWords),
 		queryMask,
-		presenceGate: needsPresenceGate ? lazyGate(() => buildPresenceGate(normalisedQuery)) : null,
-		fuzzyGate: lazyGate(() => buildFuzzyGate(normalisedQuery)),
+		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
+		fuzzyGate: buildFuzzyGate(normalisedQuery),
 		rescueState: undefined,
 		lastCorrection: undefined,
 		wordStarts: undefined,
@@ -68,18 +68,20 @@ const boundQuery = (query: string): string => {
 	return text.slice(0, splitsPair ? MAX_QUERY_LENGTH - 1 : MAX_QUERY_LENGTH);
 };
 
+// fuzzyMatch over a list prepares the same query once per row, and a
+// PreparedQuery only ever caches what its query determines.
+let lastQuery = "";
+let lastPrepared: PreparedQuery | null = null;
+
 // Null when the query holds nothing to match.
 export const prepareBoundedQuery = (query: string): PreparedQuery | null => {
-	const bounded = boundQuery(query);
-	const normalisedQuery = normaliseText(bounded);
-	return normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
-};
-
-// The mask check rejects most fields before a gate runs, so a gate is built on
-// its first test rather than with the query.
-const lazyGate = (build: () => Gate): Gate => {
-	let gate: Gate | undefined;
-	return { test: (text) => (gate ??= build()).test(text) };
+	if (query !== lastQuery) {
+		lastQuery = query;
+		const bounded = boundQuery(query);
+		const normalisedQuery = normaliseText(bounded);
+		lastPrepared = normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
+	}
+	return lastPrepared;
 };
 
 // Repeats sort together so multiWordTier can resume each copy after the last.
