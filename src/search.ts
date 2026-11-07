@@ -10,7 +10,7 @@ import { matchField, prepareBoundedQuery } from "./match";
 import { normaliseText, rawFieldMask, rawFieldScan } from "./normalise";
 import { isRescuableQuery, isShortQuery } from "./rescue";
 import { CONTAINS_SCORE } from "./scores";
-import { type Competition, type PreparedReading, readings } from "./readings";
+import { type Competition, type PreparedReading, readingAdmits, readings } from "./readings";
 import type {
 	Field,
 	FieldMatch,
@@ -71,7 +71,8 @@ export const fuzzyMatch = (
 	let result = matchField(field, normalisedField, fieldMask, q, acronym, true);
 	if (result === null || result.score > CONTAINS_SCORE) {
 		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
-		const fallback = reading?.admitsMask(fieldMask) ? reading.match(field, normalisedField) : null;
+		const fallback =
+			reading && readingAdmits(reading, fieldMask) ? reading.match(field, normalisedField) : null;
 		if (fallback && (result === null || fallback.score < result.score)) result = fallback;
 	}
 	const lead = text.length - text.trimStart().length;
@@ -472,7 +473,7 @@ export function createSearcher<T, F extends string>(
 		): void => {
 			const base = i * specCount;
 			for (let f = 0; f < specCount; f++) {
-				if (!reading.admitsMask(fieldMasks[base + f])) continue;
+				if (!readingAdmits(reading, fieldMasks[base + f])) continue;
 				materialise(i);
 				const result = reading.match(
 					trimmedFields[base + f] as string,
@@ -497,20 +498,19 @@ export function createSearcher<T, F extends string>(
 			const masks = unionMasks;
 			// An item's union mask and bigram set span all its fields, so it is
 			// skipped only when no field's reading admits both.
-			const admitsPairs = reading.admitsPairs;
-			const admitsItem =
-				masks === null || admitsPairs === null
-					? null
-					: (i: number) => {
-							if (!reading.admitsMask(masks[i])) return false;
-							knowBigrams(i);
-							return admitsPairs(bigramsLo[i], bigramsHi[i]);
-						};
+			const { needed, spare, admitsPairs } = reading;
 			const scanned = survivorsOnly ? survivorCount : count;
 			for (let k = 0; k < scanned; k++) {
 				const i = survivorsOnly ? survivors[k] : k;
+				if (masks !== null) {
+					const missing = needed & ~masks[i];
+					if (missing !== 0 && (spare === 0 || !readingAdmits(reading, masks[i]))) continue;
+					if (admitsPairs !== null) {
+						knowBigrams(i);
+						if (!admitsPairs(bigramsLo[i], bigramsHi[i])) continue;
+					}
+				}
 				if (heldMatches[i] !== undefined && heldScores[i] <= CONTAINS_SCORE) continue;
-				if (admitsItem !== null && !admitsItem(i)) continue;
 				offerFallbacks(i, reading);
 			}
 		};
