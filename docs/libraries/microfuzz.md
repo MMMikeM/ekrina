@@ -5,7 +5,7 @@ The headline tables there show whichever scores best on those benchmarks, which 
 That row is in bold in the scorecard below.
 
 - **@nozbe/microfuzz**: the defaults.
-- **@nozbe/microfuzz (all opts)**: `strategy: "aggressive"`.
+- **@nozbe/microfuzz (all opts)**: `strategy: "aggressive"`, which keeps every in-order letter match where the default `"smart"` drops the poor ones.
 
 ## Scorecard
 

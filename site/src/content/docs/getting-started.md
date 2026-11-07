@@ -97,7 +97,7 @@ A corrected match carries the query it fixed:
 declare const showNotice: (message: string) => void;
 
 const match = search("recnet")[0];
-// { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]], text: "Open Recent" }
+// { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", ranges: [[5, 10]], text: "Open Recent", corrected: "recent" }
 
 if (match?.tier === "corrected") {
 	showNotice(`Showing results for ${match.corrected}`);

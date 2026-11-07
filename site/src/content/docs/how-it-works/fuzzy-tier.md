@@ -15,13 +15,13 @@ The fuzzy tier is always on, with no strategy knob, and it only accepts pieces t
 - **The query's last one or two letters are exempt**, since a short tail could never be three letters long: `togrm` matches "**Tog**gle Te**rm**inal".
 - **The pieces must cover at least 18% of the text they stretch across.**
   In "Open the command palette", `oc` matches "**O**pen the **c**ommand", 2 letters in a stretch of 10, but `ocp` doesn't, since "**O**pen the **c**ommand **p**" is 3 letters in 18.
-  A long enough document has the letters of almost any word somewhere, and this floor is what holds false matches of absent words to 2–4% on real text.
+  A long enough document has the letters of almost any word somewhere, and this floor is what holds fuzzy matches of absent words to about 2–4% on real text.
 
 Anything the fuzzy tier refuses either matched a better tier already or wasn't worth showing.
-To keep only matches of the text as typed, filter to `score <= SCORES.CONTAINS`.
+To keep only matches of the text as typed, filter with `isLiteral`, or to `score <= SCORES.CONTAINS` on a field without `demoteBy`.
 
 ## In long text
 
 `fuzzyMatch` runs the same tier over a whole document, where the density floor does most of the work.
-It holds the junk rate for absent words to _2–4% at every measured length_ on real text, depending on the corpus and the words drawn ([the long-text table](/benchmarks/#matching-inside-long-text)).
+On real text it junk-matches no absent word up to 128 characters, rising to _about 2–4%_ on longer text, depending on the corpus and the words drawn ([the long-text table](/benchmarks/#matching-inside-long-text)).
 [Match inside long text](/guides/long-text/) shows how to use it.

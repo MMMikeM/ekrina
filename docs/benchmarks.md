@@ -7,11 +7,11 @@ No measured cell in this document is typed by hand.
 - `pnpm vpr bench` alone times ekrina's own rows once and writes nothing.
 - `pnpm vpr bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
 - `pnpm vpr bench --check` exits nonzero if any table here disagrees with `results.json`.
-- `pnpm vpr bench --speed`, `pnpm vpr bench --quality` and `pnpm vpr bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 1).
-- `pnpm vpr bench --scope=native-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable).
+- `pnpm vpr bench --speed`, `pnpm vpr bench --quality` and `pnpm vpr bench --memory` run one stage of the measurement, over ekrina's own rows and printed unless `--all` is added; `--runs=N` sets the fresh processes per cold cell (default 1).
+- `pnpm vpr bench --scope=native-10k` scopes a dev run to one corpus (`native`) or one corpus at one size (`native-10k`).
   A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor this document is touched.
 
-The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; run it with `pnpm --filter=ekrina-bench test`.
+The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; `pnpm vpr bench:test` runs it.
 Improvements to the benchmarks are welcome.
 
 ## Libraries
@@ -51,14 +51,14 @@ Size and type, Ekrina first, then by bundle size ascending.
 | fast-fuzzy       | ~11.1 kB | 1    | typo-tolerant        |
 <!-- bench:end -->
 
-The tables below show each library at its best-scoring configuration, plus every Ekrina configuration.
+The scorecard, speed and memory tables below show each library at its best-scoring configuration, plus every Ekrina configuration; the family tables leave out Ekrina (indexed), and the build, garbage and typing tables name their own rows.
 That configuration is picked by running every one a library has against the same query families it is then ranked on, so each headline row is the library tuned to this bench, the most favourable reading of it the bench can produce.
 Each library's base row is what installing it gives you, and for two of them it scores lower: uFuzzy 0.21 MRR rather than 0.66, and Fuse.js 0.72 rather than 0.76.
 Ekrina's older constants, `TYPO_PENALTY`, the density floor and the rescue cutoff, were set from measurements on the bench's earlier, synthetic corpora; the second pass's scoring of sparse matches was tuned on these, checked against held-out queries ([performance.md](./performance.md)).
 The query families were fixed, weights included, before any library was measured on these corpora, and [`bench/held-out.test.ts`](../bench/held-out.test.ts) scores Ekrina again on items and seeds the published families never drew from.
 Every other configuration is on its library's own page, against the rest of that library's: [Ekrina](./libraries/ekrina.md), [Fuse.js](./libraries/fuse.md), [uFuzzy](./libraries/ufuzzy.md), [fast-fuzzy](./libraries/fast-fuzzy.md), [@nozbe/microfuzz](./libraries/microfuzz.md) and [fuzzy](./libraries/fuzzy.md).
 An "(all opts)" row shares its base library's size, deps, and type.
-Ekrina's opt-in row is named after the option it switches on: **(acronym)** for `acronym: true`.
+Ekrina's opt-in row is named after the option it switches on: **(acronym)** for `acronym: true` on its field spec.
 **Ekrina (indexed)** is the defaults with `buildIndex()` called up front, so its results are Ekrina's and only its timings differ.
 The specific opt-ins the "(all opts)" rows switch on, and where output formats differ:
 
@@ -68,6 +68,7 @@ The specific opt-ins the "(all opts)" rows switch on, and where output formats d
   Fuse's other multi-word switch, `useTokenSearch`, defaults to OR (`tokenMatch: "any"`) and only reaches these semantics at `tokenMatch: "all"`
 - `fast-fuzzy`: its `ranges` are one span (`index` + `length`), not per-character, and its default normalisation doesn't strip accents
 - `fuzzy`: its "ranges" are a pre-wrapped string, not numeric indices
+- `@nozbe/microfuzz`: `strategy: "aggressive"` keeps every in-order letter match, where the default `"smart"` drops the poor ones
 
 Every configuration is defined once, in [`bench/configs.ts`](../bench/configs.ts), so a row timed in the speed tables is the same row ranked in the scorecard.
 A base row is the library's own defaults.
@@ -83,8 +84,8 @@ Each child times:
 
 - **index** = the constructor call, whatever the configuration builds there (uFuzzy (all opts) running `latinize()` over the haystack included; fuzzysort has no constructor at all, so its prepare-all pass lands in its first query, which is where a real user meets it).
 - **cold query** = the first answer to one representative query, before any lazy work has run: Ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all.
-  Six families are timed this way (short word, phrase, substitution, prefix, acronym, garbage), one path through a matcher each.
-- **batch** = one process answering a warmup match on a short word no probe uses (`alien` on en and native: a guaranteed literal hit that absorbs the JIT and the first full scan) and then every representative query, once each: the realistic session.
+  Six of the probe kinds are timed this way (short word, phrase, substitution, prefix, acronym, garbage), one path through a matcher each.
+- **batch** = one process answering a warmup match on a short word no probe uses (`alien` on en and native, `busts` on emoji: a guaranteed literal hit that absorbs the JIT and the first full scan) and then every representative query, once each: the realistic session.
   The process warms up only by answering distinct real queries, no query is ever repeated, anywhere in the harness.
   The batch reports its total, the warmup (`first`), the mean of the 24 queries after it (`batch/query`), and each query's own post-warmup time, kept in `results.json`.
 - **one-shot** = constructor + first answer, summed inside one child's consecutive windows: the whole of "given a list, get an answer".
@@ -99,7 +100,7 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 
 Timing noise is one-sided (GC, scheduler, and thermal interruptions only ever _add_ time), so the median across processes rejects spikes; the per-cell minimum, the noise-free floor, stays in [`bench/results.json`](../bench/results.json) but is never the headline, because best-of-N flatters.
 Every published cold cell is the median of three fresh processes (`pnpm vpr bench --all --runs=3`).
-One process per cell is the default, and `--runs=N` raises it: every number is milliseconds-scale under this model, and the small timed set keeps a default run near four minutes, which is what makes rerunning on a quiet machine quick.
+One process per cell is the default, and `--runs=N` raises it: every number is milliseconds-scale under this model, and the small timed set keeps a one-process `--all` run near four minutes, which is what makes rerunning on a quiet machine quick.
 A single cell is ~15% noisy at one process; the guards below look at sums for that reason.
 
 The guards:
@@ -119,7 +120,7 @@ Three corpora, benched separately, each a frozen JSON snapshot committed next to
 - **en**: the English labels of the best-known Wikidata entities, 100,000 items in a fixed mix of 35% people, 20% places, 20% creative works, 15% organisations and 10% products and brands ("Pedro López", "Hinton St George", "Two for the Seesaw").
   8.9% of items carry a non-ASCII letter.
 - **native**: the same items under the native name Wikidata records for them where it has one ("Москва", "孟晚舟", "Sånger från andra våningen"), and the English label otherwise: 20% of items are non-ASCII and 10% are in a non-Latin script.
-- **emoji**: every emoji [emojibase-data](https://github.com/milesj/emojibase) names, written as a picker searches it, the label then the tags the label doesn't already say ("pretzel — convoluted, twisted"): 1,923 items, too few for the 10k and 100k timing cells, so it is ranked on quality only and timed, unranked, at its own length ("emoji corpus, unranked").
+- **emoji**: every emoji [emojibase-data](https://github.com/milesj/emojibase) names and tags, bar the regional indicators, written as a picker searches it, the label then the tags the label doesn't already say ("pretzel — convoluted, twisted"): 1,923 items, too few for the 10k and 100k timing cells, so it is ranked on quality only and timed, unranked, at its own length ("emoji corpus, unranked").
 
 The categories are interleaved in a fixed pattern, so any prefix keeps the mix and the 10k list is the first 10,000 items of the 100k.
 Wikidata is CC0; regenerating the two Wikidata corpora ([`bench/corpus-wikidata-gen.test.ts`](../bench/corpus-wikidata-gen.test.ts), `GEN_WIKIDATA=1`) redraws items as well as queries, since Wikidata changes daily, and so changes every rank table here.
@@ -153,7 +154,7 @@ The rules that picked the query families ([`bench/catalogue.ts`](../bench/catalo
   Acronyms and plurals are reported but carry no weight, since both are behaviours one library was built around.
 - **Queries nothing answers are probed at several distances**, so no library's edit budget decides where "unanswerable" starts: corpus words pushed three, four and five edits from every word in the list, random letters four edits from everything, and pairs of words each three edits away, twenty of each.
 
-Separately from the sampled families, each Wikidata corpus derives one representative query per probe kind, the query the speed tables time and the batch answers.
+Separately from the sampled families, each corpus derives one representative query per probe kind, the query the speed tables time and the batch answers.
 Each kind takes the first item, from a fixed start, that can carry it: two plain words, a long enough word, a word at most two items hold ([`bench/corpus.ts`](../bench/corpus.ts)).
 On the native corpus they are:
 
@@ -182,7 +183,7 @@ On the native corpus they are:
 | 23    | accent-stripped               | `lopez`                       | diacritic folding                                     |
 | 24    | garbage                       | `qxzwkv`                      | the reject path, verifying no impossible matches      |
 
-The en corpus derives the same kinds from its own items (`pedro lopez` for the phrases); each query's rank and row count per library is in [`bench/results.json`](../bench/results.json).
+The en and emoji corpora derive the same kinds from their own items (`pedro lopez` and `slightly smiling` for the phrases); each query's rank and row count per library is in [`bench/results.json`](../bench/results.json).
 MRR covers 33 scored families and 330 queries on every corpus; with ten queries a family, a single family's MRR can swing by 0.3 between draws while the weighted headline moves by a few hundredths, so read headline differences of ±0.02 as ties and treat single family cells as indicative.
 
 ## Build time
@@ -469,11 +470,11 @@ No rank column: every library correctly returns nothing.
 What separates them is how long that answer takes, shown against each library's own time for the short-word query `hinton` (one that does match), so the column reads as "what fraction of a real query does a hopeless one take".
 A hopeless six-character query is _rescuable_, so before saying "no results" Ekrina tries harder: the literal pass comes up empty, and rather than fail it builds the union and bigram masks and attempts the corrections of the query, the same rescue that scores 0.79–1.00 on the one-edit typo families above.
 That is why its miss takes 2.8 ms cold at 10k, where uFuzzy (all opts) and fuzzy, whose empty result covers only the query as typed, take 1.0–1.7 ms.
-The work also happens once per searcher: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first query that needs the masks builds them and the other twenty-three reuse them.
+The work also happens once per searcher: the masks the garbage query builds are the ones every later rescue reuses, which is why the batch column absorbs it, a session's first query that needs the masks builds them and every later one reuses them.
 
 ## Scorecard
 
-One line per configuration: MRR and junk from [`bench/hits.test.ts`](../bench/hits.test.ts) (ranks are deterministic, measured once, untimed), times from the process-cold matrix ("Timing method"; `pnpm vpr bench --runs=N` sets the processes per cell).
+One line per configuration: MRR and junk from [`bench/hits.test.ts`](../bench/hits.test.ts) (ranks are deterministic, measured once, untimed), times from the process-cold matrix ("Timing method"; `pnpm vpr bench --all --runs=N` sets the processes per cell).
 **MRR** = the group-weighted mean of the 33 scored families' MRR@10 ("The corpora and the query families"): ten queries each, scored by the rank of the first relevant result, misses and ranks outside the top 10 scoring 0.
 **junk** = the share of the 100 queries nothing answers that the library answered anyway, averaged over the five kinds.
 **index ms** = the constructor call (from the batch cell's fresh processes).
@@ -566,7 +567,7 @@ fast-fuzzy and Fuse.js (tuned), the next rows on quality, take 4.41 ms and 11.03
 Its frontier runs `fuzzy` → Ekrina (acronym): a no-index substring scan at 0.30 MRR owns the fast end (1.91 ms), and Ekrina (acronym) reaches 0.91 at 3.24 ms, with Ekrina 7% behind it at 3.46 ms and Ekrina (indexed) 19% behind at 3.84 ms.
 This is where Ekrina's lazy preparation shows up, against a 0.17 ms constructor.
 A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings.
-The per-item mask index is built only on the first query that needs it: one with a second word, one of five or more characters that finds fewer than ten literal matches and so goes to the typo rescue, one the second pass reads over the whole list because nothing matches it literally, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
+The per-item mask index is built only on the first query that needs it: one with a second word, one that goes to the typo rescue (five or more characters with fewer than ten literal matches, or four that match nothing at all), one the second pass reads over the whole list because nothing matches it literally, or one holding a character outside Latin letters and digits, which the raw scan cannot fold.
 For Ekrina the acronym query `tfts` is the third case, since only fuzzy chains match it; Ekrina (acronym)'s acronym tier matches it literally, so its second pass reads only the literal pass's survivors and the index is never built.
 That one query is Ekrina (acronym)'s whole lead on this chart: 2.34 ms one-shot against Ekrina's 4.38, where over the other five timed queries Ekrina (acronym) averages 3.42 ms to Ekrina's 3.28.
 The per-query cells are in [`bench/results.json`](../bench/results.json).
@@ -578,10 +579,10 @@ _Both charts read the scorecard above out of [`bench/results.json`](../bench/res
 **Gzip** = esbuild `--bundle --minify`, tree-shaken to each lib's primary API, gzipped by Node's zlib, measured by `pnpm vpr bench --size --all` (the size table is in [Libraries](#libraries)).
 Every cell is process-cold ("One measurement model"), and each corpus gets two tables.
 The scale table measures the one-shot workload: **index** = the constructor, **cold query** = mean first answer across the six timed queries (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each query's own child, **total rel** = that total relative to Ekrina (100% = same, lower = faster).
-The batch table measures the session: **batch total** = one fresh process answering a short-word warmup match then every family's representative query once, **batch/query** = the mean of the 24 post-warmup queries, **batch rel** = batch total relative to Ekrina.
+The batch table measures the session: **batch total** = one fresh process answering a short-word warmup match then every representative query once, **batch/query** = the mean of the 24 post-warmup queries, **batch rel** = batch total relative to Ekrina.
 The aggregate row is a **geometric mean**: per-library times span orders of magnitude, so an arithmetic mean would only describe the slowest library; the geomean is the standard aggregate for multiplicative spreads, and the rel cells are equally the geomean of each rel column (a geomean of ratios is the ratio of geomeans).
 These tables publish the 100k size, and emoji's its whole 1,923 items; the 10k matrix and the scorecard carry the fine-grained view, and every cell of both sits in [`bench/results.json`](../bench/results.json).
-The two corpora are described in "The corpora and the query families"; they're benched separately.
+The three corpora are described in "The corpora and the query families"; they're benched separately.
 The native table only lists configurations that fold diacritics, i.e. actually do that corpus's task (cross-checked per query by [`bench/hits.test.ts`](../bench/hits.test.ts)); a fast non-folding row would be fast at a different, easier job, so those are omitted and named below the table.
 The **_all libraries_** row is the corpus-wide view: the geometric mean of every shown configuration at that size.
 **(all opts)** rows switch on every opt-in the library has: diacritic folding, multi-word, highlight/ranges output, and typo modes; base rows are stock defaults, and [Libraries](#libraries) itemises which opt-in is which.
@@ -610,7 +611,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 | _all libraries (geomean)_ |   1.25 ms |   17.17 ms |  29.21 ms |      337% |
 <!-- bench:end -->
 
-**The session batch** (one process: a warmup match, then every family's representative query once):
+**The session batch** (one process: a warmup match, then every representative query once):
 
 <!-- bench:batch-en -->
 | Library                   | batch/query | batch total | batch rel |
@@ -644,7 +645,7 @@ Ekrina leads its own table; the rest are alphabetical, so nothing is ordered by 
 | _all libraries (geomean)_ |  1.08 ms |   15.93 ms |  26.01 ms |      256% |
 <!-- bench:end -->
 
-**The session batch** (one process: a warmup match, then every family's representative query once):
+**The session batch** (one process: a warmup match, then every representative query once):
 
 <!-- bench:batch-native -->
 | Library                   | batch/query | batch total | batch rel |
@@ -690,7 +691,7 @@ That is too short to rank speed on, so these rows have no geomean and stay out o
 | uFuzzy (all opts) |  4.13 ms |    1.19 ms |  5.44 ms |      154% |
 <!-- bench:end -->
 
-**The session batch** (one process: a warmup match, then every family's representative query once):
+**The session batch** (one process: a warmup match, then every representative query once):
 
 <!-- bench:batch-emoji -->
 | Library           | batch/query | batch total | batch rel |
@@ -778,7 +779,7 @@ The fuzzy tier junk-matches none of the absent words up to 128 characters, risin
 Corrections rise with length to 3.5% at 16k, since a longer document holds more words within a correction of any given query.
 The rates move with the words drawn: a separate draw of 400 absent words, not part of `results.json`, measured fuzzy junk at 3.5% on native and 4.3% on en from 4,096 characters up, so read the table as 2–4%.
 Miss time includes the typo rescue (a miss must fail it too), and it is 0.39 ms at 16k chars.
-Literal-only matching, for callers that want no fuzzy assemblies or corrections at all, is a one-line `tier` filter.
+Literal-only matching, for callers that want no fuzzy assemblies or corrections at all, is a one-line `isLiteral` filter.
 [`bench/longtext.test.ts`](../bench/longtext.test.ts) keeps this table as a regression guard, failing if either rate rises above 5%.
 
 ## The recommendation
@@ -803,4 +804,4 @@ The rest of the field, library by library:
 - **@nozbe/microfuzz**: Ekrina's parent; same subsequence approach, ~5.2–5.7× the batch at 100k, no tier output, 0.40–0.47 MRR: on the Wikidata corpora it scores 0.05 or less on the random-letter, inserted-key and two-word typo families.
 - **fuzzysort**: the fastest per-query time after bare uFuzzy, but its prepare-all pass lands a ~7 ms first call (60–62 ms at 100k) that stock usage absorbs inside the first `go()`, and on the Wikidata corpora it scores 0.10 or less on every typo family but the dropped-letter ones, which stay a subsequence (0.45–0.52 MRR).
 - **match-sorter**: tiered ranking but no ranges and no multi-word; on the Wikidata corpora it reaches 0.70–0.73 on acronyms and 0.91–1.00 on the dropped-letter families but 0.10 or less on the other typo families, 0.38–0.45 MRR at mid-pack speed.
-- **fuzzy**: substring-only and order-sensitive; 0.10 or less on reversed phrases, 0.13 or less on the accent families, no ranges (0.29–0.39 MRR).
+- **fuzzy**: substring-only and order-sensitive; 0.10 or less on reversed phrases, 0.13 or less on the accent families, ranges only as a marked-up string (0.29–0.39 MRR).

@@ -1,10 +1,10 @@
 # Ekrina
 
 Every configuration of Ekrina the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show every Ekrina configuration.
+The scorecard and speed tables there show every Ekrina configuration.
 
 - **Ekrina**: the defaults, `createSearcher(list)`.
-- **Ekrina (acronym)**: `acronym: true`, which adds the word-initials tier.
+- **Ekrina (acronym)**: `createSearcher(list, { selectField: (item) => item, acronym: true })`, a field spec that adds the word-initials tier.
 - **Ekrina (indexed)**: the defaults with `buildIndex()` called up front, so the whole-list mask index moves into the constructor; results are identical to the defaults.
 
 ## Scorecard
