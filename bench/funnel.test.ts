@@ -10,10 +10,16 @@
  */
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
-import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
-import { isRescuableQuery } from "../src/rescue";
+import {
+	buildFuzzyGate,
+	buildPresenceGate,
+	buildRescueBigramGate,
+	charMask,
+	rawFieldScan,
+} from "../src/gates";
+import { isRescuableQuery } from "../src/correction";
 import { splitWords } from "../src/boundaries";
-import { normaliseText, rawFieldScan } from "../src/normalise";
+import { normaliseText } from "../src/normalise";
 import { CORPORA } from "./corpus";
 import { withoutSecondPass } from "./ladder";
 

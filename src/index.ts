@@ -1,4 +1,5 @@
-export { createSearcher, fuzzyMatch } from "./search";
+export { fuzzyMatch } from "./match";
+export { createSearcher } from "./search";
 export { splitWords } from "./boundaries";
 export { normaliseText } from "./normalise";
 export { isLiteral, SCORES, TYPO_PENALTY } from "./scores";

@@ -77,3 +77,17 @@ export const correctedMatch = (
  */
 export const isLiteral = (match: { tier: Tier }): boolean =>
 	match.tier !== "fuzzy" && match.tier !== "corrected";
+
+const SCORE_EPSILON = 1e-9;
+
+// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
+// the one-edit reading names the character the user got wrong, where a chain
+// only says the letters appear in order.
+export const preferBetter = (
+	incumbent: MatchResult | null,
+	challenger: MatchResult | null,
+): MatchResult | null => {
+	if (incumbent === null) return challenger;
+	if (challenger === null) return incumbent;
+	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
+};

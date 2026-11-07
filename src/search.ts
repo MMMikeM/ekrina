@@ -5,11 +5,15 @@ import {
 	buildWordStartRawGate,
 	charMask,
 	lacksAtMostOneClass,
+	rawFieldMask,
+	rawFieldScan,
 } from "./gates";
-import { frontGate, matchField, prepareBoundedQuery, shiftRanges } from "./match";
-import { normaliseText, rawFieldMask, rawFieldScan } from "./normalise";
-import { isRescuableQuery, isShortQuery } from "./rescue";
-import { better, CONTAINS_SCORE } from "./scores";
+import { shiftRanges } from "./ladder";
+import { matchField } from "./match";
+import { normaliseText } from "./normalise";
+import { frontGate, prepareBoundedQuery } from "./query";
+import { isRescuableQuery, isShortQuery } from "./correction";
+import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readingAdmits, readings } from "./readings";
 import type {
 	Field,
@@ -17,7 +21,6 @@ import type {
 	FieldSpec,
 	SearchResult,
 	Searcher,
-	MatchOptions,
 	MatchResult,
 	SearchOptions,
 } from "./types";
@@ -29,45 +32,6 @@ const RESCUE_CUTOFF = 10;
 
 const endsOnWordBoundary = (normalisedField: string, ranges: [number, number][]): boolean =>
 	closesWord(normalisedField, ranges[ranges.length - 1][1]);
-
-/**
- * Score one string against a query, or null when it doesn't match.
- *
- * Judges the string on its own. A searcher over a list can return fewer
- * corrections than this does per item (see createSearcher).
- * A query is matched on its first 256 characters, and one holding a word over
- * 64 characters is never corrected.
- *
- * @example
- * fuzzyMatch('banana', 'ban'); // { score: 0.5, tier: 'prefix', ranges: [[0, 2]] }
- *
- * @example
- * // A typo, corrected: the boundary tier's 1 plus TYPO_PENALTY
- * fuzzyMatch('Open Recent', 'recnet'); // { score: 3.1, tier: 'corrected', corrected: 'recent', ranges: [[5, 10]] }
- */
-export const fuzzyMatch = (
-	text: string,
-	query: string,
-	options: MatchOptions = {},
-): MatchResult | null => {
-	const { acronym = false } = options;
-	const q = prepareBoundedQuery(query);
-	if (q === null) return null;
-	const field = text.trim();
-	const normalisedField = normaliseText(field);
-	const fieldMask = charMask(normalisedField);
-
-	let result = matchField(field, normalisedField, fieldMask, q, acronym, true);
-	if (result === null || result.score > CONTAINS_SCORE) {
-		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
-		const fallback =
-			reading && readingAdmits(reading, fieldMask) ? reading.match(field, normalisedField) : null;
-		result = better(result, fallback);
-	}
-	const lead = text.length - text.trimStart().length;
-	if (result && lead) shiftRanges(result.ranges, lead);
-	return result;
-};
 
 type ResolvedSpec<T> = {
 	selector: (item: T) => string | null;

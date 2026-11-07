@@ -1,6 +1,5 @@
 import { isBoundaryAt, wordChar, wordStartOccurrence } from "./boundaries";
-import { bigramBit, bigramClass, unitMask } from "./normalise";
-import { unfoldTable } from "./unfold";
+import { computeFold, foldChar, unfoldTable } from "./normalise";
 
 /** A pre-gate: false only when the text cannot match the query. */
 export type Gate = { test: (text: string) => boolean };
@@ -164,4 +163,147 @@ export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate
 		}
 	}
 	return { requiredLo, requiredHi };
+};
+
+// `charMask`'s bit for one code unit: a letter as its lower case, digits in
+// four buckets, non-ASCII in two, and nothing for a separator.
+const unitMask = (unit: number): number => {
+	if (unit >= 97 && unit <= 122) return 1 << (unit - 97);
+	// Raw ASCII capitals, which rawFieldMask and rawFieldPairs read before folding.
+	if (unit >= 65 && unit <= 90) return 1 << (unit - 65);
+	if (unit >= 48 && unit <= 57) return 1 << (26 + (unit & 3));
+	if (unit > 127) return 1 << (30 + (unit & 1));
+	return 0;
+};
+
+// `charMask`'s class for one code unit, shifted so 0 can mean "not a word
+// character": class n sets mask bit n − 1, for every class.
+export const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
+
+export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
+
+// A field's bigram set — adjacent same-word class pairs and consecutive
+// word-initial pairs, 64 bits in two int32s.
+export type FieldBigrams = { lo: number; hi: number };
+
+// Every BMP code point folds to exactly one unit, so each unit's fold has a
+// fixed class, kept as a stand-in unit of that class (0x80/0x81 for the two
+// non-ASCII buckets). computeFold rather than foldChar, so the fold's string
+// is not retained for every distinct unit in the list.
+const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
+let standIns: Uint8Array | null = null;
+
+const standIn = (unit: number): number => {
+	const table = (standIns ??= new Uint8Array(0x10000));
+	return (
+		table[unit] ||
+		(table[unit] = STAND_INS.charCodeAt(
+			bigramClass(computeFold(String.fromCharCode(unit)).charCodeAt(0)),
+		))
+	);
+};
+
+const standInMasks = new Int32Array(130);
+for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
+
+const NON_ASCII_BITS = 3 << 30;
+
+const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
+
+const isCombiningMark = (unit: number): boolean => unit >= 0x300 && unit <= 0x36f;
+
+/**
+ * `charMask(normaliseText(raw))` without building the normalised string. Runs
+ * once per field, when a searcher first needs a whole-list pass. May only
+ * false-pass: skipping NFC can only add mask bits, except that NFC, which
+ * normaliseText applies to a field holding a combining mark, can compose units
+ * (Hangul jamo) into one of the other non-ASCII bucket, so such a field takes
+ * both non-ASCII bits.
+ */
+export const rawFieldMask = (raw: string): number => {
+	let mask = 0;
+	for (let i = 0; i < raw.length; i++) {
+		const unit = raw.charCodeAt(i);
+		// A surrogate's fold depends on its partner, so it takes both non-ASCII
+		// bits, which can only false-pass.
+		mask |=
+			unit < 128
+				? standInMasks[unit]
+				: isSurrogate(unit) || isCombiningMark(unit)
+					? NON_ASCII_BITS
+					: standInMasks[standIn(unit)];
+	}
+	return mask;
+};
+
+/**
+ * `charMask(normaliseText(raw))` without building the normalised string, also
+ * accumulating the field's bigram set into `into`.
+ *
+ * Both halves may only false-pass: a combining mark, where NFC may compose the
+ * field and raw adjacency stops matching normalised adjacency, degrades the
+ * bigram set to all-bits and gives the mask both non-ASCII bits (rawFieldMask).
+ */
+export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
+	let mask = 0;
+	let bigramsLo = 0;
+	let bigramsHi = 0;
+	let prevClass = 0;
+	let lastWordInitial = 0;
+	let degraded = false;
+	// One inline body for raw ASCII units and folded ones alike: every factored
+	// shape — shared helper, closure, module scratch, single mask-write site off
+	// `bigramClass − 1` — measured 8–15% slower on the whole-corpus build.
+	for (let i = 0; i < raw.length; i++) {
+		let unit = raw.charCodeAt(i);
+		let folded = "";
+		if (unit > 127) {
+			if (isCombiningMark(unit)) degraded = true;
+			if (isSurrogate(unit)) {
+				const codePoint = raw.codePointAt(i) as number;
+				if (codePoint > 0xffff) i++;
+				folded = foldChar(String.fromCodePoint(codePoint));
+				unit = folded.charCodeAt(0);
+			} else unit = standIn(unit);
+		}
+		for (let k = 0; ;) {
+			let unitClass = 0;
+			if (unit >= 97 && unit <= 122) {
+				mask |= 1 << (unit - 97);
+				unitClass = unit - 96;
+			} else if (unit >= 65 && unit <= 90) {
+				mask |= 1 << (unit - 65);
+				unitClass = unit - 64;
+			} else if (unit >= 48 && unit <= 57) {
+				mask |= 1 << (26 + (unit & 3));
+				unitClass = 27 + (unit & 3);
+			} else if (unit > 127) {
+				mask |= 1 << (30 + (unit & 1));
+				unitClass = 31 + (unit & 1);
+			}
+			if (unitClass !== 0) {
+				const pairStart = prevClass !== 0 ? prevClass : lastWordInitial;
+				if (pairStart !== 0) {
+					// Branchless: which half the bit lands in is data-dependent, and
+					// branching on it made the whole-corpus scan ~40% slower.
+					const bit = (pairStart * 37 + unitClass) & 63;
+					const inLow = (bit >> 5) - 1;
+					bigramsLo |= (1 << bit) & inLow;
+					bigramsHi |= (1 << bit) & ~inLow;
+				}
+				if (prevClass === 0) lastWordInitial = unitClass;
+			}
+			prevClass = unitClass;
+			if (++k >= folded.length) break;
+			unit = folded.charCodeAt(k);
+		}
+	}
+	if (degraded) {
+		into.lo = -1;
+		into.hi = -1;
+		return mask | NON_ASCII_BITS;
+	}
+	into.lo |= bigramsLo;
+	into.hi |= bigramsHi;
+	return mask;
 };

@@ -9,10 +9,17 @@
  */
 import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
-import { buildRawGate, buildRescueBigramGate, charMask } from "../src/gates";
-import { matchField, prepareQuery } from "../src/match";
-import { isRescuableQuery } from "../src/rescue";
-import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
+import {
+	buildRawGate,
+	buildRescueBigramGate,
+	charMask,
+	rawFieldMask,
+	rawFieldScan,
+} from "../src/gates";
+import { matchField } from "../src/match";
+import { prepareQuery } from "../src/query";
+import { isRescuableQuery } from "../src/correction";
+import { normaliseText } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createSearcher } from "../src/search";
 import { CORPORA } from "./corpus";

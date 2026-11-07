@@ -1,7 +1,20 @@
 import { isBoundaryAt, opensWord } from "./boundaries";
 import { charMask } from "./gates";
-import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
-import { CONTAINS_SCORE, correctedMatch, TYPO_PENALTY } from "./scores";
+import { literalTiers } from "./ladder";
+import { type PreparedQuery, prepareQuery } from "./query";
+import {
+	dropCharAt,
+	type Edit,
+	MIN_RESCUE_QUERY_LENGTH,
+	MIN_TYPO_QUERY_LENGTH,
+	minSubstitutionLength,
+	minTypoQueryLength,
+	rawQuery,
+	rawWordOf,
+	swapAdjacentAt,
+	wordStartsOf,
+} from "./correction";
+import { CONTAINS_SCORE, correctedMatch, preferBetter, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
 // The field currently being rescued against the prepared query, allocated by
@@ -23,75 +36,6 @@ type RescueVariant = {
 	requiredMask: number;
 	prepared: PreparedQuery | null;
 };
-
-// Below this a correction describes the field rather than the query: almost
-// every field offers a window one character away from a 3-character string.
-const MIN_RESCUE_QUERY_LENGTH = 4;
-// Enumerating a word's corrections costs time and memory quadratic in its
-// length, and no real typo needs one this long, so a query holding a longer
-// word is never corrected.
-export const MAX_RESCUE_WORD_LENGTH = 64;
-
-// Chance corrections are a multiple-comparisons problem scaling with the
-// field's window count, while a high floor hurts the short queries that
-// dominate label search (@see docs/performance.md).
-const minTypoQueryLength = (fieldLength: number): number =>
-	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
-
-// A substitution keeps the subject's length where a drop shortens it to three
-// characters, so on a label it is trusted one character sooner.
-const minSubstitutionLength = (fieldLength: number): number =>
-	fieldLength <= 64 ? MIN_RESCUE_QUERY_LENGTH : minTypoQueryLength(fieldLength);
-
-// Below this a subject is short: it is corrected only at a word start, and only
-// when nothing matches the query as typed. Drops wait for it too.
-export const MIN_TYPO_QUERY_LENGTH: number = minTypoQueryLength(0);
-
-const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: number): boolean =>
-	queryWords.length === 1
-		? normalisedQuery.length >= floor
-		: queryWords.some((word) => word.length >= floor);
-
-// Whether any rescue may run, and so whether the mask gate may relax to one
-// missing class. matchField and the searcher's survivor scan must ask this same
-// question, or one corrects what the other cannot.
-export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH) &&
-	queryWords.every((word) => word.length <= MAX_RESCUE_WORD_LENGTH);
-
-// A short query's correction stands in for a missing match and never competes
-// with one: finding it means testing every item that holds the query's
-// letters, which the searcher does only when nothing matched as typed
-// (@see docs/performance.md).
-export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	!reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
-
-const SCORE_EPSILON = 1e-9;
-
-// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
-// the one-edit reading names the character the user got wrong, where a chain
-// only says the letters appear in order.
-export const preferBetter = (
-	incumbent: MatchResult | null,
-	challenger: MatchResult | null,
-): MatchResult | null => {
-	if (incumbent === null) return challenger;
-	if (challenger === null) return incumbent;
-	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
-};
-
-type Edit = (text: string, at: number) => string;
-
-export const swapAdjacentAt: Edit = (text, at) =>
-	text.slice(0, at) + text[at + 1] + text[at] + text.slice(at + 2);
-
-const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at + 1);
-
-// Needs normaliseText's 1:1 mapping to index the raw query by normalised
-// offsets; when NFC shortened decomposed input, the normalised query stands in
-// for it — sound, just case-blind.
-const rawQuery = ({ query, normalisedQuery }: PreparedQuery): string =>
-	query.length === normalisedQuery.length ? query : normalisedQuery;
 
 // The correction must be the user's own text with one character changed —
 // spelling it out of the field would credit an ALL-CAPS query with an
@@ -224,26 +168,6 @@ const substitutedWindows = (
 		}
 	}
 	return windows;
-};
-
-export const wordStartsOf = (prepared: PreparedQuery): number[] => {
-	let starts = prepared.wordStarts;
-	if (starts === undefined) {
-		starts = [];
-		let from = 0;
-		for (const word of prepared.queryWords) {
-			const wordAt = prepared.normalisedQuery.indexOf(word, from);
-			starts.push(wordAt);
-			from = wordAt + word.length;
-		}
-		prepared.wordStarts = starts;
-	}
-	return starts;
-};
-
-export const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
-	const wordStart = wordStartsOf(prepared)[wordIndex];
-	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };
 
 const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => {

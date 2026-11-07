@@ -1,14 +1,15 @@
 import { asciiWordUnits, WORD_CHARS } from "./boundaries";
-import { literalTiers, type PreparedQuery, prepareQuery, shiftRanges } from "./match";
-import { charMask, holdsInOrderFrom } from "./gates";
-import { bigramBit, bigramClass, type FieldBigrams } from "./normalise";
+import { literalTiers, shiftRanges } from "./ladder";
+import { type PreparedQuery, prepareQuery } from "./query";
+import { bigramBit, bigramClass, charMask, type FieldBigrams, holdsInOrderFrom } from "./gates";
 import {
 	MAX_RESCUE_WORD_LENGTH,
 	MIN_TYPO_QUERY_LENGTH,
 	rawWordOf,
 	swapAdjacentAt,
+	withinEdits,
 	wordStartsOf,
-} from "./rescue";
+} from "./correction";
 import { better, CONTAINS_SCORE, correctedMatch } from "./scores";
 import type { MatchResult, HighlightRange } from "./types";
 
@@ -54,35 +55,6 @@ const MIN_SCATTER_LENGTH = 4;
 const MAX_FIELD_LENGTH = 512;
 
 const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
-
-// Optimal string alignment distance: insertions, deletions, substitutions and
-// adjacent swaps, each one edit. Capped at `limit + 1`. A shared first
-// character is always matched: no cheaper alignment edits it.
-const editDistance = (a: string, b: string, limit: number, i = 0, j = 0): number => {
-	while (i < a.length && j < b.length && a[i] === b[j]) {
-		i++;
-		j++;
-	}
-	if (i === a.length || j === b.length) {
-		return Math.min(Math.max(a.length - i, b.length - j), limit + 1);
-	}
-	if (limit === 0) return 1;
-	let fewest = Math.min(
-		editDistance(a, b, limit - 1, i + 1, j + 1),
-		editDistance(a, b, limit - 1, i + 1, j),
-		editDistance(a, b, limit - 1, i, j + 1),
-	);
-	if (a[i] === b[j + 1] && a[i + 1] === b[j]) {
-		fewest = Math.min(fewest, editDistance(a, b, limit - 1, i + 2, j + 2));
-	}
-	return fewest + 1;
-};
-
-// Each edit changes the length by at most one.
-const lengthsWithin = (a: number, b: number, limit: number): boolean => Math.abs(a - b) <= limit;
-
-const withinEdits = (a: string, b: string, limit: number): number =>
-	lengthsWithin(a.length, b.length, limit) ? editDistance(a, b, limit) : limit + 1;
 
 // How many of the query's letters each character class holds, so a field
 // lacking a class leaves that many letters unmatched.

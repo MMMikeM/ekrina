@@ -11,8 +11,8 @@
 import { expect, it } from "vite-plus/test";
 import { SCORES } from "../src/scores";
 import { createSearcher, fuzzyMatch, normaliseText, splitWords } from "../src/index";
-import { prepareBoundedQuery } from "../src/match";
-import { isShortQuery } from "../src/rescue";
+import { prepareBoundedQuery } from "../src/query";
+import { isShortQuery } from "../src/correction";
 import { CORPORA } from "./corpus";
 import { secondPass, withoutSecondPass } from "./ladder";
 
