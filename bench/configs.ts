@@ -300,8 +300,9 @@ const definitions = (list: string[]): Definition[] => [
 	{
 		name: "fuse.js (tuned)",
 		make: () => {
-			// Chosen by a sweep over 0.2–0.6 on the bench's earlier corpora;
-			// docs/libraries/fuse.md compares it with the default 0.6 on today's.
+			// Chosen by a sweep over 0.2–0.6 on the bench's earlier synthetic corpora, in
+			// docs/libraries/fuse.md as of 142ee6f; the page now compares it with the
+			// default 0.6 on today's.
 			const fuseTuned = new Fuse(list, FUSE_TUNED);
 			return {
 				count: (q) => fuseTuned.search(q).length,
