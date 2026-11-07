@@ -27,7 +27,7 @@ export const META: Record<string, LibraryMeta> = {
 		api: { from: "ekrina", name: "createSearcher" },
 		deps: 0,
 		type: "subsequence (tiered)",
-		module: "esm",
+		module: "dual",
 		updated: null,
 		features: {
 			ranges: "yes",
@@ -35,7 +35,7 @@ export const META: Record<string, LibraryMeta> = {
 			diacritics: "yes",
 			multiWord: "yes",
 			perField: "yes",
-			typos: "partial",
+			typos: "yes",
 		},
 		typoReach: "≤ 2 edits",
 	},

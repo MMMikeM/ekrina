@@ -51,7 +51,7 @@ Guards to respect rather than route around:
 
 - The pipeline exits nonzero on a contaminated run — base ekrina measuring more than 10% slower than `ekrina (acronym)`, summed over every cold cell but the acronym query's, even though the acronym row runs strictly more code per query (on the acronym query its tier matches literally and skips the index build, so that cell is left out). That means garbage collection or thermal throttling disturbed the run. Rerun on a quiet machine; do not publish it.
 - `bench/corpus-*.json` and `bench/misspellings.json` are frozen, and regeneration is gated behind `GEN_WIKIDATA=1` (the `en` and `native` corpora and the misspellings, `vpr corpus:wikidata`) and `GEN_EMOJI=1` (the emoji corpus, `vpr corpus:emoji`) because every published rank and MRR derives from those exact sequences. Wikidata changes daily, so regenerating redraws items as well as the sampled families and representative queries, and the hand-written prose around the family tables needs rewriting with them.
-- `vpr bench --scope=native-10k` scopes a dev run to one corpus or size: cold stage only, printed, never written. `BENCH=` still works as an alias.
+- `vpr bench --scope=native-10k` scopes a dev run to one corpus (`native`) or one corpus at one size (`native-10k`): cold stage only, printed, never written. `BENCH=` still works as an alias.
 
 ## Documentation
 
