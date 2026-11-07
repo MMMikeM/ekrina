@@ -18,17 +18,20 @@ export default defineConfig({
 				// The catalog alias that makes vite-plus the `vite` every tool resolves.
 				"vite",
 				"@voidzero-dev/vite-plus-core",
-				// For `tsc -p examples/command-palette`, a separate pnpm root.
-				"@types/react",
-				"@types/react-dom",
 			],
 		},
 		bench: {
 			entry: ["*.test.ts", "vitest.config.ts", "run.ts", "memory.ts", "session-typist.ts"],
 			project: ["**/*.ts"],
 		},
+		"examples/command-palette": {
+			// The tutorial's steps, shown on the site and each run by pointing a main file at it.
+			entry: ["src/step-*.ts", "src/react/step-*.tsx"],
+		},
 	},
-	// The site's deploy binary, installed in site/, a separate pnpm root.
+	// The library's CI and publish jobs install without the site, so knip can't read it there.
+	ignoreWorkspaces: ["site"],
+	// docs.yml runs the site's deploy binary.
 	ignoreBinaries: ["wrangler"],
 	treatConfigHintsAsErrors: true,
 });

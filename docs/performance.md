@@ -1,7 +1,7 @@
 # Performance design rationale
 
 Why Ekrina is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
-Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
+Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm vpr bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
 The numbers quoted here are decision evidence, each taken from the run that settled its decision.
 The relative ordering is the claim, and none of it is regenerated.
 

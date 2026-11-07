@@ -1,14 +1,14 @@
 # Match quality and speed benchmarks
 
 Full data behind the README's summary: what each library calls a match, where it ranks the right answer, and how long a query takes.
-Every measured table below is generated, and `pnpm bench --all` regenerates all of them: it measures, writes [`bench/results.json`](../bench/results.json), rewrites each table in place, and redraws the Pareto charts.
+Every measured table below is generated, and `pnpm vpr bench --all` regenerates all of them: it measures, writes [`bench/results.json`](../bench/results.json), rewrites each table in place, and redraws the Pareto charts.
 No measured cell in this document is typed by hand.
 
-- `pnpm bench` alone times ekrina's own rows once and writes nothing.
-- `pnpm bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
-- `pnpm bench --check` exits nonzero if any table here disagrees with `results.json`.
-- `pnpm bench --speed`, `pnpm bench --quality` and `pnpm bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 1).
-- `pnpm bench --scope=native-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable).
+- `pnpm vpr bench` alone times ekrina's own rows once and writes nothing.
+- `pnpm vpr bench --docs` re-emits the tables from the committed `results.json` without measuring anything.
+- `pnpm vpr bench --check` exits nonzero if any table here disagrees with `results.json`.
+- `pnpm vpr bench --speed`, `pnpm vpr bench --quality` and `pnpm vpr bench --memory` run one stage of the measurement; `--runs=N` sets the fresh processes per cold cell (default 1).
+- `pnpm vpr bench --scope=native-10k` scopes a dev run (tokens: a corpus, a size, or `corpus-size`, comma-separable).
   A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor this document is touched.
 
 The pre-filter funnel ([`bench/funnel.test.ts`](../bench/funnel.test.ts)) is a diagnostic rather than a published table; run it with `pnpm --filter=ekrina-bench test`.
@@ -98,7 +98,7 @@ Which column matters depends on workload: search-as-you-type → **batch/query**
 ### Timing method
 
 Timing noise is one-sided (GC, scheduler, and thermal interruptions only ever _add_ time), so the median across processes rejects spikes; the per-cell minimum, the noise-free floor, stays in [`bench/results.json`](../bench/results.json) but is never the headline, because best-of-N flatters.
-Every published cold cell is the median of three fresh processes (`pnpm bench --all --runs=3`).
+Every published cold cell is the median of three fresh processes (`pnpm vpr bench --all --runs=3`).
 One process per cell is the default, and `--runs=N` raises it: every number is milliseconds-scale under this model, and the small timed set keeps a default run near four minutes, which is what makes rerunning on a quiet machine quick.
 A single cell is ~15% noisy at one process; the guards below look at sums for that reason.
 
@@ -473,7 +473,7 @@ The work also happens once per searcher: the masks the garbage query builds are 
 
 ## Scorecard
 
-One line per configuration: MRR and junk from [`bench/hits.test.ts`](../bench/hits.test.ts) (ranks are deterministic, measured once, untimed), times from the process-cold matrix ("Timing method"; `pnpm bench --runs=N` sets the processes per cell).
+One line per configuration: MRR and junk from [`bench/hits.test.ts`](../bench/hits.test.ts) (ranks are deterministic, measured once, untimed), times from the process-cold matrix ("Timing method"; `pnpm vpr bench --runs=N` sets the processes per cell).
 **MRR** = the group-weighted mean of the 33 scored families' MRR@10 ("The corpora and the query families"): ten queries each, scored by the rank of the first relevant result, misses and ranks outside the top 10 scoring 0.
 **junk** = the share of the 100 queries nothing answers that the library answered anyway, averaged over the five kinds.
 **index ms** = the constructor call (from the batch cell's fresh processes).
@@ -571,11 +571,11 @@ For Ekrina the acronym query `tfts` is the third case, since only fuzzy chains m
 That one query is Ekrina (acronym)'s whole lead on this chart: 2.26 ms one-shot against Ekrina's 4.49, where over the other five timed queries Ekrina (acronym) averages 3.37 ms to Ekrina's 3.29.
 The per-query cells are in [`bench/results.json`](../bench/results.json).
 
-_Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm bench --all` redraws them._
+_Both charts read the scorecard above out of [`bench/results.json`](../bench/results.json) ([`pareto.ts`](./pareto.ts)), so they cannot disagree with it; `pnpm vpr bench --all` redraws them._
 
 ## Size, speed & search type
 
-**Gzip** = esbuild `--bundle --minify`, tree-shaken to each lib's primary API, gzipped by Node's zlib, measured by `pnpm bench --size --all` (the size table is in [Libraries](#libraries)).
+**Gzip** = esbuild `--bundle --minify`, tree-shaken to each lib's primary API, gzipped by Node's zlib, measured by `pnpm vpr bench --size --all` (the size table is in [Libraries](#libraries)).
 Every cell is process-cold ("One measurement model"), and each corpus gets two tables.
 The scale table measures the one-shot workload: **index** = the constructor, **cold query** = mean first answer across the six timed queries (each in its own fresh process), **total** = the mean of constructor + first answer, summed inside each query's own child, **total rel** = that total relative to Ekrina (100% = same, lower = faster).
 The batch table measures the session: **batch total** = one fresh process answering a short-word warmup match then every family's representative query once, **batch/query** = the mean of the 24 post-warmup queries, **batch rel** = batch total relative to Ekrina.

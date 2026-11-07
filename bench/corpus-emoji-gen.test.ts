@@ -4,7 +4,7 @@
  * already say ("pretzel — convoluted, twisted"). Skin-tone variants are left
  * out, as pickers fold them under one entry. emojibase-data is MIT; its
  * licence travels in corpus-emoji.LICENSE. Gated:
- *   GEN_EMOJI=1 pnpm --filter=ekrina-bench exec vitest run corpus-emoji-gen
+ *   vpr corpus:emoji
  */
 import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
