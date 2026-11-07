@@ -80,10 +80,10 @@ let lastPrepared: PreparedQuery | null = null;
 // Null when the query holds nothing to match.
 export const prepareBoundedQuery = (query: string): PreparedQuery | null => {
 	if (query !== lastQuery) {
-		lastQuery = query;
 		const bounded = boundQuery(query);
 		const normalisedQuery = normaliseText(bounded);
 		lastPrepared = normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
+		lastQuery = query;
 	}
 	return lastPrepared;
 };
