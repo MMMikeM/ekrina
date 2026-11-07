@@ -2,10 +2,6 @@
 	"name": "ekrina-command-palette",
 	"private": true,
 	"type": "module",
-	"scripts": {
-		"dev": "vp dev",
-		"build": "vp build"
-	},
 	"dependencies": {
 		"ekrina": "workspace:*",
 		"react": "^19.3.1",

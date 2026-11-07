@@ -24,4 +24,4 @@ jobs:
       # The docs site has its own workflow and isn't part of the library's gate.
       - run: pnpm install --frozen-lockfile --filter '!ekrina-docs'
       - run: pnpm audit --audit-level high --filter '!ekrina-docs'
-      - run: pnpm gate
+      - run: pnpm vpr gate

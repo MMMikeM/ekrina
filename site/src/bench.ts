@@ -5,7 +5,7 @@ import data from "./data/explorer.json" with { type: "json" };
 import type { ExplorerData } from "./explorer.ts";
 
 // Every number the hand-written pages quote, read from the bench's artifact at
-// build time, so `pnpm bench` stays the only thing that sets one.
+// build time, so `vpr bench` stays the only thing that sets one.
 
 const artifact = results as unknown as Artifact;
 const explorer = data as ExplorerData;

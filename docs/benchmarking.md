@@ -3,11 +3,11 @@
 How a number gets from a fresh node process into a published table.
 Companion to [benchmarks.md](./benchmarks.md) (the numbers), [measurement.md](./measurement.md) (how the harness came to be wrong, twice), and [pipeline.md](./pipeline.md) (ekrina's own query path).
 
-## One `pnpm bench --all` run
+## One `pnpm vpr bench --all` run
 
 ```mermaid
 flowchart TD
-    CLI["pnpm bench --all --runs=10"] --> COLD["cold stage<br/>bench/run.ts: full matrix<br/>~30 tests × 14 variants × 2 sizes"]
+    CLI["pnpm vpr bench --all --runs=10"] --> COLD["cold stage<br/>bench/run.ts: full matrix<br/>~30 tests × 14 variants × 2 sizes"]
     CLI --> QUAL["quality stage<br/>hits.test.ts — ranks/MRR, untimed<br/>session.test.ts — typing chain<br/>longtext.test.ts — junk guard"]
     CLI --> MEM["memory stage<br/>bench/memory.ts: 14 variants × 2 corpora at 100k<br/>retained after build, three queries, drop"]
 
@@ -19,8 +19,8 @@ flowchart TD
     REG -->|"inject between<br/>&lt;!-- bench:id --&gt; markers"| DOC["docs/benchmarks.md"]
     ART --> SVG["docs/pareto.ts<br/>4 SVGs, both themes"]
 
-    CHECK["pnpm bench --check"] -.->|"regenerate + diff,<br/>exit 1 on drift"| DOC
-    DOCS["pnpm bench --docs"] -.->|"re-emit tables,<br/>no measuring"| DOC
+    CHECK["pnpm vpr bench --check"] -.->|"regenerate + diff,<br/>exit 1 on drift"| DOC
+    DOCS["pnpm vpr bench --docs"] -.->|"re-emit tables,<br/>no measuring"| DOC
 ```
 
 Every published cell is reproducible from the artifact, and the artifact is committed, so a number that moves is a reviewable diff.

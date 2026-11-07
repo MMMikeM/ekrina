@@ -37,7 +37,7 @@ jobs:
       # Its build copies the bench's pages from docs/ and generates the API
       # reference from ../src before running astro build.
       - run: pnpm install --frozen-lockfile --filter ekrina-docs
-      - run: pnpm --dir site build
+      - run: pnpm --dir site run build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-dist

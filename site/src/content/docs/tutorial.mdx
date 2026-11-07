@@ -49,24 +49,24 @@ Some queries to try in it:
 
 ## Get the code
 
-The example takes the library from its repository, which uses pnpm, so build that first.
+The example takes the library from its repository, which uses pnpm, and builds it before it starts.
 In your own project, `npm install ekrina` instead.
 
 ```bash
 git clone https://github.com/MMMikeM/ekrina.git
-cd ekrina && pnpm install --filter ekrina-command-palette... && pnpm build
-cd examples/command-palette && pnpm dev
+cd ekrina && pnpm install --filter ekrina-command-palette...
+pnpm vpr example
 ```
 
 <Tabs syncKey="framework">
 	<TabItem label="Vanilla">
 		This version has no framework.
 		One TypeScript module builds the palette into any element, and Vite serves it.
-		`pnpm dev` runs the finished palette at `/`; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
+		`pnpm vpr example` runs the finished palette at `/`; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
 	</TabItem>
 	<TabItem label="React">
 		Each step is one component, and Vite serves it.
-		`pnpm dev` runs the finished palette at `/react.html`; to run one of the steps below instead, change `./palette` in `src/react/main.tsx` to that step's file, such as `./step-1-search`.
+		`pnpm vpr example` runs the finished palette at `/react.html`; to run one of the steps below instead, change `./palette` in `src/react/main.tsx` to that step's file, such as `./step-1-search`.
 	</TabItem>
 </Tabs>
 

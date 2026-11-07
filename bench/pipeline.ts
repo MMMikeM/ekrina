@@ -246,7 +246,7 @@ const runQuality = (artifact: Artifact): void => {
 	}
 };
 
-// Measures the built dist, which `pnpm bench` builds before this runs.
+// Measures the built dist, which `vpr bench` builds before this runs.
 const runSize = (artifact: Artifact): void => {
 	const libraries = Object.keys(META).filter((library) =>
 		LIBRARIES === "all" ? true : library.toLowerCase().includes(LIBRARIES.toLowerCase()),
@@ -320,7 +320,7 @@ if (unmarked.length) console.error(`generated but marked in no doc: ${unmarked.j
 if (CHECK) {
 	if (stale.length) {
 		console.error(`stale regions: ${stale.join(", ")}`);
-		console.error("run `pnpm bench --docs` to bring them up to date.");
+		console.error("run `pnpm vpr bench --docs` to bring them up to date.");
 	}
 	if (stale.length || unmarked.length) process.exit(1);
 	console.error("the docs agree with bench/results.json.");

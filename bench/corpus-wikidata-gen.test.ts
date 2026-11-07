@@ -2,7 +2,7 @@
  * One-shot generator for corpus-en.json, corpus-native.json and misspellings.json. Wikidata
  * changes daily, so these files, not this script, are the corpus: running it
  * again redraws every item and every query sampled from them. Gated:
- *   GEN_WIKIDATA=1 pnpm --filter=ekrina-bench exec vitest run corpus-wikidata-gen
+ *   vpr corpus:wikidata
  *
  * Items are the best-known Wikidata entities of five kinds, by sitelink count,
  * through the QLever mirror (query.wikidata.org times out on a sort this

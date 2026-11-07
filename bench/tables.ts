@@ -158,7 +158,7 @@ const buildTable = (a: Artifact): string => {
 const gzipBytesOf = (a: Artifact, library: string): number => {
 	const bytes = a.gzipBytes?.[library];
 	if (bytes === undefined) {
-		throw new Error(`no measured size for '${library}': run \`pnpm bench --size --all\``);
+		throw new Error(`no measured size for '${library}': run \`pnpm vpr bench --size --all\``);
 	}
 	return bytes;
 };

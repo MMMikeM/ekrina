@@ -10,7 +10,7 @@ runs:
         cache: pnpm
     - run: pnpm install --frozen-lockfile --filter '!ekrina-docs'
       shell: bash
-    - run: pnpm build && pnpm pack
+    - run: pnpm vpr build && pnpm pack
       shell: bash
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
