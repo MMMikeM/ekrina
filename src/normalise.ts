@@ -105,7 +105,9 @@ export type FieldBigrams = { lo: number; hi: number };
 // so each unit's fold has a fixed class, learned once and stored as a stand-in
 // unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
 // non-ASCII buckets. 0 until first seen; the table itself waits for the first
-// non-ASCII unit, so a list of ASCII never allocates it.
+// non-ASCII unit, so a list of ASCII never allocates it. It calls computeFold
+// rather than foldChar because only the class is kept: caching the fold too
+// would retain a string for every distinct unit in the list.
 const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
 let standIns: Uint8Array | null = null;
 
@@ -114,7 +116,7 @@ const standIn = (unit: number): number => {
 	return (
 		table[unit] ||
 		(table[unit] = STAND_INS.charCodeAt(
-			bigramClass(foldChar(String.fromCharCode(unit)).charCodeAt(0)),
+			bigramClass(computeFold(String.fromCharCode(unit)).charCodeAt(0)),
 		))
 	);
 };
