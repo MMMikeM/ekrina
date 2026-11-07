@@ -10,13 +10,14 @@
  *           24 probes once each: warmed only by distinct real queries,
  *           never repetition.
  *
- *   node bench/run.ts <variant|all> <test|all> [count] [--size=10k|100k] [--out=file] [--json]
+ *   node bench/run.ts [variant|all] [test|all] [count] [--size=10k|100k] [--out=file] [--json]
+ *   node bench/run.ts                       # ekrina's rows, every test, one process per cell
  *   node bench/run.ts ekrina native/miss 10
  *   node bench/run.ts all batch 5 --size=10k
  *
  * Variants match by case-insensitive substring; tests by `corpus/kind`, bare
  * `kind` (both corpora), `batch`, or `all`. Count = fresh processes per cell
- * (median published; min and spread kept). Cells are interleaved round-robin
+ * (default 1; median published; min and spread kept). Cells are interleaved round-robin
  * across variants with a rotating start so thermal and load drift land evenly,
  * and the run re-times its first cell at the end as a drift canary.
  */
@@ -72,17 +73,16 @@ const median = (xs: number[]): number => [...xs].sort((a, b) => a - b)[xs.length
 
 type Test = { id: string; corpus: string; queries: string[] };
 
-// The batch opens with the short-word probe as a warmup: a guaranteed literal
-// match that absorbs JIT and first-scan time, so the 24 probes after it
-// are the session's steady tail. It is timed (it is the first answer — the
-// one-shot column is index + this), published as the batch's `first`.
+// The batch opens with a warmup match that absorbs JIT and first-scan time, so
+// the 24 probes after it are the session's steady tail. It is timed (it is the
+// first answer — the one-shot column is index + this), published as the
+// batch's `first`.
 const tests: Test[] = CORPORA.flatMap((c) => {
-	const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 	return [
 		...c.specs
 			.filter((s) => TIMED_KINDS.includes(s.kind))
 			.map((s) => ({ id: `${c.name}/${s.kind}`, corpus: c.name, queries: [s.query] })),
-		{ id: `${c.name}/batch`, corpus: c.name, queries: [warmup, ...c.specs.map((s) => s.query)] },
+		{ id: `${c.name}/batch`, corpus: c.name, queries: [c.warmup, ...c.specs.map((s) => s.query)] },
 	];
 });
 
@@ -91,12 +91,11 @@ const tests: Test[] = CORPORA.flatMap((c) => {
 const catalogueTests = (): Test[] =>
 	CORPORA.map((c) => {
 		const items = c.build(SAMPLE_SIZE);
-		const warmup = c.specs.find((s) => s.kind === "short-word")?.query ?? c.specs[0].query;
 		const queries = [
 			...c.samples.map((s) => s.query),
 			...junkProbes(items).flatMap((p) => p.queries),
 		];
-		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [warmup, ...queries] };
+		return { id: `${c.name}/catalogue`, corpus: c.name, queries: [c.warmup, ...queries] };
 	});
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
@@ -105,8 +104,8 @@ const sizeFlag = flags.find((f) => f.startsWith("--size="))?.slice(7);
 const sizes = sizeFlag ? [sizeFlag === "100k" ? 100_000 : 10_000] : [10_000, 100_000];
 const outFile = flags.find((f) => f.startsWith("--out="))?.slice(6);
 const countFlag = flags.find((f) => f.startsWith("--count="))?.slice(8);
-const [variantSel = "all", testSel = "all", countArg] = args;
-const count = Number(countFlag ?? countArg ?? "5");
+const [variantSel = "ekrina", testSel = "all", countArg] = args;
+const count = Number(countFlag ?? countArg ?? "1");
 if (!Number.isInteger(count) || count < 1) throw new Error(`bad count '${countArg ?? countFlag}'`);
 
 const variants = CONFIG_NAMES.filter(
@@ -211,6 +210,8 @@ for (const size of sizes) {
 
 // Physical invariant: the acronym configuration runs strictly more code per
 // query, so base ekrina measuring slower than it means the run absorbed load.
+// The acronym query is the exception: the acronym tier matches it literally,
+// so that searcher never builds the whole-list index base ekrina builds for it.
 // Summed over every cell, because one process per cell leaves a single cell
 // ~15% noisy, while load that lasts shows up across the whole run.
 {
@@ -218,6 +219,7 @@ for (const size of sizes) {
 	let acronymMs = 0;
 	for (const size of sizes) {
 		for (const t of chosen) {
+			if (t.id.endsWith("/acronym")) continue;
 			const base = results.get(key(t.id, size, "ekrina"));
 			const acr = results.get(key(t.id, size, "ekrina (acronym)"));
 			if (!base || !acr) continue;

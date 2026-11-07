@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { createSearcher, normaliseText } from "ekrina";
 import { charMask } from "../src/gates";
-import { CONFIG_NAMES, configs } from "./configs.ts";
+import { SELECTED_NAMES, configs } from "./configs.ts";
+import { REPEAT } from "./passes.ts";
 import { CORPORA } from "./corpus";
 
 const SIZE = 10_000;
@@ -51,10 +52,11 @@ describe("a corpus in Cyrillic", () => {
 			const indexOf = new Map(list.map((item, i) => [item, i]));
 			const search = createSearcher(list);
 			return (query: string) =>
-				search(query).map(({ item, score, fields }) => ({
+				search(query).map(({ item, corrected, text, ...match }) => ({
+					...match,
 					at: indexOf.get(item),
-					score,
-					fields: fields.map((f) => f && { ...f, corrected: f.corrected && toCyrillic(f.corrected) }),
+					corrected: corrected && toCyrillic(corrected),
+					text: toCyrillic(text),
 				}));
 		});
 		for (const query of queries) {
@@ -80,11 +82,11 @@ describe("a corpus in Cyrillic", () => {
 
 	it("every library's hits and timings, Latin against Cyrillic", { timeout: 600_000 }, () => {
 		const rows: Record<string, string | number>[] = [];
-		for (const name of CONFIG_NAMES) {
+		for (const name of SELECTED_NAMES) {
 			const runs = SCRIPTS.map(({ list, queries }) => {
 				const counts: number[] = [];
 				const first = median(
-					Array.from({ length: 5 }, () => {
+					Array.from({ length: REPEAT ? 5 : 1 }, () => {
 						const config = configs(list, name)[0];
 						const t = performance.now();
 						counts.length = 0;
@@ -95,7 +97,7 @@ describe("a corpus in Cyrillic", () => {
 				const config = configs(list, name)[0];
 				for (const query of queries) config.count(query);
 				const warm = median(
-					Array.from({ length: 5 }, () => {
+					Array.from({ length: REPEAT ? 5 : 1 }, () => {
 						const t = performance.now();
 						for (const query of queries) config.count(query);
 						return performance.now() - t;

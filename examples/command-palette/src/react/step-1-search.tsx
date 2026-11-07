@@ -1,17 +1,20 @@
 import { createSearcher } from "ekrina";
-import type { SearchResult } from "ekrina";
+import type { SearchResultOf } from "ekrina";
 import { useMemo, useState } from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [{ selectField: (command) => command.title }]);
+	const search = createSearcher(commands, (command) => command.title);
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
 
-const Option = ({ result, onChoose }: { result: SearchResult<Command>; onChoose: () => void }) => {
+type Result = SearchResultOf<typeof createSearch>;
+
+const Option = ({ result, onChoose }: { result: Result; onChoose: () => void }) => {
 	const { title, category } = result.item;
 	return (
 		<li className="option" onClick={onChoose}>

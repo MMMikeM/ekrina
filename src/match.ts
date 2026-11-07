@@ -1,4 +1,4 @@
-import { splitWords, WORD_CHARS, wordChar } from "./boundaries";
+import { splitWords, WORD_CHARS, wordStartOccurrence } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
 import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import { normaliseText } from "./normalise";
@@ -9,15 +9,16 @@ import {
 	missingCharRescue,
 	type RescueContext,
 	rescueField,
-	type RescueState,
+	type CorrectionSubject,
 } from "./rescue";
 import { ACRONYM_SCORE, BOUNDARY_SCORE, BOUNDARY_CASED_SCORE, CONTAINS_SCORE, EXACT_SCORE, MULTI_WORD_SCORE, NORMALISED_EXACT_SCORE, PREFIX_SCORE } from "./scores";
+import type { PreparedReading } from "./readings";
 import type { MatchResult, HighlightRange } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
-// lazy rescue fields share one protocol: undefined = not built yet, null = the
-// query admits none. Declared required so every PreparedQuery keeps one object
-// shape as rescue.ts fills them in.
+// lazy fields share one protocol: undefined = not built yet, null = the query
+// admits none. Declared required so every PreparedQuery keeps one object shape
+// as rescue.ts and readings.ts fill them in.
 export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;
@@ -26,10 +27,12 @@ export type PreparedQuery = {
 	queryMask: number;
 	presenceGate: Gate | null;
 	fuzzyGate: Gate;
-	rescueState: RescueState | undefined;
+	rescueState: CorrectionSubject | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
-	wordRescueStates: (RescueState | null)[] | undefined;
+	wordRescueStates: (CorrectionSubject | undefined)[] | undefined;
+	// Indexed by whether the reading competes with matches as typed.
+	readings: (PreparedReading | null | undefined)[] | undefined;
 };
 
 // The raw query is stored trimmed so the exact-case tiers treat padding as
@@ -46,12 +49,13 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		queryWords,
 		wordsLongestFirst: longestFirst(queryWords),
 		queryMask,
-		presenceGate: needsPresenceGate ? lazyGate(() => buildPresenceGate(normalisedQuery)) : null,
-		fuzzyGate: lazyGate(() => buildFuzzyGate(normalisedQuery)),
+		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
+		fuzzyGate: buildFuzzyGate(normalisedQuery),
 		rescueState: undefined,
 		lastCorrection: undefined,
 		wordStarts: undefined,
 		wordRescueStates: undefined,
+		readings: undefined,
 	};
 };
 
@@ -68,18 +72,20 @@ const boundQuery = (query: string): string => {
 	return text.slice(0, splitsPair ? MAX_QUERY_LENGTH - 1 : MAX_QUERY_LENGTH);
 };
 
+// fuzzyMatch over a list prepares the same query once per row, and a
+// PreparedQuery only ever caches what its query determines.
+let lastQuery = "";
+let lastPrepared: PreparedQuery | null = null;
+
 // Null when the query holds nothing to match.
 export const prepareBoundedQuery = (query: string): PreparedQuery | null => {
-	const bounded = boundQuery(query);
-	const normalisedQuery = normaliseText(bounded);
-	return normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
-};
-
-// The mask check rejects most fields before a gate runs, so a gate is built on
-// its first test rather than with the query.
-const lazyGate = (build: () => Gate): Gate => {
-	let gate: Gate | undefined;
-	return { test: (text) => (gate ??= build()).test(text) };
+	if (query !== lastQuery) {
+		const bounded = boundQuery(query);
+		const normalisedQuery = normaliseText(bounded);
+		lastPrepared = normalisedQuery.length ? prepareQuery(bounded, normalisedQuery) : null;
+		lastQuery = query;
+	}
+	return lastPrepared;
 };
 
 // Repeats sort together so multiWordTier can resume each copy after the last.
@@ -92,15 +98,6 @@ const longestFirst = (words: string[]): string[] =>
 // Word-internal apostrophes don't end a run: "people's" is one word with
 // initial "p", or "Lao People's Democratic Republic" could never match "lpdr".
 const wordRun = new RegExp(`[${WORD_CHARS}]+(?:'[${WORD_CHARS}]+)*`, "gu");
-
-const wordStartOccurrence = (haystack: string, needle: string, from = 0): number => {
-	let at = haystack.indexOf(needle, from);
-	while (at > -1) {
-		if (at === 0 || !wordChar.test(haystack[at - 1])) return at;
-		at = haystack.indexOf(needle, at + 1);
-	}
-	return -1;
-};
 
 const boundaryTier = (
 	haystack: string,
@@ -252,7 +249,7 @@ export const matchField = (
 
 	let rescue: RescueContext | null = null;
 	const rescueContext = (): RescueContext =>
-		(rescue ??= { field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
+		(rescue ??= { rawField: field, normalisedField, fieldMask, prepared, acronymTier: acronym, missingClasses });
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 

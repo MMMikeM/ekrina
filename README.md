@@ -57,20 +57,22 @@ search("settings");
 // [{
 //   item: { id: "settings.open", title: "Preferences: Open User Settings" },
 //   score: 1,
-//   fields: [{ score: 1, tier: "boundary", ranges: [[23, 30]] }],
+//   tier: "boundary",
+//   ranges: [[23, 30]],
+//   text: "Preferences: Open User Settings",
 // }]
 ```
 
-`ranges` index the string you passed in, so highlighting is slicing it, escaped if it goes into HTML ([highlighting](https://ekrina.thelazyweb.dev/guides/highlight/)).
+`ranges` index `text`, the string your function returned, so highlighting is slicing it, escaped if it goes into HTML ([highlighting](https://ekrina.thelazyweb.dev/guides/highlight/)).
 
 **3. Say when it corrected a typo.**
 
 ```typescript
 const [top] = search("recnet");
-// top.fields[0]: { score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]] }
+// top: { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]], text: "Open Recent" }
 
-if (top?.fields[0]?.tier === "corrected") {
-	showNotice(`Showing results for ${top.fields[0].corrected}`);
+if (top?.tier === "corrected") {
+	showNotice(`Showing results for ${top.corrected}`);
 }
 ```
 
@@ -83,14 +85,14 @@ Each library at its best-scoring configuration, on 10,000 real Wikidata names un
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  1.06 |     7.7 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
-| fast-fuzzy        | 0.81 |  6.20 |    11.0 |  24% | any       |  no   | partial |    1 |
-| Fuse.js (tuned)   | 0.76 | 12.21 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
-| uFuzzy (all opts) | 0.66 |  0.64 |     4.2 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
-| fuzzysort         | 0.46 |  0.41 |     3.7 |   7% | none      |  no   |   yes   |    0 |
-| @nozbe/microfuzz  | 0.41 |  2.10 |     1.7 |   7% | none      |  no   |   yes   |    0 |
-| match-sorter      | 0.39 |  2.70 |     3.5 |   7% | none      |  yes  |   no    |    2 |
-| fuzzy             | 0.30 |  2.10 |     0.8 |   7% | none      |  no   | partial |    0 |
+| **Ekrina**        | 0.91 |  0.36 |     8.4 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| fast-fuzzy        | 0.81 |  4.72 |    11.1 |  24% | any       |  no   | partial |    1 |
+| Fuse.js (tuned)   | 0.76 | 10.78 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
+| uFuzzy (all opts) | 0.66 |  0.59 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
+| fuzzysort         | 0.46 |  0.24 |     3.7 |   7% | none      |  no   |   yes   |    0 |
+| @nozbe/microfuzz  | 0.41 |  1.40 |     1.7 |   7% | none      |  no   |   yes   |    0 |
+| match-sorter      | 0.39 |  2.14 |     3.6 |   7% | none      |  yes  |   no    |    2 |
+| fuzzy             | 0.30 |  1.53 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
 **MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **Junk** is the share of queries with no right answer that a library answers anyway.

@@ -7,7 +7,7 @@ import type { HighlightRanges, MatchResult } from "./types";
 // The field currently being rescued against the prepared query, allocated by
 // matchField only when a field actually reaches a rescue site.
 export type RescueContext = {
-	field: string;
+	rawField: string;
 	normalisedField: string;
 	fieldMask: number;
 	prepared: PreparedQuery;
@@ -15,7 +15,7 @@ export type RescueContext = {
 	missingClasses: number;
 };
 
-export type RescueVariant = {
+type RescueVariant = {
 	normalised: string;
 	raw: string;
 	isDrop: boolean;
@@ -24,8 +24,6 @@ export type RescueVariant = {
 	requiredMask: number;
 	prepared: PreparedQuery | null;
 };
-
-export type RescueState = RescueVariant[];
 
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
@@ -71,21 +69,16 @@ export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boo
 
 const SCORE_EPSILON = 1e-9;
 
-// Ties keep the incumbent unless it is a fuzzy chain: the one-edit reading
-// names the character the user got wrong, where a chain only says the letters
-// appear in order.
+// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
+// the one-edit reading names the character the user got wrong, where a chain
+// only says the letters appear in order.
 export const preferBetter = (
 	incumbent: MatchResult | null,
 	challenger: MatchResult | null,
 ): MatchResult | null => {
 	if (incumbent === null) return challenger;
 	if (challenger === null) return incumbent;
-	if (challenger.score < incumbent.score - SCORE_EPSILON) return challenger;
-	if (incumbent.score < challenger.score - SCORE_EPSILON) return incumbent;
-	// Every caller passes the fuzzy chain as the challenger, so only the
-	// correction side of this tie runs today.
-	/* v8 ignore next */
-	return incumbent.tier === "fuzzy" ? challenger : incumbent;
+	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
 };
 
 // The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
@@ -133,19 +126,23 @@ const prepareCorrection = (
 // Only a real-tier hit (`score <= SCORES.CONTAINS`) counts: rescuing a fuzzy
 // chain is an invented edit on top of a speculative assembly
 // (@see docs/benchmarks.md). The rerun passes `mayRescue: false`, disabling
-// every rescue inside it, so the penalty cannot apply twice.
+// every rescue inside it, so the penalty cannot apply twice. It skips the front
+// gate and the chain too: the gate passes every literal hit, and a chain is
+// refused anyway, so a correction never pays to compile its own gate.
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
 	short = false,
 ): MatchResult | null => {
 	const result = matchField(
-		rescue.field,
+		rescue.rawField,
 		rescue.normalisedField,
 		rescue.fieldMask,
 		correctedQuery,
 		rescue.acronymTier,
 		false,
+		true,
+		true,
 	);
 	return result && acceptsCorrection(result, short)
 		? {
@@ -194,19 +191,30 @@ const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVarian
 	return variants;
 };
 
+// A drop, a substitution or a swap leaves one half of the subject intact, unless
+// the swap straddles the split, so a field holding none of the three holds no
+// correction. The halves come first: substitutedWindows reads them.
+const correctionAnchors = (subjectText: string): string[] => {
+	const splitAt = subjectText.length >> 1;
+	return [
+		subjectText.slice(0, splitAt),
+		subjectText.slice(splitAt),
+		swapAdjacentAt(subjectText, splitAt - 1),
+	];
+};
+
 // By the pigeonhole principle a single substitution leaves at least one half of
 // the subject intact, so those halves' occurrences are the only windows worth
 // testing. Position must not rank the corrections — the rerun rescans the field.
 const substitutedWindows = (
 	normalisedField: string,
-	subjectText: string,
+	{ queryText: subjectText, anchors: [head, tail] }: CorrectionSubject,
 	atWordStart: boolean,
 ): string[] => {
 	const subjectLength = subjectText.length;
-	const splitAt = subjectLength >> 1;
 	const halves: [offset: number, half: string][] = [
-		[0, subjectText.slice(0, splitAt)],
-		[splitAt, subjectText.slice(splitAt)],
+		[0, head],
+		[head.length, tail],
 	];
 	const windows: string[] = [];
 	for (const [offset, half] of halves) {
@@ -257,12 +265,9 @@ const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
 	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
 };
 
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): RescueState => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => null));
-	return (cache[wordIndex] ??= buildRescueVariants(
-		rawWordOf(prepared, wordIndex),
-		prepared.queryWords[wordIndex],
-	));
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => {
+	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => undefined));
+	return (cache[wordIndex] ??= absentWordSubject(prepared, wordIndex));
 };
 
 const spliceCorrectedWord = (
@@ -284,19 +289,18 @@ const spliceCorrectedWord = (
 
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
-type CorrectionSubject = {
-	text: string;
+export type CorrectionSubject = {
+	queryText: string;
+	anchors: string[];
 	variants: RescueVariant[];
 	fromVariant: (variant: RescueVariant) => PreparedQuery;
 	fromWindow: (corrected: string) => PreparedQuery;
 };
 
-const wholeQuerySubject = (
-	prepared: PreparedQuery,
-	variants: RescueVariant[],
-): CorrectionSubject => ({
-	text: prepared.normalisedQuery,
-	variants,
+const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
+	queryText: prepared.normalisedQuery,
+	anchors: correctionAnchors(prepared.normalisedQuery),
+	variants: buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery),
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
 	fromWindow: (corrected) =>
 		prepareCorrection(
@@ -306,13 +310,10 @@ const wholeQuerySubject = (
 		),
 });
 
-const absentWordSubject = (
-	prepared: PreparedQuery,
-	wordIndex: number,
-	variants: RescueVariant[],
-): CorrectionSubject => ({
-	text: prepared.queryWords[wordIndex],
-	variants,
+const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => ({
+	queryText: prepared.queryWords[wordIndex],
+	anchors: correctionAnchors(prepared.queryWords[wordIndex]),
+	variants: buildRescueVariants(rawWordOf(prepared, wordIndex), prepared.queryWords[wordIndex]),
 	fromVariant: (variant) =>
 		spliceCorrectedWord(prepared, wordIndex, variant.raw, variant.normalised),
 	fromWindow: (corrected) =>
@@ -334,7 +335,7 @@ const scoreEnumeratedVariants = (
 	for (const variant of subject.variants) {
 		// Only a drop shortens the subject, so only it answers to the field-scaled
 		// floor.
-		if (variant.isDrop && subject.text.length < fieldFloor) continue;
+		if (variant.isDrop && subject.queryText.length < fieldFloor) continue;
 		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
@@ -351,7 +352,7 @@ const scoreSubstitutedWindows = (
 	short: boolean,
 ): MatchResult | null => {
 	let best = incumbent;
-	for (const corrected of substitutedWindows(rescue.normalisedField, subject.text, short)) {
+	for (const corrected of substitutedWindows(rescue.normalisedField, subject, short)) {
 		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromWindow(corrected), short));
 		if (isUnbeatableCorrection(best)) return best;
 	}
@@ -365,10 +366,11 @@ const scoreSubstitutedWindows = (
 // stopping after the enumerated family would let the worse one win by default.
 // A corrected exact hit is unbeatable and exits early.
 const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): MatchResult | null => {
+	if (!subject.anchors.some((anchor) => rescue.normalisedField.includes(anchor))) return null;
 	const fieldLength = rescue.normalisedField.length;
-	const short = subject.text.length < MIN_TYPO_QUERY_LENGTH;
+	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;
 	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
-	if (isUnbeatableCorrection(best) || subject.text.length < minSubstitutionLength(fieldLength)) {
+	if (isUnbeatableCorrection(best) || subject.queryText.length < minSubstitutionLength(fieldLength)) {
 		return best;
 	}
 	return scoreSubstitutedWindows(rescue, subject, best, short);
@@ -393,16 +395,12 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	const absentIndex = soleAbsentWord(normalisedField, prepared.queryWords);
 	if (absentIndex === null) return null;
 	if (prepared.queryWords[absentIndex].length < MIN_RESCUE_QUERY_LENGTH) return null;
-	return correctSubject(
-		rescue,
-		absentWordSubject(prepared, absentIndex, wordRescueStateOf(prepared, absentIndex)),
-	);
+	return correctSubject(rescue, wordRescueStateOf(prepared, absentIndex));
 };
 
 const typoRescue = (rescue: RescueContext): MatchResult | null => {
 	const { prepared } = rescue;
-	prepared.rescueState ??= buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery);
-	return correctSubject(rescue, wholeQuerySubject(prepared, prepared.rescueState));
+	return correctSubject(rescue, (prepared.rescueState ??= wholeQuerySubject(prepared)));
 };
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a

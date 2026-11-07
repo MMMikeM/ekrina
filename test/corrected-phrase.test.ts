@@ -74,7 +74,7 @@ describe("one-edit corrections inside a phrase", () => {
 		expect(results[0].item).toBe("Handcxafted Wooden Sign");
 		expect(results[0].score).toBeLessThanOrEqual(SCORES.CONTAINS);
 		expect(results[1].item).toBe("Handcrafted Wooden Duck");
-		expect(results[1].fields[0]?.tier).toBe("corrected");
+		expect(results[1]?.tier).toBe("corrected");
 	});
 
 	it("search() surfaces the phrase correction through the collection gates", () => {
@@ -82,6 +82,6 @@ describe("one-edit corrections inside a phrase", () => {
 		const results = search("handcxafted wooden");
 		expect(results).toHaveLength(1);
 		expect(results[0].item).toBe("Handcrafted Wooden Duck");
-		expect(results[0].fields[0]?.tier).toBe("corrected");
+		expect(results[0]?.tier).toBe("corrected");
 	});
 });

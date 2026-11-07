@@ -188,12 +188,12 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 
 	it("one character longer, and both agree it can", () => {
 		expect(fuzzyMatch("gene", "genx")?.tier).toBe("corrected");
-		expect(createSearcher(["gene"])("genx")[0]?.fields[0]?.tier).toBe("corrected");
+		expect(createSearcher(["gene"])("genx")[0]?.tier).toBe("corrected");
 	});
 
 	it("a multi-word query relaxes once its mistyped word is long enough", () => {
 		expect(fuzzyMatch("wooden table", "wooden tablx")?.tier).toBe("corrected");
-		expect(createSearcher(["wooden table"])("wooden tablx")[0]?.fields[0]?.tier).toBe(
+		expect(createSearcher(["wooden table"])("wooden tablx")[0]?.tier).toBe(
 			"corrected",
 		);
 	});
@@ -205,8 +205,8 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 });
 
 describe("matcher and searcher agree on the typo floor", () => {
-	const tierFrom = (results: { fields: ({ tier: string } | null)[] }[]) =>
-		results[0]?.fields[0]?.tier ?? null;
+	const tierFrom = (results: { tier: string }[]) =>
+		results[0]?.tier ?? null;
 
 	// The searcher is asked three ways: first search, second search, indexed.
 	const agreedTier = (field: string, query: string): string | null => {
@@ -245,7 +245,7 @@ describe("matcher and searcher agree on the typo floor", () => {
 describe("a short query is corrected only when nothing matches it as typed", () => {
 	it("a fuzzy chain beside it does not keep a swap uncorrected", () => {
 		const search = createSearcher(["Soft Gold Hat", "Safe Fort Inn"]);
-		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+		expect(search("sfot").map((r) => [r.item, r?.tier])).toEqual([
 			["Soft Gold Hat", "corrected"],
 			["Safe Fort Inn", "fuzzy"],
 		]);
@@ -253,14 +253,14 @@ describe("a short query is corrected only when nothing matches it as typed", () 
 
 	it("with nothing matching as typed, the correction is offered", () => {
 		const search = createSearcher(["Soft Gold Hat", "Red Oak Table"]);
-		expect(search("sfot").map((r) => [r.item, r.fields[0]?.tier])).toEqual([
+		expect(search("sfot").map((r) => [r.item, r?.tier])).toEqual([
 			["Soft Gold Hat", "corrected"],
 		]);
 	});
 
 	it("a five-character query is corrected alongside matches as typed", () => {
 		const search = createSearcher(["Golden Hat", "Gloden Pond"]);
-		expect(search("gloden").map((r) => r.fields[0]?.tier)).toEqual(["prefix", "corrected"]);
+		expect(search("gloden").map((r) => r?.tier)).toEqual(["prefix", "corrected"]);
 	});
 });
 
@@ -295,7 +295,7 @@ describe("a certain match always beats a speculative one", () => {
 		const search = createSearcher(["Enero Calendar", "Generic Widget"]);
 		const results = search("eneri");
 		expect(results[0]?.item).toBe("Generic Widget");
-		expect(results[0]?.fields[0]?.tier).toBe("contains");
+		expect(results[0]?.tier).toBe("contains");
 	});
 
 	it("an item excluded by a shorter query's strict gate is still reachable", () => {
@@ -303,21 +303,21 @@ describe("a certain match always beats a speculative one", () => {
 		// is not a valid superset — and every query is typed through 4.
 		const search = createSearcher(["Ergonomic Granite Hat"]);
 		search("ergq");
-		expect(search("ergqnomic")[0]?.fields[0]?.tier).toBe("corrected");
+		expect(search("ergqnomic")[0]?.tier).toBe("corrected");
 	});
 
 	it("a corrected hit still beats no hit at all", () => {
 		const search = createSearcher(["Silk Towels", "Cotton Rug"]);
 		const results = search("towles");
 		expect(results[0]?.item).toBe("Silk Towels");
-		expect(results[0]?.fields[0]?.tier).toBe("corrected");
-		expect(results[0]?.fields[0]?.corrected).toBe("towels");
+		expect(results[0]?.tier).toBe("corrected");
+		expect(results[0]?.corrected).toBe("towels");
 	});
 });
 
 describe("a typo in a word holding digits", () => {
 	it("is corrected like any other", () => {
 		const search = createSearcher(["abc12345 x", "zzz"]);
-		expect(search("abc12x45")[0]?.fields[0]?.corrected).toBe("abc12345");
+		expect(search("abc12x45")[0]?.corrected).toBe("abc12345");
 	});
 });

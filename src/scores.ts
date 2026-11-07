@@ -1,3 +1,5 @@
+import type { Tier } from "./types";
+
 /**
  * The tier ladder as named constants. Lower = better. Every genuine tier
  * scores at or below CONTAINS, and anything above it is a `fuzzy` chain or a
@@ -55,3 +57,11 @@ export const CONTAINS_SCORE: typeof SCORES.CONTAINS = 2;
  * rank a swapped keystroke above a dropped one on no evidence.
  */
 export const TYPO_PENALTY = 2.1;
+
+/**
+ * Whether a match is of the query as typed: any tier but `fuzzy` and
+ * `corrected`. Works on `fuzzyMatch` results and search results alike, demoted
+ * fields included.
+ */
+export const isLiteral = (match: { tier: Tier }): boolean =>
+	match.tier !== "fuzzy" && match.tier !== "corrected";

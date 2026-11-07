@@ -16,7 +16,7 @@ const examples = ["rainb", "partypop", "rcoket", "tears joy", "qxzwkv"];
 const search = emojiSearch(corpus, glyphs);
 const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 	const [top] = search(query);
-	const corrected = top?.fields.find((field) => field?.score === top.score)?.tier === "corrected";
+	const corrected = top?.tier === "corrected";
 	return { query, found: top && `${top.item.glyph} ${top.item.label}`, corrected };
 });
 ---
@@ -57,10 +57,9 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 </div>
 
 <script>
-	import type { HighlightRange, MatchResult, SearchResult } from "../../../src/index.ts";
+	import type { HighlightRange, SearchResult } from "../../../src/index.ts";
 	import { DEMO_LIMIT as LIMIT, type Emoji, type EmojiSearch as Searcher } from "./emoji-search.ts";
 
-	const LABEL_FIELD = 0;
 	const TAG_SEPARATOR = ", ";
 
 	let searcher: Promise<Searcher> | undefined;
@@ -77,11 +76,6 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 
 	const warmUp = (): void => {
 		loadSearcher().catch(() => {});
-	};
-
-	const bestField = ({ fields, score }: SearchResult<Emoji>): { index: number; match: MatchResult } => {
-		const index = fields.findIndex((match) => match?.score === score);
-		return { index, match: fields[index]! };
 	};
 
 	// Ranges are inclusive at both ends; only the part inside [from, to) is drawn.
@@ -121,9 +115,9 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		return line;
 	};
 
-	const row = (result: SearchResult<Emoji>): HTMLLIElement => {
+	const row = (result: SearchResult<Emoji, "label" | "tags">): HTMLLIElement => {
 		const { glyph, label, tags } = result.item;
-		const { index, match } = bestField(result);
+		const labelMatched = result.field === "label";
 		const item = document.createElement("li");
 
 		const emoji = document.createElement("span");
@@ -135,14 +129,14 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		text.className = "text";
 		const name = document.createElement("span");
 		name.className = "label";
-		appendHighlighted(name, label, result.fields[LABEL_FIELD]?.ranges ?? []);
+		appendHighlighted(name, label, labelMatched ? result.ranges : []);
 		text.append(name);
-		if (index !== LABEL_FIELD && tags) text.append(matchedTags(tags, match.ranges));
+		if (!labelMatched && tags) text.append(matchedTags(tags, result.ranges));
 
 		const tier = document.createElement("span");
 		tier.className = "tier";
-		tier.dataset.tier = match.tier;
-		tier.textContent = match.tier;
+		tier.dataset.tier = result.tier;
+		tier.textContent = result.tier;
 
 		item.append(emoji, text, tier);
 		return item;
@@ -161,8 +155,8 @@ const samples = ["rcoket", "tears joy", "qxzwkv"].map((query) => {
 		const correctedQuery = corrected.querySelector("strong")!;
 		const list = root.querySelector<HTMLOListElement>(".results")!;
 
-		const render = (query: string, results: SearchResult<Emoji>[]): void => {
-			const top = results[0] && bestField(results[0]).match;
+		const render = (query: string, results: SearchResult<Emoji, "label" | "tags">[]): void => {
+			const top = results[0];
 			const correction = top?.tier === "corrected" ? top.corrected : undefined;
 			corrected.hidden = !correction;
 			correctedQuery.textContent = correction ?? "";

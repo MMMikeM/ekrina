@@ -19,6 +19,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch, normaliseText, splitWords } from "ekrina";
 import { type LongtextRow, ensureRawDir, rawFile } from "./artifact.ts";
 import { CORPORA } from "./corpus";
+import { REPEAT } from "./passes.ts";
 
 const DOC_LENGTHS = [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
 const ABSENT_PROBES = 200;
@@ -33,6 +34,11 @@ let sink = 0;
 // Same time-boxed median as hits.test.ts, minus the reset (fuzzyMatch is
 // stateless — no cache to bust).
 const timeQuery = (run: () => number): number => {
+	if (!REPEAT) {
+		const t0 = performance.now();
+		sink += run();
+		return performance.now() - t0;
+	}
 	for (let i = 0; i < 3; i++) sink += run();
 	const budget = performance.now() + 100;
 	const samples: number[] = [];

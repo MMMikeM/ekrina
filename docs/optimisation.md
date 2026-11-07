@@ -21,7 +21,7 @@ Counted per query on the ascii corpus at 100k:
 ```
 
 The pre-filter was never the problem.
-Ekrina's entire gate, a per-item `Int32Array` mask read plus a native regex on survivors, takes less time than uFuzzy's _whole_ query, which has no index at all.
+Ekrina's entire gate, a per-item `Int32Array` mask read plus a subsequence test on survivors (an `indexOf` scan for one word, a presence regex for several), takes less time than uFuzzy's _whole_ query, which has no index at all.
 All the slow work happens per surviving candidate, and only 53% of candidates that reach the ladder produce a result.
 
 ## What landed
@@ -90,7 +90,8 @@ The negative results are the more useful half, because each was a confident hypo
 | **Lazy ranges**                                 | 1.08–1.67 range entries per result, and the fuzzy tier's ranges fall out of the chain walk that produces the score. Nothing to defer.                                                         |
 | **`missingClasses` dispatch**                   | Sound and adds no work, but its effect sits below the harness's ±3% noise floor, so it cannot be claimed.                                                                                             |
 
-Every attempt to beat a native regex lost.
+Every attempt to beat a native regex on time per test lost.
+The `indexOf` scan that now gates a single word only ties the regex per test; it wins because a query compiles nothing, where each regex holding `\p{L}` cost about 0.2 ms to compile (docs/performance.md).
 The anchored gate won because it makes Irregexp reject _earlier_; the bigram mask lost because it tried to replace Irregexp with a JS loop.
 
 Every win came from moving work off the 100,000 path, onto the ~6,200 or ~741 paths.

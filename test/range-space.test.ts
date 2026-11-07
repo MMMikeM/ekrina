@@ -22,7 +22,7 @@ describe("ranges index the caller's string", () => {
 
 		it("shifts collection-path ranges too", () => {
 			const results = createSearcher(["  banana"])("ban");
-			expect(results[0]?.fields[0]?.ranges).toEqual([[2, 4]]);
+			expect(results[0]?.ranges).toEqual([[2, 4]]);
 		});
 
 		it("shifts two-edit and sparse ranges too", () => {
@@ -34,7 +34,7 @@ describe("ranges index the caller's string", () => {
 			];
 			expect(fuzzyMatch("  Huguette", "hget")?.ranges).toEqual(sparse);
 			const search = createSearcher(["  Huguette"]);
-			expect(search("hget")[0]?.fields[0]?.ranges).toEqual(sparse);
+			expect(search("hget")[0]?.ranges).toEqual(sparse);
 		});
 
 		it("treats padding as insignificant for the exact tier", () => {

@@ -30,12 +30,10 @@ search("recnet");
 // [{
 //   item: "Open Recent",
 //   score: 3.1,
-//   fields: [{
-//     score: 3.1,
-//     tier: "corrected",
-//     corrected: "recent",
-//     ranges: [[5, 10]],
-//   }],
+//   tier: "corrected",
+//   corrected: "recent",
+//   ranges: [[5, 10]],
+//   text: "Open Recent",
 // }]
 
 search("qxzwkv");
@@ -44,7 +42,7 @@ search("qxzwkv");
 
 Every match says how it matched.
 `tier` names the kind of match, from `exact` down to `fuzzy` and `corrected`, so you can rank, filter or label results without decoding a number.
-`ranges` are the characters to highlight, as inclusive `[start, end]` pairs of UTF-16 indices into the string you passed in, accents and casing included, so a range's text is `text.slice(start, end + 1)`.
+`ranges` are the characters to highlight, as inclusive `[start, end]` pairs of UTF-16 indices into `text`, the string you passed in, accents and casing included, so a range's text is `text.slice(start, end + 1)`.
 They are inclusive because Fuse.js and microfuzz ranges are, so a highlight helper written for either keeps working.
 A correction carries the query it fixed, which is your "Showing results for recent" in one line.
 
@@ -88,7 +86,7 @@ Each library at its best-scoring configuration, over 10,000 Wikidata names each 
 <CompareTable />
 
 **MRR** is mean reciprocal rank, where 1 means the right item always comes first, and **junk** is the share of queries with no right answer that a library answers anyway.
-The queries are families of real-world mistakes, Wikipedia's list of common misspellings among them, weighted before anything was measured, and `pnpm bench` reruns every cell from the frozen lists in the repository.
+The queries are families of real-world mistakes, Wikipedia's list of common misspellings among them, weighted before anything was measured, and `pnpm bench --all` reruns every cell from the frozen lists in the repository.
 Across all three real-world lists, Ekrina ranks the right item highest, at {bench.ekrina.mrr} against {bench.runnerUp.mrr} for {bench.runnerUp.name}, the next best.
 It answers none of the queries with no right answer on any of the three lists{bench.alsoJunkFree}.
 It isn't the fastest, and at {bench.ekrina.gzip} gzipped it is {bench.size}.

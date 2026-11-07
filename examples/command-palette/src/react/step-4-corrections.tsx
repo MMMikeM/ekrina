@@ -1,28 +1,27 @@
 import { createSearcher, SCORES } from "ekrina";
-import type { SearchResult, HighlightRanges, MatchResult } from "ekrina";
+import type { HighlightRanges, SearchResultOf } from "ekrina";
 import { type ReactNode, useMemo, useState } from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
 
+
 const createSearch = (commands: Command[]) => {
-	const search = createSearcher(commands, [
-		{ selectField: (command) => command.title, acronym: true },
-		{ selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
-	]);
+	const search = createSearcher(commands, {
+		title: { selectField: (command) => command.title, acronym: true },
+		keywords: { selectField: (command) => command.keywords ?? null, demoteBy: SCORES.CONTAINS },
+	});
 	search.buildIndex();
 	return (query: string) => search(query, { limit: LIMIT });
 };
 
-const bestField = (result: SearchResult<Command>): MatchResult =>
-	result.fields.find((field) => field?.score === result.score)!;
+type Result = SearchResultOf<typeof createSearch>;
 
-const noticeText = (query: string, results: SearchResult<Command>[]): string => {
+const noticeText = (query: string, results: Result[]): string => {
 	if (query === "") return "";
 	const top = results[0];
 	if (!top) return `No commands match “${query}”`;
-	const match = bestField(top);
-	return match.tier === "corrected" ? `Showing results for “${match.corrected}”` : "";
+	return top.tier === "corrected" ? `Showing results for “${top.corrected}”` : "";
 };
 
 const highlighted = (text: string, ranges: HighlightRanges): ReactNode[] => {
@@ -37,15 +36,15 @@ const highlighted = (text: string, ranges: HighlightRanges): ReactNode[] => {
 	return nodes;
 };
 
-const Option = ({ result, onChoose }: { result: SearchResult<Command>; onChoose: () => void }) => {
+const Option = ({ result, onChoose }: { result: Result; onChoose: () => void }) => {
 	const { title, category, keywords } = result.item;
-	const [titleMatch, keywordMatch] = result.fields;
+	const keywordsMatched = result.field === "keywords";
 	return (
 		<li className="option" onClick={onChoose}>
 			<span className="text">
-				<span className="title">{highlighted(title, titleMatch?.ranges ?? [])}</span>
-				{!titleMatch && keywordMatch && keywords && (
-					<span className="keywords">{highlighted(keywords, keywordMatch.ranges)}</span>
+				<span className="title">{highlighted(title, keywordsMatched ? [] : result.ranges)}</span>
+				{keywordsMatched && keywords && (
+					<span className="keywords">{highlighted(keywords, result.ranges)}</span>
 				)}
 			</span>
 			<span className="category">{category}</span>

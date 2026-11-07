@@ -90,3 +90,14 @@ describe("a searcher answers every query as a fresh one would, whatever came bef
 		]);
 	});
 });
+
+describe("a query that throws", () => {
+	it("throws again, rather than answering as the query before it", () => {
+		const search = createSearcher(["banana"]);
+		search("ban");
+		// @ts-expect-error a query is a string
+		expect(() => search(null)).toThrow(TypeError);
+		// @ts-expect-error a query is a string
+		expect(() => search(null)).toThrow(TypeError);
+	});
+});

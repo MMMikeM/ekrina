@@ -1,8 +1,7 @@
-// Hand-maintained, not measured: sizes are `esbuild --bundle --minify`
-// (tree-shaken to the primary API) piped through gzip, in kB of 1,000 bytes,
-// and every `features` cell is verified against that library's current source.
+// Hand-maintained: every `features` cell is verified against that library's
+// current source. Sizes are measured from `api` (bench/size.ts).
 
-export type Features = {
+type Features = {
 	ranges: "yes" | "opt-in" | "partial" | "no";
 	tier: "yes" | "no";
 	diacritics: "yes" | "opt-in" | "no";
@@ -12,7 +11,8 @@ export type Features = {
 };
 
 export type LibraryMeta = {
-	gzipKB: number;
+	/** The primary API the size is measured from: `name` is an export of `from`, or `default`. */
+	api: { from: string; name: string };
 	deps: number;
 	type: string;
 	module: "esm" | "cjs" | "dual";
@@ -24,7 +24,7 @@ export type LibraryMeta = {
 
 export const META: Record<string, LibraryMeta> = {
 	ekrina: {
-		gzipKB: 7.7,
+		api: { from: "ekrina", name: "createSearcher" },
 		deps: 0,
 		type: "subsequence (tiered)",
 		module: "esm",
@@ -40,7 +40,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: "≤ 2 edits",
 	},
 	"@nozbe/microfuzz": {
-		gzipKB: 1.7,
+		api: { from: "@nozbe/microfuzz", name: "default" },
 		deps: 0,
 		type: "subsequence",
 		module: "cjs",
@@ -56,7 +56,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	fuzzysort: {
-		gzipKB: 3.7,
+		api: { from: "fuzzysort", name: "default" },
 		deps: 0,
 		type: "subsequence",
 		module: "cjs",
@@ -72,7 +72,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	"match-sorter": {
-		gzipKB: 3.5,
+		api: { from: "match-sorter", name: "matchSorter" },
 		deps: 2,
 		type: "subsequence (tiered)",
 		module: "dual",
@@ -88,7 +88,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	uFuzzy: {
-		gzipKB: 4.2,
+		api: { from: "@leeoniya/ufuzzy", name: "default" },
 		deps: 0,
 		type: "subsequence",
 		module: "dual",
@@ -104,7 +104,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: "≤ 1 edit",
 	},
 	fuzzy: {
-		gzipKB: 0.8,
+		api: { from: "fuzzy", name: "default" },
 		deps: 0,
 		type: "substring",
 		module: "cjs",
@@ -120,7 +120,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: null,
 	},
 	"fuse.js": {
-		gzipKB: 9.6,
+		api: { from: "fuse.js", name: "default" },
 		deps: 0,
 		type: "typo-tolerant",
 		module: "dual",
@@ -136,7 +136,7 @@ export const META: Record<string, LibraryMeta> = {
 		typoReach: "any",
 	},
 	"fast-fuzzy": {
-		gzipKB: 11,
+		api: { from: "fast-fuzzy", name: "Searcher" },
 		deps: 1,
 		type: "typo-tolerant",
 		module: "dual",
@@ -153,11 +153,15 @@ export const META: Record<string, LibraryMeta> = {
 	},
 };
 
+/** Published sizes are kB of 1,000 bytes to one decimal, as in `~7.7 kB`. */
+export const gzipKB = (bytes: number): number => Number((bytes / 1000).toFixed(1));
+
 // "ekrina (acronym)", "<lib> (all opts)" and "<lib> (tuned)" are configurations of a base library
 // and share its size, deps and type.
+/** @public Read by site/src/bench.ts, outside knip's workspaces. */
 export const baseName = (name: string): string => name.replace(/ \([^)]+\)$/, "");
 
-export const metaFor = (name: string): LibraryMeta | undefined =>
+const metaFor = (name: string): LibraryMeta | undefined =>
 	META[name] ?? META[baseName(name)];
 
 const DISPLAY: Record<string, string> = { ekrina: "Ekrina", "fuse.js": "Fuse.js" };
@@ -167,10 +171,6 @@ export const displayName = (name: string): string => {
 	const base = baseName(name);
 	return (DISPLAY[base] ?? base) + name.slice(base.length);
 };
-
-/** Size-table order: ekrina first, then ascending gzip. */
-export const bySize = (a: string, b: string): number =>
-	Number(b === "ekrina") - Number(a === "ekrina") || (META[a]?.gzipKB ?? 0) - (META[b]?.gzipKB ?? 0);
 
 /**
  * Whether a configuration actually does the corpus's task. The accented corpus

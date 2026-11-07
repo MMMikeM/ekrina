@@ -11,7 +11,7 @@
  * process-wide cache, and ekrina builds its union index on the first query that
  * needs the one-edit rescue, so a constructor-only reading undercounts both.
  *
- *   node --expose-gc bench/memory.ts [variant|all]   # parent: spawns every cell, writes .raw/memory.json
+ *   node --expose-gc bench/memory.ts [variant|all]   # parent (default ekrina): spawns each cell, writes .raw/memory.json
  *   MEM_CELL='<corpus>|<config>' node --expose-gc bench/memory.ts   # one cell
  */
 import { execFileSync } from "node:child_process";
@@ -103,7 +103,7 @@ if (cell) {
 	process.stdout.write(JSON.stringify(await measureCell(corpusName, configName)));
 } else {
 	const self = fileURLToPath(import.meta.url);
-	const variantSel = process.argv[2] ?? "all";
+	const variantSel = process.argv[2] ?? "ekrina";
 	const variants = CONFIG_NAMES.filter(
 		(n) => variantSel === "all" || n.toLowerCase().includes(variantSel.toLowerCase()),
 	);

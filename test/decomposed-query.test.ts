@@ -6,7 +6,7 @@ import { createSearcher, fuzzyMatch } from "../src/index";
 // to the normalised spelling.
 const desserts = ["Crème brûlée", "Café noir"];
 const corrected = (query: string): string | undefined =>
-	createSearcher(desserts)(query)[0]?.fields[0]?.corrected;
+	createSearcher(desserts)(query)[0]?.corrected;
 
 describe("a query typed with combining accents", () => {
 	it("is still corrected by a substitution", () => {

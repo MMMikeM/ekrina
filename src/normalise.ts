@@ -1,4 +1,4 @@
-const combiningMarks = /[\u0300-\u036f]/g;
+export const combiningMarks: RegExp = /[\u0300-\u036f]/g;
 const hasCombiningMark = /[\u0300-\u036f]/;
 const hasNonAscii = /[\u0080-\uffff]/;
 
@@ -36,7 +36,7 @@ const denseFolds: (string | undefined)[] = new Array(DENSE_FOLDS_MAX + 1).fill(u
 const rareFolds = new Map<string, string>();
 const RARE_FOLDS_MAX = 65_536;
 
-export const foldChar = (char: string): string => {
+const foldChar = (char: string): string => {
 	const codePoint = char.codePointAt(0) as number;
 	if (codePoint <= DENSE_FOLDS_MAX) {
 		let folded = denseFolds[codePoint];
@@ -101,23 +101,56 @@ export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur
 // word-initial pairs, 64 bits in two int32s.
 export type FieldBigrams = { lo: number; hi: number };
 
+// Every BMP code point folds to exactly one unit (computeFold's length check),
+// so each unit's fold has a fixed class, learned once and stored as a stand-in
+// unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
+// non-ASCII buckets. 0 until first seen; the table itself waits for the first
+// non-ASCII unit, so a list of ASCII never allocates it. It calls computeFold
+// rather than foldChar because only the class is kept: caching the fold too
+// would retain a string for every distinct unit in the list.
+const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
+let standIns: Uint8Array | null = null;
+
+const standIn = (unit: number): number => {
+	const table = (standIns ??= new Uint8Array(0x10000));
+	return (
+		table[unit] ||
+		(table[unit] = STAND_INS.charCodeAt(
+			bigramClass(computeFold(String.fromCharCode(unit)).charCodeAt(0)),
+		))
+	);
+};
+
+// `unitMask` for every ASCII unit and both non-ASCII stand-ins.
+const standInMasks = new Int32Array(130);
+for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
+
+const NON_ASCII_BITS = 3 << 30;
+
+const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
+
+const isCombiningMark = (unit: number): boolean => unit >= 0x300 && unit <= 0x36f;
+
 /**
  * `charMask(normaliseText(raw))` without building the normalised string. Runs
  * once per field, when a searcher first needs a whole-list pass. May only
- * false-pass: skipping NFC can only add mask bits.
+ * false-pass: skipping NFC can only add mask bits, except that NFC, which
+ * normaliseText applies to a field holding a combining mark, can compose units
+ * (Hangul jamo) into one of the other non-ASCII bucket, so such a field takes
+ * both non-ASCII bits.
  */
 export const rawFieldMask = (raw: string): number => {
 	let mask = 0;
 	for (let i = 0; i < raw.length; i++) {
 		const unit = raw.charCodeAt(i);
-		if (unit < 128) {
-			mask |= unitMask(unit);
-			continue;
-		}
-		const codePoint = raw.codePointAt(i) as number;
-		if (codePoint > 0xffff) i++;
-		const folded = foldChar(String.fromCodePoint(codePoint));
-		for (let k = 0; k < folded.length; k++) mask |= unitMask(folded.charCodeAt(k));
+		// A surrogate's fold depends on its partner, so it takes both non-ASCII
+		// bits, which can only false-pass.
+		mask |=
+			unit < 128
+				? standInMasks[unit]
+				: isSurrogate(unit) || isCombiningMark(unit)
+					? NON_ASCII_BITS
+					: standInMasks[standIn(unit)];
 	}
 	return mask;
 };
@@ -128,9 +161,9 @@ export const rawFieldMask = (raw: string): number => {
  * (degraded = all-ones). Runs per item the first time a gate asks for its
  * pairs, or over every item when the caller builds the index up front.
  *
- * Both halves may only false-pass: skipping NFC can only ADD mask bits, and a
- * combining mark — where raw adjacency stops matching normalised adjacency —
- * degrades the bigram set to all-bits while the mask keeps folding.
+ * Both halves may only false-pass: a combining mark, where NFC may compose the
+ * field and raw adjacency stops matching normalised adjacency, degrades the
+ * bigram set to all-bits and gives the mask both non-ASCII bits (rawFieldMask).
  */
 export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	let mask = 0;
@@ -146,11 +179,13 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 		let unit = raw.charCodeAt(i);
 		let folded = "";
 		if (unit > 127) {
-			if (unit >= 0x300 && unit <= 0x36f) degraded = true;
-			const codePoint = raw.codePointAt(i) as number;
-			if (codePoint > 0xffff) i++;
-			folded = foldChar(String.fromCodePoint(codePoint));
-			unit = folded.charCodeAt(0);
+			if (isCombiningMark(unit)) degraded = true;
+			if (isSurrogate(unit)) {
+				const codePoint = raw.codePointAt(i) as number;
+				if (codePoint > 0xffff) i++;
+				folded = foldChar(String.fromCodePoint(codePoint));
+				unit = folded.charCodeAt(0);
+			} else unit = standIn(unit);
 		}
 		for (let k = 0; ; ) {
 			let unitClass = 0;
@@ -165,22 +200,19 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 				unitClass = 27 + (unit & 3);
 			} else if (unit > 127) {
 				mask |= 1 << (30 + (unit & 1));
-				if (unit >= 0x300 && unit <= 0x36f) degraded = true;
-				else unitClass = 31 + (unit & 1);
+				unitClass = 31 + (unit & 1);
 			}
-			if (unitClass !== 0 && !degraded) {
-				if (prevClass !== 0) {
-					const bit = (prevClass * 37 + unitClass) & 63;
-					if (bit < 32) bigramsLo |= 1 << bit;
-					else bigramsHi |= 1 << bit;
-				} else {
-					if (lastWordInitial !== 0) {
-						const bit = (lastWordInitial * 37 + unitClass) & 63;
-						if (bit < 32) bigramsLo |= 1 << bit;
-						else bigramsHi |= 1 << bit;
-					}
-					lastWordInitial = unitClass;
+			if (unitClass !== 0) {
+				const pairStart = prevClass !== 0 ? prevClass : lastWordInitial;
+				if (pairStart !== 0) {
+					// Branchless: which half the bit lands in is data-dependent, and
+					// branching on it made the whole-corpus scan ~40% slower.
+					const bit = (pairStart * 37 + unitClass) & 63;
+					const inLow = (bit >> 5) - 1;
+					bigramsLo |= (1 << bit) & inLow;
+					bigramsHi |= (1 << bit) & ~inLow;
 				}
+				if (prevClass === 0) lastWordInitial = unitClass;
 			}
 			prevClass = unitClass;
 			if (++k >= folded.length) break;
@@ -190,9 +222,9 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	if (degraded) {
 		into.lo = -1;
 		into.hi = -1;
-	} else {
-		into.lo |= bigramsLo;
-		into.hi |= bigramsHi;
+		return mask | NON_ASCII_BITS;
 	}
+	into.lo |= bigramsLo;
+	into.hi |= bigramsHi;
 	return mask;
 };
