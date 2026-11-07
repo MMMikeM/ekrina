@@ -43,12 +43,12 @@
 			}
 		}
 	},
-	"scripts": {
-		"prepare": "vp config --no-agent"
-	},
 	"publishConfig": {
 		"access": "public",
 		"provenance": true
+	},
+	"scripts": {
+		"prepare": "vp config --no-agent"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/core": "^0.18.5",

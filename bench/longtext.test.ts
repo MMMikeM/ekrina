@@ -114,8 +114,14 @@ describe("long-text matching: the density floor keeps junk at zero", () => {
 		ensureRawDir();
 		writeFileSync(rawFile("longtext.json"), JSON.stringify({ rows }, null, "\t"));
 		for (const row of rows) {
-			expect(row.junkRate, `fuzzy-tier junk on a ${row.docChars}-char document`).toBeLessThanOrEqual(MAX_JUNK_RATE);
-			expect(row.correctedRate, `corrections on a ${row.docChars}-char document`).toBeLessThanOrEqual(MAX_CORRECTED_RATE);
+			expect(
+				row.junkRate,
+				`fuzzy-tier junk on a ${row.docChars}-char document`,
+			).toBeLessThanOrEqual(MAX_JUNK_RATE);
+			expect(
+				row.correctedRate,
+				`corrections on a ${row.docChars}-char document`,
+			).toBeLessThanOrEqual(MAX_CORRECTED_RATE);
 			expect(row.presentHits).toBe(row.presentProbes);
 		}
 	});

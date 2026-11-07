@@ -22,10 +22,30 @@ type Kind = { name: string; types: string[]; nativeName: string; fetch: number }
 
 const KINDS: Kind[] = [
 	{ name: "people", types: ["Q5"], nativeName: "P1559", fetch: 40_000 },
-	{ name: "places", types: ["Q515", "Q1549591", "Q3957", "Q532"], nativeName: "P1705", fetch: 24_000 },
-	{ name: "works", types: ["Q11424", "Q7725634", "Q482994", "Q7889", "Q5398426"], nativeName: "P1476", fetch: 24_000 },
-	{ name: "organisations", types: ["Q4830453", "Q783794", "Q163740", "Q3918", "Q476028"], nativeName: "P1448", fetch: 18_000 },
-	{ name: "products", types: ["Q431289", "Q10929058", "Q7397"], nativeName: "P1705", fetch: 12_000 },
+	{
+		name: "places",
+		types: ["Q515", "Q1549591", "Q3957", "Q532"],
+		nativeName: "P1705",
+		fetch: 24_000,
+	},
+	{
+		name: "works",
+		types: ["Q11424", "Q7725634", "Q482994", "Q7889", "Q5398426"],
+		nativeName: "P1476",
+		fetch: 24_000,
+	},
+	{
+		name: "organisations",
+		types: ["Q4830453", "Q783794", "Q163740", "Q3918", "Q476028"],
+		nativeName: "P1448",
+		fetch: 18_000,
+	},
+	{
+		name: "products",
+		types: ["Q431289", "Q10929058", "Q7397"],
+		nativeName: "P1705",
+		fetch: 12_000,
+	},
 ];
 
 // Every 20 items hold 7 people, 4 places, 4 works, 3 organisations and 2
@@ -101,31 +121,39 @@ const misspellingsOf = (page: string): Record<string, string[]> => {
 	return out;
 };
 
-it.skipIf(!process.env.GEN_WIKIDATA)("regenerates the Wikidata corpus and misspelling snapshots", { timeout: 600_000 }, async () => {
-	const queues: string[][][] = [];
-	for (const [k, kind] of KINDS.entries()) {
-		const rows = parseCsv(await get(`${ENDPOINT}?${new URLSearchParams({ query: query(kind) })}`));
-		queues.push(shuffled(rows, 7 + k));
-	}
-	const en: string[] = [];
-	const native: string[] = [];
-	const seen = new Set<string>();
-	for (let i = 0; en.length < SIZE; i++) {
-		const queue = queues[PATTERN[i % PATTERN.length]];
-		let row = queue.shift();
-		while (row && seen.has(row[1])) row = queue.shift();
-		if (!row) throw new Error(`ran out of ${KINDS[PATTERN[i % PATTERN.length]].name}`);
-		seen.add(row[1]);
-		en.push(row[1]);
-		native.push(row[2] || row[1]);
-	}
-	writeFileSync(new URL("./corpus-en.json", import.meta.url), JSON.stringify(en));
-	writeFileSync(new URL("./corpus-native.json", import.meta.url), JSON.stringify(native));
+it.skipIf(!process.env.GEN_WIKIDATA)(
+	"regenerates the Wikidata corpus and misspelling snapshots",
+	{ timeout: 600_000 },
+	async () => {
+		const queues: string[][][] = [];
+		for (const [k, kind] of KINDS.entries()) {
+			const rows = parseCsv(
+				await get(`${ENDPOINT}?${new URLSearchParams({ query: query(kind) })}`),
+			);
+			queues.push(shuffled(rows, 7 + k));
+		}
+		const en: string[] = [];
+		const native: string[] = [];
+		const seen = new Set<string>();
+		for (let i = 0; en.length < SIZE; i++) {
+			const queue = queues[PATTERN[i % PATTERN.length]];
+			let row = queue.shift();
+			while (row && seen.has(row[1])) row = queue.shift();
+			if (!row) throw new Error(`ran out of ${KINDS[PATTERN[i % PATTERN.length]].name}`);
+			seen.add(row[1]);
+			en.push(row[1]);
+			native.push(row[2] || row[1]);
+		}
+		writeFileSync(new URL("./corpus-en.json", import.meta.url), JSON.stringify(en));
+		writeFileSync(new URL("./corpus-native.json", import.meta.url), JSON.stringify(native));
 
-	const page = await get(`https://en.wikipedia.org/w/index.php?oldid=${MISSPELLINGS_REVISION}&action=raw`);
-	const source = `https://en.wikipedia.org/w/index.php?title=Wikipedia:Lists_of_common_misspellings/For_machines&oldid=${MISSPELLINGS_REVISION}`;
-	writeFileSync(
-		new URL("./misspellings.json", import.meta.url),
-		JSON.stringify({ source, licence: "CC BY-SA 4.0", misspellings: misspellingsOf(page) }),
-	);
-});
+		const page = await get(
+			`https://en.wikipedia.org/w/index.php?oldid=${MISSPELLINGS_REVISION}&action=raw`,
+		);
+		const source = `https://en.wikipedia.org/w/index.php?title=Wikipedia:Lists_of_common_misspellings/For_machines&oldid=${MISSPELLINGS_REVISION}`;
+		writeFileSync(
+			new URL("./misspellings.json", import.meta.url),
+			JSON.stringify({ source, licence: "CC BY-SA 4.0", misspellings: misspellingsOf(page) }),
+		);
+	},
+);

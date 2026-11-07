@@ -29,6 +29,7 @@ What breaks is the seven names below, what a result holds, and the same query re
 
   Before, `atBest` and a misspelt option were ignored, and the others failed with an unreadable message.
   A negative, infinite or non-number `demoteBy` throws a `RangeError`, since a negative shift would carry a fuzzy or corrected match to or below `SCORES.CONTAINS`.
+
 - **Several fields are named, and a result is its best field's match.**
   An object that names each field replaces the array of field specs: `createSearcher(posts, { title: (p) => p.title, body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS } })`.
   A field is a function, or a spec when it needs options, and one spec alone, `{ selectField, acronym: true }`, is a single field with options.
@@ -64,6 +65,7 @@ What breaks is the seven names below, what a result holds, and the same query re
   The bundle grows from ~6.4 kB to ~8.4 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
   The build mangles internal property names, which takes ~0.3 kB off, and duplicated paths are merged into one.
   Every result is unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
+
 - **Searching is faster than 1.1.2, corrections included, and holds about as much.**
   - A single-word query is gated by an `indexOf` scan instead of a compiled regex, and the scan tests as fast as the regex did.
   - The raw-text gates other queries compile anchor on `\w`, which compiles in a fraction of the time a `\p{L}` class does.
@@ -76,6 +78,7 @@ What breaks is the seven names below, what a result holds, and the same query re
   - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);
   - the 24 queries of a 100k session take 11–18% less, and a first answer 6–45% less;
   - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
+
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
   - 100,000 well-known Wikidata entities, under their English names and again under their native names;
@@ -86,6 +89,7 @@ What breaks is the seven names below, what a result holds, and the same query re
   On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
   The typing session times each keystroke once, in a fresh process, as a user types it.
   Before, it repeated each query in one process, which let V8 reuse the regexes it had compiled.
+
 - **The package ships `dist/AGENTS.md`.**
   It lists the exports and the rules a coding agent needs to use them correctly, built from the docs site's page for AI coding agents.
 

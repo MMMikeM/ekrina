@@ -93,7 +93,10 @@ const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
-export const readingAdmits = ({ needed, counts, spare }: PreparedReading, fieldMask: number): boolean => {
+export const readingAdmits = (
+	{ needed, counts, spare }: PreparedReading,
+	fieldMask: number,
+): boolean => {
 	let unmatched = 0;
 	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
@@ -170,7 +173,10 @@ const correction = (
 	first: FieldWord,
 	last: FieldWord,
 ): MatchResult | null => {
-	const span = { word: normalisedField.slice(first.offset, last.offset + last.word.length), offset: first.offset };
+	const span = {
+		word: normalisedField.slice(first.offset, last.offset + last.word.length),
+		offset: first.offset,
+	};
 	const corrected = spelling(field, normalisedField, span);
 	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
 };
@@ -383,8 +389,10 @@ const pairsOf = (words: string[]): Pairs => {
 
 const lacksPairsAtMost = (needed: Pairs, lo: number, hi: number, limit: number): boolean => {
 	let missing = 0;
-	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
-	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1) if (++missing > limit) return false;
+	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
+	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
 	return true;
 };
 
@@ -465,7 +473,8 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 	// Gated on the form it corrects, since a long run would fail a gate built
 	// from the letters as typed.
 	const stuck = phrase || competing ? null : stuckKeyForm(letters);
-	const swaps = phrase || competing || letters.length !== SWAP_ONLY_LENGTH ? null : swapForms(letters);
+	const swaps =
+		phrase || competing || letters.length !== SWAP_ONLY_LENGTH ? null : swapForms(letters);
 	const matchAsTyped = (
 		word: string,
 		field: string,
@@ -478,14 +487,27 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 		);
 	const matchWord =
 		stuck !== null
-			? (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
+			? (
+					word: string,
+					field: string,
+					normalisedField: string,
+					words: FieldWord[],
+				): MatchResult | null =>
 					better(
 						matchAsTyped(word, field, normalisedField, words),
 						correctWord(stuck, field, normalisedField, words, 1, MAX_EDITS - 1),
 					)
 			: swaps !== null
-				? (word: string, field: string, normalisedField: string, words: FieldWord[]): MatchResult | null =>
-						better(matchAsTyped(word, field, normalisedField, words), swapWord(swaps, field, normalisedField, words))
+				? (
+						word: string,
+						field: string,
+						normalisedField: string,
+						words: FieldWord[],
+					): MatchResult | null =>
+						better(
+							matchAsTyped(word, field, normalisedField, words),
+							swapWord(swaps, field, normalisedField, words),
+						)
 				: matchAsTyped;
 	const correctable = queryWords.some((word) => word.length >= MIN_PHRASE_CORRECTION_LENGTH);
 	const matchable = phrase

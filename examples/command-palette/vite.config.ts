@@ -5,7 +5,11 @@ export default defineConfig({
 	run: {
 		tasks: {
 			// The app imports ekrina from its dist/, which a stale build would serve silently.
-			dev: { command: "vp dev", dependsOn: [{ task: "build", from: "dependencies" }], cache: false },
+			dev: {
+				command: "vp dev",
+				dependsOn: [{ task: "build", from: "dependencies" }],
+				cache: false,
+			},
 			build: { command: "vp build", dependsOn: [{ task: "build", from: "dependencies" }] },
 		},
 	},

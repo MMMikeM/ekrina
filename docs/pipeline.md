@@ -63,16 +63,16 @@ With a `limit`, the ladder runs in full until `limit` items have matched literal
 
 en 100k, mean over sixteen single-word probes:
 
-| stage                                 | records in |      records out |                           time |
-| ------------------------------------- | ---------: | ---------------: | -----------------------------: |
-| construction                          |          — |                — |       under half a millisecond |
-| raw gate (first query)                |    100,000 |    **92 — 0.09%** |                        2.20 ms |
-| materialise survivors                 |         92 |               92 |                        0.03 ms |
-| tier ladder                           |         92 |   **34 results** |                        0.03 ms |
-| — rescue path only —                  |            |                  |                                |
-| union mask build                      |    100,000 |                — | **3.47 ms**, once per searcher |
-| bigram sets, items one class short    |      7,005 |                — |    0.54 ms, once per item read |
-| relaxed scan + rescue                 |    100,000 | **2,322 — 2.3%** |                        0.64 ms |
+| stage                              | records in |      records out |                           time |
+| ---------------------------------- | ---------: | ---------------: | -----------------------------: |
+| construction                       |          — |                — |       under half a millisecond |
+| raw gate (first query)             |    100,000 |   **92 — 0.09%** |                        2.20 ms |
+| materialise survivors              |         92 |               92 |                        0.03 ms |
+| tier ladder                        |         92 |   **34 results** |                        0.03 ms |
+| — rescue path only —               |            |                  |                                |
+| union mask build                   |    100,000 |                — | **3.47 ms**, once per searcher |
+| bigram sets, items one class short |      7,005 |                — |    0.54 ms, once per item read |
+| relaxed scan + rescue              |    100,000 | **2,322 — 2.3%** |                        0.64 ms |
 
 Native 100k behaves the same: the raw gate leaves _92 records, 0.09%_, at 2.64 ms; the ladder produces 34 results in 0.03 ms; the rescue's mask build is 3.68 ms, the bigram sets of the 6,865 items one class short take 0.61 ms, and its relaxed scan admits 2,357 records (2.4%) at 0.66 ms.
 

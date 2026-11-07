@@ -187,7 +187,7 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 				unit = folded.charCodeAt(0);
 			} else unit = standIn(unit);
 		}
-		for (let k = 0; ; ) {
+		for (let k = 0; ;) {
 			let unitClass = 0;
 			if (unit >= 97 && unit <= 122) {
 				mask |= 1 << (unit - 97);

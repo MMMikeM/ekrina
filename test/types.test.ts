@@ -98,4 +98,3 @@ describe("SearchResultOf", () => {
 		expect(none).toBeDefined();
 	});
 });
-

@@ -370,7 +370,10 @@ const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): Matc
 	const fieldLength = rescue.normalisedField.length;
 	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;
 	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
-	if (isUnbeatableCorrection(best) || subject.queryText.length < minSubstitutionLength(fieldLength)) {
+	if (
+		isUnbeatableCorrection(best) ||
+		subject.queryText.length < minSubstitutionLength(fieldLength)
+	) {
 		return best;
 	}
 	return scoreSubstitutedWindows(rescue, subject, best, short);

@@ -5,14 +5,18 @@ import { INTERNAL_NAMES } from "./scripts/internal-names.ts";
 export default defineConfig({
 	fmt: {
 		useTabs: true,
-		// The bench pipeline owns results.json, the frozen corpora, and every
-		// marked region in docs/benchmarks.md — formatting them fights the
-		// generator and `vpr bench --check`.
+		// The bench pipeline owns results.json, the frozen corpora, and every doc
+		// with a marked region; formatting them fights the generator and
+		// `vpr bench --check`.
 		ignorePatterns: [
 			"dist",
 			"bench/results.json",
 			"bench/corpus-*.json",
+			"bench/misspellings.json",
 			"docs/benchmarks.md",
+			"docs/compare.md",
+			"docs/libraries",
+			"README.md",
 			"site",
 		],
 	},
@@ -115,7 +119,11 @@ export default defineConfig({
 				cwd: "bench",
 				cache: false,
 			},
-			"corpus:emoji": { command: "GEN_EMOJI=1 vp test run corpus-emoji-gen", cwd: "bench", cache: false },
+			"corpus:emoji": {
+				command: "GEN_EMOJI=1 vp test run corpus-emoji-gen",
+				cwd: "bench",
+				cache: false,
+			},
 			site: { command: "vp run ekrina-docs#dev", cache: false },
 			"site:build": { command: "vp run ekrina-docs#build", cache: false },
 			example: { command: "vp run ekrina-command-palette#dev", cache: false },

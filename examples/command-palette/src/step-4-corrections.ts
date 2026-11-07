@@ -4,7 +4,6 @@ import type { Command } from "./commands";
 
 const LIMIT = 8;
 
-
 const createSearch = (commands: Command[]) => {
 	const search = createSearcher(commands, {
 		title: { selectField: (command) => command.title, acronym: true },
@@ -44,7 +43,11 @@ const element = <K extends keyof HTMLElementTagNameMap>(
 const option = (result: Result): HTMLLIElement => {
 	const { title, category, keywords } = result.item;
 	const keywordsMatched = result.field === "keywords";
-	const text = element("span", "text", element("span", "title", ...highlighted(title, keywordsMatched ? [] : result.ranges)));
+	const text = element(
+		"span",
+		"text",
+		element("span", "title", ...highlighted(title, keywordsMatched ? [] : result.ranges)),
+	);
 	if (keywordsMatched && keywords) {
 		text.append(element("span", "keywords", ...highlighted(keywords, result.ranges)));
 	}

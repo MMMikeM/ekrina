@@ -50,9 +50,7 @@ describe("the adjacent-swap rescue", () => {
 	});
 
 	it("rescued items rank above junk subsequence chains", () => {
-		const results = createSearcher(["generic gasket", "grabbing electric nickel rugs"])(
-			"geenric",
-		);
+		const results = createSearcher(["generic gasket", "grabbing electric nickel rugs"])("geenric");
 		expect(results[0]?.item).toBe("generic gasket");
 		expect(results[0]?.tier).toBe("corrected");
 	});
