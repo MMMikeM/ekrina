@@ -113,7 +113,7 @@ const resolveField = <T>(field: Field<T>, fieldName: string | undefined): Resolv
 	checkSpecKeys(field, where);
 	const demotion = field.demoteBy ?? 0;
 	// A negative or NaN shift would carry a guess to or below SCORES.CONTAINS.
-	if (!(demotion >= 0 && demotion < Infinity)) {
+	if (!(typeof demotion === "number" && demotion >= 0 && demotion < Infinity)) {
 		throw new RangeError(`${where}: demoteBy must be a finite number of at least 0, got ${demotion}`);
 	}
 	return { selector: field.selectField, acronymTier: field.acronym ?? false, demotion, fieldName };
@@ -122,7 +122,9 @@ const resolveField = <T>(field: Field<T>, fieldName: string | undefined): Resolv
 const resolveFieldSpecs = <T>(selection?: Field<T> | Record<string, Field<T>>): ResolvedSpec<T>[] => {
 	if (!selection) selection = (item) => item as unknown as string;
 	if (typeof selection === "function") return [resolveField(selection, undefined)];
-	if (typeof selection !== "object" || Array.isArray(selection)) {
+	// A Map, an array or a class instance would read as an object of no fields.
+	const proto = typeof selection === "object" ? Object.getPrototypeOf(selection) : undefined;
+	if (proto !== Object.prototype && proto !== null) {
 		throw new TypeError(
 			"createSearcher takes a field, or an object of named fields such as { title: (item) => item.title }",
 		);

@@ -94,6 +94,12 @@ describe("named fields", () => {
 		expect(r).toMatchObject({ field: "name", tier: "acronym" });
 	});
 
+	it("takes named fields on an object with no prototype", () => {
+		const fields: Record<string, (item: string) => string> = Object.create(null);
+		fields.title = (item) => item;
+		expect(createSearcher(["orange"], fields)("orange")[0]?.field).toBe("title");
+	});
+
 	it("an empty object of fields searches nothing", () => {
 		expect(createSearcher(["cat"], {})("cat")).toEqual([]);
 	});
@@ -211,6 +217,15 @@ describe("selections the searcher rejects", () => {
 		);
 		expect(() => createSearcher(items, demoted(Number.NaN))).toThrow(RangeError);
 		expect(() => createSearcher(items, demoted(Number.POSITIVE_INFINITY))).toThrow(RangeError);
+		expect(() => createSearcher(items, demoted("2" as unknown as number))).toThrow(RangeError);
+	});
+
+	it("a key name, as Fuse.js takes, where a field is a function", () => {
+		expect(() => createSearcher(items, "title" as never)).toThrow(TypeError);
+	});
+
+	it("a Map or class instance, which would read as an object of no fields", () => {
+		expect(() => createSearcher(items, new Map() as never)).toThrow(TypeError);
 	});
 
 	it("a field named like an integer, since those names sort first", () => {

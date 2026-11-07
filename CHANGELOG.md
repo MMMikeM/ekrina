@@ -16,7 +16,7 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   Rename `text:` to `selectField:` in each field spec.
 - **`FieldSpec.atBest` is `demoteBy`.**
   The value is added to every score the field produces, which `atBest` hid by naming only where the field's best hit lands; the number and the mechanism are unchanged.
-  A field spec with any key but `selectField`, `acronym` and `demoteBy`, the 1.x `text` and `atBest` included, a field without `selectField`, or an array of field specs throws a `TypeError`; before, `atBest` was ignored and the others failed with an unreadable message.
+  A field spec with any key but `selectField`, `acronym` and `demoteBy`, the 1.x `text` and `atBest` included, a field without `selectField`, or anything but a field or a plain object of fields in their place (an array of field specs, a `Map`, a class instance, a string) throws a `TypeError`; before, `atBest` was ignored and the others failed with an unreadable message.
   So a misspelt `demotBy`, or a field written beside a lone spec's `selectField`, is an error rather than silently ignored.
   A negative, infinite or non-number `demoteBy` throws a `RangeError`, since a negative shift would carry a fuzzy or corrected match to or below `SCORES.CONTAINS`.
 - **Several fields are named, and a result is its best field's match.**
