@@ -42,6 +42,18 @@ export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]):
 export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	!reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
 
+// A query of five or more letters is rescued beside its matches as typed,
+// before the readings; a shorter one only once nothing else matched, since a
+// swap or a sparse word is likelier what was meant ("tahn" is "than", not "taha").
+export type RescueTurn = "first" | "last" | null;
+
+export const rescueTurn = (normalisedQuery: string, queryWords: string[]): RescueTurn =>
+	!isRescuableQuery(normalisedQuery, queryWords)
+		? null
+		: isShortQuery(normalisedQuery, queryWords)
+			? "last"
+			: "first";
+
 export type Edit = (text: string, at: number) => string;
 
 export const swapAdjacentAt: Edit = (text, at) =>

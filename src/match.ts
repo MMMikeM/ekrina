@@ -4,7 +4,7 @@ import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
 import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
 import { readingAdmits, readings } from "./readings";
-import { isRescuableQuery, isShortQuery } from "./correction";
+import { isRescuableQuery, rescueTurn } from "./correction";
 import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
 import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
 import type { MatchOptions, MatchResult } from "./types";
@@ -17,7 +17,7 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 			? null
 			: fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
 	if (chain === null) return rescuable ? rescueField(rescue) : null;
-	if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
+	if (!rescuable) return chain;
 	// The field may literally contain the corrected word, so both rescues are
 	// still scored beside the chain.
 	const dropped = missingCharRescue(rescue, chain.ranges);
@@ -93,12 +93,16 @@ export const fuzzyMatch = (
 	const normalisedField = normaliseText(field);
 	const fieldMask = charMask(normalisedField);
 
-	let result = matchField(field, normalisedField, fieldMask, q, acronym, true);
+	const turn = rescueTurn(q.normalisedQuery, q.queryWords);
+	let result = matchField(field, normalisedField, fieldMask, q, acronym, turn === "first");
 	if (result === null || result.score > CONTAINS_SCORE) {
 		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
 		const fallback =
 			reading && readingAdmits(reading, fieldMask) ? reading.match(field, normalisedField) : null;
 		result = better(result, fallback);
+	}
+	if (result === null && turn === "last") {
+		result = matchField(field, normalisedField, fieldMask, q, acronym, true);
 	}
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);

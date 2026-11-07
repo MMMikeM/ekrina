@@ -12,7 +12,7 @@ import { shiftRanges } from "./ladder";
 import { matchField } from "./match";
 import { normaliseText } from "./normalise";
 import { frontGate, prepareBoundedQuery } from "./query";
-import { isRescuableQuery, isShortQuery } from "./correction";
+import { rescueTurn } from "./correction";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readingAdmits, readings } from "./readings";
 import type {
@@ -323,8 +323,6 @@ export function createSearcher<T, F extends string>(
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
-		// Same predicate matchField's mask gate uses, so the two cannot drift.
-		const rescuable = isRescuableQuery(normalisedQuery, prepared.queryWords);
 		const multiWord = prepared.queryWords.length > 1;
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
@@ -492,15 +490,13 @@ export function createSearcher<T, F extends string>(
 		literalPass();
 		// A correction can only matter while fewer than a page of literal hits
 		// exist; below that the near-misses have to be looked at. A short query's
-		// correction only stands in for a missing match (see isShortQuery).
+		// correction only stands in for a missing match (see rescueTurn).
 		// Taken before the relaxed pass, which rescores the literal hits.
 		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
-		const shortQuery = isShortQuery(normalisedQuery, prepared.queryWords);
-		if (rescuable && !shortQuery && offeringSecondPass) relaxedPass();
+		const turn = rescueTurn(normalisedQuery, prepared.queryWords);
+		if (turn === "first" && offeringSecondPass) relaxedPass();
 		if (offeringSecondPass) secondPass();
-		// A short query's substitution is the last resort: a swap or a sparse word
-		// the second pass read is likelier what was meant ("tahn" is "than", not "taha").
-		if (rescuable && shortQuery && matched.length === 0) relaxedPass();
+		if (turn === "last" && matched.length === 0) relaxedPass();
 
 		survivorCache.query = normalisedQuery;
 		survivorCache.multiWord = multiWord;
