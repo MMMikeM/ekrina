@@ -1,7 +1,14 @@
 import { asciiWordUnits, WORD_CHARS } from "./boundaries";
 import { literalTiers, shiftRanges } from "./ladder";
 import { type PreparedQuery, prepareQuery } from "./query";
-import { bigramBit, bigramClass, charMask, type FieldBigrams, holdsInOrderFrom } from "./gates";
+import {
+	charMask,
+	classCounts,
+	holdsInOrderFrom,
+	lacksPairsAtMost,
+	type LetterBudget,
+	pairsOf,
+} from "./gates";
 import {
 	MAX_RESCUE_WORD_LENGTH,
 	MIN_TYPO_QUERY_LENGTH,
@@ -15,15 +22,9 @@ import type { MatchResult, HighlightRange } from "./types";
 
 // What one query admits under a reading, prepared once and tried against
 // fields that matched nothing else.
-export type PreparedReading = {
-	// A gate, so it may only false-pass: a field whose missing `needed` bits hold
-	// more than `spare` of the query's letters has no match (see readingAdmits).
-	// A surrogate pair sets two bits, so missing bits do not count letters.
-	needed: number;
-	counts: Int32Array;
-	spare: number;
+export type PreparedReading = LetterBudget & {
 	// Absent when it could reject nothing; reads an item's bigram set (see
-	// rawFieldPairs).
+	// rawFieldScan).
 	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
 	match: (field: string, normalisedField: string) => MatchResult | null;
 	// The reading may match fields the literal pass rejected, so every item is
@@ -55,26 +56,6 @@ const MIN_SCATTER_LENGTH = 4;
 const MAX_FIELD_LENGTH = 512;
 
 const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
-
-// How many of the query's letters each character class holds, so a field
-// lacking a class leaves that many letters unmatched.
-const classCounts = (letters: string): Int32Array => {
-	const counts = new Int32Array(32);
-	for (const char of letters) counts[31 - Math.clz32(charMask(char))]++;
-	return counts;
-};
-
-export const readingAdmits = (
-	{ needed, counts, spare }: PreparedReading,
-	fieldMask: number,
-): boolean => {
-	let unmatched = 0;
-	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
-		unmatched += counts[31 - Math.clz32(missing & -missing)];
-		if (unmatched > spare) return false;
-	}
-	return true;
-};
 
 type FieldWord = { word: string; offset: number };
 
@@ -323,35 +304,6 @@ const correctSplitWord = (
 // An adjacent swap breaks the three letter pairs around it; every other edit
 // breaks fewer.
 const PAIRS_ONE_EDIT_BREAKS = 3;
-
-// Only pairs of ASCII letters and digits, where a field's bigram set and the
-// normalised query are sure to agree.
-const pairsOf = (words: string[]): FieldBigrams => {
-	const pairs = { lo: 0, hi: 0 };
-	for (const word of words) {
-		for (let at = 1; at < word.length; at++) {
-			const before = word.charCodeAt(at - 1);
-			const unit = word.charCodeAt(at);
-			if (before > 127 || unit > 127) continue;
-			const beforeClass = bigramClass(before);
-			const unitClass = bigramClass(unit);
-			if (beforeClass === 0 || unitClass === 0) continue;
-			const bit = bigramBit(beforeClass, unitClass);
-			if (bit < 32) pairs.lo |= 1 << bit;
-			else pairs.hi |= 1 << (bit - 32);
-		}
-	}
-	return pairs;
-};
-
-const lacksPairsAtMost = (needed: FieldBigrams, lo: number, hi: number, limit: number): boolean => {
-	let missing = 0;
-	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1)
-		if (++missing > limit) return false;
-	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1)
-		if (++missing > limit) return false;
-	return true;
-};
 
 // A phrase word under five letters is never corrected, so its pairs all occur;
 // the rest lose at most what the edits break. Read as one word, the joined

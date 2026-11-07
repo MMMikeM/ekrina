@@ -80,4 +80,5 @@ One concern per file.
 | rescue.ts     | the one-edit typo rescue                                                        |
 | readings.ts   | the second pass: corrections the one-edit rescue cannot make                    |
 | match.ts      | matching one field, and `fuzzyMatch`                                            |
+| fields.ts     | resolving and checking `createSearcher`'s fields                                |
 | search.ts     | `createSearcher` and the collection cache                                       |

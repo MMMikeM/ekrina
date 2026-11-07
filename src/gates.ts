@@ -178,9 +178,9 @@ const unitMask = (unit: number): number => {
 
 // `charMask`'s class for one code unit, shifted so 0 can mean "not a word
 // character": class n sets mask bit n − 1, for every class.
-export const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
+const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
 
-export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
+const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
 
 // A field's bigram set — adjacent same-word class pairs and consecutive
 // word-initial pairs, 64 bits in two int32s.
@@ -306,4 +306,63 @@ export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
 	into.lo |= bigramsLo;
 	into.hi |= bigramsHi;
 	return mask;
+};
+
+// A gate, so it may only false-pass: a field whose missing `needed` bits hold
+// more than `spare` of the query's letters has no match. A surrogate pair sets
+// two bits, so missing bits do not count letters.
+export type LetterBudget = { needed: number; counts: Int32Array; spare: number };
+
+// How many of the query's letters each character class holds, so a field
+// lacking a class leaves that many letters unmatched.
+export const classCounts = (letters: string): Int32Array => {
+	const counts = new Int32Array(32);
+	for (const char of letters) counts[31 - Math.clz32(charMask(char))]++;
+	return counts;
+};
+
+export const readingAdmits = (
+	{ needed, counts, spare }: LetterBudget,
+	fieldMask: number,
+): boolean => {
+	let unmatched = 0;
+	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
+		unmatched += counts[31 - Math.clz32(missing & -missing)];
+		if (unmatched > spare) return false;
+	}
+	return true;
+};
+
+// Only pairs of ASCII letters and digits, where a field's bigram set and the
+// normalised query are sure to agree.
+export const pairsOf = (words: string[]): FieldBigrams => {
+	const pairs = { lo: 0, hi: 0 };
+	for (const word of words) {
+		for (let at = 1; at < word.length; at++) {
+			const before = word.charCodeAt(at - 1);
+			const unit = word.charCodeAt(at);
+			if (before > 127 || unit > 127) continue;
+			const beforeClass = bigramClass(before);
+			const unitClass = bigramClass(unit);
+			if (beforeClass === 0 || unitClass === 0) continue;
+			const bit = bigramBit(beforeClass, unitClass);
+			if (bit < 32) pairs.lo |= 1 << bit;
+			else pairs.hi |= 1 << (bit - 32);
+		}
+	}
+	return pairs;
+};
+
+export const lacksPairsAtMost = (
+	needed: FieldBigrams,
+	lo: number,
+	hi: number,
+	limit: number,
+): boolean => {
+	let missing = 0;
+	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
+	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
+	return true;
 };

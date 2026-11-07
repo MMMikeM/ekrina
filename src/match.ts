@@ -1,9 +1,9 @@
 import { fuzzyChainMatch } from "./fuzzy";
-import { charMask, lacksAtMostOneClass } from "./gates";
+import { charMask, lacksAtMostOneClass, readingAdmits } from "./gates";
 import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
 import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
-import { readingAdmits, readings } from "./readings";
+import { readings } from "./readings";
 import { isRescuableQuery, rescueTurn } from "./correction";
 import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
 import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
