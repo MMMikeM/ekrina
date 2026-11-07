@@ -85,13 +85,21 @@ export type SearchResult<T, F extends string = never> = MatchResult & {
 	item: T;
 	/** The text `ranges` index into: the string the best field returned. */
 	text: string;
-} & ([F] extends [never] ? unknown : { field: F; fields: Partial<Record<F, FieldMatch>> });
+} & ([F] extends [never]
+		? unknown
+		: {
+				/** The named field that matched best. */
+				field: F;
+				/** Each named field that matched, by name; a field that didn't is absent. */
+				fields: Partial<Record<F, FieldMatch>>;
+			});
 
 /**
  * How one named field matched, in the field's own text. Fuzzy and corrected
  * matches are included; `isLiteral` tells them apart.
  */
 export type FieldMatch = {
+	/** Which tier this field's match came from. */
 	tier: Tier;
 	/** The characters of `text` that matched, to highlight. */
 	ranges: HighlightRanges;
@@ -128,12 +136,8 @@ export type Searcher<T, F extends string = never> = {
 
 /**
  * The result type of whatever produces search results: a searcher, a factory
- * that builds one, or a function that returns results.
- *
- * @example
- * const createSearch = (commands: Command[]) =>
- *   createSearcher(commands, { title: (c) => c.title, keywords: (c) => c.keywords ?? null });
- * type Result = SearchResultOf<typeof createSearch>; // field: "title" | "keywords"
+ * that builds one, or a function that returns results. For a factory over
+ * `{ title, keywords }` fields, its `field` is `"title" | "keywords"`.
  */
 export type SearchResultOf<S> = S extends (...args: never[]) => infer R
 	? R extends readonly (infer Result)[]
