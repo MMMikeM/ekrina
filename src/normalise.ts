@@ -9,11 +9,7 @@ const QUOTE_FOLDS: Record<string, string> = { "‘": "'", "’": "'", "“": '"'
 // One folded string per code point, never changing the code-unit length — the
 // 1:1 guarantee behind every published HighlightRange. Length-changing folds fall back
 // to plain lowercase, then to the original character.
-const computeFold = (char: string): string => {
-	const quote = QUOTE_FOLDS[char];
-	if (quote !== undefined) return quote;
-	const lowered = char.toLowerCase();
-	let stripped = lowered.normalize("NFD").replace(combiningMarks, "");
+export const fitFold = (char: string, lowered: string, stripped: string): string => {
 	// ł has no NFD decomposition; final sigma folds to medial.
 	if (stripped === "ł") stripped = "l";
 	else if (stripped === "ς") stripped = "σ";
@@ -27,8 +23,14 @@ const computeFold = (char: string): string => {
 				char;
 };
 
-// Dense array through Latin Extended + Greek + Cyrillic (an indexed load beats
-// Map's string hashing ~1.8× on the fold loop); rarer code points use the Map.
+const computeFold = (char: string): string => {
+	const quote = QUOTE_FOLDS[char];
+	if (quote !== undefined) return quote;
+	const lowered = char.toLowerCase();
+	return fitFold(char, lowered, lowered.normalize("NFD").replace(combiningMarks, ""));
+};
+
+// An indexed load beats Map's string hashing on the fold loop.
 const DENSE_FOLDS_MAX = 0x4ff;
 // fill() keeps the elements packed; Array.from({ length }) reads slower.
 // oxlint-disable-next-line unicorn/no-new-array
@@ -68,10 +70,7 @@ const foldChar = (char: string): string => {
  * visually-identical NFC form).
  */
 export const normaliseText = (text: string): string => {
-	// toLowerCase can itself surface combining marks (İ → i̇), so the pure-ASCII
-	// fast path tests after it.
-	const lowered = text.toLowerCase();
-	if (!hasNonAscii.test(lowered)) return lowered.trim();
+	if (!hasNonAscii.test(text)) return text.toLowerCase().trim();
 	let trimmed = text.trim();
 	// Compose first so the per-point fold sees "é", not "e" + combining mark.
 	if (hasCombiningMark.test(trimmed)) trimmed = trimmed.normalize("NFC");
@@ -101,13 +100,10 @@ export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur
 // word-initial pairs, 64 bits in two int32s.
 export type FieldBigrams = { lo: number; hi: number };
 
-// Every BMP code point folds to exactly one unit (computeFold's length check),
-// so each unit's fold has a fixed class, learned once and stored as a stand-in
-// unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
-// non-ASCII buckets. 0 until first seen; the table itself waits for the first
-// non-ASCII unit, so a list of ASCII never allocates it. It calls computeFold
-// rather than foldChar because only the class is kept: caching the fold too
-// would retain a string for every distinct unit in the list.
+// Every BMP code point folds to exactly one unit, so each unit's fold has a
+// fixed class, kept as a stand-in unit of that class (0x80/0x81 for the two
+// non-ASCII buckets). computeFold rather than foldChar, so the fold's string
+// is not retained for every distinct unit in the list.
 const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
 let standIns: Uint8Array | null = null;
 
@@ -121,7 +117,6 @@ const standIn = (unit: number): number => {
 	);
 };
 
-// `unitMask` for every ASCII unit and both non-ASCII stand-ins.
 const standInMasks = new Int32Array(130);
 for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
 
@@ -156,10 +151,8 @@ export const rawFieldMask = (raw: string): number => {
 };
 
 /**
- * `charMask(normaliseText(raw))` without building the normalised string:
- * returns the field's char mask and accumulates its bigram set into `into`
- * (degraded = all-ones). Runs per item the first time a gate asks for its
- * pairs, or over every item when the caller builds the index up front.
+ * `charMask(normaliseText(raw))` without building the normalised string, also
+ * accumulating the field's bigram set into `into`.
  *
  * Both halves may only false-pass: a combining mark, where NFC may compose the
  * field and raw adjacency stops matching normalised adjacency, degrades the

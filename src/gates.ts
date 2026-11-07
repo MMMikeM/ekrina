@@ -27,18 +27,13 @@ export const holdsInOrderFrom = (text: string, query: string, k: number, from: n
 
 /**
  * The fuzzy tier's pre-gate, and for single-word queries the whole ladder's:
- * the query in order, starting where the chunk assembler can start, after no
- * word character or with its first three characters consecutive. Every earlier
- * tier implies such a subsequence too, and a field with no admissible first
- * placement has no chain to assemble. Plain `indexOf` rather than a regex,
- * which costs more to compile than most gates spend testing; the earliest
- * admissible start admits whatever a later one does, so one placement is enough.
- * It steps by code unit, so beside an astral character it can only false-pass.
+ * the query in order, starting where the chunk assembler can start. Every
+ * earlier tier implies such a subsequence too. The earliest admissible start
+ * admits whatever a later one does, so one placement is enough.
  *
  * Monotone under query extension, which is what lets the survivor cache in
  * search.ts reuse the previous keystroke's survivors: extending the query
- * lengthens the subsequence and never changes the first three characters, so
- * the gate only ever admits fewer fields.
+ * lengthens the subsequence and never changes the first three characters.
  */
 export const buildFuzzyGate = (normalisedQuery: string): Gate => {
 	const first = normalisedQuery[0];
@@ -73,8 +68,7 @@ export const buildRawGate = (normalisedQuery: string): Gate | null => {
 		accepted.push(sources);
 	}
 	const at = accepted.map((sources) => `[${sources}][\\u0300-\\u036f]*`);
-	// `[^x]*x` leaves each attempt exactly one place to stop per step, so it
-	// cannot backtrack (same survivors, 16%/8% less gate time on ascii/mixed).
+	// `[^x]*x` leaves each attempt one place to stop per step, so it cannot backtrack.
 	const after = accepted.map((sources, k) => `[^${sources}]*${at[k]}`);
 	// `\w` is the word characters' ASCII part, so after any other letter the
 	// anchor can only false-pass; `\p{L}` takes about 0.2 ms to compile.
@@ -98,23 +92,20 @@ export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null =>
 	return sources === undefined ? null : new RegExp(`(?<!\\w)[${sources}]`, "u");
 };
 
-/**
- * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for
- * a–z, bits 26–29 for digits (bucketed), bits 30–31 for non-ASCII (bucketed);
- * separators are skipped so they are never required of the field. Query and
- * field use the same buckets, so a collision can only false-pass, never
- * false-reject. `(queryMask & fieldMask) !== queryMask` means some query class
- * is absent and no tier can match.
- */
+// Separators set no bit, so they are never required of the field. Query and
+// field share the buckets, so a collision can only false-pass.
 export const charMask = (normalised: string): number => {
 	let mask = 0;
 	for (let i = 0; i < normalised.length; i++) mask |= unitMask(normalised.charCodeAt(i));
 	return mask;
 };
 
-// True when the mask is an exact distinct-char presence check: no lossy bucket
-// bits set, so the presence-gate regex could not reject anything further.
+// No bucketed bits: the mask alone is the presence gate.
 export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
+
+// Only a substitution or a drop can account for one absent class.
+export const lacksAtMostOneClass = (missingClasses: number): boolean =>
+	(missingClasses & (missingClasses - 1)) === 0;
 
 /**
  * Order-independent presence gate: every distinct word-character of the query
@@ -136,16 +127,13 @@ export const buildPresenceGate = (normalisedQuery: string): RegExp => {
 
 /**
  * Query-side half of the rescue bigram gate, for fields missing exactly one of
- * the query's character classes. Such a field is only reachable by an edit at
- * the query's sole character of the missing class β (two β characters would
- * need two edits), and every rescue-eligible tier is a contiguous occurrence —
- * so every query bigram NOT touching the β position must appear in the field's
- * bigram set: `requiredLo/requiredHi[β]` hold exactly those. Two or more β
- * characters store all-ones, which no real field covers (a hazard-degraded
- * field is all-ones too and still passes). Hash collisions stay
- * false-pass-only on both sides: a required bit colliding with a touching
- * pair's is still owed by the intact remainder of the window, and field-side
- * collisions only add coverage.
+ * the query's character classes, β. Only an edit at the query's sole β
+ * character can reach such a field, and every rescue-eligible tier is a
+ * contiguous occurrence, so every query bigram not touching that position must
+ * be in the field's bigram set. Two or more β characters store all-ones, which
+ * only a degraded field covers. A required bit colliding with a touching
+ * pair's is still owed by the intact rest of the window, so collisions only
+ * false-pass.
  */
 export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
 

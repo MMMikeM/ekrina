@@ -78,7 +78,8 @@ Construction is allocation, the first query that needs the masks carries the def
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
 This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borw` as a corrected `brow` and fails `bor`, which is too short to correct), so caching matches would be wrong.
-Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
+Backspace and replacement queries fall back to a full scan.
+A query that ran the relaxed rescue still seeds the cache with its literal survivors: the rescue scores items outside them but never adds to them.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
 ### Corrections are budgeted

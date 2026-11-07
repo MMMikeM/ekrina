@@ -52,7 +52,7 @@ Schemes the code follows deliberately; new code joins them.
 - **Bigram halves** carry the `Lo`/`Hi` suffix; field-side sets are `bigrams*`, query-side requirements are `required*`; the per-field accumulator keeps bare `{ lo, hi }` (`FieldBigrams`).
 - **Tier probes** in match.ts are `<name>Tier(…): MatchResult | null`; `fuzzyMatch` (public) and `fuzzyChainMatch` (a chain scorer, not a rung probe) are the deliberate exceptions.
 - **Ends are exclusive** in bare locals (`end`, `chunkEnd`, `wordEnd`, the JS slice idiom); inclusive ends exist only inside `HighlightRange` tuples and are always destructured `[start, end]`.
-- **Predicates** read as predicates: `is*` (`isBoundaryChar`, `isExactMask`, `isRescuableQuery`, `isShortQuery`, `isUnbeatableCorrection`) or a domain verb (`admitsChunk`).
+- **Predicates** read as predicates: `is*` (`isBoundaryAt`, `isExactMask`, `isRescuableQuery`, `isShortQuery`, `isUnbeatableCorrection`) or a domain verb (`admitsChunk`).
 - **`*Occurrence`** returns an index or -1 (`boundaryOccurrence`, `wordStartOccurrence`).
 - **`build*` constructs fresh** per-query state (`buildFuzzyGate`, `buildRescueVariants`); **`prepare*` constructs caller-cached state** (`prepareQuery`, `prepareCorrection`); noun and `*Of` accessors may memoise transparently (`unfoldTable`, `wordStartsOf`).
 - **`prefer*`** names an asymmetric selection and its parameters carry the policy: `preferBetter(incumbent, challenger)` keeps the incumbent on ties unless it is fuzzy.

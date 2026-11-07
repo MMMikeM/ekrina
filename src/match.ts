@@ -1,6 +1,13 @@
 import { splitWords, WORD_CHARS, wordStartOccurrence } from "./boundaries";
 import { fuzzyChainMatch } from "./fuzzy";
-import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
+import {
+	buildFuzzyGate,
+	buildPresenceGate,
+	charMask,
+	type Gate,
+	isExactMask,
+	lacksAtMostOneClass,
+} from "./gates";
 import { normaliseText } from "./normalise";
 import {
 	isRescuableQuery,
@@ -22,7 +29,7 @@ import {
 	PREFIX_SCORE,
 } from "./scores";
 import type { PreparedReading } from "./readings";
-import type { MatchResult, HighlightRange } from "./types";
+import type { MatchResult, HighlightRange, HighlightRanges } from "./types";
 
 // Query-derived state, built once per query and reused across every field. The
 // lazy fields share one protocol: undefined = not built yet, null = the query
@@ -44,10 +51,7 @@ export type PreparedQuery = {
 	readings: (PreparedReading | null | undefined)[] | undefined;
 };
 
-// The raw query is stored trimmed so the exact-case tiers treat padding as
-// insignificant, matching the normalised tiers (normaliseText trims). The
-// presence gate is skipped whenever the mask already proves exact char
-// presence — for pure a–z queries the mask IS that check.
+// Trimmed, so the exact-case tiers ignore padding as the normalised ones do.
 export const prepareQuery = (query: string, normalisedQuery: string): PreparedQuery => {
 	const queryMask = charMask(normalisedQuery);
 	const queryWords = splitWords(normalisedQuery);
@@ -118,10 +122,8 @@ const boundaryTier = (
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
 };
 
-// Each query word needs its own occurrence, so a repeated word must appear
-// twice. Longest first, so a short word can't take the start a longer one needs;
-// each copy of a repeated word resumes after the last, so a query of one word
-// repeated walks the field once instead of once per copy.
+// A repeated word must appear twice. Longest first, so a short word can't take
+// the start a longer one needs.
 const multiWordTier = (normalisedField: string, words: string[]): MatchResult | null => {
 	const ranges: HighlightRange[] = [];
 	const isTaken = (start: number, end: number): boolean =>
@@ -177,30 +179,21 @@ const containsTier = (normalisedField: string, normalisedQuery: string): MatchRe
 
 const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult | null => {
 	const { normalisedField, prepared } = rescue;
-	// Single-word queries already passed fuzzyGate as the ladder's front gate;
-	// only multi-word queries (presence-gated up front) still owe this test. A
-	// phrase with a swapped keystroke fails it with every class present, so this
-	// reject is a rescue site like the others.
-	if (prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)) {
-		return rescuable ? rescueField(rescue) : null;
-	}
-	const chain = fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
-	if (chain) {
-		if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
-		// A chain assembling is not evidence it is the best reading: the field may
-		// literally contain the corrected word, so both rescues are still scored.
-		const dropped = missingCharRescue(rescue, chain.ranges);
-		return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
-	}
-	// The chain can refuse past the gate via its density floor.
-	return rescuable ? rescueField(rescue) : null;
+	// A phrase was front-gated on presence, so it still owes the fuzzy gate.
+	const chain =
+		prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)
+			? null
+			: fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
+	if (chain === null) return rescuable ? rescueField(rescue) : null;
+	if (!rescuable || isShortQuery(prepared.normalisedQuery, prepared.queryWords)) return chain;
+	// The field may literally contain the corrected word, so both rescues are
+	// still scored beside the chain.
+	const dropped = missingCharRescue(rescue, chain.ranges);
+	return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
 };
 
-// The literal rungs in ladder order: exact → normalised-exact → prefix →
-// boundary ×2 → multi-word → acronym → contains. Acronym (1.8) outranks
-// contains (2), so it must be tried first — a field matching both ways must
-// get the better tier, or cross-item ordering inverts. Initials never contain
-// a separator, so a multi-word query can never acronym-match.
+// In ladder order. Acronym is tried before contains so a field matching both
+// ways gets the better tier.
 export const literalTiers = (
 	field: string,
 	normalisedField: string,
@@ -240,6 +233,20 @@ export const literalTiers = (
 	return containsTier(normalisedField, normalisedQuery);
 };
 
+// A phrase's words may match out of order, which the subsequence gate would
+// reject, so a phrase is gated on presence instead.
+export const frontGate = ({ queryWords, presenceGate, fuzzyGate }: PreparedQuery): Gate | null =>
+	queryWords.length > 1 ? presenceGate : fuzzyGate;
+
+// Results are fresh per call, so their ranges can shift in place.
+export const shiftRanges = (ranges: HighlightRanges, lead: number): void => {
+	for (const range of ranges) {
+		range[0] += lead;
+		range[1] += lead;
+	}
+};
+
+// `preGated` means the caller already ran the front gate on this string.
 export const matchField = (
 	field: string,
 	normalisedField: string,
@@ -252,36 +259,22 @@ export const matchField = (
 ): MatchResult | null => {
 	const { normalisedQuery, queryWords } = prepared;
 
-	// `n & (n - 1)` clears the lowest set bit, so it is zero iff at most one
-	// class is absent — and only a substitution or a drop can account for
-	// exactly one, so a genuinely missing class goes straight to the rescue.
 	const rescuable = mayRescue && isRescuableQuery(normalisedQuery, queryWords);
 	const missingClasses = prepared.queryMask & ~fieldMask;
-	if (rescuable ? missingClasses & (missingClasses - 1) : missingClasses) return null;
+	if (rescuable ? !lacksAtMostOneClass(missingClasses) : missingClasses) return null;
 
-	let rescue: RescueContext | null = null;
-	const rescueContext = (): RescueContext =>
-		(rescue ??= {
-			rawField: field,
-			normalisedField,
-			fieldMask,
-			prepared,
-			acronymTier: acronym,
-			missingClasses,
-		});
+	const rescueContext = (): RescueContext => ({
+		rawField: field,
+		normalisedField,
+		prepared,
+		acronymTier: acronym,
+		missingClasses,
+	});
 
 	if (missingClasses !== 0) return rescueField(rescueContext());
 
-	// Multi-word queries must front-gate on the order-independent presence gate:
-	// the multi-word tier matches words out of order, and the subsequence gate
-	// would false-reject them. `preGated` means the searcher already ran this
-	// exact gate on this exact string.
-	const frontGate: Gate | null = preGated
-		? null
-		: queryWords.length > 1
-			? prepared.presenceGate
-			: prepared.fuzzyGate;
-	if (frontGate && !frontGate.test(normalisedField)) {
+	const gate = preGated ? null : frontGate(prepared);
+	if (gate && !gate.test(normalisedField)) {
 		return rescuable ? rescueField(rescueContext()) : null;
 	}
 

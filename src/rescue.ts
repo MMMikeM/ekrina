@@ -1,7 +1,7 @@
-import { isBoundaryChar, wordChar } from "./boundaries";
+import { isBoundaryAt, opensWord } from "./boundaries";
 import { charMask } from "./gates";
-import { matchField, type PreparedQuery, prepareQuery } from "./match";
-import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
+import { literalTiers, type PreparedQuery, prepareQuery } from "./match";
+import { CONTAINS_SCORE, correctedMatch, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
 // The field currently being rescued against the prepared query, allocated by
@@ -9,7 +9,6 @@ import type { HighlightRanges, MatchResult } from "./types";
 export type RescueContext = {
 	rawField: string;
 	normalisedField: string;
-	fieldMask: number;
 	prepared: PreparedQuery;
 	acronymTier: boolean;
 	missingClasses: number;
@@ -31,7 +30,7 @@ const MIN_RESCUE_QUERY_LENGTH = 4;
 // Enumerating a word's corrections costs time and memory quadratic in its
 // length, and no real typo needs one this long, so a query holding a longer
 // word is never corrected.
-const MAX_RESCUE_WORD_LENGTH = 64;
+export const MAX_RESCUE_WORD_LENGTH = 64;
 
 // Chance corrections are a multiple-comparisons problem scaling with the
 // field's window count, while a high floor hurts the short queries that
@@ -46,7 +45,7 @@ const minSubstitutionLength = (fieldLength: number): number =>
 
 // Below this a subject is short: it is corrected only at a word start, and only
 // when nothing matches the query as typed. Drops wait for it too.
-const MIN_TYPO_QUERY_LENGTH = minTypoQueryLength(0);
+export const MIN_TYPO_QUERY_LENGTH: number = minTypoQueryLength(0);
 
 const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: number): boolean =>
 	queryWords.length === 1
@@ -81,7 +80,6 @@ export const preferBetter = (
 	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
 };
 
-// The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
 type Edit = (text: string, at: number) => string;
 
 export const swapAdjacentAt: Edit = (text, at) =>
@@ -123,43 +121,28 @@ const prepareCorrection = (
 	return (prepared.lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
 };
 
-// Only a real-tier hit (`score <= SCORES.CONTAINS`) counts: rescuing a fuzzy
-// chain is an invented edit on top of a speculative assembly
-// (@see docs/benchmarks.md). The rerun passes `mayRescue: false`, disabling
-// every rescue inside it, so the penalty cannot apply twice. It skips the front
-// gate and the chain too: the gate passes every literal hit, and a chain is
-// refused anyway, so a correction never pays to compile its own gate.
+// Only a literal tier counts: rescuing a fuzzy chain is an invented edit on top
+// of a speculative assembly (@see docs/benchmarks.md).
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
 	short = false,
 ): MatchResult | null => {
-	const result = matchField(
+	const result = literalTiers(
 		rescue.rawField,
 		rescue.normalisedField,
-		rescue.fieldMask,
 		correctedQuery,
 		rescue.acronymTier,
-		false,
-		true,
-		true,
 	);
-	return result && acceptsCorrection(result, short)
-		? {
-				score: result.score + TYPO_PENALTY,
-				tier: "corrected",
-				corrected: correctedQuery.query,
-				ranges: result.ranges,
-			}
+	return result && (!short || startsWord(result))
+		? correctedMatch(result, 1, correctedQuery.query)
 		: null;
 };
 
-// A short correction must start a word: mid-word, most fields hold a window
-// one edit from four characters ("colt" in "Nicolas").
-const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
-	short
-		? result.score < CONTAINS_SCORE && result.tier !== "acronym"
-		: result.score <= CONTAINS_SCORE;
+// Mid-word, most fields hold a window one edit from four characters ("colt" in
+// "Nicolas"), so a short correction must start a word.
+const startsWord = (result: MatchResult): boolean =>
+	result.score < CONTAINS_SCORE && result.tier !== "acronym";
 
 const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
@@ -225,9 +208,7 @@ const substitutedWindows = (
 		) {
 			const windowStart = halfAt - offset;
 			if (windowStart < 0 || windowStart + subjectLength > normalisedField.length) continue;
-			if (atWordStart && windowStart > 0 && !isBoundaryChar(normalisedField[windowStart - 1])) {
-				continue;
-			}
+			if (atWordStart && !opensWord(normalisedField, windowStart)) continue;
 			let mismatches = 0;
 			let mismatchAt = -1;
 			for (let i = 0; i < subjectLength; i++) {
@@ -237,7 +218,7 @@ const substitutedWindows = (
 			}
 			// Exactly one: zero would mean the contains tier already owns it. A
 			// separator in its place splits the word rather than correcting it.
-			if (mismatches !== 1 || isBoundaryChar(normalisedField[windowStart + mismatchAt])) continue;
+			if (mismatches !== 1 || isBoundaryAt(normalisedField, windowStart + mismatchAt)) continue;
 			const corrected = normalisedField.slice(windowStart, windowStart + subjectLength);
 			if (!windows.includes(corrected)) windows.push(corrected);
 		}
@@ -245,7 +226,7 @@ const substitutedWindows = (
 	return windows;
 };
 
-const wordStartsOf = (prepared: PreparedQuery): number[] => {
+export const wordStartsOf = (prepared: PreparedQuery): number[] => {
 	let starts = prepared.wordStarts;
 	if (starts === undefined) {
 		starts = [];
@@ -333,10 +314,7 @@ const scoreEnumeratedVariants = (
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
 	for (const variant of subject.variants) {
-		// Only a drop shortens the subject, so only it answers to the field-scaled
-		// floor.
 		if (variant.isDrop && subject.queryText.length < fieldFloor) continue;
-		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
 		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant), short));
@@ -407,11 +385,9 @@ const typoRescue = (rescue: RescueContext): MatchResult | null => {
 };
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a
-// dropped keystroke: the missing character is the gap itself. The gap must be a
-// word character — a skipped separator is concatenated-word matching, not a
-// typo. Skips the field-scaled floor: this shape pins the correction to one
-// contiguous window, so the multiple-comparisons hazard that floor guards never
-// arises (@see bench/longtext.test.ts).
+// dropped keystroke, unless the gap is a separator. It skips the field-scaled
+// floor: the shape pins the correction to one window, so there are no multiple
+// comparisons to guard against (@see bench/longtext.test.ts).
 export const missingCharRescue = (
 	rescue: RescueContext,
 	ranges: HighlightRanges,
@@ -419,8 +395,8 @@ export const missingCharRescue = (
 	const { prepared, normalisedField } = rescue;
 	if (ranges.length !== 2) return null;
 	const [[firstStart, firstEnd], [secondStart, secondEnd]] = ranges;
+	if (secondStart !== firstEnd + 2 || isBoundaryAt(normalisedField, firstEnd + 1)) return null;
 	const gapChar = normalisedField[firstEnd + 1];
-	if (secondStart !== firstEnd + 2 || !wordChar.test(gapChar)) return null;
 
 	const insertAt = firstEnd - firstStart + 1;
 	const raw = rawQuery(prepared);

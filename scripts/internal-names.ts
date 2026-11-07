@@ -22,7 +22,6 @@ export const INTERNAL_NAMES: string[] = [
 	"fuzzyGate",
 	"presenceGate",
 	"queryMask",
-	"fieldMask",
 	"requiredMask",
 	"missingClasses",
 	"wholeList",
