@@ -85,7 +85,7 @@ Each library at its best-scoring configuration, on 10,000 real Wikidata names un
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  0.36 |     8.3 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| **Ekrina**        | 0.91 |  0.36 |     8.4 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
 | fast-fuzzy        | 0.81 |  4.72 |    11.1 |  24% | any       |  no   | partial |    1 |
 | Fuse.js (tuned)   | 0.76 | 10.78 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
 | uFuzzy (all opts) | 0.66 |  0.59 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |

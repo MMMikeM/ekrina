@@ -41,7 +41,7 @@ Size and type, Ekrina first, then by bundle size ascending.
 <!-- bench:libraries -->
 | Library          | Gzip     | Deps | Type                 |
 |------------------|----------|------|----------------------|
-| **Ekrina**       | ~8.3 kB  | 0    | subsequence (tiered) |
+| **Ekrina**       | ~8.4 kB  | 0    | subsequence (tiered) |
 | fuzzy            | ~0.8 kB  | 0    | substring            |
 | @nozbe/microfuzz | ~1.7 kB  | 0    | subsequence          |
 | match-sorter     | ~3.6 kB  | 2    | subsequence (tiered) |
@@ -209,11 +209,11 @@ Ekrina (indexed), the same searcher with its mask index built up front, moves th
 <!-- bench:memory -->
 | Library           | built MB | + `hinton` | + `qxzwkv` | + `gensler` | dropped MB |
 |-------------------|---------:|-----------:|-----------:|------------:|-----------:|
-| Ekrina            |     2.03 |       2.60 |       3.67 |        4.00 |       0.63 |
-| Ekrina (acronym)  |     2.04 |       2.60 |       3.68 |        4.01 |       0.64 |
-| Ekrina (indexed)  |     3.12 |       3.97 |       3.97 |        4.23 |       0.62 |
+| Ekrina            |     1.18 |       2.60 |       3.74 |        4.08 |       0.70 |
+| Ekrina (acronym)  |     1.18 |       2.61 |       3.75 |        4.10 |       0.72 |
+| Ekrina (indexed)  |     2.34 |       4.05 |       4.05 |        4.31 |       0.69 |
 | @nozbe/microfuzz  |    45.94 |      46.00 |      46.00 |       46.00 |       0.12 |
-| fast-fuzzy        |   189.66 |     191.63 |     191.63 |      191.63 |       0.18 |
+| fast-fuzzy        |   189.67 |     191.64 |     191.64 |      191.64 |       0.18 |
 | Fuse.js (tuned)   |     6.92 |       7.04 |       7.12 |        7.07 |       0.18 |
 | fuzzy             |     0.02 |       0.05 |       0.05 |        0.05 |       0.05 |
 | fuzzysort         |     0.02 |      43.17 |      43.18 |       43.23 |      43.23 |
@@ -224,9 +224,9 @@ Ekrina (indexed), the same searcher with its mask index built up front, moves th
 What each configuration retains at 100k on the native corpus: `heapUsed + external` over a baseline taken with the list already in memory, so typed arrays count and the caller's own strings don't.
 Each row is one fresh process ([`bench/memory.ts`](../bench/memory.ts)): the searcher is built, then answers `hinton`, `qxzwkv` and `gensler` warm in that order, so each column includes every query before it.
 **dropped MB** is what is still retained once the searcher is unreachable and collected.
-Ekrina allocates its per-item caches empty at construction; `hinton` prepares the items it matches (~0.6 MB), and `qxzwkv`, the first query to reach the typo rescue, adds the mask index's bigram arrays (~1.1 MB).
-Ekrina (indexed) builds that index at construction instead (3.12 MB built), so `qxzwkv` adds only 0.003 MB.
-Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.6 MB of process-wide state stays behind on native and 0.3 MB on en: it grows with the characters a corpus holds rather than its items, consistent with the module-level cache of rare-character folds in [`src/normalise.ts`](../src/normalise.ts).
+Ekrina allocates its per-item caches empty at construction; `hinton` allocates a match slot per item and prepares the items it matches (~1.4 MB), and `qxzwkv`, the first query to reach the typo rescue, adds the mask index's bigram arrays (~1.1 MB).
+Ekrina (indexed) builds that index at construction instead (2.34 MB built), so `qxzwkv` adds only 0.001 MB.
+Ekrina's searcher is collected (`collected` in [`bench/results.json`](../bench/results.json)), but 0.7 MB of process-wide state stays behind on native and 0.4 MB on en: it grows with the characters a corpus holds rather than its items, consistent with the module-level cache of rare-character folds in [`src/normalise.ts`](../src/normalise.ts).
 fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, which is process-wide and unevicted, so its **dropped** column equals its footprint until you call `cleanup()`.
 Every other library gives its index back, leaving under 0.2 MB.
 The en cells, in [`bench/results.json`](../bench/results.json), tell the same story.
@@ -745,7 +745,7 @@ Literal-only matching, for callers that want no fuzzy assemblies or corrections 
 The recommendation is to _pick Ekrina for list matching_, with two carve-outs the data supports.
 
 - **Quality**: Ekrina tops the scorecard on all three corpora (0.92 en, 0.91 native and emoji) and answers none of the queries nothing answers; the nearest rows, fast-fuzzy (0.80–0.84) and Fuse.js (tuned) (0.71–0.76), answer a quarter to a half of them.
-- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (11.00 ms at native 10k) and the fastest per query after the warm-up (0.35 ms, with Ekrina inside the tie band at 0.36 ms), and every Ekrina row runs that session in about a tenth of fast-fuzzy's time (128.89 ms) and about a fifth of match-sorter's (58.94 ms), with a near-zero constructor, <!-- bench:ekrina-gzip -->~8.3 kB<!-- bench:end --> gzip and zero deps.
+- **Speed, measured cold**: Ekrina (indexed) runs the fastest 24-query session of the configurations at 0.70 MRR or above (11.00 ms at native 10k) and the fastest per query after the warm-up (0.35 ms, with Ekrina inside the tie band at 0.36 ms), and every Ekrina row runs that session in about a tenth of fast-fuzzy's time (128.89 ms) and about a fifth of match-sorter's (58.94 ms), with a near-zero constructor, <!-- bench:ekrina-gzip -->~8.4 kB<!-- bench:end --> gzip and zero deps.
   The exception is the first call: Ekrina prepares lazily, so a fresh searcher's first answer prepares what it matches, and its first multi-word or rescue-bound query builds the mask index over the whole list (a first answer averages 2.9–3.3 ms at 10k and 8–10 ms at 100k across the timed queries, or 1.6–1.7 ms and 3.1–3.5 ms once Ekrina (indexed) has built the index up front); a workload that only ever asks one question of one searcher should read the one-shot numbers, where bare `fuzzy` is faster at 10k.
 - **Long text**: the density floor holds `fuzzyMatch` junk to 2–4% at every measured document length, so the same engine covers documents as well as labels.
 

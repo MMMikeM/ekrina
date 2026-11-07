@@ -42,12 +42,12 @@ Every score value and `TYPO_PENALTY` are unchanged, and `score <= SCORES.CONTAIN
   A word read any of these ways reports `corrected` spelt as the field spells it.
   On the benchmark below MRR rises 0.70 → 0.91–0.92 on all three corpora, held-out queries rise with them (`bench/held-out.test.ts`), and the share of unanswerable queries answered stays at zero on every corpus.
   A query with ten or more literal matches skips them entirely, since the second pass runs only while fewer than ten items match literally (docs/performance.md).
-  The bundle grows from ~6.4 kB to ~8.3 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
+  The bundle grows from ~6.4 kB to ~8.4 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
   The build mangles internal property names, and duplicated paths are merged into one; together they took the bundle from ~9.3 kB with every result unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
 - **Searching is faster than 1.1.2, corrections included, and holds about as much.**
   No query compiles a gate regex any more: a single word is gated by an `indexOf` scan, which ties the regex per test, and the raw-text gates anchor on `\w`, which compiles in a fraction of the time a `\p{L}` class does.
   Results are built once, for the page the sort keeps; the searcher keeps no per-item copy of trimmed text or of scores; and the raw scans read a table of non-ASCII character classes instead of folding each character.
-  Against 1.1.2 a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k), a 100k session 11–16% less and a first answer 17–45% less, and a 100k searcher holds 0.1–0.2 MB more (docs/benchmarks.md).
+  Against 1.1.2 a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k), a 100k session 11–16% less and a first answer 17–45% less, and a 100k searcher holds 1.15 MB rather than 1.91 MB until its first query and 0.1–0.35 MB more once it has answered a few (docs/benchmarks.md).
   Passing `limit` costs nothing: once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by 100,000 well-known Wikidata entities under their English and their native names, and an emoji picker's labels and tags, with query families drawn from how people mistype, Wikipedia's list of common misspellings included, weighted by group before anything was measured.

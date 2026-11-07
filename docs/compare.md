@@ -11,7 +11,7 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
 |-------------------|-----:|------:|--------:|-----:|-----------|:-----:|:-------:|-----:|
-| **Ekrina**        | 0.91 |  0.36 |     8.3 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
+| **Ekrina**        | 0.91 |  0.36 |     8.4 |   0% | ≤ 2 edits |  yes  |   yes   |    0 |
 | fast-fuzzy        | 0.81 |  4.72 |    11.1 |  24% | any       |  no   | partial |    1 |
 | Fuse.js (tuned)   | 0.76 | 10.78 |     9.6 |  47% | any       |  no   | opt-in  |    0 |
 | uFuzzy (all opts) | 0.66 |  0.59 |     4.3 |   0% | ≤ 1 edit  |  no   |   yes   |    0 |
@@ -56,7 +56,7 @@ It is built for matching in-memory lists on the client, and the cold-process num
 
 Pick Ekrina, unless one of the cases below is yours.
 It tops the quality scorecard on all three benchmark corpora, answers nothing it shouldn't, and runs its session ten to twenty times faster than the two libraries closest to it on quality.
-At <!-- bench:ekrina-size-standing -->~8.3 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11.1 kB, are larger<!-- bench:end -->.
+At <!-- bench:ekrina-size-standing -->~8.4 kB gzip it is the third-largest of the eight, and only Fuse.js, at ~9.6 kB, and fast-fuzzy, at ~11.1 kB, are larger<!-- bench:end -->.
 Most of what it has grown by since 1.x is the correction machinery, which is also where the quality lead comes from.
 Pick something else when:
 
