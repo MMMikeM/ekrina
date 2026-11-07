@@ -73,7 +73,7 @@ describe("pre-filter funnel", () => {
 				const rows: FunnelRow[] = [];
 				for (const query of queries) {
 					const normalisedQuery = normaliseText(query);
-					const queryMask = charMask(normalisedQuery);
+					const queryMask = charMask(splitWords(normalisedQuery).join(""));
 					const gate =
 						splitWords(normalisedQuery).length > 1
 							? buildPresenceGate(normalisedQuery)

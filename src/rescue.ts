@@ -31,8 +31,8 @@ type RescueVariant = {
 	normalised: string;
 	raw: string;
 	isDrop: boolean;
-	// A subset of the query mask, so `requiredMask & missingClasses` is exactly
-	// "the field lacks a class this correction still requires".
+	// `requiredMask & missingClasses` is exactly "the field lacks a class this
+	// correction still requires", since missingClasses holds only query classes.
 	requiredMask: number;
 	prepared: PreparedQuery | null;
 };

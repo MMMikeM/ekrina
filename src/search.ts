@@ -450,18 +450,21 @@ export function createSearcher<T, F extends string>(
 				a - b
 			);
 		};
-		// Only the page is put in order: once full, an item joins it only by
-		// outranking its last.
+		// Only the page is put in order: matches buffer to twice the page, which is
+		// sorted and cut back, and one that cannot outrank the page's last is skipped.
 		let page = matched;
 		if (pageSize < matched.length) {
 			page = [];
+			let last = -1;
 			for (const i of matched) {
-				if (page.length < pageSize || ranks(i, page[pageSize - 1]) < 0) {
-					if (page.push(i) >= pageSize) page.sort(ranks).length = pageSize;
+				if (last !== -1 && ranks(i, last) >= 0) continue;
+				if (page.push(i) === 2 * pageSize) {
+					page.sort(ranks).length = pageSize;
+					last = page[pageSize - 1];
 				}
 			}
 		}
-		const results = page.sort(ranks).map(resultOf);
+		const results = page.sort(ranks).slice(0, pageSize).map(resultOf);
 		forgetMatches();
 		return results;
 	};

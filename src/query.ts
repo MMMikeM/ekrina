@@ -7,7 +7,7 @@ import type { CorrectionSubject } from "./rescue";
 // Query-derived state, built once per query and reused across every field. The
 // lazy fields share one protocol: undefined = not built yet, null = the query
 // admits none. Declared required so every PreparedQuery keeps one object shape
-// as rescue.ts and readings.ts fill them in.
+// as the corrections fill them in.
 export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;

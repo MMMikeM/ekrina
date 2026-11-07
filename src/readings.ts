@@ -91,16 +91,14 @@ const spelling = (field: string, normalisedField: string, { word, offset }: Fiel
 	composed(field, normalisedField).slice(offset, offset + word.length);
 
 // Priced as the built-in rescue prices one: the tier the corrected query lands
-// on, as if typed in lower case, plus a penalty per edit.
+// on, plus a penalty per edit.
 const scoreCorrection = (
 	edits: number,
 	field: string,
 	normalisedField: string,
-	normalisedCorrected: string,
+	asTyped: PreparedQuery,
 	corrected: string,
-	typed: string = normalisedCorrected,
 ): MatchResult | null => {
-	const asTyped = prepareQuery(typed, normalisedCorrected);
 	const landed = literalTiers(field, normalisedField, asTyped, false);
 	/* v8 ignore next -- spelt from the field's own words, the corrected query always appears in it */
 	if (landed === null) return null;
@@ -119,7 +117,13 @@ const correction = (
 		offset: first.offset,
 	};
 	const corrected = spelling(field, normalisedField, span);
-	return scoreCorrection(edits, field, normalisedField, span.word, corrected);
+	return scoreCorrection(
+		edits,
+		field,
+		normalisedField,
+		prepareQuery(span.word, span.word),
+		corrected,
+	);
 };
 
 // A space typed or forgotten, or a key held down, counts as one edit: `spent` is
@@ -273,11 +277,12 @@ const correctPhrase = (
 		normalisedCorrected += normalisedQuery.slice(from, at) + (wordEdits ? candidate.word : word);
 		from = at + word.length;
 	}
+	normalisedCorrected += normalisedQuery.slice(from);
 	return scoreCorrection(
 		edits,
 		field,
 		normalisedField,
-		normalisedCorrected + normalisedQuery.slice(from),
+		prepareQuery(normalisedCorrected, normalisedCorrected),
 		corrected + typed.slice(from),
 	);
 };
@@ -336,7 +341,7 @@ const stuckKeyForm = (word: string): string | null => {
 	return form.length >= MIN_TYPO_QUERY_LENGTH ? form : null;
 };
 
-type Swap = { normalised: string; typed: string };
+type Swap = { normalised: string; asTyped: PreparedQuery };
 
 // Every adjacent swap of a short word. Swaps at different places change
 // different letters, so only a swap of two equal ones repeats a form: the word.
@@ -344,7 +349,8 @@ const swapForms = (word: string, typedWord: string): Swap[] => {
 	const forms: Swap[] = [];
 	for (let k = 0; k + 1 < word.length; k++) {
 		if (word[k] !== word[k + 1]) {
-			forms.push({ normalised: swapAdjacentAt(word, k), typed: swapAdjacentAt(typedWord, k) });
+			const normalised = swapAdjacentAt(word, k);
+			forms.push({ normalised, asTyped: prepareQuery(swapAdjacentAt(typedWord, k), normalised) });
 		}
 	}
 	return forms;
@@ -360,9 +366,9 @@ const swapWord = (
 	words: FieldWord[],
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
-	for (const { normalised, typed } of swaps) {
+	for (const { normalised, asTyped } of swaps) {
 		if (!words.some((candidate) => candidate.word.startsWith(normalised))) continue;
-		best = better(best, scoreCorrection(1, field, normalisedField, normalised, typed, typed));
+		best = better(best, scoreCorrection(1, field, normalisedField, asTyped, asTyped.query));
 	}
 	return best;
 };

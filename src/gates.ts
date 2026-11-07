@@ -91,8 +91,8 @@ export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null =>
 	return sources === undefined ? null : new RegExp(`(?<!\\w)[${sources}]`, "u");
 };
 
-// Separators set no bit, so they are never required of the field. Query and
-// field share the buckets, so a collision can only false-pass.
+// ASCII separators set no bit, so they are never required of the field. Query
+// and field share the buckets, so a collision can only false-pass.
 export const charMask = (normalised: string): number => {
 	let mask = 0;
 	for (let i = 0; i < normalised.length; i++) mask |= unitMask(normalised.charCodeAt(i));
@@ -166,10 +166,10 @@ export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate
 };
 
 // `charMask`'s bit for one code unit: a letter as its lower case, digits in
-// four buckets, non-ASCII in two, and nothing for a separator.
+// four buckets, non-ASCII in two, and nothing for an ASCII separator.
 const unitMask = (unit: number): number => {
 	if (unit >= 97 && unit <= 122) return 1 << (unit - 97);
-	// Raw ASCII capitals, which rawFieldMask and rawFieldPairs read before folding.
+	// Raw ASCII capitals, which rawFieldMask and rawFieldScan read before folding.
 	if (unit >= 65 && unit <= 90) return 1 << (unit - 65);
 	if (unit >= 48 && unit <= 57) return 1 << (26 + (unit & 3));
 	if (unit > 127) return 1 << (30 + (unit & 1));

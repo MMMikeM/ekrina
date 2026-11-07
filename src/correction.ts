@@ -29,8 +29,8 @@ const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: numb
 		: queryWords.some((word) => word.length >= floor);
 
 // Whether any rescue may run, and so whether the mask gate may relax to one
-// missing class. matchField and the searcher's survivor scan must ask this same
-// question, or one corrects what the other cannot.
+// missing class. Both entry points ask it through rescueTurn, so neither
+// corrects what the other cannot.
 export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH) &&
 	queryWords.every((word) => word.length <= MAX_RESCUE_WORD_LENGTH);
