@@ -165,19 +165,11 @@ describe("selections the searcher rejects", () => {
 		);
 	});
 
-	it("an options object such as { getText }", () => {
-		const getText = { getText: (item: string) => [item] };
-		// @ts-expect-error getText returns an array, which no field may
-		expect(() => createSearcher(items, getText)).toThrow(
-			new TypeError("pass the function itself: createSearcher(items, (item) => item.title)"),
-		);
-	});
-
 	it("a field without selectField, such as 1.x's { text }", () => {
 		const text = { title: { text: (item: string) => item } };
 		// @ts-expect-error the 1.x shape no longer type-checks either
 		expect(() => createSearcher(items, text)).toThrow(
-			new TypeError("field title needs selectField, which replaced text in 2.0"),
+			new TypeError("field title needs selectField"),
 		);
 	});
 
@@ -189,16 +181,36 @@ describe("selections the searcher rejects", () => {
 		);
 	});
 
-	it("1.x's atBest on a lone spec too", () => {
-		const atBest = { selectField: (item: string) => item, atBest: SCORES.CONTAINS };
-		expect(() => createSearcher(items, atBest)).toThrow(new TypeError("atBest is demoteBy since 2.0"));
+	it("a field beside a lone spec's selectField, rather than ignoring it", () => {
+		const spec = { selectField: (item: string) => item, body: (item: string) => item };
+		expect(() => createSearcher(items, spec)).toThrow(
+			new TypeError("a field spec takes selectField, acronym and demoteBy, not body"),
+		);
 	});
 
-	it("1.x's atBest, rather than ignoring it", () => {
-		const atBest = { title: { selectField: (item: string) => item, atBest: SCORES.CONTAINS } };
-		expect(() => createSearcher(items, atBest)).toThrow(
-			new TypeError("atBest is demoteBy since 2.0"),
+	it("a misspelt option, rather than ignoring it", () => {
+		const fields = { title: { selectField: (item: string) => item, demotBy: SCORES.CONTAINS } };
+		expect(() => createSearcher(items, fields)).toThrow(
+			new TypeError("field title takes selectField, acronym and demoteBy, not demotBy"),
 		);
+	});
+
+	it("1.x's atBest on a lone spec, rather than ignoring it", () => {
+		const atBest = { selectField: (item: string) => item, atBest: SCORES.CONTAINS };
+		expect(() => createSearcher(items, atBest)).toThrow(
+			new TypeError("a field spec takes selectField, acronym and demoteBy, not atBest"),
+		);
+	});
+
+	it("a negative or NaN demoteBy, which would carry a guess below SCORES.CONTAINS", () => {
+		const demoted = (demoteBy: number) => ({
+			title: { selectField: (item: string) => item, demoteBy },
+		});
+		expect(() => createSearcher(items, demoted(-1))).toThrow(
+			new RangeError("field title: demoteBy must be a finite number of at least 0, got -1"),
+		);
+		expect(() => createSearcher(items, demoted(Number.NaN))).toThrow(RangeError);
+		expect(() => createSearcher(items, demoted(Number.POSITIVE_INFINITY))).toThrow(RangeError);
 	});
 
 	it("a field named like an integer, since those names sort first", () => {

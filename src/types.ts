@@ -63,9 +63,9 @@ export type FieldSpec<T = unknown> = {
 	/** Enable the acronym tier for this field (default: false). */
 	acronym?: boolean;
 	/** Added to this field's scores when results are ranked, so a higher value
-	 *  demotes it (default: 0, keep >= 0). With `demoteBy: SCORES.CONTAINS`, this
-	 *  field's best hit ranks level with a contains match elsewhere. It never
-	 *  changes `tier`. */
+	 *  demotes it (default: 0; a finite number of at least 0, or createSearcher
+	 *  throws). With `demoteBy: SCORES.CONTAINS`, this field's best hit ranks level
+	 *  with a contains match elsewhere. It never changes `tier`. */
 	demoteBy?: number;
 };
 
