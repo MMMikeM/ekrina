@@ -202,32 +202,48 @@ export function createSearcher<T, F extends string>(
 	const resolvedSpecs = resolveFieldSpecs(selection);
 	const specCount = resolvedSpecs.length;
 	const count = list.length;
-	// Each matched item's best match so far, so a second-pass match can replace
-	// a weaker one. Results are built only for the page the sort keeps.
-	// oxlint-disable-next-line unicorn/no-new-array
-	const heldMatches: (MatchResult | undefined)[] = new Array(count);
-	const heldEndsWord = new Uint8Array(count);
-	const heldFields =
-		specCount > 1
-			? new (
-					specCount < 256
-						? Uint8Array
-						: /* v8 ignore next -- only a searcher with 256 or more fields needs it */ Uint32Array
-				)(count)
-			: null;
-	const heldFieldOf = (i: number): number => (heldFields === null ? 0 : heldFields[i]);
-	const heldScore = (i: number): number =>
-		(heldMatches[i] as MatchResult).score + resolvedSpecs[heldFieldOf(i)].demotion;
 	const named = specCount > 0 && resolvedSpecs[0].fieldName !== undefined;
-	// Each item's best match per field, item-major, kept only for named fields.
-	let fieldMatches: (MatchResult | undefined)[] | null = null;
+	// Each field's best match so far, item-major. A field keeps its first match on
+	// a tie, as fuzzyMatch does, and an item's best field is derived from these, so
+	// a result and its `fields` entry are always the same match.
+	// Allocated by the first search, so a searcher that is never queried holds none.
+	let fieldMatches: (MatchResult | undefined)[] = [];
+	let fieldEndsWord = new Uint8Array(0);
+	// Each matched item's best field, taken once before the sort.
+	const bestFields = specCount > 1 ? new (specCount < 256 ? Uint8Array : Uint32Array)(count) : null;
 	let matched: number[] = [];
 	const forgetMatches = (): void => {
-		for (const i of matched) {
-			heldMatches[i] = undefined;
-			fieldMatches?.fill(undefined, i * specCount, (i + 1) * specCount);
-		}
+		for (const i of matched) fieldMatches.fill(undefined, i * specCount, (i + 1) * specCount);
 		matched = [];
+	};
+	const fieldScore = (i: number, f: number): number =>
+		(fieldMatches[i * specCount + f] as MatchResult).score + resolvedSpecs[f].demotion;
+	// Lower score, then a match ending on a word boundary, then the field named
+	// first; -1 when no field matched.
+	const bestFieldOf = (i: number): number => {
+		const base = i * specCount;
+		let best = -1;
+		for (let f = 0; f < specCount; f++) {
+			if (fieldMatches[base + f] === undefined) continue;
+			if (best !== -1) {
+				const lead = fieldScore(i, f) - fieldScore(i, best);
+				if (lead > 0 || (lead === 0 && fieldEndsWord[base + f] <= fieldEndsWord[base + best])) continue;
+			}
+			best = f;
+		}
+		return best;
+	};
+	const sortedField = (i: number): number => (bestFields === null ? 0 : bestFields[i]);
+	const hasMatch = (i: number): boolean => {
+		for (let f = 0; f < specCount; f++) if (fieldMatches[i * specCount + f] !== undefined) return true;
+		return false;
+	};
+	// The best field's score is at most CONTAINS exactly when any field's is.
+	const holdsLiteral = (i: number): boolean => {
+		for (let f = 0; f < specCount; f++) {
+			if (fieldMatches[i * specCount + f] !== undefined && fieldScore(i, f) <= CONTAINS_SCORE) return true;
+		}
+		return false;
 	};
 
 	// Item-major flat caches, filled per field on first mask survival: survivors
@@ -336,6 +352,11 @@ export function createSearcher<T, F extends string>(
 		const prepared = prepareBoundedQuery(query);
 		if (prepared === null) return [];
 		forgetMatches();
+		if (fieldEndsWord.length < count * specCount) {
+			// oxlint-disable-next-line unicorn/no-new-array
+			fieldMatches = new Array(count * specCount);
+			fieldEndsWord = new Uint8Array(count * specCount);
+		}
 		const { normalisedQuery, queryMask } = prepared;
 		const singleChar = normalisedQuery.length === 1;
 
@@ -352,6 +373,7 @@ export function createSearcher<T, F extends string>(
 		let literalHits = 0;
 		// Fuzzy and corrected matches score above SCORES.CONTAINS, so once a page
 		// of items matches literally, no chain found after it can reach the page.
+		// Only a lone field skips them: with several, `fields` reports every match.
 		const pageSize = limit ?? Infinity;
 
 		// Returns whether the match ends on a word boundary. Results are fresh
@@ -365,31 +387,18 @@ export function createSearcher<T, F extends string>(
 			return endsWord;
 		};
 
-		// An item reports its best field. On a tied score the field whose match
-		// ends on a word boundary wins, as it does in the sort, then the earlier one.
 		const offerField = (i: number, f: number, match: MatchResult): void => {
 			const at = i * specCount + f;
 			const endsWord = placeFieldResult(match, at);
-			const score = match.score + resolvedSpecs[f].demotion;
-			const held = heldMatches[i] !== undefined;
-			if (named) {
-				// oxlint-disable-next-line unicorn/no-new-array
-				const perField = (fieldMatches ??= new Array(count * specCount));
-				const fieldBest = perField[at];
-				if (fieldBest === undefined || match.score < fieldBest.score) perField[at] = match;
-			}
-			if (!held) matched.push(i);
-			else {
-				const heldAt = heldScore(i);
-				if (!(score < heldAt || (score === heldAt && endsWord && !heldEndsWord[i]))) return;
-			}
-			heldMatches[i] = match;
-			heldEndsWord[i] = endsWord ? 1 : 0;
-			if (heldFields !== null) heldFields[i] = f;
+			const best = fieldMatches[at];
+			if (best !== undefined && !(match.score < best.score)) return;
+			if (best === undefined && !hasMatch(i)) matched.push(i);
+			fieldMatches[at] = match;
+			fieldEndsWord[at] = endsWord ? 1 : 0;
 		};
 
 		const scoreItem = (i: number, mayRescue: boolean, preGated: boolean): void => {
-			const literalOnly = !mayRescue && literalHits >= pageSize;
+			const literalOnly = !mayRescue && specCount === 1 && literalHits >= pageSize;
 			materialise(i);
 			const base = i * specCount;
 			for (let f = 0; f < specCount; f++) {
@@ -405,7 +414,7 @@ export function createSearcher<T, F extends string>(
 				);
 				if (result) offerField(i, f, result);
 			}
-			if (heldMatches[i] !== undefined && heldScore(i) <= CONTAINS_SCORE) literalHits++;
+			if (holdsLiteral(i)) literalHits++;
 		};
 
 		const narrowed =
@@ -533,7 +542,7 @@ export function createSearcher<T, F extends string>(
 						if (!admitsPairs(bigramsLo[i], bigramsHi[i])) continue;
 					}
 				}
-				if (heldMatches[i] !== undefined && heldScore(i) <= CONTAINS_SCORE) continue;
+				if (holdsLiteral(i)) continue;
 				offerFallbacks(i, reading);
 			}
 		};
@@ -568,10 +577,16 @@ export function createSearcher<T, F extends string>(
 
 		// Within a score, a match that ends on a word boundary ranks first ("will"
 		// means "Will Smith" before "Willa"), then list order.
-		matched.sort(
-			(a, b) =>
-				heldScore(a) - heldScore(b) || heldEndsWord[b] - heldEndsWord[a] || a - b,
-		);
+		if (bestFields !== null) for (const i of matched) bestFields[i] = bestFieldOf(i);
+		matched.sort((a, b) => {
+			const fa = sortedField(a);
+			const fb = sortedField(b);
+			return (
+				fieldScore(a, fa) - fieldScore(b, fb) ||
+				fieldEndsWord[b * specCount + fb] - fieldEndsWord[a * specCount + fa] ||
+				a - b
+			);
+		});
 		return matched.slice(0, limit).map(resultOf);
 	};
 
@@ -584,11 +599,12 @@ export function createSearcher<T, F extends string>(
 	// Callers can see key order, so it stays item, score, tier, ranges, text, field,
 	// corrected, fields.
 	const resultOf = (i: number): SearchResult<T, F> => {
-		const f = heldFieldOf(i);
-		const { tier, ranges, text, corrected } = fieldMatchOf(i, f, heldMatches[i] as MatchResult);
+		const f = sortedField(i);
+		const match = fieldMatches[i * specCount + f] as MatchResult;
+		const { tier, ranges, text, corrected } = fieldMatchOf(i, f, match);
 		const result: SearchResult<T> & { field?: string; fields?: Record<string, FieldMatch> } = {
 			item: list[i],
-			score: heldScore(i),
+			score: fieldScore(i, f),
 			tier,
 			ranges,
 			text,
@@ -602,7 +618,7 @@ export function createSearcher<T, F extends string>(
 	const fieldsOf = (i: number): Record<string, FieldMatch> => {
 		const fields: Record<string, FieldMatch> = {};
 		for (let f = 0; f < specCount; f++) {
-			const match = (fieldMatches as (MatchResult | undefined)[])[i * specCount + f];
+			const match = fieldMatches[i * specCount + f];
 			if (match !== undefined) fields[resolvedSpecs[f].fieldName as string] = fieldMatchOf(i, f, match);
 		}
 		return fields;

@@ -63,6 +63,13 @@ describe("ordering within a score", () => {
 		]);
 	});
 
+	it("a later reading that ties an item's match keeps the first, as fuzzyMatch does", () => {
+		const field = " llAo-1я";
+		const result = createSearcher([field])(" lAlo-")[0];
+		const match = fuzzyMatch(field, " lAlo-");
+		expect([result?.corrected, result?.ranges]).toEqual([match?.corrected, match?.ranges]);
+	});
+
 	it("list order still breaks ties between whole words", () => {
 		const search = createSearcher(["Will Jones", "Will Smith"]);
 		expect(search("will").map((r) => r.item)).toEqual(["Will Jones", "Will Smith"]);

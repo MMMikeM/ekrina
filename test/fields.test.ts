@@ -94,6 +94,30 @@ describe("named fields", () => {
 		expect(r).toMatchObject({ field: "name", tier: "acronym" });
 	});
 
+	it("a result's entry in fields is the match the result reports", () => {
+		const r = createSearcher(["than t ahnx"], { a: (x: string) => x })("tahn")[0];
+		expect([r?.fields.a?.tier, r?.fields.a?.ranges]).toEqual([r?.tier, r?.ranges]);
+	});
+
+	it("fields holds every field that matched, with a limit too", () => {
+		const items = [
+			{ title: "orange juice", body: "x" },
+			{ title: "orange", body: "o r a n g e s" },
+		];
+		const search = createSearcher(items, { title: (i) => i.title, body: (i) => i.body });
+		const fieldsOfOrange = (limit?: number) =>
+			Object.keys(search("orange", { limit }).find((r) => r.item.title === "orange")?.fields ?? {});
+		expect(fieldsOfOrange()).toEqual(["title", "body"]);
+		expect(fieldsOfOrange(1)).toEqual(["title", "body"]);
+	});
+
+	it("a searcher with hundreds of fields still names the one that matched", () => {
+		const fields = Object.fromEntries(
+			Array.from({ length: 300 }, (_, k) => [`f${k}`, (item: string) => (k === 299 ? item : null)]),
+		);
+		expect(createSearcher(["orange"], fields)("orange")[0]?.field).toBe("f299");
+	});
+
 	it("takes named fields on an object with no prototype", () => {
 		const fields: Record<string, (item: string) => string> = Object.create(null);
 		fields.title = (item) => item;
