@@ -34,6 +34,8 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: "Ekrina",
+			// src/pages/404.astro replaces it, so no docs entry named 404 is looked up.
+			disable404Route: true,
 			description:
 				"Fuzzy search for TypeScript that corrects up to two mistakes per query, says how every result matched, and returns nothing for nonsense. Zero dependencies.",
 			customCss: [

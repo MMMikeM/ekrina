@@ -56,14 +56,23 @@ export type ParetoData = {
 	rows: ParetoRow[];
 };
 
-export const MEASURES = ["one-shot", "session", "per-query"] as const;
+export const MEASURES = ["one-shot", "per-query", "session"] as const;
 export type Measure = (typeof MEASURES)[number];
+
+export const SCALES = ["log", "linear"] as const;
+export type Scale = (typeof SCALES)[number];
+
+export const SCALE_LABELS: Record<Scale, string> = {
+	log: "Log",
+	linear: "Linear",
+};
 
 export type ParetoState = {
 	measure: Measure;
 	constructorCounted: boolean;
 	corpus: Corpus;
 	size: string;
+	scale: Scale;
 };
 
 export const MEASURE_LABELS: Record<Measure, string> = {
@@ -234,6 +243,7 @@ export const noteTexts = (data: ParetoData): Record<"constructor" | "corpus" | "
 			constructorCounted: true,
 			corpus: corpus.id,
 			size: corpus.sizes[0]!,
+			scale: "log" as const,
 		})),
 	);
 	const distinct = (texts: string[]) => [...new Set(texts.filter(Boolean))];
@@ -662,6 +672,39 @@ const minorLogTicks = (lo: number, hi: number, major: number[]): number[] => {
 	return out;
 };
 
+type TimeAxis = { fraction: (ms: number) => number; ticks: number[]; minor: number[] };
+
+const logAxis = (lo: number, hi: number, plotW: number): TimeAxis => {
+	const ticks = logTicks(lo, hi, plotW);
+	return {
+		fraction: (ms) => Math.log10(ms / lo) / Math.log10(hi / lo),
+		ticks,
+		minor: minorLogTicks(lo, hi, ticks),
+	};
+};
+
+// From zero to the same end as the log axis, so switching scale never changes the range.
+const linearAxis = (hi: number, plotW: number): TimeAxis => ({
+	fraction: (ms) => ms / hi,
+	ticks: linearTicks(hi, plotW),
+	minor: [],
+});
+
+const linearTicks = (hi: number, plotW: number): number[] => {
+	const e = Math.floor(Math.log10(hi));
+	const steps = [e - 2, e - 1, e]
+		.flatMap((power) => MANTISSAS.map((m) => Number((m * 10 ** power).toPrecision(6))))
+		.filter((step) => Math.abs(hi / step - Math.round(hi / step)) < 1e-9);
+	for (const step of steps) {
+		const ticks = Array.from({ length: Math.round(hi / step) + 1 }, (_, i) =>
+			Number((i * step).toPrecision(6)),
+		);
+		const widest = Math.max(...ticks.map((t) => textWidth(tickLabel(t))));
+		if (plotW / ticks.length >= widest + TICK_GAP_PX) return ticks;
+	}
+	return [0, hi];
+};
+
 const tickLabel = (t: number): string => (t >= 1000 ? t.toLocaleString("en-GB") : String(t));
 
 const MANTISSAS = [1, 2, 5];
@@ -695,6 +738,7 @@ const axesOf = (data: ParetoData, measure: Measure, corpus: Corpus) => {
 					constructorCounted,
 					corpus: corpus.id,
 					size,
+					scale: "log" as const,
 				})),
 			),
 		),
@@ -737,9 +781,8 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const front = viewFrontier(data, state, points);
 
 	const { yLo, yHi, msLo, msHi } = axesOf(data, state.measure, state.corpus);
-	const xLo = Math.log10(msLo);
-	const xHi = Math.log10(msHi);
-	const X = (ms: number) => r1(M.left + ((Math.log10(ms) - xLo) / (xHi - xLo)) * plotW);
+	const xAxis = state.scale === "log" ? logAxis(msLo, msHi, plotW) : linearAxis(msHi, plotW);
+	const X = (ms: number) => r1(M.left + xAxis.fraction(ms) * plotW);
 	const Y = (mrr: number) => r1(M.top + ((yHi - mrr) / (yHi - yLo)) * plotH);
 
 	const placed: Placed[] = points.map((p) => ({
@@ -774,14 +817,14 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		],
 	);
 
-	const xTicks = logTicks(msLo, msHi, plotW);
+	const xTicks = xAxis.ticks;
 	const yStep = plotH / ((yHi - yLo) / 0.1) >= 26 ? 0.1 : 0.2;
 	const yTicks: number[] = [];
 	for (let t = Math.ceil(yLo / yStep - 1e-9) * yStep; t <= yHi + 1e-9; t += yStep) {
 		yTicks.push(Number(t.toFixed(1)));
 	}
 
-	const minorGrid = minorLogTicks(msLo, msHi, xTicks)
+	const minorGrid = xAxis.minor
 		.map((t) => `<line x1="${X(t)}" y1="${M.top}" x2="${X(t)}" y2="${M.top + plotH}"/>`)
 		.join("");
 	const grid = [
@@ -800,9 +843,11 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		.join("");
 	const titles = axisTitles(state);
 	const xTitle =
-		titles
-			.flatMap((title) => [`${title}, log scale, lower is better`, `${title}, log scale`, title])
-			.find((text) => textWidth(text) <= plotW + M.left - 8) ?? titles.at(-1)!;
+		[
+			...titles.map((title) => `${title}, ${state.scale} scale, lower is better`),
+			...titles.map((title) => `${title}, ${state.scale} scale`),
+			...titles,
+		].find((text) => textWidth(text) <= plotW + M.left - 8) ?? titles.at(-1)!;
 	const frontierPath = frontPlaced.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join("");
 
 	// Ekrina's three rows can share a spot, so its default draws last, inside the hollow variants' outlines.
@@ -839,7 +884,7 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		.join("");
 
 	return [
-		`<svg class="pareto-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="${escapeHtml(`MRR against ${titles[0]}, log scale`)}">`,
+		`<svg class="pareto-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="${escapeHtml(`MRR against ${titles[0]}, ${state.scale} scale`)}">`,
 		`<g class="grid minor" aria-hidden="true">${minorGrid}</g>`,
 		`<g class="grid" aria-hidden="true">${grid}</g>`,
 		`<g class="axis" aria-hidden="true">`,
