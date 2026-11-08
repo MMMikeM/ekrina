@@ -54,11 +54,11 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:end -->
 
 <!-- bench:library-fuzzy-batch-en -->
-| Library          |   build | first answer | per query | session total | session rel |
-|------------------|--------:|-------------:|----------:|--------------:|------------:|
-| **Ekrina**       | 0.23 ms |      8.55 ms |   1.64 ms |      48.14 ms |    **100%** |
-| fuzzy            | 0.03 ms |     15.72 ms |  13.06 ms |     329.25 ms |        684% |
-| fuzzy (all opts) | 0.03 ms |     16.83 ms |  13.71 ms |     345.87 ms |        719% |
+| Library          |   build | first answer | session total | per query | per query rel |
+|------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**       | 0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| fuzzy            | 0.03 ms |     15.72 ms |     329.25 ms |  13.06 ms |          795% |
+| fuzzy (all opts) | 0.03 ms |     16.83 ms |     345.87 ms |  13.71 ms |          835% |
 <!-- bench:end -->
 
 ## Match quality, by query family

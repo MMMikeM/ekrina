@@ -334,16 +334,10 @@ const batchTable = (
 		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
 
 	const batches = shown.map((lib) => cellOf(a, corpus, "batch", size, lib) as ColdCell);
-	const ekrinaSession = sessionMsOf(ekrinaBatch);
-	const columns = (b: {
-		build: number;
-		first: number;
-		rest: number;
-		session: number;
-	}): string[] => [
+	const ekrinaRest = ekrinaBatch.restMs ?? ekrinaBatch.queryMs;
+	const setup = (b: { build: number; first: number; session: number }): string[] => [
 		`${ms(b.build)} ms`,
 		`${ms(b.first)} ms`,
-		`${ms(b.rest)} ms`,
 		`${ms(b.session)} ms`,
 	];
 	const partsOf = (batch: ColdCell) => ({
@@ -357,24 +351,26 @@ const batchTable = (
 		const emphasise = (v: string): string => (lib === "ekrina" ? `**${v}**` : v);
 		return [
 			lib === "ekrina" ? "**Ekrina**" : displayName(lib),
-			...columns(parts),
-			emphasise(pct(parts.session, ekrinaSession)),
+			...setup(parts),
+			`${ms(parts.rest)} ms`,
+			emphasise(pct(parts.rest, ekrinaRest)),
 		];
 	});
 
 	if (aggregate) {
 		const geo = (part: keyof ReturnType<typeof partsOf>): number =>
 			geomean(batches.map((batch) => partsOf(batch)[part]));
-		const session = geo("session");
+		const rest = geo("rest");
 		rows.push([
 			"_all libraries (geomean)_",
-			...columns({ build: geo("build"), first: geo("first"), rest: geo("rest"), session }),
-			pct(session, ekrinaSession),
+			...setup({ build: geo("build"), first: geo("first"), session: geo("session") }),
+			`${ms(rest)} ms`,
+			pct(rest, ekrinaRest),
 		]);
 	}
 
 	return mdTable(
-		["Library", "build", "first answer", "per query", "session total", "session rel"],
+		["Library", "build", "first answer", "session total", "per query", "per query rel"],
 		rows,
 		["left", "right", "right", "right", "right", "right"],
 	);

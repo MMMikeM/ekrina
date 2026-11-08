@@ -56,11 +56,11 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-en -->
-| Library          |   build | first answer | per query | session total | session rel |
-|------------------|--------:|-------------:|----------:|--------------:|------------:|
-| **Ekrina**       | 0.23 ms |      8.55 ms |   1.64 ms |      48.14 ms |    **100%** |
-| Ekrina (acronym) | 0.26 ms |     10.24 ms |   1.63 ms |      49.60 ms |        103% |
-| Ekrina (indexed) | 6.63 ms |      4.47 ms |   1.24 ms |      40.84 ms |         85% |
+| Library          |   build | first answer | session total | per query | per query rel |
+|------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**       | 0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| Ekrina (acronym) | 0.26 ms |     10.24 ms |      49.60 ms |   1.63 ms |           99% |
+| Ekrina (indexed) | 6.63 ms |      4.47 ms |      40.84 ms |   1.24 ms |           76% |
 <!-- bench:end -->
 
 **native corpus:**
@@ -74,11 +74,11 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-native -->
-| Library          |   build | first answer | per query | session total | session rel |
-|------------------|--------:|-------------:|----------:|--------------:|------------:|
-| **Ekrina**       | 0.23 ms |      9.75 ms |   1.96 ms |      56.79 ms |    **100%** |
-| Ekrina (acronym) | 0.25 ms |     11.84 ms |   1.97 ms |      59.27 ms |        104% |
-| Ekrina (indexed) | 8.53 ms |      4.98 ms |   1.43 ms |      47.88 ms |         84% |
+| Library          |   build | first answer | session total | per query | per query rel |
+|------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**       | 0.23 ms |      9.75 ms |      56.79 ms |   1.96 ms |      **100%** |
+| Ekrina (acronym) | 0.25 ms |     11.84 ms |      59.27 ms |   1.97 ms |          101% |
+| Ekrina (indexed) | 8.53 ms |      4.98 ms |      47.88 ms |   1.43 ms |           73% |
 <!-- bench:end -->
 
 ## Match quality, by query family
