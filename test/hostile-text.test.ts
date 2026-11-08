@@ -118,7 +118,9 @@ describe("a query an attacker controls", () => {
 	it("can name any number of rare characters and still be folded correctly", () => {
 		for (let batch = 0; batch < 300; batch++) {
 			const start = 0x4e00 + batch * 256;
-			normaliseText(Array.from({ length: 256 }, (_, i) => String.fromCodePoint(start + i)).join(""));
+			normaliseText(
+				Array.from({ length: 256 }, (_, i) => String.fromCodePoint(start + i)).join(""),
+			);
 		}
 		expect(normaliseText("Ärger ПРИВЕТ Ḁ")).toBe("arger привет a");
 	});
@@ -129,7 +131,11 @@ const hostileQueries: [string, string, string][] = [
 	["a single word of 16,000 characters", alphabet, mixedWord(16_000)],
 	["a single word of 16,000 characters, against a long field", longField, mixedWord(16_000)],
 	["a phrase with an absent word of 16,385 characters", longField, `hello ${mixedWord(16_385)}`],
-	["a word repeated 4,000 times", "the cat sat on the mat ".repeat(2_700), Array(4_000).fill("the").join(" ")],
+	[
+		"a word repeated 4,000 times",
+		"the cat sat on the mat ".repeat(2_700),
+		Array(4_000).fill("the").join(" "),
+	],
 	[
 		"a phrase of 4,900 distinct characters",
 		"Blue Wooden Chair — Oak",

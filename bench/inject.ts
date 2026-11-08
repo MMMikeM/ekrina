@@ -6,7 +6,8 @@ const MARKER =
 
 // A value inside a sentence: both markers on one line. The id may not be `end`,
 // or a block region's end marker would open an inline one.
-const INLINE = /<!-- bench:(?!end -->)([a-z0-9-]+) -->(?!\n)(?:(?!<!-- bench:)[^\n])*?<!-- bench:end -->/g;
+const INLINE =
+	/<!-- bench:(?!end -->)([a-z0-9-]+) -->(?!\n)(?:(?!<!-- bench:)[^\n])*?<!-- bench:end -->/g;
 
 export type Injected = {
 	doc: string;

@@ -1,7 +1,7 @@
 # Performance design rationale
 
 Why Ekrina is fast the way it is: the standing design decisions, the evidence that settled them, the alternatives rejected along the way, and the hazards any future change must respect.
-Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
+Current numbers live in [benchmarks.md](./benchmarks.md) and regenerate with `pnpm vpr bench`; the sequence of changes lives in [CHANGELOG.md](../CHANGELOG.md) and git history.
 The numbers quoted here are decision evidence, each taken from the run that settled its decision.
 The relative ordering is the claim, and none of it is regenerated.
 
@@ -78,7 +78,8 @@ Construction is allocation, the first query that needs the masks carries the def
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
 This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borw` as a corrected `brow` and fails `bor`, which is too short to correct), so caching matches would be wrong.
-Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
+Backspace and replacement queries fall back to a full scan.
+A query that ran the relaxed rescue still seeds the cache with its literal survivors: the rescue scores items outside them but never adds to them.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
 ### Corrections are budgeted
@@ -151,8 +152,8 @@ Teaching the searcher the four-character rescue was measured both ways it can be
 
 | Build                            | mixed acronym @100k | mixed scatter-heavy @100k | mixed accent-stripped @10k |
 | -------------------------------- | ------------------: | ------------------------: | -------------------------: |
-| rescue pass over the union index |   5.74 → 20.32 ms   |      4.97 → 18.93 ms      |       2.10 → 4.42 ms       |
-| raw-text swap gate, no index     |   5.63 → 16.16 ms   |      4.88 → 14.17 ms      |       2.08 → 5.15 ms       |
+| rescue pass over the union index |     5.74 → 20.32 ms |           4.97 → 18.93 ms |             2.10 → 4.42 ms |
+| raw-text swap gate, no index     |     5.63 → 16.16 ms |           4.88 → 14.17 ms |             2.08 → 5.15 ms |
 
 Neither build changed a single result, rank or tier on those probes.
 Finding a four-character swap means testing every item that holds the query's letters, and the per-string regex time of that test is the whole slowdown.
@@ -179,12 +180,12 @@ MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` k
 Rescored over the sampled query families that replaced single probes ([benchmarks.md](./benchmarks.md#match-quality-by-query-family)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
 Only four-character queries that match nothing get slower (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
 
-| Query                 | Cold             | After `buildIndex()` |
-| --------------------- | ---------------: | -------------------: |
-| `anxe`, mixed @10k    |  2.19 → 8.18 ms  |      0.67 → 4.49 ms  |
-| `zzzz`, mixed @100k   |  4.43 → 24.04 ms |      4.99 → 9.58 ms  |
-| `zzzzz`, mixed @100k  | 20.96 → 21.35 ms |      7.56 → 8.23 ms  |
-| `rsaw`, mixed @100k   |  5.92 → 5.98 ms  |      3.96 → 4.08 ms  |
+| Query                |             Cold | After `buildIndex()` |
+| -------------------- | ---------------: | -------------------: |
+| `anxe`, mixed @10k   |   2.19 → 8.18 ms |       0.67 → 4.49 ms |
+| `zzzz`, mixed @100k  |  4.43 → 24.04 ms |       4.99 → 9.58 ms |
+| `zzzzz`, mixed @100k | 20.96 → 21.35 ms |       7.56 → 8.23 ms |
+| `rsaw`, mixed @100k  |   5.92 → 5.98 ms |       3.96 → 4.08 ms |
 
 A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
 `fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
@@ -248,6 +249,28 @@ At 0.15 the cost is two dropped vowels at 0.90–0.95 held out, from 1.00.
 Letting every query with only fuzzy chains read in full, rather than just the four-letter ones, scored the same and ran 8–30% slower, so only the swap reading reaches the whole list; three interleaved rounds put that build level with the one before it.
 The junk probes stay at 0 of 100 on every corpus and the long-text rates are unchanged.
 
+### A fuzzy chain enters a later word at its start
+
+The fuzzy tier is the first relevant answer for 5–7% of the scored queries (22, 17 and 18 of 330 on en, native and emoji), nearly all of them two words typed as one (`pedroalonso`) and initials (`tfts`).
+With fuzzy results dropped and every correction kept, headline MRR fell 0.9154 → 0.8981 (en), 0.9096 → 0.9014 (native) and 0.9131 → 0.9062 (emoji), the acronym family went to 0 on every corpus, and the median result set for a three-letter prefix shrank from 51 rows to 8 on en: the tier earns its MRR from a few families and carries a long tail of weak rows.
+That tail is a chain stepping into a later word mid-word, `prow` across "mobile **p**hone with ar**row**"; the useful chains either start each piece at a word or stay inside one.
+
+So a later piece in a new word must open that word, and a piece inside the current word keeps the old rule.
+Removing those chains exposed a second fault they had been hiding: a short query's substitution rescue ran whenever nothing matched, so once `suop` lost its junk chain it read as "stop" (2.6) over the swap that reads "soup" (3.0), and `tahn` as "Taha" over "Than".
+So a short query's substitution now runs after the second pass, and only when its swap and sparse readings find nothing too.
+
+Both changes together, against the build before them (quality stage, every family):
+
+|                             |              en |          native |           emoji |
+| --------------------------- | --------------: | --------------: | --------------: |
+| headline MRR                | 0.9154 → 0.9156 | 0.9096 → 0.9096 | 0.9131 → 0.9131 |
+| acronym family (unweighted) |   0.635 → 0.635 |   0.369 → 0.369 |   0.351 → 0.401 |
+| median rows, prefix of 3    |         51 → 41 |         44 → 34 |         40 → 34 |
+| junk                        |         0% → 0% |         0% → 0% |         0% → 0% |
+
+No family's MRR fell, long-text fuzzy junk halved (2.0% → 1.0% from 512 characters up, 200 absent words over the native corpus), and speed did not move (`ab.ts`, seven pairs at 100k: −2.1% to +1.1%).
+Two variants that let a short query's substitution compete beside fuzzy chains were measured first and rejected: run whenever no literal match exists, they cost 0.003–0.010 MRR and 13–17% per query; run only beside chains with a mid-word piece, they cost nothing and fixed nothing, since `prow`'s "**p**erson **row**ing boat" opens every piece at a word.
+
 ### What a dropped searcher leaves behind
 
 Once a searcher was dropped and collected, `bench/memory.ts` still measured 0.41 MB retained on en and 0.70 MB on native, where every other library but fuzzysort left under 0.2 MB.
@@ -262,6 +285,37 @@ Three other changes were measured and left out:
 - a query cache per searcher, which freed about 32 KB and made 15 searchers answering the same keystrokes 1.5–2% slower;
 - the class table split into pages allocated on demand, which freed 19–65 KB and made a cold one-shot 1.4–2.9% slower;
 - a flattened unfold table, which freed 9–14 KB for about 18 B of bundle.
+
+### The rescue runs as a stage
+
+Both entry points used to hand-write the rescue's order around the readings, and the searcher's relaxed pass forgot every literal-pass match, then reran the literal tiers and the fuzzy chain on each survivor only to reach the rescue.
+Now both run the literal pass, then `stages` in order: the early rescue, the readings, the late rescue.
+Each stage corrects a field beside the match the literal pass left it, so a literal hit stands and a fuzzy chain competes with the correction, with byte-identical results over every corpus and query family.
+Against the build before it, warm, ms per query at 100k:
+
+| Query                 | Before | After |
+| --------------------- | -----: | ----: |
+| native two words      |   0.67 |  0.53 |
+| no match, each corpus |   0.30 |  0.27 |
+| substitution, indexed |   0.17 |  0.15 |
+
+Twenty queries of five letters or more over 2,000 fields of 1,200 characters took 35–39% less.
+Process-cold (`bench/run.ts`, four interleaved rounds of three processes per cell), the 105 cells summed level, and the first indexed substitution at 100k was 9–10% slower, about 0.2 ms.
+Writing the rescue's letter-pair gate back into the searcher's loop would recover that, and was left out because it is the special case the stage removes.
+`bench/memory.ts` read the same to 0.01 MB at every point, since a stage's candidates reuse the previous keystroke's survivor buffer.
+
+Three shapes were measured on the way:
+
+- One whole-list loop serving every stage kept each stage's gates live in its compiled body, and a query matching nothing took 0.30 → 0.45 ms; a loop per stage that only tests the letter budget, with the pair gate and the correction run over its candidates, brought it to 0.27.
+- The rescue's one-edit budget is a bit test rather than the readings' counting loop: run through the loop, the relaxed pass measured 1.7% slower over the cold matrix and up to 15% on its rescue cells.
+- `fuzzyMatch` turns away a field lacking more letter classes than any stage can supply before preparing the stages, which every stage's budget implies anyway: without it, `fuzzyMatch` over a label list measured 13% slower than before the change, and with it 4%.
+
+`literalTiers` finds the normalised query once and reuses its position for the prefix, boundary and contains tiers: long fields 6% faster, literal queries 2–3%, the cold matrix 0.6%.
+Three other changes were measured and left out:
+
+- a per-unit table for `isBoundaryAt`, 7× faster per call, which moved the cold matrix 0.3% and native typing not at all, for 64 KB held for the session;
+- an ASCII compare in the long-field in-order scan in place of the unfold class lookup, within noise even on a searcher's first queries;
+- skipping a field the readings reject for length before normalising it, within 1%.
 
 ## Benchmarking lessons
 

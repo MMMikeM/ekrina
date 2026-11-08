@@ -41,11 +41,12 @@ flowchart TD
     RAW --> MAT["materialise survivors<br/>trim + normalise + per-field mask, cached"]
     MSCAN --> MAT
     MAT --> LAD["tier ladder<br/>exact -> prefix -> boundary -> multi-word<br/>-> acronym -> contains -> fuzzy chain"]
-    LAD --> LIT{"rescuable query with fewer literal hits<br/>than min(10, limit)? four characters:<br/>no hit at all, literal or fuzzy"}
+    LAD --> LIT{"fewer literal hits<br/>than min(10, limit)?"}
     LIT -->|no| OUT["build results, sort by score,<br/>cut to limit"]
-    LIT -->|yes| REL["relaxed scan over the union masks, built first if missing:<br/>admit items missing at most one<br/>character class, and only if every query bigram<br/>away from that class's position is present<br/>(an item's bigram set is read the first time it is needed)"]
-    REL --> RES["ladder + one-edit rescue"]
-    RES --> OUT
+    LIT -->|yes| STG["correction stages, in order:<br/>early rescue (a word of five characters or more),<br/>readings, late rescue (shorter, and only if nothing matched)"]
+    STG --> SCAN["per stage: scan all N, or only the survivors,<br/>against its letter budget on the union masks, built first if missing;<br/>then its letter-pair gate on the items that pass<br/>(an item's bigram set is read the first time it is needed)"]
+    SCAN --> FIX["correct each admitted field beside the match it already holds:<br/>a literal hit stands, a fuzzy chain competes with the correction"]
+    FIX --> OUT
 ```
 
 Which path a query takes depends on:
@@ -63,21 +64,21 @@ With a `limit`, the ladder runs in full until `limit` items have matched literal
 
 en 100k, mean over sixteen single-word probes:
 
-| stage                                 | records in |      records out |                           time |
-| ------------------------------------- | ---------: | ---------------: | -----------------------------: |
-| construction                          |          — |                — |       under half a millisecond |
-| raw gate (first query)                |    100,000 |    **92 — 0.09%** |                        2.20 ms |
-| materialise survivors                 |         92 |               92 |                        0.03 ms |
-| tier ladder                           |         92 |   **34 results** |                        0.03 ms |
-| — rescue path only —                  |            |                  |                                |
-| union mask build                      |    100,000 |                — | **3.47 ms**, once per searcher |
-| bigram sets, items one class short    |      7,005 |                — |    0.54 ms, once per item read |
-| relaxed scan + rescue                 |    100,000 | **2,322 — 2.3%** |                        0.64 ms |
+| stage                              | records in |      records out |                           time |
+| ---------------------------------- | ---------: | ---------------: | -----------------------------: |
+| construction                       |          — |                — |       under half a millisecond |
+| raw gate (first query)             |    100,000 |   **92 — 0.09%** |                        2.33 ms |
+| materialise survivors              |         92 |               92 |                        0.02 ms |
+| tier ladder                        |         92 |   **29 results** |                        0.09 ms |
+| — rescue path only —               |            |                  |                                |
+| union mask build                   |    100,000 |                — | **3.22 ms**, once per searcher |
+| bigram sets, items one class short |      6,361 |                — |    0.69 ms, once per item read |
+| rescue stage                       |    100,000 | **2,322 — 2.3%** |                        1.56 ms |
 
-Native 100k behaves the same: the raw gate leaves _92 records, 0.09%_, at 2.64 ms; the ladder produces 34 results in 0.03 ms; the rescue's mask build is 3.68 ms, the bigram sets of the 6,865 items one class short take 0.61 ms, and its relaxed scan admits 2,357 records (2.4%) at 0.66 ms.
+Native 100k behaves the same: the raw gate leaves _92 records, 0.09%_, at 2.60 ms; the ladder produces 29 results in 0.06 ms; the rescue's mask build is 3.61 ms, the bigram sets of the 6,297 items one class short take 0.60 ms, and its stage admits 2,357 records (2.4%) at 1.28 ms.
 
 Once the gate has run, the literal path takes almost no time.
-0.09% of the corpus survives it, and everything downstream - materialising, normalising, masking and running the full tier ladder on those survivors - takes 0.05 ms against the gate's 2.20.
+0.09% of the corpus survives it, and everything downstream - materialising, normalising, masking and running the full tier ladder on those survivors - takes 0.1 ms against the gate's 2.33.
 
 The rescue admits _2.3% of the corpus_, about 25 times what the literal gate lets through, and it is the only thing that needs a whole-corpus index.
 Twelve of the sixteen probes take it on both corpora, because the probe set is deliberately typo-heavy.
@@ -91,14 +92,14 @@ A four-character query builds them only when nothing matched it at all.
 A session whose queries all match literally never builds them.
 Multi-word and non-Latin queries have no raw-gate form, so they take the mask path and force the build immediately.
 That scan computes only the masks, folding each code unit once (`rawFieldMask`).
-An item's bigram set is read the first time a gate needs it, which in the relaxed scan means an item missing exactly one character class, about 7% of the corpus, and reading those takes 0.8–0.9 ms.
+An item's bigram set is read the first time a gate needs it, which in the rescue stage means an item missing exactly one character class, about 6% of the corpus, and reading those takes 0.6–0.7 ms.
 
 **The raw gate, ~2–3 ms.**
 Run by any query that cannot narrow: the first one, and any later one that isn't an extension of its predecessor.
 A typed sequence runs it on its first keystroke, and each unrelated query runs it again.
 
 Building the masks only when a query needs them, and gating the raw text until then, makes the first query faster than an index built up front would, and a long run of unrelated queries slower.
-`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 6.7–9.2 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
+`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 5.9–6.5 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 
@@ -115,6 +116,6 @@ The rescue path deliberately ignores the cache: it scans all N, because the near
 
 ## Large result sets
 
-0.09% of records reach the ladder and the ladder takes 0.02 ms, so filtering is not the slow part of a query that returns a lot.
-The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.59 ms and `hinto` 0.29.
+0.09% of records reach the ladder and the ladder takes under 0.1 ms, so filtering is not the slow part of a query that returns a lot.
+The time it takes beyond the gate grows with how many results it has, not how many records it searched: in the typing session in [benchmarks.md](./benchmarks.md), `hin`, the widest query, takes 3.73 ms and `hinto` 0.29.
 Even with a `limit`, every literal result is built and sorted before the list is cut.

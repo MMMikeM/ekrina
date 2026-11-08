@@ -24,7 +24,7 @@ Its benchmark is published with the method, the frozen corpora and every cell in
 
 ## Operating Context
 
-The pages whose tables `pnpm bench` regenerates (benchmarks, compare and one page per library) are copied from `docs/` at build time, since GitHub renders those too.
+The pages whose tables `pnpm vpr bench` regenerates (benchmarks, compare and one page per library) are copied from `docs/` at build time, since GitHub renders those too.
 The API reference is generated from the source's JSDoc.
 Every other page is written for the site in `src/content/docs`, and reads each number it quotes from `bench/results.json` at build time through `src/bench.ts`.
 The landing page runs the library live over the emoji corpus, and the tutorial runs `examples/command-palette` from the repository.

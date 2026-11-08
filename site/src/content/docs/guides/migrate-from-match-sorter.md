@@ -66,7 +66,7 @@ Behavioural differences:
   match-sorter returns the items alone.
   Ekrina returns `{ item, score, tier, ranges, text }`, with `ranges` ready to highlight in `text`.
 - **The searcher remembers the last query.**
-  A query that extends the previous one starts from the items that could have matched the previous one, which is what search-as-you-type sends, so build the searcher once per list rather than once per keystroke.
+  A query that extends the previous one usually starts from the items that could have matched the previous one ([which keystrokes rescan](/guides/search-as-you-type/#which-keystrokes-rescan)), which is what search-as-you-type sends, so build the searcher once per list rather than once per keystroke.
 - **No `baseSort` or `sorter`.**
   Ties go to a match that ends on a word boundary, then to list order.
 - **Keys are functions.**

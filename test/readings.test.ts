@@ -54,7 +54,7 @@ describe("two edits inside one word", () => {
 		expect(fuzzyMatch("Søndergaard ApS", "søndrgrd")?.corrected).toBe("Søndergaard");
 	});
 
-		it("finds the word in a field holding letters that never fold to ASCII", () => {
+	it("finds the word in a field holding letters that never fold to ASCII", () => {
 		expect(fuzzyMatch("Ørsted Ergonomic", "ergxnomiq")?.ranges).toEqual([[7, 15]]);
 	});
 
@@ -126,7 +126,10 @@ describe("a word typed sparsely", () => {
 	it("leaves a word with one letter too many to the ladder", () => {
 		const search = searcher(["East Salmacester", "Lake Salma", "Nikolaus Group", "Nikola Czajka"]);
 		expect(search("salmas")[0].item).toBe("Lake Salma");
-		expect(search("nikolas").map((r) => r.score)).toEqual([TYPO_PENALTY + SCORES.PREFIX, TYPO_PENALTY + SCORES.PREFIX]);
+		expect(search("nikolas").map((r) => r.score)).toEqual([
+			TYPO_PENALTY + SCORES.PREFIX,
+			TYPO_PENALTY + SCORES.PREFIX,
+		]);
 	});
 
 	it("finds the word in an accented field", () => {
@@ -205,17 +208,37 @@ describe("a swap in a four-letter word", () => {
 			item: "Louder Than Bombs",
 			score: SCORES.BOUNDARY + TYPO_PENALTY,
 			tier: "corrected",
-			corrected: "Than",
+			corrected: "than",
 			ranges: [[7, 10]],
 			text: "Louder Than Bombs",
+		});
+	});
+
+	it("scores as fuzzyMatch scores it, in the caller's casing", () => {
+		const items = ["Than", "Taha Hussein"];
+		expect(search(items)("Tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "Tahn"),
+			score: SCORES.EXACT + TYPO_PENALTY,
+			corrected: "Than",
+		});
+		expect(search(items)("tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "tahn"),
+			score: SCORES.NORMALISED_EXACT + TYPO_PENALTY,
+			corrected: "than",
 		});
 	});
 
 	it("finishes a longer word it starts", () => {
 		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]).toMatchObject({
 			score: SCORES.PREFIX + TYPO_PENALTY,
-			corrected: "Than",
+			corrected: "than",
 		});
+	});
+
+	it("is read before a substitution, which would land on another word", () => {
+		expect(search(["Taha Hussein", "Louder Than Bombs"])("tahn").map((r) => r.corrected)).toEqual([
+			"than",
+		]);
 	});
 
 	it("is not tried once a field matches it literally", () => {
@@ -271,9 +294,7 @@ describe("one edit in each word of a phrase", () => {
 	});
 
 	it("corrects a decomposed query on its composed form", () => {
-		expect(fuzzyMatch("Rustic Wooden", "rustíx wooxen")?.corrected).toBe(
-			"Rustic Wooden",
-		);
+		expect(fuzzyMatch("Rustic Wooden", "rustíx wooxen")?.corrected).toBe("Rustic Wooden");
 	});
 
 	it("refuses three edits across a phrase", () => {
@@ -337,9 +358,9 @@ describe("a space counts as one edit", () => {
 		expect(fuzzyMatch("Hillside", "hil sidx")).toBeNull();
 	});
 
-	it("rejoins a split word beside weaker matches", () => {
+	it("rejoins a split word, which keeps a short query's substitutions out", () => {
 		const items = ["Mlle Anne Marty", "Marianne Lowe"];
-		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe", "Mlle Anne Marty"]);
+		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe"]);
 		const typed = searcher(["Mari Annx Shop", "Marianne Lowe"])("mari annx");
 		expect(typed.map((r) => r.item)).toEqual(["Mari Annx Shop"]);
 	});
@@ -417,15 +438,15 @@ describe("in a searcher", () => {
 	});
 
 	it("scores each field and keeps the best", () => {
-		const search = createSearcher(
-			[{ title: "Hxgxextx", body: "Hagueta" }],
-			{ title: (r) => r.title, body: (r) => r.body },
-		);
+		const search = createSearcher([{ title: "Hxgxextx", body: "Hagueta" }], {
+			title: (r) => r.title,
+			body: (r) => r.body,
+		});
 		expect(search("hget")[0]).toMatchObject({ field: "body", corrected: "Hagueta" });
-		const [reversed] = createSearcher(
-			[{ title: "Hagueta", body: "Hxgxextx" }],
-			{ title: (r) => r.title, body: (r) => r.body },
-		)("hget");
+		const [reversed] = createSearcher([{ title: "Hagueta", body: "Hxgxextx" }], {
+			title: (r) => r.title,
+			body: (r) => r.body,
+		})("hget");
 		expect(reversed).toMatchObject({ field: "title", corrected: "Hagueta" });
 	});
 
@@ -455,7 +476,9 @@ describe("in a searcher", () => {
 
 	it("ranks an item by where its best field's match ends", () => {
 		const bodies = (items: { title: string; body: string }[]) =>
-			createSearcher(items, { title: (r) => r.title, body: (r) => r.body })("hget").map((r) => r.item.body);
+			createSearcher(items, { title: (r) => r.title, body: (r) => r.body })("hget").map(
+				(r) => r.item.body,
+			);
 		const beaten = [
 			{ title: "Hxgxet", body: "Hgueetx" },
 			{ title: "Hxgxet", body: "zzz" },
@@ -483,8 +506,7 @@ describe("in a searcher", () => {
 	});
 
 	it("corrects a phrase holding a letter outside ASCII or an underscore", () => {
-		const tiers = (list: string[], query: string) =>
-			searcher(list)(query).map((r) => r?.tier);
+		const tiers = (list: string[], query: string) => searcher(list)(query).map((r) => r?.tier);
 		expect(tiers(["Søndergaard ApS Holding"], "søndrgaard holdixg")).toEqual(["corrected"]);
 		expect(tiers(["snake_case helper"], "snake_cse helpxr")).toEqual(["corrected"]);
 	});
@@ -496,13 +518,10 @@ describe("in a searcher", () => {
 
 	it("answers afresh after a query whose field text threw", () => {
 		let throwing = false;
-		const search = createSearcher(
-			["Hget Lane", "Huguette Brown"],
-			(s) => {
-				if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
-				return s;
-			},
-		);
+		const search = createSearcher(["Hget Lane", "Huguette Brown"], (s) => {
+			if (throwing && s.startsWith("Hu")) throw new Error("unreadable");
+			return s;
+		});
 		throwing = true;
 		expect(() => search("hget")).toThrow("unreadable");
 		throwing = false;
@@ -518,10 +537,7 @@ describe("in a searcher", () => {
 	});
 
 	it("skips an item whose field is missing", () => {
-		const search = createSearcher(
-			[{ name: null }, { name: "Ergonomic" }],
-			(r) => r.name,
-		);
+		const search = createSearcher([{ name: null }, { name: "Ergonomic" }], (r) => r.name);
 		expect(search("ergxnomiq").map((r) => r.item.name)).toEqual(["Ergonomic"]);
 		expect(search("________")).toEqual([]);
 	});

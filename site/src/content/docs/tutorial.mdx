@@ -49,24 +49,24 @@ Some queries to try in it:
 
 ## Get the code
 
-The example takes the library from its repository, which uses pnpm, so build that first.
-In your own project, `npm install ekrina` instead.
+The example takes the library from its repository, which uses pnpm, and builds it before it starts.
+In your own project, `npm install ekrina@^2` instead.
 
 ```bash
 git clone https://github.com/MMMikeM/ekrina.git
-cd ekrina && pnpm install && pnpm build
-cd examples/command-palette && pnpm install && pnpm dev
+cd ekrina && pnpm install --filter ekrina-command-palette...
+pnpm vpr example
 ```
 
 <Tabs syncKey="framework">
 	<TabItem label="Vanilla">
 		This version has no framework.
 		One TypeScript module builds the palette into any element, and Vite serves it.
-		`pnpm dev` runs the finished palette at `/`; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
+		`pnpm vpr example` runs the finished palette at `/`; to run one of the steps below instead, change `./palette` in `src/main.ts` to that step's file, such as `./step-1-search`.
 	</TabItem>
 	<TabItem label="React">
 		Each step is one component, and Vite serves it.
-		`pnpm dev` runs the finished palette at `/react.html`; to run one of the steps below instead, change `./palette` in `src/react/main.tsx` to that step's file, such as `./step-1-search`.
+		`pnpm vpr example` runs the finished palette at `/react.html`; to run one of the steps below instead, change `./palette` in `src/react/main.tsx` to that step's file, such as `./step-1-search`.
 	</TabItem>
 </Tabs>
 
@@ -117,9 +117,8 @@ The marked lines are the ones this step adds:
 With acronyms turned on for the title, `gc` finds Git: Commit and `tt` finds Toggle Terminal.
 The keywords are demoted by `SCORES.CONTAINS`, so `dark` finds Preferences: Theme, ranked below any title that contains the query.
 
-Each result's `fields` has one entry per field, in the order the fields were given, and `null` for a field that didn't match.
-So `[titleMatch, keywordMatch]` reads them by position.
-When only the keywords matched, the row shows them under the title, to make it clear why the command is there.
+Each result's `field` names the field that matched best, `"title"` or `"keywords"`, and its `tier` and `ranges` are that field's match.
+When the keywords matched best, the row shows them under the title, to make it clear why the command is there.
 
 ## 3. Highlight what matched
 
@@ -154,9 +153,9 @@ This step adds a notice above the list:
 	</TabItem>
 </Tabs>
 
-`bestField` picks the field that set a result's score, the one with the lowest, and `noticeText` reads it from the top result.
+`noticeText` reads the `tier` and `corrected` of the top result, which are its best field's.
 It says when that result is a correction, as in Showing results for “terminal”, or that nothing matched.
-`corrected` keeps your casing when it fixed a mistyped character, such as two swapped letters, and takes the command's spelling for other corrections, such as a missing letter, so `termnial` shows “terminal” and `comit` shows “Commit”.
+`corrected` keeps your casing when it fixed one mistyped character, such as two swapped letters, and takes the command's spelling when it read the word another way, such as typed sparsely, so `termnial` shows “terminal” and `comit` shows “Commit”.
 The library has corrected typos since the first step, as `termnial` shows in every palette above, and this step only adds the notice.
 `noticeText` reads only the top result, so the notice appears when the best match is a correction, even if a fuzzy match sits below it.
 The notice is a live region, so a screen reader announces it as it changes.
@@ -203,6 +202,6 @@ The styles take their colours from the surrounding text, so the palette suits a 
 ## Next
 
 - [Search several fields](/guides/several-fields/) covers `demoteBy` and acronyms in full.
-- [Highlight matches](/guides/highlight/) does the same highlighting in React.
+- [Highlight matches](/guides/highlight/) covers highlighting as escaped HTML or as React elements.
 - [Handle corrections](/guides/corrections/) labels corrected rows or leaves them out.
 - [Search as you type](/guides/search-as-you-type/) says which keystrokes rescan the whole list.

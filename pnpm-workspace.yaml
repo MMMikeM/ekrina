@@ -1,8 +1,27 @@
 packages:
   - bench
+  - site
+  - examples/*
 
 allowBuilds:
   esbuild: true
+  # Its postinstall only fetches the per-platform binary when the optional
+  # dependency that already provides it is missing.
+  workerd: false
+
+# 7 days
+minimumReleaseAge: 10080
+
+# The site's reference generator needs TypeScript 7.1's programmatic API, only
+# published as a beta so far. Its per-platform compiler binaries can't take a
+# version in a name pattern, but typescript pins them to its own exact version.
+minimumReleaseAgeExclude:
+  - typescript@7.1.0-beta
+  - "@typescript/typescript-*"
+  # Locked by the library's tools before the policy covered them.
+  - "@napi-rs/wasm-runtime@1.2.7"
+  - unbash@6.0.3
+
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.4.0
   vite-plus: 1.4.0
@@ -10,6 +29,11 @@ overrides:
   vite: "catalog:"
   # magicast, under the coverage provider, still resolves a release with GHSA-68fv-2mgg-jv7q.
   source-map-js: ">=1.2.2"
+  nanoid@<3.3.18: ^3.3.18
+  tinypool@<2.1.2: ~2.1.2
+  # GHSA-rj75-hqrm-r3gf: expressive-code 0.44.3 moves to postcss-nested 7 for
+  # the same fix.
+  postcss-nested@<7: ^7.0.2
 peerDependencyRules:
   allowAny:
     - vite

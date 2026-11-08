@@ -106,8 +106,10 @@ const METHOD = {
 		"MRR@10 over catalogue.ts's sampled families, weighted by group (typos 0.35, phonetic 0.25, partial words 0.15, query shape 0.15, noise 0.10); junk = share of queries nothing answers that a library answers anyway; ranks are deterministic and measured untimed",
 	corpora: {
 		en: "English labels of the best-known Wikidata people, places, works, organisations and products — 8.9% of items carry a non-ASCII letter",
-		native: "the same items under their Wikidata native name where one exists — 20% non-ASCII, 10% in a non-Latin script",
-		emoji: "every emojibase-data emoji as label then tags, 1,923 items — scored for quality only",
+		native:
+			"the same items under their Wikidata native name where one exists — 20% non-ASCII, 10% in a non-Latin script",
+		emoji:
+			"every emojibase-data emoji as label then tags, 1,923 items — timed at its own length, outside the speed rankings",
 	},
 };
 

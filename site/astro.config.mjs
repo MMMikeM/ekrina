@@ -89,7 +89,7 @@ export default defineConfig({
 				starlightLlmsTxt({
 					details: [
 						"`ekrina` is a zero-dependency fuzzy matcher for TypeScript and JavaScript. It reports how each match was made as a tier (exact, prefix, word boundary, multi-word, acronym, contains, fuzzy, corrected), returns highlight ranges into the caller's own string, folds diacritics, and corrects up to two typos per query. It needs nothing beyond ES2022, so it runs in browsers, Node, Deno, Bun and edge runtimes.",
-						"Install with `npm install ekrina`. `createSearcher(list, selectField)` builds a searcher over a list of strings or objects; `fuzzyMatch(text, query)` scores one string. Scores are lower-is-better, and `score <= SCORES.CONTAINS` means the query text appears in the field.",
+						"Install with `npm install ekrina@^2`; these docs describe version 2. `createSearcher(list, selectField)` builds a searcher over a list of strings or objects; `fuzzyMatch(text, query)` scores one string. Scores are lower-is-better, and `score <= SCORES.CONTAINS` means the query text appears in the field.",
 						"Every page is also served as Markdown, at its URL with `.md` in place of the trailing slash (the home page at `index.md`). The key pages:",
 						[
 							["getting-started", "Install, search a list, read how it matched, highlight it, show corrections"],
@@ -102,6 +102,7 @@ export default defineConfig({
 							["guides/literal-matches", "Keep only matches of the query as typed, by score or by tier"],
 							["guides/search-as-you-type", "One searcher per list, limit, buildIndex, and which keystrokes rescan"],
 							["guides/long-text", "fuzzyMatch over a document, and how false matches are held down"],
+							["guides/migrate-from-ekrina-1", "Upgrade from ekrina 1.x: every rename and what a result holds now"],
 							["guides/migrate-from-microfuzz", "Migrate from @nozbe/microfuzz"],
 							["guides/migrate-from-fuse", "Migrate from Fuse.js"],
 							["guides/migrate-from-match-sorter", "Migrate from match-sorter"],

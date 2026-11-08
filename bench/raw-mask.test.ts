@@ -1,8 +1,8 @@
 // The same false-pass-only invariant test/raw-mask.test.ts pins, swept over
 // every string the published corpora hold — where the real Unicode lives.
 import { expect, it } from "vite-plus/test";
-import { charMask } from "../src/gates";
-import { normaliseText, rawFieldMask } from "../src/normalise";
+import { charMask, rawFieldMask } from "../src/gates";
+import { normaliseText } from "../src/normalise";
 import { CORPORA } from "./corpus";
 
 it("rawFieldMask never drops a mask bit over either corpus", { timeout: 300_000 }, () => {

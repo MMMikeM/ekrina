@@ -10,9 +10,32 @@ const SIZE = 10_000;
 
 // No й or ё: normaliseText folds them onto и and е, which would merge two letters.
 const CYRILLIC: Record<string, string> = {
-	a: "а", b: "б", c: "ц", d: "д", e: "е", f: "ф", g: "г", h: "х", i: "и",
-	j: "ж", k: "к", l: "л", m: "м", n: "н", o: "о", p: "п", q: "щ", r: "р",
-	s: "с", t: "т", u: "у", v: "в", w: "ш", x: "э", y: "ы", z: "з",
+	a: "а",
+	b: "б",
+	c: "ц",
+	d: "д",
+	e: "е",
+	f: "ф",
+	g: "г",
+	h: "х",
+	i: "и",
+	j: "ж",
+	k: "к",
+	l: "л",
+	m: "м",
+	n: "н",
+	o: "о",
+	p: "п",
+	q: "щ",
+	r: "р",
+	s: "с",
+	t: "т",
+	u: "у",
+	v: "в",
+	w: "ш",
+	x: "э",
+	y: "ы",
+	z: "з",
 };
 
 const toCyrillic = (s: string): string =>

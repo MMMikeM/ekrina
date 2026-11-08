@@ -17,9 +17,13 @@ import { REPEAT } from "./passes.ts";
 import { CORPORA } from "./corpus.ts";
 
 const SIZE = 100_000;
-const SHOWN = ["ekrina", "@nozbe/microfuzz", "fuzzysort", "uFuzzy (all opts)", "fuse.js (all opts)"].filter(
-	(name) => SELECTED_NAMES.includes(name),
-);
+const SHOWN = [
+	"ekrina",
+	"@nozbe/microfuzz",
+	"fuzzysort",
+	"uFuzzy (all opts)",
+	"fuse.js (all opts)",
+].filter((name) => SELECTED_NAMES.includes(name));
 const PROCESSES = REPEAT ? 7 : 1;
 const typist = fileURLToPath(new URL("./session-typist.ts", import.meta.url));
 

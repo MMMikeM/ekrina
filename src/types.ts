@@ -40,8 +40,9 @@ export type MatchResult = {
 	score: number;
 	tier: Tier;
 	/** The query with its mistyped characters fixed. Present only when `tier`
-	 *  is `"corrected"`. A single mistyped character fixed keeps the caller's
-	 *  own casing; a word read any other way is spelt as the field spells it. */
+	 *  is `"corrected"`. A single mistyped character fixed, or two swapped back,
+	 *  keeps the caller's own casing; a word read any other way is spelt as the
+	 *  field spells it. */
 	corrected?: string;
 	ranges: HighlightRanges;
 };
@@ -105,7 +106,7 @@ export type FieldMatch = {
 	ranges: HighlightRanges;
 	/** The text `ranges` index into: the string this field returned. */
 	text: string;
-	/** On a `corrected` match, the query as it was read, spelt as the field spells it. */
+	/** On a `corrected` match, the query as it was read, cased as `MatchResult.corrected` is. */
 	corrected?: string;
 };
 
