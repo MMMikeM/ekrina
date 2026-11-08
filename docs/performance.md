@@ -286,6 +286,37 @@ Three other changes were measured and left out:
 - the class table split into pages allocated on demand, which freed 19–65 KB and made a cold one-shot 1.4–2.9% slower;
 - a flattened unfold table, which freed 9–14 KB for about 18 B of bundle.
 
+### The rescue runs as a stage
+
+Both entry points used to hand-write the rescue's order around the readings, and the searcher's relaxed pass forgot every literal-pass match, then reran the literal tiers and the fuzzy chain on each survivor only to reach the rescue.
+Now both run the literal pass, then `stages` in order: the early rescue, the readings, the late rescue.
+Each stage corrects a field beside the match the literal pass left it, so a literal hit stands and a fuzzy chain competes with the correction, with byte-identical results over every corpus and query family.
+Against the build before it, warm, ms per query at 100k:
+
+| Query                 | Before | After |
+| --------------------- | -----: | ----: |
+| native two words      |   0.67 |  0.53 |
+| no match, each corpus |   0.30 |  0.27 |
+| substitution, indexed |   0.17 |  0.15 |
+
+Twenty queries of five letters or more over 2,000 fields of 1,200 characters took 35–39% less.
+Process-cold (`bench/run.ts`, four interleaved rounds of three processes per cell), the 105 cells summed level, and the first indexed substitution at 100k was 9–10% slower, about 0.2 ms.
+Writing the rescue's letter-pair gate back into the searcher's loop would recover that, and was left out because it is the special case the stage removes.
+`bench/memory.ts` read the same to 0.01 MB at every point, since a stage's candidates reuse the previous keystroke's survivor buffer.
+
+Three shapes were measured on the way:
+
+- One whole-list loop serving every stage kept each stage's gates live in its compiled body, and a query matching nothing took 0.30 → 0.45 ms; a loop per stage that only tests the letter budget, with the pair gate and the correction run over its candidates, brought it to 0.27.
+- The rescue's one-edit budget is a bit test rather than the readings' counting loop: run through the loop, the relaxed pass measured 1.7% slower over the cold matrix and up to 15% on its rescue cells.
+- `fuzzyMatch` turns away a field lacking more letter classes than any stage can supply before preparing the stages, which every stage's budget implies anyway: without it, `fuzzyMatch` over a label list measured 13% slower than before the change, and with it 4%.
+
+`literalTiers` finds the normalised query once and reuses its position for the prefix, boundary and contains tiers: long fields 6% faster, literal queries 2–3%, the cold matrix 0.6%.
+Three other changes were measured and left out:
+
+- a per-unit table for `isBoundaryAt`, 7× faster per call, which moved the cold matrix 0.3% and native typing not at all, for 64 KB held for the session;
+- an ASCII compare in the long-field in-order scan in place of the unfold class lookup, within noise even on a searcher's first queries;
+- skipping a field the readings reject for length before normalising it, within 1%.
+
 ## Benchmarking lessons
 
 The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.
