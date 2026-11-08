@@ -56,7 +56,7 @@ export type ParetoData = {
 	rows: ParetoRow[];
 };
 
-export const MEASURES = ["per-query", "session", "one-shot"] as const;
+export const MEASURES = ["one-shot", "session", "per-query"] as const;
 export type Measure = (typeof MEASURES)[number];
 
 export type ParetoState = {
@@ -214,21 +214,19 @@ export const escapeHtml = (text: string): string =>
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;");
 
-/** Why the constructor control is off for the current view, said beside it; empty when it is on. */
+/** Why the constructor control is off for the current view, short enough to share its legend's line on a phone; empty when it is on. */
 export const constructorNote = (state: ParetoState): string =>
-	state.measure === "per-query"
-		? "Per query never counts it: the constructor runs once, before the warm-up answer."
-		: "";
+	state.measure === "per-query" ? "Per query never counts it" : "";
 
-/** Why the size control is off for the current corpus, said beside it; empty when it is on. */
+/** Why the size control is off for the current corpus, short enough to share its legend's line on a phone; empty when it is on. */
 export const sizeNote = (data: ParetoData, state: ParetoState): string => {
 	const corpus = corpusOf(data, state.corpus);
 	return corpus.sizes.length === 1
-		? `The ${CORPUS_LABELS[corpus.id]} corpus is timed only at its whole ${sizeLabel(corpus.sizes[0]!)} items.`
+		? `${CORPUS_LABELS[corpus.id]} is timed at all ${sizeLabel(corpus.sizes[0]!)} items`
 		: "";
 };
 
-/** Every text each control note can show; the note keeps room for its longest so a switch never moves the controls. */
+/** Every text each control note can show; the note keeps room for its longest so a switch never moves the chart. */
 export const noteTexts = (data: ParetoData): Record<"constructor" | "corpus" | "size", string[]> => {
 	const views = MEASURES.flatMap((measure) =>
 		data.corpora.map((corpus) => ({
@@ -259,7 +257,7 @@ const timeSentences = (state: ParetoState, corpus: ParetoCorpus): string[] => {
 	switch (timingKind(state)) {
 		case "per-query":
 			return [
-				`Time is the mean of the ${queries} one searcher answers over ${items} after a warm-up answer, which absorbs first-contact setup; the constructor is left out.`,
+				`Time is the mean of the ${queries} one searcher answers over ${items} after a warm-up answer, which absorbs first-contact setup; the constructor runs once, before the warm-up, so it is left out.`,
 				"Lazy Ekrina builds its whole-list mask on the first query that needs it, inside this time; Ekrina (indexed) builds it in the constructor.",
 			];
 		case "session":
@@ -619,6 +617,8 @@ const stacksFor = (cluster: Placed[]): ClusterLabels[] => {
 	);
 };
 
+const TICK_GAP_PX = 18;
+
 const logTicks = (lo: number, hi: number, plotW: number): number[] => {
 	const steps = [[1, 2, 5], [1, 3], [1]];
 	for (const mantissas of steps) {
@@ -630,9 +630,36 @@ const logTicks = (lo: number, hi: number, plotW: number): number[] => {
 			}
 		}
 		const widest = Math.max(...ticks.map((t) => textWidth(tickLabel(t))));
-		if (ticks.length <= 1 || plotW / ticks.length >= widest + 18) return ticks;
+		if (ticks.length <= 1 || plotW / ticks.length >= widest + TICK_GAP_PX) {
+			return withAxisEnds(ticks, lo, hi, plotW);
+		}
 	}
 	return [];
+};
+
+// A thinned tick set can skip the axis's own ends, which leaves its range unlabelled.
+const withAxisEnds = (ticks: number[], lo: number, hi: number, plotW: number): number[] => {
+	const px = (t: number) => (Math.log10(t / lo) / Math.log10(hi / lo)) * plotW;
+	const fitsBeside = (end: number, neighbour: number | undefined) =>
+		neighbour === undefined ||
+		Math.abs(px(end) - px(neighbour)) >=
+			(textWidth(tickLabel(end)) + textWidth(tickLabel(neighbour))) / 2 + TICK_GAP_PX;
+	const out = [...ticks];
+	if (!out.includes(lo) && fitsBeside(lo, out[0])) out.unshift(lo);
+	if (!out.includes(hi) && fitsBeside(hi, out.at(-1))) out.push(hi);
+	return out;
+};
+
+// Every 1–9 step of each decade that has no labelled tick, so the axis reads as logarithmic.
+const minorLogTicks = (lo: number, hi: number, major: number[]): number[] => {
+	const out: number[] = [];
+	for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) {
+		for (let m = 1; m <= 9; m++) {
+			const t = Number((m * 10 ** e).toPrecision(6));
+			if (t > lo && t < hi && !major.includes(t)) out.push(t);
+		}
+	}
+	return out;
 };
 
 const tickLabel = (t: number): string => (t >= 1000 ? t.toLocaleString("en-GB") : String(t));
@@ -651,24 +678,32 @@ const niceAbove = (v: number): number => {
 	return Number((m * 10 ** e).toPrecision(6));
 };
 
-// One time axis per measure, spanning every corpus, size and constructor setting,
-// so switching any of those moves points rather than the axis under them.
-const axesOf = (data: ParetoData, measure: Measure) => {
-	const views = data.corpora.flatMap((corpus) =>
-		corpus.sizes.flatMap((size) =>
-			[true, false].map((constructorCounted) => ({
-				measure,
-				constructorCounted,
-				corpus: corpus.id,
-				size,
-			})),
+// Measures read side by side share a time axis. Each axis spans every size and constructor
+// setting and every corpus timed like this one, so switching any of those moves points rather
+// than the axis under them; the emoji list is a fiftieth the size and gets its own.
+const SHARED_AXES: Measure[][] = [["one-shot", "per-query"], ["session"]];
+
+const axesOf = (data: ParetoData, measure: Measure, corpus: Corpus) => {
+	const measures = SHARED_AXES.find((group) => group.includes(measure))!;
+	const ranked = corpusOf(data, corpus).ranked;
+	const alike = data.corpora.filter((other) => other.ranked === ranked);
+	const views = measures.flatMap((shared) =>
+		alike.flatMap((corpus) =>
+			corpus.sizes.flatMap((size) =>
+				[true, false].map((constructorCounted) => ({
+					measure: shared,
+					constructorCounted,
+					corpus: corpus.id,
+					size,
+				})),
+			),
 		),
 	);
 	const ms = views.flatMap((view) => data.rows.map((row) => msOf(row, view)));
 	const mrrs = data.rows.flatMap((row) => CORPORA.map((corpus) => row.mrr[corpus]));
 	return {
-		xLo: Math.log10(niceBelow(Math.min(...ms) / 1.15)),
-		xHi: Math.log10(niceAbove(Math.max(...ms) * 1.15)),
+		msLo: niceBelow(Math.min(...ms) / 1.15),
+		msHi: niceAbove(Math.max(...ms) * 1.15),
 		yLo: Math.max(0, Math.floor((Math.min(...mrrs) - 0.04) * 10) / 10),
 		yHi: Math.min(1, Math.ceil((Math.max(...mrrs) + 0.04) * 10) / 10),
 	};
@@ -701,7 +736,9 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const points = pointsOf(data, state);
 	const front = viewFrontier(data, state, points);
 
-	const { yLo, yHi, xLo, xHi } = axesOf(data, state.measure);
+	const { yLo, yHi, msLo, msHi } = axesOf(data, state.measure, state.corpus);
+	const xLo = Math.log10(msLo);
+	const xHi = Math.log10(msHi);
 	const X = (ms: number) => r1(M.left + ((Math.log10(ms) - xLo) / (xHi - xLo)) * plotW);
 	const Y = (mrr: number) => r1(M.top + ((yHi - mrr) / (yHi - yLo)) * plotH);
 
@@ -737,19 +774,26 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		],
 	);
 
-	const xTicks = logTicks(10 ** xLo, 10 ** xHi, plotW);
+	const xTicks = logTicks(msLo, msHi, plotW);
 	const yStep = plotH / ((yHi - yLo) / 0.1) >= 26 ? 0.1 : 0.2;
 	const yTicks: number[] = [];
 	for (let t = Math.ceil(yLo / yStep - 1e-9) * yStep; t <= yHi + 1e-9; t += yStep) {
 		yTicks.push(Number(t.toFixed(1)));
 	}
 
+	const minorGrid = minorLogTicks(msLo, msHi, xTicks)
+		.map((t) => `<line x1="${X(t)}" y1="${M.top}" x2="${X(t)}" y2="${M.top + plotH}"/>`)
+		.join("");
 	const grid = [
 		...xTicks.map((t) => `<line x1="${X(t)}" y1="${M.top}" x2="${X(t)}" y2="${M.top + plotH}"/>`),
 		...yTicks.map((t) => `<line x1="${M.left}" y1="${Y(t)}" x2="${M.left + plotW}" y2="${Y(t)}"/>`),
 	].join("");
 	const xLabels = xTicks
-		.map((t) => `<text x="${X(t)}" y="${M.top + plotH + 18}" text-anchor="middle">${tickLabel(t)}</text>`)
+		.map((t) => {
+			const pastEdge = X(t) + textWidth(tickLabel(t)) / 2 > W - 2;
+			const [x, anchor] = pastEdge ? [W - 2, "end"] : [X(t), "middle"];
+			return `<text x="${x}" y="${M.top + plotH + 18}" text-anchor="${anchor}">${tickLabel(t)}</text>`;
+		})
 		.join("");
 	const yLabels = yTicks
 		.map((t) => `<text x="${M.left - 8}" y="${Y(t) + 4}" text-anchor="end">${t.toFixed(1)}</text>`)
@@ -796,6 +840,7 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 
 	return [
 		`<svg class="pareto-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="${escapeHtml(`MRR against ${titles[0]}, log scale`)}">`,
+		`<g class="grid minor" aria-hidden="true">${minorGrid}</g>`,
 		`<g class="grid" aria-hidden="true">${grid}</g>`,
 		`<g class="axis" aria-hidden="true">`,
 		`<line x1="${M.left}" y1="${M.top + plotH}" x2="${M.left + plotW}" y2="${M.top + plotH}"/>`,
