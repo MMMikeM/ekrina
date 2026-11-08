@@ -1,6 +1,6 @@
 /**
  * Compile-time checks for the v1.0 overloads and types. tsconfig includes
- * test/**, so `pnpm lint:types` enforces these; the runtime bodies are incidental.
+ * test/**, so `vpr types` enforces these; the runtime bodies are incidental.
  */
 import { describe, expect, it } from "vite-plus/test";
 import { createSearcher, fuzzyMatch, SCORES } from "../src/index";
@@ -98,4 +98,3 @@ describe("SearchResultOf", () => {
 		expect(none).toBeDefined();
 	});
 });
-

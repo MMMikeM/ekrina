@@ -1,9 +1,9 @@
 import { createSearcher, type SearchResult, SCORES } from "../../../src/index.ts";
+import { DEMO_LIMIT } from "./demo-limit.ts";
 
 export type Emoji = { glyph: string; label: string; tags: string | null };
 export type EmojiSearch = (query: string) => SearchResult<Emoji, "label" | "tags">[];
 
-export const DEMO_LIMIT = 8;
 const TAGS_SEPARATOR = " — ";
 
 /** The demo's searcher, shared by the page's build and the browser so both answer alike. */
@@ -16,10 +16,11 @@ export const emojiSearch = (corpus: string[], glyphs: string[]): EmojiSearch => 
 			tags: at < 0 ? null : item.slice(at + TAGS_SEPARATOR.length),
 		};
 	});
-	// A tag hit ranks level with a contains in a name, so a name that starts with the query comes first.
+	// A tag that starts a word ranks level with a contains in a name: below a name that starts
+	// with the query, and above every correction.
 	const search = createSearcher(items, {
 		label: (emoji) => emoji.label,
-		tags: { selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS },
+		tags: { selectField: (emoji) => emoji.tags, demoteBy: SCORES.CONTAINS - SCORES.BOUNDARY },
 	});
 	search.buildIndex();
 	return (query) => search(query, { limit: DEMO_LIMIT });

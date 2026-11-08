@@ -3,7 +3,13 @@
 // stops finding the item. Diagnostic only: limits.test.ts reports it, and no
 // published number reads it.
 import type { Sample } from "./mrr.ts";
-import { answeredByFew, foldedWords, holdsWordWhere, holdsWords, shuffledIndices } from "./words.ts";
+import {
+	answeredByFew,
+	foldedWords,
+	holdsWordWhere,
+	holdsWords,
+	shuffledIndices,
+} from "./words.ts";
 
 const SAMPLES_PER_CELL = 10;
 // Clear of every seed corpus.ts samples with, so no cell reuses a published draw.
@@ -52,12 +58,17 @@ type Edit = (word: string, at: number, random: Random) => string | null;
 
 export const EDITS = {
 	drop: (w, at) => w.slice(0, at) + w.slice(at + 1),
-	"insert-near": (w, at, random) => w.slice(0, at + 1) + neighbourOf(w[at], random) + w.slice(at + 1),
-	"substitute-near": (w, at, random) => w.slice(0, at) + neighbourOf(w[at], random) + w.slice(at + 1),
-	"substitute-random": (w, at, random) => w.slice(0, at) + randomLetterFor(w, random) + w.slice(at + 1),
+	"insert-near": (w, at, random) =>
+		w.slice(0, at + 1) + neighbourOf(w[at], random) + w.slice(at + 1),
+	"substitute-near": (w, at, random) =>
+		w.slice(0, at) + neighbourOf(w[at], random) + w.slice(at + 1),
+	"substitute-random": (w, at, random) =>
+		w.slice(0, at) + randomLetterFor(w, random) + w.slice(at + 1),
 	swap: (w, at) => {
 		const from = Math.min(at, w.length - 2);
-		return w[from] === w[from + 1] ? null : w.slice(0, from) + w[from + 1] + w[from] + w.slice(from + 2);
+		return w[from] === w[from + 1]
+			? null
+			: w.slice(0, from) + w[from + 1] + w[from] + w.slice(from + 2);
 	},
 } satisfies Record<string, Edit>;
 
@@ -75,7 +86,8 @@ export const applyEdits = (word: string, edits: EditName[], random: Random): str
 	const spots = edits.map((_, k) => Math.floor(((k + 0.5) * word.length) / edits.length));
 	if (spots.some((spot, k) => k > 0 && spot - spots[k - 1] < 3)) return null;
 	let typed: string | null = word;
-	for (let k = edits.length - 1; k >= 0 && typed !== null; k--) typed = EDITS[edits[k]](typed, spots[k], random);
+	for (let k = edits.length - 1; k >= 0 && typed !== null; k--)
+		typed = EDITS[edits[k]](typed, spots[k], random);
 	return typed;
 };
 
@@ -83,11 +95,15 @@ type Derived = { query: string; relevant: (item: string) => boolean } | null;
 type Cell = { axis: string; kind: string; derive: (words: string[], random: Random) => Derived };
 
 const cells = (isTypo: (query: string) => boolean): Cell[] => {
-	const typo = (query: string | null): string | null => (query !== null && isTypo(query) ? query : null);
+	const typo = (query: string | null): string | null =>
+		query !== null && isTypo(query) ? query : null;
 	const wordOf = (words: string[], minLength: number): string | undefined =>
 		words.find((word) => word.length >= minLength && /^[a-z]+$/.test(word));
 	const twoWords = (ws: string[], minLength = 3): [string, string] | null =>
-		ws.length >= 2 && ws[0].length >= minLength && ws[1].length >= minLength && /^[a-z]+$/.test(ws[0] + ws[1])
+		ws.length >= 2 &&
+		ws[0].length >= minLength &&
+		ws[1].length >= minLength &&
+		/^[a-z]+$/.test(ws[0] + ws[1])
 			? [ws[0], ws[1]]
 			: null;
 
@@ -131,7 +147,12 @@ const cells = (isTypo: (query: string) => boolean): Cell[] => {
 			kind: "space inside a word, halves",
 			derive: (ws) => {
 				const w = wordOf(ws, 8);
-				return w ? { query: `${w.slice(0, w.length >> 1)} ${w.slice(w.length >> 1)}`, relevant: holdsWords(w) } : null;
+				return w
+					? {
+							query: `${w.slice(0, w.length >> 1)} ${w.slice(w.length >> 1)}`,
+							relevant: holdsWords(w),
+						}
+					: null;
 			},
 		},
 		{
@@ -211,7 +232,10 @@ const cells = (isTypo: (query: string) => boolean): Cell[] => {
 				const t = typo(EDITS["substitute-near"](pair[0], pair[0].length >> 1, random));
 				const typed = pair[1].slice(0, 3);
 				return t
-					? { query: `${t} ${typed}`, relevant: holdsWordWhere((w) => w.startsWith(typed), pair[0]) }
+					? {
+							query: `${t} ${typed}`,
+							relevant: holdsWordWhere((w) => w.startsWith(typed), pair[0]),
+						}
 					: null;
 			},
 		},
@@ -234,7 +258,8 @@ export type LimitSample = Sample & { axis: string };
 /** The grid's queries over `items`, each answered by at most three of them. */
 export const limitSamples = (items: string[]): LimitSample[] => {
 	const vocabulary = new Set(items.flatMap(foldedWords));
-	const isTypo = (query: string): boolean => !query.split(" ").every((word) => vocabulary.has(word));
+	const isTypo = (query: string): boolean =>
+		!query.split(" ").every((word) => vocabulary.has(word));
 	const sampled: LimitSample[] = [];
 	for (const [seed, { axis, kind, derive }] of cells(isTypo).entries()) {
 		const random = seeded(SEED_OFFSET + seed + 1);
@@ -259,8 +284,13 @@ export const editDistanceWithin = (a: string, b: string, limit: number): number 
 		const row = [i];
 		let rowMin = i;
 		for (let j = 1; j <= b.length; j++) {
-			let cost = Math.min(last[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), last[j] + 1, row[j - 1] + 1);
-			if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) cost = Math.min(cost, before[j - 2] + 1);
+			let cost = Math.min(
+				last[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+				last[j] + 1,
+				row[j - 1] + 1,
+			);
+			if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+				cost = Math.min(cost, before[j - 2] + 1);
 			row.push(cost);
 			rowMin = Math.min(rowMin, cost);
 		}
@@ -286,14 +316,25 @@ export const unanswerable = (items: string[]): Unanswerable[] => {
 	for (const at of shuffledIndices(items.length, SEED_OFFSET + 999)) {
 		if (words.length === 2 * SAMPLES_PER_CELL * 3) break;
 		const source = foldedWords(items[at]).find((word) => word.length >= 7 && /^[a-z]+$/.test(word));
-		const typed = source ? applyEdits(source, ["substitute-random", "substitute-random", "swap"], random) : null;
+		const typed = source
+			? applyEdits(source, ["substitute-random", "substitute-random", "swap"], random)
+			: null;
 		if (!typed || words.includes(typed)) continue;
-		if (vocabulary.some((word) => editDistanceWithin(typed, word, UNANSWERABLE_DISTANCE - 1) < UNANSWERABLE_DISTANCE)) continue;
+		if (
+			vocabulary.some(
+				(word) =>
+					editDistanceWithin(typed, word, UNANSWERABLE_DISTANCE - 1) < UNANSWERABLE_DISTANCE,
+			)
+		)
+			continue;
 		words.push(typed);
 	}
 	const single = words.slice(0, SAMPLES_PER_CELL * 3);
 	const rest = words.slice(SAMPLES_PER_CELL * 3);
-	const pairs = Array.from({ length: rest.length >> 1 }, (_, k) => `${rest[2 * k]} ${rest[2 * k + 1]}`);
+	const pairs = Array.from(
+		{ length: rest.length >> 1 },
+		(_, k) => `${rest[2 * k]} ${rest[2 * k + 1]}`,
+	);
 	return [
 		{ kind: "absent word", queries: single },
 		{ kind: "two absent words", queries: pairs },

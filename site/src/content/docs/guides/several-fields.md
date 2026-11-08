@@ -24,13 +24,13 @@ const search = createSearcher(posts, {
 search("ban");
 // [
 //   {
-//     item: posts[0], score: 0.5, field: "title",
-//     tier: "prefix", ranges: [[0, 2]], text: "Banana bread",
+//     item: posts[0], score: 0.5,
+//     tier: "prefix", ranges: [[0, 2]], text: "Banana bread", field: "title",
 //     fields: { title: { tier: "prefix", ranges: [[0, 2]], text: "Banana bread" } },
 //   },
 //   {
-//     item: posts[1], score: 2.5, field: "body",
-//     tier: "prefix", ranges: [[0, 2]], text: "banana picker shipped",
+//     item: posts[1], score: 2.5,
+//     tier: "prefix", ranges: [[0, 2]], text: "banana picker shipped", field: "body",
 //     fields: { body: { tier: "prefix", ranges: [[0, 2]], text: "banana picker shipped" } },
 //   },
 // ]

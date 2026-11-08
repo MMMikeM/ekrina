@@ -51,7 +51,7 @@ Behavioural differences:
 - **Corrections say what they fixed.**
   Both find "Toggle Terminal" for `termimal`; Ekrina reports it as `tier: "corrected"`, with `corrected: "terminal"`, so a caller can show what was searched for or leave corrections out.
 - **No matching options.**
-  `ignoreCase`, `ignoreSymbols`, `normalizeWhitespace`, `useDamerau` and `useSellers` have no equivalents.
+  `ignoreCase`, `ignoreSymbols`, `normalizeWhitespace`, `useDamerau`, `useSellers` and `useSeparatedUnicode` have no equivalents.
   Ekrina always ignores case, folds accents, and treats punctuation as a break between words.
   There is no `sortBy` either; results always come best first.
 - **No `add`.**

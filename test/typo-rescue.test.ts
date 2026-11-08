@@ -193,9 +193,7 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 
 	it("a multi-word query relaxes once its mistyped word is long enough", () => {
 		expect(fuzzyMatch("wooden table", "wooden tablx")?.tier).toBe("corrected");
-		expect(createSearcher(["wooden table"])("wooden tablx")[0]?.tier).toBe(
-			"corrected",
-		);
+		expect(createSearcher(["wooden table"])("wooden tablx")[0]?.tier).toBe("corrected");
 	});
 
 	it("a multi-word query keeps the strict gate while every word is under the floor", () => {
@@ -205,8 +203,7 @@ describe("the relaxed mask gate matches what a rescue can explain", () => {
 });
 
 describe("matcher and searcher agree on the typo floor", () => {
-	const tierFrom = (results: { tier: string }[]) =>
-		results[0]?.tier ?? null;
+	const tierFrom = (results: { tier: string }[]) => results[0]?.tier ?? null;
 
 	// The searcher is asked three ways: first search, second search, indexed.
 	const agreedTier = (field: string, query: string): string | null => {
@@ -253,9 +250,7 @@ describe("a short query is corrected only when nothing matches it as typed", () 
 
 	it("with nothing matching as typed, the correction is offered", () => {
 		const search = createSearcher(["Soft Gold Hat", "Red Oak Table"]);
-		expect(search("sfot").map((r) => [r.item, r?.tier])).toEqual([
-			["Soft Gold Hat", "corrected"],
-		]);
+		expect(search("sfot").map((r) => [r.item, r?.tier])).toEqual([["Soft Gold Hat", "corrected"]]);
 	});
 
 	it("a five-character query is corrected alongside matches as typed", () => {

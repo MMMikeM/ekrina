@@ -26,7 +26,14 @@ describe("named fields", () => {
 		})("tgl")[0];
 		expect(r?.field).toBe("keywords");
 		expect(r?.fields).toEqual({
-			title: { tier: "fuzzy", ranges: [[0, 0], [3, 4]], text: "Toggle Terminal" },
+			title: {
+				tier: "fuzzy",
+				ranges: [
+					[0, 0],
+					[3, 4],
+				],
+				text: "Toggle Terminal",
+			},
 			keywords: { tier: "prefix", ranges: [[0, 2]], text: "tgl terminal" },
 		});
 		expect(Object.keys(r?.fields ?? {})).toEqual(["title", "keywords"]);
@@ -34,7 +41,9 @@ describe("named fields", () => {
 	});
 
 	it("a field keeps its best match when a later reading offers a worse one", () => {
-		const r = createSearcher([{ a: "Jhelum", b: "x" }], { a: (i) => i.a, b: (i) => i.b })("jheum")[0];
+		const r = createSearcher([{ a: "Jhelum", b: "x" }], { a: (i) => i.a, b: (i) => i.b })(
+			"jheum",
+		)[0];
 		expect(r?.fields).toEqual({
 			a: { tier: "corrected", corrected: "jhelum", ranges: [[0, 5]], text: "Jhelum" },
 		});
@@ -46,7 +55,13 @@ describe("named fields", () => {
 			title: (p) => p.title,
 			body: { selectField: (p) => p.body, demoteBy: 2 },
 		})("cat")[0];
-		expect(r).toMatchObject({ score: 2, field: "body", tier: "exact", ranges: [[0, 2]], text: "cat" });
+		expect(r).toMatchObject({
+			score: 2,
+			field: "body",
+			tier: "exact",
+			ranges: [[0, 2]],
+			text: "cat",
+		});
 		expect(r && isLiteral(r)).toBe(true);
 	});
 

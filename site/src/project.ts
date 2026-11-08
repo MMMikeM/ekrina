@@ -18,4 +18,5 @@ export const project = {
 	repositoryUrl,
 	changelogUrl: `${repositoryUrl}/blob/main/CHANGELOG.md`,
 	npmUrl: `https://www.npmjs.com/package/${pkg.name}`,
+	majorVersion: pkg.version.split(".")[0],
 };

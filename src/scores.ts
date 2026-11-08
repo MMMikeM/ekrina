@@ -1,4 +1,4 @@
-import type { Tier } from "./types";
+import type { MatchResult, Tier } from "./types";
 
 /**
  * The tier ladder as named constants. Lower = better. Every genuine tier
@@ -27,10 +27,8 @@ export const SCORES: {
 	CONTAINS: 2,
 };
 
-// Each value on its own as well, for the library's internal use: the minifier
-// inlines a constant but not an object property. Written as literals in SCORES
-// too, since a constant SCORES also reads is never inlined; the types keep the
-// two equal.
+// The minifier inlines a constant but not an object property, and never one
+// SCORES also reads, so each value is written twice; the types keep them equal.
 export const EXACT_SCORE: typeof SCORES.EXACT = 0;
 export const NORMALISED_EXACT_SCORE: typeof SCORES.NORMALISED_EXACT = 0.1;
 export const PREFIX_SCORE: typeof SCORES.PREFIX = 0.5;
@@ -53,10 +51,24 @@ export const CONTAINS_SCORE: typeof SCORES.CONTAINS = 2;
  * Corrected scores therefore land at 2.1 and up, overlapping the fuzzy band,
  * and a word typed sparsely, which fixes no typo, scores just above CONTAINS.
  * Only `tier` tells them apart. Every kind of edit takes the same penalty,
- * because they are the same edit distance. Scoring them differently would
- * rank a swapped keystroke above a dropped one on no evidence.
+ * because they are the same edit distance.
  */
 export const TYPO_PENALTY = 2.1;
+
+// Ties keep `a`.
+export const better = (a: MatchResult | null, b: MatchResult | null): MatchResult | null =>
+	a === null || (b !== null && b.score < a.score) ? b : a;
+
+export const correctedMatch = (
+	landed: MatchResult,
+	edits: number,
+	corrected: string,
+): MatchResult => ({
+	score: landed.score + TYPO_PENALTY * edits,
+	tier: "corrected",
+	corrected,
+	ranges: landed.ranges,
+});
 
 /**
  * Whether a match is of the query as typed: any tier but `fuzzy` and
@@ -65,3 +77,17 @@ export const TYPO_PENALTY = 2.1;
  */
 export const isLiteral = (match: { tier: Tier }): boolean =>
 	match.tier !== "fuzzy" && match.tier !== "corrected";
+
+const SCORE_EPSILON = 1e-9;
+
+// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
+// the one-edit reading names the character the user got wrong, where a chain
+// only says the letters appear in order.
+export const preferBetter = (
+	incumbent: MatchResult | null,
+	challenger: MatchResult | null,
+): MatchResult | null => {
+	if (incumbent === null) return challenger;
+	if (challenger === null) return incumbent;
+	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
+};

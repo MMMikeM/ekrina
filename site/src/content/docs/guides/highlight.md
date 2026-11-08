@@ -50,7 +50,7 @@ const Highlight = ({ text, ranges }: HighlightProps) => (
 	</>
 );
 
-<Highlight text={result.item.title} ranges={result?.ranges ?? []} />;
+<Highlight text={result.text} ranges={result.ranges} />;
 ```
 
 Create the searcher with `useMemo` on the list, and the results with a second `useMemo` on the query:

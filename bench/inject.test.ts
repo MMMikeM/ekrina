@@ -27,19 +27,28 @@ describe("inject", () => {
 	});
 
 	it("a value marked inside a sentence is replaced on its line", () => {
-		const doc = ["At <!-- bench:size -->~7.7 kB<!-- bench:end --> gzip.", region("a", "old a")].join("\n");
+		const doc = [
+			"At <!-- bench:size -->~7.7 kB<!-- bench:end --> gzip.",
+			region("a", "old a"),
+		].join("\n");
 		const { doc: next, stale } = inject(doc, { size: "~8.2 kB", a: "old a" });
-		expect(next).toBe(["At <!-- bench:size -->~8.2 kB<!-- bench:end --> gzip.", region("a", "old a")].join("\n"));
+		expect(next).toBe(
+			["At <!-- bench:size -->~8.2 kB<!-- bench:end --> gzip.", region("a", "old a")].join("\n"),
+		);
 		expect(stale).toEqual(["size"]);
 	});
 
 	it("text after a block region's end marker is not read as an inline region", () => {
 		const doc = `${region("a", "old a")} <!-- bench:b -->x<!-- bench:end -->`;
-		expect(inject(doc, { a: "old a", b: "y" }).doc).toBe(`${region("a", "old a")} <!-- bench:b -->y<!-- bench:end -->`);
+		expect(inject(doc, { a: "old a", b: "y" }).doc).toBe(
+			`${region("a", "old a")} <!-- bench:b -->y<!-- bench:end -->`,
+		);
 	});
 
 	it("a multi-line value marked inline is an error", () => {
-		expect(() => inject("<!-- bench:a -->x<!-- bench:end -->", { a: "| y |\n| z |" })).toThrow(/'a'/);
+		expect(() => inject("<!-- bench:a -->x<!-- bench:end -->", { a: "| y |\n| z |" })).toThrow(
+			/'a'/,
+		);
 	});
 
 	it("a marked region nothing generates is an error", () => {

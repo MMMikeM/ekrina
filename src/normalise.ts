@@ -1,4 +1,4 @@
-export const combiningMarks: RegExp = /[\u0300-\u036f]/g;
+const combiningMarks: RegExp = /[\u0300-\u036f]/g;
 const hasCombiningMark = /[\u0300-\u036f]/;
 const hasNonAscii = /[\u0080-\uffff]/;
 
@@ -9,11 +9,7 @@ const QUOTE_FOLDS: Record<string, string> = { "‘": "'", "’": "'", "“": '"'
 // One folded string per code point, never changing the code-unit length — the
 // 1:1 guarantee behind every published HighlightRange. Length-changing folds fall back
 // to plain lowercase, then to the original character.
-const computeFold = (char: string): string => {
-	const quote = QUOTE_FOLDS[char];
-	if (quote !== undefined) return quote;
-	const lowered = char.toLowerCase();
-	let stripped = lowered.normalize("NFD").replace(combiningMarks, "");
+const fitFold = (char: string, lowered: string, stripped: string): string => {
 	// ł has no NFD decomposition; final sigma folds to medial.
 	if (stripped === "ł") stripped = "l";
 	else if (stripped === "ς") stripped = "σ";
@@ -27,8 +23,14 @@ const computeFold = (char: string): string => {
 				char;
 };
 
-// Dense array through Latin Extended + Greek + Cyrillic (an indexed load beats
-// Map's string hashing ~1.8× on the fold loop); rarer code points use the Map.
+export const computeFold = (char: string): string => {
+	const quote = QUOTE_FOLDS[char];
+	if (quote !== undefined) return quote;
+	const lowered = char.toLowerCase();
+	return fitFold(char, lowered, lowered.normalize("NFD").replace(combiningMarks, ""));
+};
+
+// An indexed load beats Map's string hashing on the fold loop.
 const DENSE_FOLDS_MAX = 0x4ff;
 // fill() keeps the elements packed; Array.from({ length }) reads slower.
 // oxlint-disable-next-line unicorn/no-new-array
@@ -36,7 +38,7 @@ const denseFolds: (string | undefined)[] = new Array(DENSE_FOLDS_MAX + 1).fill(u
 const rareFolds = new Map<string, string>();
 const RARE_FOLDS_MAX = 65_536;
 
-const foldChar = (char: string): string => {
+export const foldChar = (char: string): string => {
 	const codePoint = char.codePointAt(0) as number;
 	if (codePoint <= DENSE_FOLDS_MAX) {
 		let folded = denseFolds[codePoint];
@@ -68,10 +70,7 @@ const foldChar = (char: string): string => {
  * visually-identical NFC form).
  */
 export const normaliseText = (text: string): string => {
-	// toLowerCase can itself surface combining marks (İ → i̇), so the pure-ASCII
-	// fast path tests after it.
-	const lowered = text.toLowerCase();
-	if (!hasNonAscii.test(lowered)) return lowered.trim();
+	if (!hasNonAscii.test(text)) return text.toLowerCase().trim();
 	let trimmed = text.trim();
 	// Compose first so the per-point fold sees "é", not "e" + combining mark.
 	if (hasCombiningMark.test(trimmed)) trimmed = trimmed.normalize("NFC");
@@ -80,151 +79,43 @@ export const normaliseText = (text: string): string => {
 	return folded;
 };
 
-// `charMask`'s bit for one code unit: a letter as its lower case, digits in
-// four buckets, non-ASCII in two, and nothing for a separator.
-export const unitMask = (unit: number): number => {
-	if (unit >= 97 && unit <= 122) return 1 << (unit - 97);
-	// Raw ASCII capitals, which rawFieldMask and rawFieldPairs read before folding.
-	if (unit >= 65 && unit <= 90) return 1 << (unit - 65);
-	if (unit >= 48 && unit <= 57) return 1 << (26 + (unit & 3));
-	if (unit > 127) return 1 << (30 + (unit & 1));
-	return 0;
-};
+// Every code point that folds to ASCII lives in these ranges; test/unfold.test.ts
+// walks the whole BMP and fails if a fold source ever appears outside them.
+const SOURCE_RANGES: readonly (readonly [number, number])[] = [
+	[0x30, 0x39],
+	[0x41, 0x5a],
+	[0x61, 0x7a],
+	[0xc0, 0x24f],
+	[0x1e00, 0x1eff],
+	[0x212a, 0x212b],
+];
 
-// `charMask`'s class for one code unit, shifted so 0 can mean "not a word
-// character": class n sets mask bit n − 1, for every class.
-export const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
+let table: Record<string, string> | null = null;
 
-export const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
-
-// A field's bigram set — adjacent same-word class pairs and consecutive
-// word-initial pairs, 64 bits in two int32s.
-export type FieldBigrams = { lo: number; hi: number };
-
-// Every BMP code point folds to exactly one unit (computeFold's length check),
-// so each unit's fold has a fixed class, learned once and stored as a stand-in
-// unit of that class: an ASCII letter, digit or space, or 0x80/0x81 for the two
-// non-ASCII buckets. 0 until first seen; the table itself waits for the first
-// non-ASCII unit, so a list of ASCII never allocates it. It calls computeFold
-// rather than foldChar because only the class is kept: caching the fold too
-// would retain a string for every distinct unit in the list.
-const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
-let standIns: Uint8Array | null = null;
-
-const standIn = (unit: number): number => {
-	const table = (standIns ??= new Uint8Array(0x10000));
-	return (
-		table[unit] ||
-		(table[unit] = STAND_INS.charCodeAt(
-			bigramClass(computeFold(String.fromCharCode(unit)).charCodeAt(0)),
-		))
-	);
-};
-
-// `unitMask` for every ASCII unit and both non-ASCII stand-ins.
-const standInMasks = new Int32Array(130);
-for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
-
-const NON_ASCII_BITS = 3 << 30;
-
-const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
-
-const isCombiningMark = (unit: number): boolean => unit >= 0x300 && unit <= 0x36f;
-
-/**
- * `charMask(normaliseText(raw))` without building the normalised string. Runs
- * once per field, when a searcher first needs a whole-list pass. May only
- * false-pass: skipping NFC can only add mask bits, except that NFC, which
- * normaliseText applies to a field holding a combining mark, can compose units
- * (Hangul jamo) into one of the other non-ASCII bucket, so such a field takes
- * both non-ASCII bits.
- */
-export const rawFieldMask = (raw: string): number => {
-	let mask = 0;
-	for (let i = 0; i < raw.length; i++) {
-		const unit = raw.charCodeAt(i);
-		// A surrogate's fold depends on its partner, so it takes both non-ASCII
-		// bits, which can only false-pass.
-		mask |=
-			unit < 128
-				? standInMasks[unit]
-				: isSurrogate(unit) || isCombiningMark(unit)
-					? NON_ASCII_BITS
-					: standInMasks[standIn(unit)];
-	}
-	return mask;
-};
-
-/**
- * `charMask(normaliseText(raw))` without building the normalised string:
- * returns the field's char mask and accumulates its bigram set into `into`
- * (degraded = all-ones). Runs per item the first time a gate asks for its
- * pairs, or over every item when the caller builds the index up front.
- *
- * Both halves may only false-pass: a combining mark, where NFC may compose the
- * field and raw adjacency stops matching normalised adjacency, degrades the
- * bigram set to all-bits and gives the mask both non-ASCII bits (rawFieldMask).
- */
-export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
-	let mask = 0;
-	let bigramsLo = 0;
-	let bigramsHi = 0;
-	let prevClass = 0;
-	let lastWordInitial = 0;
-	let degraded = false;
-	// One inline body for raw ASCII units and folded ones alike: every factored
-	// shape — shared helper, closure, module scratch, single mask-write site off
-	// `bigramClass − 1` — measured 8–15% slower on the whole-corpus build.
-	for (let i = 0; i < raw.length; i++) {
-		let unit = raw.charCodeAt(i);
-		let folded = "";
-		if (unit > 127) {
-			if (isCombiningMark(unit)) degraded = true;
-			if (isSurrogate(unit)) {
-				const codePoint = raw.codePointAt(i) as number;
-				if (codePoint > 0xffff) i++;
-				folded = foldChar(String.fromCodePoint(codePoint));
-				unit = folded.charCodeAt(0);
-			} else unit = standIn(unit);
-		}
-		for (let k = 0; ; ) {
-			let unitClass = 0;
-			if (unit >= 97 && unit <= 122) {
-				mask |= 1 << (unit - 97);
-				unitClass = unit - 96;
-			} else if (unit >= 65 && unit <= 90) {
-				mask |= 1 << (unit - 65);
-				unitClass = unit - 64;
-			} else if (unit >= 48 && unit <= 57) {
-				mask |= 1 << (26 + (unit & 3));
-				unitClass = 27 + (unit & 3);
-			} else if (unit > 127) {
-				mask |= 1 << (30 + (unit & 1));
-				unitClass = 31 + (unit & 1);
-			}
-			if (unitClass !== 0) {
-				const pairStart = prevClass !== 0 ? prevClass : lastWordInitial;
-				if (pairStart !== 0) {
-					// Branchless: which half the bit lands in is data-dependent, and
-					// branching on it made the whole-corpus scan ~40% slower.
-					const bit = (pairStart * 37 + unitClass) & 63;
-					const inLow = (bit >> 5) - 1;
-					bigramsLo |= (1 << bit) & inLow;
-					bigramsHi |= (1 << bit) & ~inLow;
-				}
-				if (prevClass === 0) lastWordInitial = unitClass;
-			}
-			prevClass = unitClass;
-			if (++k >= folded.length) break;
-			unit = folded.charCodeAt(k);
+// For each ASCII letter and digit, every code point that `normaliseText` folds
+// to it. Folded in bulk, one `toLowerCase` and one NFD pass over the joined
+// ranges, since folding per character is several times slower. A class missing
+// any source would false-reject a field that carries it.
+export const unfoldTable = (): Record<string, string> => {
+	if (table !== null) return table;
+	let sources = "";
+	for (const [lo, hi] of SOURCE_RANGES) {
+		for (let codePoint = lo; codePoint <= hi; codePoint++) {
+			sources += String.fromCharCode(codePoint);
 		}
 	}
-	if (degraded) {
-		into.lo = -1;
-		into.hi = -1;
-		return mask | NON_ASCII_BITS;
+	const joined = sources.split("").join(" ");
+	const lowered = joined.toLowerCase();
+	const lowers = lowered.split(" ");
+	const candidates = lowered.normalize("NFD").replace(combiningMarks, "").split(" ");
+	const built: Record<string, string> = {};
+	for (let i = 0; i < sources.length; i++) {
+		const folded = fitFold(sources[i], lowers[i], candidates[i]);
+		const unit = folded.charCodeAt(0);
+		if ((unit >= 97 && unit <= 122) || (unit >= 48 && unit <= 57)) {
+			built[folded] = (built[folded] ?? "") + sources[i];
+		}
 	}
-	into.lo |= bigramsLo;
-	into.hi |= bigramsHi;
-	return mask;
+	table = built;
+	return built;
 };

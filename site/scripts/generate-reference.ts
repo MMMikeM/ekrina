@@ -467,7 +467,7 @@ const renderClass = (name: string, symbol: Symbol) => {
 const renderType = (name: string, symbol: Symbol) => {
 	const declared = checker.getDeclaredTypeOfSymbol(symbol);
 	const isPlainObject = declared.flags & (TypeFlags.Object | TypeFlags.Intersection);
-	const properties = isPlainObject ? checker.getPropertiesOfType(declared) : [];
+	const properties = isPlainObject ? checker.getPropertiesOfType(declared).filter(declaredInLibrary) : [];
 	const fieldRows = fieldDocs(properties);
 	const hasFieldDocs = fieldRows.some((row) => row.description);
 	const isOpaque = [...exportedAliasOf.values()].includes(name);

@@ -30,7 +30,7 @@ Import `SCORES` for thresholds and `demoteBy` values, or read `tier` directly.
 [Keep only literal matches](/guides/literal-matches/) filters by either, and [Handle corrections](/guides/corrections/) shows a "Showing results for" notice from a `corrected` match.
 
 `demoteBy` shifts `score` but never `tier`, so tier filters stay reliable on demoted fields (a body-field prefix hit can report `score: 2.5, tier: "prefix"`).
-Corrected matches also score above `CONTAINS` (a corrected contains is 4.1) without being fuzzy chains, so filter by `tier` when you mean the kind of match.
+Corrected matches also score above `CONTAINS` (a corrected contains is 4.1) without being fuzzy chains, so filter by `tier`, or with `isLiteral`, when you mean the kind of match.
 
 ## Acronyms
 

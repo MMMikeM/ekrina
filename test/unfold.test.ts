@@ -1,8 +1,7 @@
 // Imports internals: the unfold table is generated data whose only correctness
 // property is completeness, and a gap in it makes a gate false-reject silently.
 import { describe, expect, it } from "vite-plus/test";
-import { normaliseText } from "../src/normalise";
-import { unfoldTable } from "../src/unfold";
+import { normaliseText, unfoldTable } from "../src/normalise";
 
 const UNFOLD = unfoldTable();
 

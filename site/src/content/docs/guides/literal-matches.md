@@ -22,8 +22,8 @@ That keeps exact, prefix, word-start, multi-word, acronym and contains matches, 
 The tier says the same thing without a number, and lets you drop one kind and keep the other:
 
 ```ts
-search(query).filter((result) => result?.tier !== "fuzzy"); // keep corrections
-search(query).filter((result) => result?.tier !== "corrected"); // keep fuzzy chains
+search(query).filter((result) => result.tier !== "fuzzy"); // keep corrections
+search(query).filter((result) => result.tier !== "corrected"); // keep fuzzy chains
 ```
 
 ## On demoted fields

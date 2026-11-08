@@ -6,8 +6,10 @@ description: Install ekrina, search a list of strings or objects, read how each 
 Install it, build a searcher over your list once, and call it with each query.
 
 ```bash
-npm install ekrina
+npm install ekrina@^2
 ```
+
+These docs describe ekrina 2; on 1.x, [Upgrade from ekrina 1.x](/guides/migrate-from-ekrina-1/) lists every change.
 
 It ships ESM and CommonJS with types for each, and runs on anything with ES2022: browsers, Node, Deno, Bun and edge runtimes, with no polyfills.
 
@@ -97,7 +99,7 @@ A corrected match carries the query it fixed:
 declare const showNotice: (message: string) => void;
 
 const match = search("recnet")[0];
-// { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", corrected: "recent", ranges: [[5, 10]], text: "Open Recent" }
+// { item: { id: "file.openRecent", … }, score: 3.1, tier: "corrected", ranges: [[5, 10]], text: "Open Recent", corrected: "recent" }
 
 if (match?.tier === "corrected") {
 	showNotice(`Showing results for ${match.corrected}`);

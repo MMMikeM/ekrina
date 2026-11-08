@@ -60,9 +60,10 @@ describe("held-out families", () => {
 			const heldOutMrr = mrrOf(fresh.scorecard, "ekrina");
 			// `--only=` narrows the set, and a check against an absent row would assert nothing.
 			if (publishedMrr !== undefined && heldOutMrr !== undefined) {
-				expect(publishedMrr - heldOutMrr, "Ekrina is fit to the published queries").toBeLessThanOrEqual(
-					MAX_HELD_OUT_GAP,
-				);
+				expect(
+					publishedMrr - heldOutMrr,
+					"Ekrina is fit to the published queries",
+				).toBeLessThanOrEqual(MAX_HELD_OUT_GAP);
 			}
 		});
 	}

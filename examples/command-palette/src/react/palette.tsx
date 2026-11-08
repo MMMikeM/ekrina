@@ -1,10 +1,17 @@
 import { createSearcher, SCORES } from "ekrina";
 import type { HighlightRanges, SearchResultOf } from "ekrina";
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+	type KeyboardEvent,
+	type ReactNode,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import type { Command } from "../commands";
 
 const LIMIT = 8;
-
 
 const createSearch = (commands: Command[]) => {
 	const search = createSearcher(commands, {

@@ -4,7 +4,6 @@ import type { Command } from "./commands";
 
 const LIMIT = 8;
 
-
 const createSearch = (commands: Command[]) => {
 	const search = createSearcher(commands, (command) => command.title);
 	search.buildIndex();

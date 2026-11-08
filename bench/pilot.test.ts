@@ -17,8 +17,12 @@ import { shuffledIndices } from "./words.ts";
 const dir = process.env.PILOT;
 const misspellingsFile = dir ? join(dir, "misspellings.json") : "";
 const misspellings: Misspellings | undefined =
-	dir && existsSync(misspellingsFile) ? JSON.parse(readFileSync(misspellingsFile, "utf8")).misspellings : undefined;
-const lists = dir ? readdirSync(dir).filter((file) => file.endsWith(".json") && file !== "misspellings.json") : [];
+	dir && existsSync(misspellingsFile)
+		? JSON.parse(readFileSync(misspellingsFile, "utf8")).misspellings
+		: undefined;
+const lists = dir
+	? readdirSync(dir).filter((file) => file.endsWith(".json") && file !== "misspellings.json")
+	: [];
 
 if (lists.length === 0) it.skip("[pilot] needs PILOT=<dir> of corpora", () => {});
 
@@ -26,11 +30,19 @@ for (const file of lists) {
 	const name = file.replace(/\.json$/, "");
 	it.skipIf(!dir)(`[${name}] the catalogue on a pilot corpus`, { timeout: 3_600_000 }, () => {
 		const all: string[] = JSON.parse(readFileSync(join(dir as string, file), "utf8"));
-		const items = all.length <= SAMPLE_SIZE ? all : shuffledIndices(all.length, 1).slice(0, SAMPLE_SIZE).map((at) => all[at]);
+		const items =
+			all.length <= SAMPLE_SIZE
+				? all
+				: shuffledIndices(all.length, 1)
+						.slice(0, SAMPLE_SIZE)
+						.map((at) => all[at]);
 		const samples = catalogueSamples(items, misspellings);
 		const score = scoreCatalogue(items, samples);
 		console.table(score.scorecard);
 		ensureRawDir();
-		writeFileSync(rawFile(`pilot-${name}.json`), JSON.stringify({ weights: WEIGHTS, items: items.length, ...score }, null, "\t"));
+		writeFileSync(
+			rawFile(`pilot-${name}.json`),
+			JSON.stringify({ weights: WEIGHTS, items: items.length, ...score }, null, "\t"),
+		);
 	});
 }

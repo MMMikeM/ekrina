@@ -1,15 +1,28 @@
-import { isBoundaryChar, wordChar } from "./boundaries";
-import { charMask } from "./gates";
-import { matchField, type PreparedQuery, prepareQuery } from "./match";
-import { CONTAINS_SCORE, TYPO_PENALTY } from "./scores";
+import { isBoundaryAt, opensWord } from "./boundaries";
+import { buildRescueBigramGate, charMask, rescuePairsAdmit } from "./gates";
+import { literalTiers } from "./ladder";
+import { type PreparedQuery, perQuery, prepareQuery } from "./query";
+import {
+	dropCharAt,
+	type Edit,
+	MIN_RESCUE_QUERY_LENGTH,
+	MIN_TYPO_QUERY_LENGTH,
+	minSubstitutionLength,
+	minTypoQueryLength,
+	rawQuery,
+	rawWordOf,
+	rescueCounts,
+	rescueTurn,
+	swapAdjacentAt,
+	wordStartsOf,
+} from "./correction";
+import type { PreparedStage, Stage } from "./stages";
+import { CONTAINS_SCORE, correctedMatch, preferBetter, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
-// The field currently being rescued against the prepared query, allocated by
-// matchField only when a field actually reaches a rescue site.
-export type RescueContext = {
+type RescueContext = {
 	rawField: string;
 	normalisedField: string;
-	fieldMask: number;
 	prepared: PreparedQuery;
 	acronymTier: boolean;
 	missingClasses: number;
@@ -19,81 +32,11 @@ type RescueVariant = {
 	normalised: string;
 	raw: string;
 	isDrop: boolean;
-	// A subset of the query mask, so `requiredMask & missingClasses` is exactly
-	// "the field lacks a class this correction still requires".
+	// `requiredMask & missingClasses` is exactly "the field lacks a class this
+	// correction still requires", since missingClasses holds only query classes.
 	requiredMask: number;
 	prepared: PreparedQuery | null;
 };
-
-// Below this a correction describes the field rather than the query: almost
-// every field offers a window one character away from a 3-character string.
-const MIN_RESCUE_QUERY_LENGTH = 4;
-// Enumerating a word's corrections costs time and memory quadratic in its
-// length, and no real typo needs one this long, so a query holding a longer
-// word is never corrected.
-const MAX_RESCUE_WORD_LENGTH = 64;
-
-// Chance corrections are a multiple-comparisons problem scaling with the
-// field's window count, while a high floor hurts the short queries that
-// dominate label search (@see docs/performance.md).
-const minTypoQueryLength = (fieldLength: number): number =>
-	fieldLength <= 64 ? 5 : fieldLength <= 1024 ? 6 : 7;
-
-// A substitution keeps the subject's length where a drop shortens it to three
-// characters, so on a label it is trusted one character sooner.
-const minSubstitutionLength = (fieldLength: number): number =>
-	fieldLength <= 64 ? MIN_RESCUE_QUERY_LENGTH : minTypoQueryLength(fieldLength);
-
-// Below this a subject is short: it is corrected only at a word start, and only
-// when nothing matches the query as typed. Drops wait for it too.
-const MIN_TYPO_QUERY_LENGTH = minTypoQueryLength(0);
-
-const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: number): boolean =>
-	queryWords.length === 1
-		? normalisedQuery.length >= floor
-		: queryWords.some((word) => word.length >= floor);
-
-// Whether any rescue may run, and so whether the mask gate may relax to one
-// missing class. matchField and the searcher's survivor scan must ask this same
-// question, or one corrects what the other cannot.
-export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH) &&
-	queryWords.every((word) => word.length <= MAX_RESCUE_WORD_LENGTH);
-
-// A short query's correction stands in for a missing match and never competes
-// with one: finding it means testing every item that holds the query's
-// letters, which the searcher does only when nothing matched as typed
-// (@see docs/performance.md).
-export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
-	!reachesFloor(normalisedQuery, queryWords, MIN_TYPO_QUERY_LENGTH);
-
-const SCORE_EPSILON = 1e-9;
-
-// Ties keep the incumbent, so a caller passes a fuzzy chain as the challenger:
-// the one-edit reading names the character the user got wrong, where a chain
-// only says the letters appear in order.
-export const preferBetter = (
-	incumbent: MatchResult | null,
-	challenger: MatchResult | null,
-): MatchResult | null => {
-	if (incumbent === null) return challenger;
-	if (challenger === null) return incumbent;
-	return challenger.score < incumbent.score - SCORE_EPSILON ? challenger : incumbent;
-};
-
-// The two enumerable one-edit corrections; both fill `addVariant`'s edit slot.
-type Edit = (text: string, at: number) => string;
-
-export const swapAdjacentAt: Edit = (text, at) =>
-	text.slice(0, at) + text[at + 1] + text[at] + text.slice(at + 2);
-
-const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at + 1);
-
-// Needs normaliseText's 1:1 mapping to index the raw query by normalised
-// offsets; when NFC shortened decomposed input, the normalised query stands in
-// for it — sound, just case-blind.
-const rawQuery = ({ query, normalisedQuery }: PreparedQuery): string =>
-	query.length === normalisedQuery.length ? query : normalisedQuery;
 
 // The correction must be the user's own text with one character changed —
 // spelling it out of the field would credit an ALL-CAPS query with an
@@ -107,59 +50,41 @@ const substituteRaw = (raw: string, normalised: string, corrected: string): stri
 	return corrected;
 };
 
-const prepareCorrection = (
-	prepared: PreparedQuery,
-	rawCorrected: string,
-	normalisedCorrected: string,
-): PreparedQuery => {
-	const cached = prepared.lastCorrection;
+let lastCorrection: PreparedQuery | undefined;
+
+const prepareCorrection = (rawCorrected: string, normalisedCorrected: string): PreparedQuery => {
 	if (
-		cached !== undefined &&
-		cached.query === rawCorrected &&
-		cached.normalisedQuery === normalisedCorrected
+		lastCorrection !== undefined &&
+		lastCorrection.query === rawCorrected &&
+		lastCorrection.normalisedQuery === normalisedCorrected
 	) {
-		return cached;
+		return lastCorrection;
 	}
-	return (prepared.lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
+	return (lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
 };
 
-// Only a real-tier hit (`score <= SCORES.CONTAINS`) counts: rescuing a fuzzy
-// chain is an invented edit on top of a speculative assembly
-// (@see docs/benchmarks.md). The rerun passes `mayRescue: false`, disabling
-// every rescue inside it, so the penalty cannot apply twice. It skips the front
-// gate and the chain too: the gate passes every literal hit, and a chain is
-// refused anyway, so a correction never pays to compile its own gate.
+// Only a literal tier counts: rescuing a fuzzy chain is an invented edit on top
+// of a speculative assembly (@see docs/benchmarks.md).
 const scoreCorrectedQuery = (
 	rescue: RescueContext,
 	correctedQuery: PreparedQuery,
 	short = false,
 ): MatchResult | null => {
-	const result = matchField(
+	const result = literalTiers(
 		rescue.rawField,
 		rescue.normalisedField,
-		rescue.fieldMask,
 		correctedQuery,
 		rescue.acronymTier,
-		false,
-		true,
-		true,
 	);
-	return result && acceptsCorrection(result, short)
-		? {
-				score: result.score + TYPO_PENALTY,
-				tier: "corrected",
-				corrected: correctedQuery.query,
-				ranges: result.ranges,
-			}
+	return result && (!short || startsWord(result))
+		? correctedMatch(result, 1, correctedQuery.query)
 		: null;
 };
 
-// A short correction must start a word: mid-word, most fields hold a window
-// one edit from four characters ("colt" in "Nicolas").
-const acceptsCorrection = (result: MatchResult, short: boolean): boolean =>
-	short
-		? result.score < CONTAINS_SCORE && result.tier !== "acronym"
-		: result.score <= CONTAINS_SCORE;
+// Mid-word, most fields hold a window one edit from four characters ("colt" in
+// "Nicolas"), so a short correction must start a word.
+const startsWord = (result: MatchResult): boolean =>
+	result.score < CONTAINS_SCORE && result.tier !== "acronym";
 
 const isUnbeatableCorrection = (best: MatchResult | null): best is MatchResult =>
 	best !== null && best.score <= TYPO_PENALTY;
@@ -189,6 +114,17 @@ const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVarian
 		for (let at = 0; at < normalisedQuery.length; at++) addVariant(at, dropCharAt);
 	}
 	return variants;
+};
+
+// -1 unless exactly one unit differs: with none, the contains tier owns the window.
+const soleMismatchAt = (field: string, windowStart: number, subject: string): number => {
+	let mismatchAt = -1;
+	for (let i = 0; i < subject.length; i++) {
+		if (field[windowStart + i] === subject[i]) continue;
+		if (mismatchAt !== -1) return -1;
+		mismatchAt = i;
+	}
+	return mismatchAt;
 };
 
 // A drop, a substitution or a swap leaves one half of the subject intact, unless
@@ -225,19 +161,10 @@ const substitutedWindows = (
 		) {
 			const windowStart = halfAt - offset;
 			if (windowStart < 0 || windowStart + subjectLength > normalisedField.length) continue;
-			if (atWordStart && windowStart > 0 && !isBoundaryChar(normalisedField[windowStart - 1])) {
-				continue;
-			}
-			let mismatches = 0;
-			let mismatchAt = -1;
-			for (let i = 0; i < subjectLength; i++) {
-				if (normalisedField[windowStart + i] === subjectText[i]) continue;
-				mismatchAt = i;
-				if (++mismatches > 1) break;
-			}
-			// Exactly one: zero would mean the contains tier already owns it. A
-			// separator in its place splits the word rather than correcting it.
-			if (mismatches !== 1 || isBoundaryChar(normalisedField[windowStart + mismatchAt])) continue;
+			if (atWordStart && !opensWord(normalisedField, windowStart)) continue;
+			const mismatchAt = soleMismatchAt(normalisedField, windowStart, subjectText);
+			// A separator in its place splits the word rather than correcting it.
+			if (mismatchAt === -1 || isBoundaryAt(normalisedField, windowStart + mismatchAt)) continue;
 			const corrected = normalisedField.slice(windowStart, windowStart + subjectLength);
 			if (!windows.includes(corrected)) windows.push(corrected);
 		}
@@ -245,30 +172,12 @@ const substitutedWindows = (
 	return windows;
 };
 
-const wordStartsOf = (prepared: PreparedQuery): number[] => {
-	let starts = prepared.wordStarts;
-	if (starts === undefined) {
-		starts = [];
-		let from = 0;
-		for (const word of prepared.queryWords) {
-			const wordAt = prepared.normalisedQuery.indexOf(word, from);
-			starts.push(wordAt);
-			from = wordAt + word.length;
-		}
-		prepared.wordStarts = starts;
-	}
-	return starts;
-};
+const absentWordSubjects = perQuery((prepared) =>
+	prepared.queryWords.map((): CorrectionSubject | undefined => undefined),
+);
 
-const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
-	const wordStart = wordStartsOf(prepared)[wordIndex];
-	return rawQuery(prepared).slice(wordStart, wordStart + prepared.queryWords[wordIndex].length);
-};
-
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => undefined));
-	return (cache[wordIndex] ??= absentWordSubject(prepared, wordIndex));
-};
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject =>
+	(absentWordSubjects(prepared)[wordIndex] ??= absentWordSubject(prepared, wordIndex));
 
 const spliceCorrectedWord = (
 	prepared: PreparedQuery,
@@ -284,12 +193,12 @@ const spliceCorrectedWord = (
 		prepared.normalisedQuery.slice(wordEnd);
 	const raw = rawQuery(prepared);
 	const rawCorrected = raw.slice(0, wordStart) + rawWord + raw.slice(wordEnd);
-	return prepareCorrection(prepared, rawCorrected, normalisedCorrected);
+	return prepareCorrection(rawCorrected, normalisedCorrected);
 };
 
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
-export type CorrectionSubject = {
+type CorrectionSubject = {
 	queryText: string;
 	anchors: string[];
 	variants: RescueVariant[];
@@ -297,14 +206,19 @@ export type CorrectionSubject = {
 	fromWindow: (corrected: string) => PreparedQuery;
 };
 
-const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
-	queryText: prepared.normalisedQuery,
-	anchors: correctionAnchors(prepared.normalisedQuery),
-	variants: buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery),
+type VariantFamily = Pick<CorrectionSubject, "queryText" | "variants" | "fromVariant">;
+
+const variantFamily = (raw: string, normalised: string): VariantFamily => ({
+	queryText: normalised,
+	variants: buildRescueVariants(raw, normalised),
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
+});
+
+const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
+	...variantFamily(rawQuery(prepared), prepared.normalisedQuery),
+	anchors: correctionAnchors(prepared.normalisedQuery),
 	fromWindow: (corrected) =>
 		prepareCorrection(
-			prepared,
 			substituteRaw(rawQuery(prepared), prepared.normalisedQuery, corrected),
 			corrected,
 		),
@@ -327,16 +241,13 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 
 const scoreEnumeratedVariants = (
 	rescue: RescueContext,
-	subject: CorrectionSubject,
+	subject: VariantFamily,
 	fieldFloor: number,
 	short: boolean,
 ): MatchResult | null => {
 	let best: MatchResult | null = null;
 	for (const variant of subject.variants) {
-		// Only a drop shortens the subject, so only it answers to the field-scaled
-		// floor.
 		if (variant.isDrop && subject.queryText.length < fieldFloor) continue;
-		// A variant still needing a class the field lacks cannot be contained.
 		if ((variant.requiredMask & rescue.missingClasses) !== 0) continue;
 		if (!rescue.normalisedField.includes(variant.normalised)) continue;
 		best = preferBetter(best, scoreCorrectedQuery(rescue, subject.fromVariant(variant), short));
@@ -370,7 +281,10 @@ const correctSubject = (rescue: RescueContext, subject: CorrectionSubject): Matc
 	const fieldLength = rescue.normalisedField.length;
 	const short = subject.queryText.length < MIN_TYPO_QUERY_LENGTH;
 	const best = scoreEnumeratedVariants(rescue, subject, minTypoQueryLength(fieldLength), short);
-	if (isUnbeatableCorrection(best) || subject.queryText.length < minSubstitutionLength(fieldLength)) {
+	if (
+		isUnbeatableCorrection(best) ||
+		subject.queryText.length < minSubstitutionLength(fieldLength)
+	) {
 		return best;
 	}
 	return scoreSubstitutedWindows(rescue, subject, best, short);
@@ -398,38 +312,96 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	return correctSubject(rescue, wordRescueStateOf(prepared, absentIndex));
 };
 
-const typoRescue = (rescue: RescueContext): MatchResult | null => {
-	const { prepared } = rescue;
-	return correctSubject(rescue, (prepared.rescueState ??= wholeQuerySubject(prepared)));
-};
+const wholeQuerySubjectOf = perQuery(wholeQuerySubject);
+
+const typoRescue = (rescue: RescueContext): MatchResult | null =>
+	correctSubject(rescue, wholeQuerySubjectOf(rescue.prepared));
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a
-// dropped keystroke: the missing character is the gap itself. The gap must be a
-// word character — a skipped separator is concatenated-word matching, not a
-// typo. Skips the field-scaled floor: this shape pins the correction to one
-// contiguous window, so the multiple-comparisons hazard that floor guards never
-// arises (@see bench/longtext.test.ts).
-export const missingCharRescue = (
-	rescue: RescueContext,
-	ranges: HighlightRanges,
-): MatchResult | null => {
+// dropped keystroke, unless the gap is a separator. It skips the field-scaled
+// floor: the shape pins the correction to one window, so there are no multiple
+// comparisons to guard against (@see bench/longtext.test.ts).
+const missingCharRescue = (rescue: RescueContext, ranges: HighlightRanges): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
 	if (ranges.length !== 2) return null;
 	const [[firstStart, firstEnd], [secondStart, secondEnd]] = ranges;
+	if (secondStart !== firstEnd + 2 || isBoundaryAt(normalisedField, firstEnd + 1)) return null;
 	const gapChar = normalisedField[firstEnd + 1];
-	if (secondStart !== firstEnd + 2 || !wordChar.test(gapChar)) return null;
 
 	const insertAt = firstEnd - firstStart + 1;
 	const raw = rawQuery(prepared);
 	return scoreCorrectedQuery(
 		rescue,
 		prepareCorrection(
-			prepared,
 			raw.slice(0, insertAt) + gapChar + raw.slice(insertAt),
 			normalisedField.slice(firstStart, secondEnd + 1),
 		),
 	);
 };
 
-export const rescueField = (rescue: RescueContext): MatchResult | null =>
+// A lone word's swaps, which the readings try beside fuzzy chains where the
+// rescue waits for no match (@see readings.ts). The word alone, as typed, so a
+// query's punctuation need not appear in the field.
+export const swapFamily = (prepared: PreparedQuery): VariantFamily =>
+	variantFamily(rawWordOf(prepared, 0), prepared.queryWords[0]);
+
+export const bestSwap = (
+	field: string,
+	normalisedField: string,
+	prepared: PreparedQuery,
+	swaps: VariantFamily,
+): MatchResult | null =>
+	scoreEnumeratedVariants(
+		{ rawField: field, normalisedField, prepared, acronymTier: false, missingClasses: 0 },
+		swaps,
+		0,
+		true,
+	);
+
+const rescueField = (rescue: RescueContext): MatchResult | null =>
 	rescue.prepared.queryWords.length > 1 ? multiWordRescue(rescue) : typoRescue(rescue);
+
+// Nothing held is enough to go on: a field the literal pass never scored failed
+// a gate that only false-passes, so it holds no literal match or chain either.
+const rescueBeside = (rescue: RescueContext, held: MatchResult | null): MatchResult | null => {
+	if (held === null) return rescueField(rescue);
+	if (held.score <= CONTAINS_SCORE) return held;
+	// The field may literally contain the corrected word, so both rescues are
+	// still scored beside the chain, which keeps a tie with them.
+	const dropped = missingCharRescue(rescue, held.ranges);
+	return preferBetter(preferBetter(dropped, rescueField(rescue)), held);
+};
+
+const rescueStage = perQuery((prepared): PreparedStage => {
+	const counts = rescueCounts(prepared);
+	const pairsGate = buildRescueBigramGate(prepared.normalisedQuery, counts);
+	return {
+		needed: prepared.queryMask,
+		counts,
+		spare: 1,
+		admitsPairs: (missing, item, pairsOf) =>
+			missing === 0 || rescuePairsAdmit(pairsGate, missing, pairsOf(item)),
+		match: (rawField, normalisedField, held, fieldMask, acronymTier) =>
+			rescueBeside(
+				{
+					rawField,
+					normalisedField,
+					prepared,
+					acronymTier,
+					missingClasses: prepared.queryMask & ~fieldMask,
+				},
+				held,
+			),
+		wholeList: true,
+		besideLiteral: true,
+	};
+});
+
+export const earlyRescue: Stage = {
+	prepare: (prepared) => (rescueTurn(prepared) === "first" ? rescueStage(prepared) : null),
+};
+
+export const lateRescue: Stage = {
+	prepare: (prepared, competition) =>
+		competition === "none" && rescueTurn(prepared) === "last" ? rescueStage(prepared) : null,
+};

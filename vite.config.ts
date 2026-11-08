@@ -5,14 +5,18 @@ import { INTERNAL_NAMES } from "./scripts/internal-names.ts";
 export default defineConfig({
 	fmt: {
 		useTabs: true,
-		// The bench pipeline owns results.json, the frozen corpora, and every
-		// marked region in docs/benchmarks.md — formatting them fights the
-		// generator and `pnpm bench --check`.
+		// The bench pipeline owns results.json, the frozen corpora, and every doc
+		// with a marked region; formatting them fights the generator and
+		// `vpr bench --check`.
 		ignorePatterns: [
 			"dist",
 			"bench/results.json",
 			"bench/corpus-*.json",
+			"bench/misspellings.json",
 			"docs/benchmarks.md",
+			"docs/compare.md",
+			"docs/libraries",
+			"README.md",
 			"site",
 		],
 	},
@@ -21,8 +25,9 @@ export default defineConfig({
 		categories: { correctness: "error" },
 		rules: {},
 		env: { builtin: true },
-		// The site is its own pnpm root, linted and typechecked by its own toolchain.
-		ignorePatterns: ["site"],
+		overrides: [
+			{ files: ["examples/command-palette/**"], plugins: ["react"], env: { browser: true } },
+		],
 	},
 	pack: {
 		entry: ["./src/index.ts"],
@@ -61,9 +66,17 @@ export default defineConfig({
 	},
 	run: {
 		tasks: {
-			verify: {
-				command: ["vp lint", "knip", "vp test run --coverage"],
-				dependsOn: ["types"],
+			build: "vp pack",
+			// Its dependencies run side by side before the tests.
+			gate: {
+				command: "vp test run --coverage",
+				dependsOn: ["types", "lint", "knip"],
+				// Coverage writes temp files the run then reads back, which otherwise
+				// marks every run as having changed its own inputs.
+				cache: {
+					input: [{ auto: true }, "!coverage/**"],
+					output: [{ auto: true }, "!coverage/**"],
+				},
 			},
 			// tsc 7 is a native binary whose file reads the cache's tracking doesn't see,
 			// so a cached run would replay a pass over code it never read.
@@ -76,7 +89,19 @@ export default defineConfig({
 				dependsOn: ["build"],
 				cache: false,
 			},
-			suite: {
+			lint: "vp lint",
+			"lint:fix": { command: "vp lint --fix", cache: false },
+			format: { command: "vp fmt", cache: false },
+			knip: {
+				command: "knip",
+				// Its loader caches each compiled config here and reads it back next run.
+				cache: {
+					input: [{ auto: true }, "!node_modules/.cache/**"],
+					output: [{ auto: true }, "!node_modules/.cache/**"],
+				},
+			},
+			test: "vp test run",
+			"bench:test": {
 				command: "vp test run",
 				cwd: "bench",
 				dependsOn: ["build"],
@@ -86,6 +111,22 @@ export default defineConfig({
 					env: ["BENCH_ONLY", "BENCH_REPEAT"],
 				},
 			},
+			// A measurement must never be replayed from a cache.
+			bench: { command: "node bench/pipeline.ts", dependsOn: ["build"], cache: false },
+			release: { command: "node scripts/release.ts", cache: false },
+			"corpus:wikidata": {
+				command: "GEN_WIKIDATA=1 vp test run corpus-wikidata-gen",
+				cwd: "bench",
+				cache: false,
+			},
+			"corpus:emoji": {
+				command: "GEN_EMOJI=1 vp test run corpus-emoji-gen",
+				cwd: "bench",
+				cache: false,
+			},
+			site: { command: "vp run ekrina-docs#dev", cache: false },
+			"site:build": { command: "vp run ekrina-docs#build", cache: false },
+			example: { command: "vp run ekrina-command-palette#dev", cache: false },
 		},
 	},
 });

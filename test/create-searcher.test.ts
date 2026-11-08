@@ -108,7 +108,12 @@ describe("selectField overload", () => {
 		const results = createSearcher(users, (u) => u.name)("john");
 		expect(results).toHaveLength(1);
 		expect(results[0]!.item).toBe(users[0]);
-		expect(results[0]).toMatchObject({ score: 0.5, tier: "prefix", ranges: [[0, 3]], text: "John Doe" });
+		expect(results[0]).toMatchObject({
+			score: 0.5,
+			tier: "prefix",
+			ranges: [[0, 3]],
+			text: "John Doe",
+		});
 	});
 
 	it("skips items whose text is null", () => {
@@ -219,8 +224,6 @@ describe("unicode", () => {
 	it("finds a mid-word match whose accent is a separate combining mark", () => {
 		const decomposed = "Re\u0301sume\u0301";
 		expect(fuzzyMatch(decomposed, "esum")?.tier).toBe("contains");
-		expect(createSearcher([decomposed])("esum").map((r) => r?.tier)).toEqual([
-			"contains",
-		]);
+		expect(createSearcher([decomposed])("esum").map((r) => r?.tier)).toEqual(["contains"]);
 	});
 });

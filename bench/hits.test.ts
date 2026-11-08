@@ -42,7 +42,10 @@ const runOut: Record<
 > = {};
 
 const scored = (list: string[], samples: Sample[], all: Config[], reversedAll: Config[]) => {
-	const families = [...scoreFamilies(samples, all, reversedAll), ...scoreJunk(junkProbes(list), all)];
+	const families = [
+		...scoreFamilies(samples, all, reversedAll),
+		...scoreJunk(junkProbes(list), all),
+	];
 	return { families, scorecard: scorecardOf(families, all) };
 };
 

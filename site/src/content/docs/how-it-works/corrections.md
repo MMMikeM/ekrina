@@ -23,10 +23,12 @@ A correction is a guess at what was meant, so it is the fallback.
 In full:
 
 - **Up to two mistakes:** a wrong, missing, extra or swapped character, or a space typed inside a word or left out between two.
-  A single word takes two from eight letters and one from five; each word of a phrase takes one from five.
+  A word takes two from eight letters and one from five, and a phrase takes at most two in all.
+  A space typed inside a word is undone only in a query of two words.
 - **A word typed sparsely:** at least four of its letters, in order, starting with its first and covering at least half of it (`hget` for "Huguette").
 - **A key held down:** a run of three or more of one letter counts as one mistake (`twaaain`).
-- **A swap in a four-letter word**, where the fix starts a word (`tahn` for "Than").
+- **A wrong or swapped letter in a four-letter word**, where the fix starts a word (`tahn` for "Than").
+- **In text over 64 characters**, a wrong or extra letter needs a word of six letters, and seven past 1,024, and two mistakes or a sparse word are read only in text up to 512 characters.
 
 It is not general edit distance, which keeps it small and fast.
 
@@ -37,8 +39,8 @@ It is not general edit distance, which keeps it small and fast.
   Past that, a correction would come after ten matches of the query as typed, so none is computed.
   So the same typo can be corrected in a short list and left alone in a long one, where enough items match it as typed.
 - **Short queries only when nothing matches.**
-  A query under five characters is corrected only when no item matches it at all, not even fuzzily.
-  The exception is a swap in a four-letter word, which is undone when no item contains it literally, even if some match it fuzzily.
+  A query under five characters is corrected only when no item matches it at all, not even fuzzily, and a wrong letter is tried last, once a swap or a sparse word has found nothing: `tahn` reads as "Than", not "Taha".
+  The exceptions are a word typed sparsely, read while fewer than ten items match as typed, as a longer query is, and a swap in a four-letter word, undone when no item contains it literally, even if some match it fuzzily.
 - **Never for a long word.**
   A query holding a word over 64 characters is never corrected, and any query is matched on its first 256 characters.
 

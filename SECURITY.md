@@ -24,7 +24,7 @@ The attestation's SLSA provenance is also attached on its own, as `ekrina-<versi
 
 ## Testing
 
-The tests cover every statement and branch of `src/`, and `pnpm gate` fails below 100%.
+The tests cover every statement and branch of `src/`, and `pnpm vpr gate` fails below 100%.
 Property tests (`test/properties.test.ts`, with fast-check) check the published invariants against random input: ranges always index the caller's string, normalisation is 1:1, and a search typed keystroke by keystroke returns what a fresh one does.
 CI runs `pnpm audit` over the development dependencies, CodeQL on every pull request, and the packed tarball on Node 18, 20, 22 and 24, Bun and Deno.
 

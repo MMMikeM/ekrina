@@ -1,23 +1,20 @@
-import { isBoundaryChar } from "./boundaries";
+import { closesWord, isBoundaryAt, opensWord } from "./boundaries";
+import { better } from "./scores";
 import type { MatchResult, HighlightRange } from "./types";
 
-// Same shape as a HighlightRange, named for what it means here: a consecutive
-// run of matched characters.
 type Chunk = HighlightRange;
 
-// BASE equals SCORES.CONTAINS (2) by design — a fuzzy match must never beat a
-// true contains — but intentionally NOT the same binding: they mean different
-// things and could diverge.
+// Equal to SCORES.CONTAINS so a chain never beats a contains, but its own
+// binding: the two mean different things.
 const CHUNK_BASE = 2;
 const CHUNK_WHOLE_WORD = 0.2;
 const CHUNK_WORD_START = 0.4;
 const CHUNK_LONG = 0.8;
 const CHUNK_SCATTERED = 1.6;
 
-// Matched chars ÷ spanned chars. Junk chains over long text measured at most
-// 0.143; the sparsest genuine match measured 0.211; 0.18 splits the gap with
-// margin both ways (@see docs/benchmarks.md "Matching inside long text"). This
-// is what keeps the fuzzy tier safe over document-length fields.
+// Matched chars ÷ spanned chars, between the densest junk chain and the
+// sparsest genuine match over long text (@see docs/benchmarks.md "Matching
+// inside long text").
 const DENSITY_FLOOR = 0.18;
 
 const scoreChunks = (chunks: Chunk[], normalisedField: string): MatchResult | null => {
@@ -28,28 +25,23 @@ const scoreChunks = (chunks: Chunk[], normalisedField: string): MatchResult | nu
 
 	let score = CHUNK_BASE;
 	for (const [start, end] of chunks) {
-		// Same boundary definition admitsChunk used — a chunk admitted because a
-		// hyphen is a boundary must not then be scored as if it weren't.
-		const opensWord = start === 0 || isBoundaryChar(normalisedField[start - 1]);
-		const closesWord =
-			end === normalisedField.length - 1 || isBoundaryChar(normalisedField[end + 1]);
-		if (opensWord && closesWord) score += CHUNK_WHOLE_WORD;
-		else if (opensWord) score += CHUNK_WORD_START;
+		const opens = opensWord(normalisedField, start);
+		if (opens && closesWord(normalisedField, end)) score += CHUNK_WHOLE_WORD;
+		else if (opens) score += CHUNK_WORD_START;
 		else if (end - start + 1 >= 3) score += CHUNK_LONG;
 		else score += CHUNK_SCATTERED;
 	}
 	return { score, tier: "fuzzy", ranges: chunks };
 };
 
-// A chunk may start mid-word only by running 3+ characters; short query tails
-// are exempt, since fewer than 3 remaining characters could never satisfy it.
-const admitsChunk = (
+// Mid-word, a chunk must run 3+ characters; short query tails are exempt, since
+// fewer than 3 remaining characters could never satisfy it.
+const runsOn = (
 	normalisedField: string,
 	at: number,
 	normalisedQuery: string,
 	queryFrom: number,
 ): boolean => {
-	if (at === 0 || isBoundaryChar(normalisedField[at - 1])) return true;
 	const queryCharsLeft = normalisedQuery.length - queryFrom;
 	const fieldCharsLeft = normalisedField.length - at;
 	const minChunkLength = Math.min(3, queryCharsLeft, fieldCharsLeft);
@@ -59,9 +51,23 @@ const admitsChunk = (
 	);
 };
 
-// Assemble the whole query from a chunk at `start` (already admitted), taking
-// the leftmost admissible placement for every later chunk; null when the chain
-// dead-ends.
+const admitsChunk = (
+	normalisedField: string,
+	at: number,
+	normalisedQuery: string,
+	queryFrom: number,
+): boolean =>
+	opensWord(normalisedField, at) || runsOn(normalisedField, at, normalisedQuery, queryFrom);
+
+const nextBoundary = (normalisedField: string, from: number): number => {
+	let at = from;
+	while (at < normalisedField.length && !isBoundaryAt(normalisedField, at)) at++;
+	return at;
+};
+
+// A later chunk is admitted like the first within the word the chain is in; in
+// a later word it must open that word, or "prow" assembles across "phone with
+// arrow". Every later chunk takes its leftmost admissible placement.
 const chainFrom = (
 	normalisedField: string,
 	normalisedQuery: string,
@@ -83,11 +89,17 @@ const chainFrom = (
 
 		if (queryAt === normalisedQuery.length) return chunks;
 
-		// indexOf from past each rejected occurrence, never one char at a time —
-		// stepping would re-find the same occurrence per step and turn a far-away
-		// reject into O(gap²).
+		// indexOf past each rejected occurrence: stepping one unit at a time makes
+		// a far-away reject O(gap²).
+		const wordEnd = nextBoundary(normalisedField, chunkEnd);
 		let at = normalisedField.indexOf(queryChar, chunkEnd);
-		while (at > -1 && !admitsChunk(normalisedField, at, normalisedQuery, queryAt)) {
+		while (
+			at > -1 &&
+			!(
+				opensWord(normalisedField, at) ||
+				(at <= wordEnd && runsOn(normalisedField, at, normalisedQuery, queryAt))
+			)
+		) {
 			at = normalisedField.indexOf(queryChar, at + 1);
 		}
 		if (at === -1) return null;
@@ -95,18 +107,15 @@ const chainFrom = (
 	}
 };
 
-// A correctness guard, not a speed knob: the density floor is a ratio, so every
-// extra first-chunk attempt is another chance for junk to assemble a dense
-// coincidence, and an unbounded search makes the junk rate climb with field
-// length. 4 does as well as an unbounded search while staying clear of the
-// leak — measured table in docs/performance.md "Bounded chunk-start retries".
+// Each extra first-chunk attempt is another chance for junk to assemble a
+// dense coincidence, so this is a correctness bound, not a speed knob
+// (@see docs/performance.md "Bounded chunk-start retries").
 const MAX_CHUNK_STARTS = 4;
 
-// Retry the assembly from the first few admissible placements of the first
-// chunk and keep the lowest-scoring: leftmost-only strands the chain whenever the
-// query's first character also opens an earlier word ("towls" over "Tasty Silk
-// Towels" hits the T of "Tasty"). Later chunks stay leftmost-greedy —
-// reconsidering those too is what starts leaking junk.
+// Leftmost-only would strand the chain whenever the query's first character
+// also opens an earlier word ("towls" over "Tasty Silk Towels"), so the first
+// chunk retries; later chunks stay leftmost, since reconsidering those too
+// leaks junk.
 export const fuzzyChainMatch = (
 	normalisedField: string,
 	normalisedQuery: string,
@@ -123,9 +132,7 @@ export const fuzzyChainMatch = (
 		if (!admitsChunk(normalisedField, start, normalisedQuery, 0)) continue;
 		if (++attempts > MAX_CHUNK_STARTS) break;
 		const chunks = chainFrom(normalisedField, normalisedQuery, start);
-		if (chunks === null) continue;
-		const scored = scoreChunks(chunks, normalisedField);
-		if (scored !== null && (best === null || scored.score < best.score)) best = scored;
+		if (chunks !== null) best = better(best, scoreChunks(chunks, normalisedField));
 	}
 	return best;
 };

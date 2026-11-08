@@ -18,7 +18,8 @@ export type Sample = {
 // Identical strings are always tied, and the corpus repeats a few items.
 export const tieAround = (ranked: string[], reversed: string[], rank: number): [number, number] => {
 	const reversedAt = new Map<string, number[]>();
-	for (const [at, item] of reversed.entries()) reversedAt.set(item, [...(reversedAt.get(item) ?? []), at]);
+	for (const [at, item] of reversed.entries())
+		reversedAt.set(item, [...(reversedAt.get(item) ?? []), at]);
 	const flipsWithNext = (at: number): boolean => {
 		if (ranked[at] === ranked[at + 1]) return true;
 		const next = reversedAt.get(ranked[at + 1]) ?? [];
@@ -72,7 +73,14 @@ export const scoreFamilies = (
 		const ofKind = samples.filter((sample) => sample.kind === kind);
 		const scored = ofKind[0].relevant !== null;
 		const queries = ofKind.map((sample) => sample.query);
-		const row: FamilyRow = { kind, scored, queries, mrr: {}, medianRows: {}, ...(ofKind[0].group ? { group: ofKind[0].group } : {}) };
+		const row: FamilyRow = {
+			kind,
+			scored,
+			queries,
+			mrr: {},
+			medianRows: {},
+			...(ofKind[0].group ? { group: ofKind[0].group } : {}),
+		};
 		for (const [at, config] of all.entries()) {
 			const rrs: number[] = [];
 			const rows: number[] = [];
@@ -92,7 +100,10 @@ export const scoreFamilies = (
 };
 
 /** Queries nothing answers, as refusal rows: the share of them each config answers at all. */
-export const scoreJunk = (probes: { kind: string; queries: string[] }[], all: Config[]): FamilyRow[] =>
+export const scoreJunk = (
+	probes: { kind: string; queries: string[] }[],
+	all: Config[],
+): FamilyRow[] =>
 	probes.map(({ kind, queries }) => {
 		const row: FamilyRow = { kind, scored: false, queries, mrr: {}, medianRows: {}, answered: {} };
 		for (const config of all) {
@@ -127,7 +138,9 @@ export const headlineMrr = (families: FamilyRow[], library: string): number => {
 
 /** The share of junk probes a config answers, over every refusal row that measured it. */
 const junkRate = (families: FamilyRow[], library: string): number | undefined => {
-	const shares = families.flatMap((family) => (family.answered?.[library] === undefined ? [] : [family.answered[library]]));
+	const shares = families.flatMap((family) =>
+		family.answered?.[library] === undefined ? [] : [family.answered[library]],
+	);
 	return shares.length ? mean(shares) : undefined;
 };
 

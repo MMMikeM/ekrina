@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The pages whose tables `pnpm bench` regenerates are copied from docs/, which
+// The pages whose tables `vpr bench` regenerates are copied from docs/, which
 // GitHub renders too, so their numbers have one source. Every other page is
 // written for the site, in src/content/docs.
 

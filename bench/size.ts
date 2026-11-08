@@ -9,7 +9,7 @@ const here = fileURLToPath(new URL(".", import.meta.url));
  * The library's primary API bundled and minified by esbuild, then gzipped, in
  * bytes. zlib rather than the `gzip` CLI, whose output differs between macOS
  * and Linux. Ekrina resolves to the workspace's built `dist/`, so it measures
- * the last `pnpm build`.
+ * the last `vpr build`.
  */
 export const gzipBytes = (library: string): number => {
 	const meta = META[library];

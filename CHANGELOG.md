@@ -29,6 +29,7 @@ What breaks is the seven names below, what a result holds, and the same query re
 
   Before, `atBest` and a misspelt option were ignored, and the others failed with an unreadable message.
   A negative, infinite or non-number `demoteBy` throws a `RangeError`, since a negative shift would carry a fuzzy or corrected match to or below `SCORES.CONTAINS`.
+
 - **Several fields are named, and a result is its best field's match.**
   An object that names each field replaces the array of field specs: `createSearcher(posts, { title: (p) => p.title, body: { selectField: (p) => p.body, demoteBy: SCORES.CONTAINS } })`.
   A field is a function, or a spec when it needs options, and one spec alone, `{ selectField, acronym: true }`, is a single field with options.
@@ -46,7 +47,7 @@ What breaks is the seven names below, what a result holds, and the same query re
 
 - **Corrections reach further, when the query as typed matches poorly.**
   As well as one wrong, missing, extra or swapped character:
-  - two mistakes in a word of eight letters or more, or one in each phrase word of five or more, at 2.1 each;
+  - two mistakes in a word of eight letters or more, or one in a word of five or more, up to two in a query, at 2.1 each;
   - a space typed inside a word or left out between two, as one mistake;
   - a word typed sparsely, at least four of its letters in order from its first and covering half of it (`hget` for "Huguette"), scored just above `contains`;
   - a key held down, a run of three or more of one letter, as one mistake (`twaaain`);
@@ -54,16 +55,17 @@ What breaks is the seven names below, what a result holds, and the same query re
     - undone only where the fix starts a word;
     - tried even beside a fuzzy chain, which keeps other short corrections from running.
 
-  A word read any of these ways reports `corrected` spelt as the field spells it.
+  A word read any of these ways but the four-letter swap reports `corrected` spelt as the field spells it; a single fixed character keeps the caller's casing.
   On the benchmark below:
   - MRR rises 0.70 → 0.91–0.92 on all three corpora;
   - MRR on held-out queries rises with it (`bench/held-out.test.ts`);
   - the share of unanswerable queries answered stays at zero on every corpus.
 
   A query with ten or more literal matches skips these corrections entirely (docs/performance.md).
-  The bundle grows from ~6.4 kB to ~8.4 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
+  The bundle grows from ~6.4 kB to ~8.6 kB gzipped (esbuild, tree-shaken to `createSearcher`), and these corrections are most of it.
   The build mangles internal property names, which takes ~0.3 kB off, and duplicated paths are merged into one.
   Every result is unchanged, checked over 46,320 compared result lists and all 702 MRR cells.
+
 - **Searching is faster than 1.1.2, corrections included, and holds about as much.**
   - A single-word query is gated by an `indexOf` scan instead of a compiled regex, and the scan tests as fast as the regex did.
   - The raw-text gates other queries compile anchor on `\w`, which compiles in a fraction of the time a `\p{L}` class does.
@@ -71,11 +73,23 @@ What breaks is the seven names below, what a result holds, and the same query re
   - The searcher keeps no per-item copy of trimmed text or of scores.
   - The raw scans look up each non-ASCII character's class in a table instead of folding it.
   - With `limit`, once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
+  - A keystroke that ran a correction still narrows the next one to its literal survivors, word boundaries in ASCII text are read from a table, and only the page `limit` returns is put in order: typing takes about 15% less and document-length fields about 11% less, with identical results.
+  - A searcher lets go of the last query's matches once it has returned them, up to 4 MB after a two-letter query over 100k items.
+  - A field lacking a letter the query holds twice is turned away before the one-edit rescue looks at it, which no edit could fix: `fuzzyMatch` over a list takes about 29% less.
+  - A correction no longer reruns the literal tiers and the fuzzy chain on items the literal pass already scored: a query of five letters or more over a list of 1,200-character fields takes 35–39% less, and a two-word query over the native corpus about 20% less, with identical results.
 
   Against the 1.1.2 run in `bench/results.json`'s history:
-  - a query takes 43% less once a searcher is warm (0.54–0.64 → 0.31–0.36 ms at 10k);
-  - a 100k session takes 11–16% less, and a first answer 17–45% less;
+  - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);
+  - the 24 queries of a 100k session take 11–18% less, and a first answer 6–45% less;
   - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
+
+- **A fuzzy chain enters a later word only at its start.**
+  `prow` no longer matches "mobile **p**hone with ar**row**", while "**p**erson **row**ing boat", `vsc` and initials such as `tfts` still match; inside one word a piece may still start mid-word.
+  That trims the tail of weak fuzzy rows (a three-letter prefix's median result set 51 → 41 on en) and halves long-text fuzzy junk, with no family's MRR lower (docs/performance.md).
+  A short query's wrong-letter correction is now tried after its swap and sparse readings, and only when they find nothing, so `tahn` still reads as "Than" rather than "Taha".
+  The swap keeps the caller's casing, as every other swap does, so `Tahn` scores 2.1 against "Than" in a searcher and in `fuzzyMatch` alike.
+- **A no-break space or a dash outside ASCII in a query is a separator like any other.**
+  It counted as a character the field had to hold, so `new` + no-break space + `york` found neither "new york" nor "new-york" in a searcher, and `fuzzyMatch` returned "New York" as a correction at 1.5.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
   - 100,000 well-known Wikidata entities, under their English names and again under their native names;
@@ -83,9 +97,10 @@ What breaks is the seven names below, what a result holds, and the same query re
 
   The query families are drawn from how people mistype, Wikipedia's list of common misspellings included, and were weighted by group before anything was measured.
   Each library also gets a junk rate, the share of queries no item answers that it answers anyway.
-  On real text the long-text junk rate is 2–4% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
+  On real text the long-text junk rate is about 1% rather than the 0% measured on synthetic text, and `bench/longtext.test.ts` now holds it under a ceiling.
   The typing session times each keystroke once, in a fresh process, as a user types it.
   Before, it repeated each query in one process, which let V8 reuse the regexes it had compiled.
+
 - **The package ships `dist/AGENTS.md`.**
   It lists the exports and the rules a coding agent needs to use them correctly, built from the docs site's page for AI coding agents.
 

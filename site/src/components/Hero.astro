@@ -9,7 +9,7 @@ const highlight = data.heroHighlight;
 const [beforeHighlight, afterHighlight] =
 	highlight && title.includes(highlight) ? title.split(highlight) : [title];
 
-const install = `npm install ${project.name}`;
+const install = `npm install ${project.name}@^${project.majorVersion}`;
 ---
 
 <div class="lead">
