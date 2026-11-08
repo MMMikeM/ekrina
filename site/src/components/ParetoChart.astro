@@ -9,6 +9,8 @@ import {
 	corpusOf,
 	MEASURE_LABELS,
 	MEASURES,
+	SCALE_LABELS,
+	SCALES,
 	noteTexts,
 	type Measure,
 	type ParetoData,
@@ -26,7 +28,13 @@ interface Props {
 
 const data = raw as ParetoData;
 const { measure } = Astro.props;
-const state: ParetoState = { measure, constructorCounted: true, corpus: "native", size: "10000" };
+const state: ParetoState = {
+	measure,
+	constructorCounted: true,
+	corpus: "native",
+	size: "10000",
+	scale: "log",
+};
 const id = `pareto-${measure}`;
 const note = constructorNote(state);
 const notes = noteTexts(data);
@@ -126,6 +134,21 @@ const NARROW_PX = 340;
 		<div class="pareto-static narrow" set:html={chartSvg(data, state, NARROW_PX)} />
 		<div class="pareto-tip" id={`${id}-tip`} role="tooltip" hidden></div>
 	</div>
+	<form class="pareto-scale decoration not-content" aria-label="How the time axis is drawn" hidden>
+		<fieldset>
+			<legend>Time axis</legend>
+			<div class="segmented">
+				{
+					SCALES.map((scale) => (
+						<label>
+							<input type="radio" name={`${id}-scale`} value={scale} checked={scale === state.scale} />
+							<span>{SCALE_LABELS[scale]}</span>
+						</label>
+					))
+				}
+			</div>
+		</fieldset>
+	</form>
 	<ul class="pareto-key decoration not-content" aria-hidden="true">
 		<li><svg viewBox="-8 -8 16 16"><circle class="ekrina" r="5.5"></circle></svg>Ekrina</li>
 		<li><svg viewBox="-9 -9 18 18"><path class="ekrina hollow" d="M0 -8L8 0L0 8L-8 0Z"></path></svg>Ekrina (acronym)</li>
@@ -186,8 +209,27 @@ const NARROW_PX = 340;
 		}
 	}
 
-	.pareto-controls[hidden] {
+	.pareto-controls[hidden],
+	.pareto-scale[hidden] {
 		display: none;
+	}
+
+	.pareto-scale fieldset {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: var(--space-2xs);
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.pareto-scale legend {
+		float: left;
+		padding: 0;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
 	}
 
 	.pareto-controls fieldset {
