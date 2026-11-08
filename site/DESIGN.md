@@ -25,6 +25,8 @@ colors:
   chart-ekrina-light: "#2a78d6"
   chart-subject: "#e06a35"
   chart-subject-light: "#d4622a"
+  chart-field: "#6f6e68"
+  chart-field-light: "#94928b"
   code-night: "#292d3e"
 typography:
   display:
@@ -151,7 +153,7 @@ Dark values sit on `:root`; every `-light` key is the same role under `[data-the
 - **Press Blue** (`button`, `button-light`) with **White** (`button-text`): the fill of the primary call to action only.
 
 ### Secondary
-- **Highlighter Yellow** (`highlight`) with **Highlight Ink** (`highlight-ink`): `<mark>` in prose and results, the hero's highlighted word, the sidebar's current page, and the field of the mark (logo), behind its serif "e". Identical in both modes.
+- **Highlighter Yellow** (`highlight`) with **Highlight Ink** (`highlight-ink`): `<mark>` in prose and results, the hero's highlighted word, the sidebar's current page, the label of each point on the Pareto chart's frontier, and the field of the mark (logo), behind its serif "e". Identical in both modes.
 
 ### Tertiary
 - **Ekrina Series Blue** (`chart-ekrina`, `chart-ekrina-light`): Ekrina's line, dot and fill in every chart, its key swatch and winning-value fill in the explorer's scoreline, and the underline of the landing page's live search input.
@@ -165,6 +167,7 @@ Dark values sit on `:root`; every `-light` key is the same role under `[data-the
 - **Ink** (`ink`, `ink-light`): body text and headings; also the fill of a checked segment.
 - **Muted Ink** (`ink-muted`, `ink-muted-light`): captions, legends, table headers, status lines, placeholders, the shell prompt.
 - **Code Night** (`code-night`): the single Material Palenight code theme, used in both modes.
+- **Field Grey** (`chart-field`, `chart-field-light`): the dots of every library other than Ekrina on the Pareto chart, where there is no single compared library. It is achromatic, so it is the neutral the Two Sides Rule leaves room for, not a third hue.
 
 ### Named Rules
 **The Highlighter Rule.** Yellow is only ever a background, with Highlight Ink on it, in both modes. It is never text, never a border, never a chart series.
@@ -248,7 +251,7 @@ Quiet, ruled, mono.
 
 ### Segmented control
 A row of mono options in one Strong Rule outline (8px), each option 2.75rem tall and divided by a Strong Rule.
-The checked option inverts to an Ink fill with Paper text; focus draws the ring inset (-2px); forced colours swap in Highlight / HighlightText.
+The checked option inverts to an Ink fill with Paper text; focus draws the ring inset (-2px) over a 4px Paper band, so the Pen Blue ring meets Paper even on a checked segment; forced colours swap in Highlight / HighlightText.
 Works with no JavaScript: the corpus bar and explorer drive their panels through `:has()` on radio inputs.
 The exception is the explorer's Log/Linear switch, which stays hidden until its script runs, because the linear charts are fetched per library when Linear is picked.
 

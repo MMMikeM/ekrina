@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Artifact, ColdCell } from "../../bench/artifact.ts";
+import { type Artifact, type ColdCell, PUBLISHED_SIZE } from "../../bench/artifact.ts";
 import { displayName, foldsFor } from "../../bench/libraries.ts";
 import { headlineConfigs, meanOneShotOf } from "../../bench/tables.ts";
 import { CORPORA, type Corpus, type Marker, type ParetoData, type ParetoTiming } from "../src/pareto.ts";
@@ -63,9 +63,10 @@ const data: ParetoData = {
 			timedQueries: ekrinaBatch.perQueryMs?.length ?? 0,
 			probeKinds: probeKindsOf(corpus).length,
 			unfolded: configs.filter((config) => !foldsFor(corpus, config)).map(displayName),
+			// The same rule bench/tables.ts ranks a corpus's speed tables by.
+			ranked: sizes.includes(String(PUBLISHED_SIZE)),
 		};
 	}),
-	untimed: { id: "emoji", size: sizesOf("emoji")[0]! },
 	rows: configs.map((config) => ({
 		config,
 		name: displayName(config),

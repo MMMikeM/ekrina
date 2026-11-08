@@ -2,21 +2,31 @@ import raw from "./data/pareto.json";
 import {
 	captionOf,
 	chartSvg,
+	constructorNote,
 	CORPORA,
+	CORPUS_DEFINITIONS,
 	corpusOf,
 	MEASURES,
-	constructorNote,
 	type Corpus,
 	type Measure,
 	type ParetoData,
 	type ParetoState,
+	pointsOf,
+	sizeFor,
+	sizeNote,
 	tableHtml,
 	tooltipHtml,
+	viewFrontier,
 } from "./pareto.ts";
 
 const data = raw as ParetoData;
 const TIP_GAP = 14;
 const NARROW_PX = 480;
+const HIT_PX = 14;
+// Half of --tap-target, so a finger's target is 2.75rem across.
+const TOUCH_HIT_PX = 22;
+// Points this close draw over each other, so the tooltip lists them all.
+const COINCIDENT_PX = 4;
 
 const radios = (form: HTMLFormElement, control: string) =>
 	[...form.querySelectorAll<HTMLInputElement>(`input[name$="-${control}"]`)];
@@ -24,23 +34,55 @@ const radios = (form: HTMLFormElement, control: string) =>
 const checkedValue = (form: HTMLFormElement, control: string) =>
 	radios(form, control).find((input) => input.checked)?.value;
 
+const constructorField = (state: ParetoState) =>
+	state.constructorCounted ? "counted" : "not-counted";
+
 // A link can open the chart on a view: ?pareto=one-shot,not-counted,en,100000.
-// Anything it doesn't recognise keeps the page's own choice.
+// Anything it doesn't recognise, or leaves off the end, keeps the page's own choice.
 const initialOverride = (state: ParetoState): ParetoState => {
 	const asked = new URLSearchParams(location.search).get("pareto")?.split(",") ?? [];
 	const [measure = "", constructor = "", corpus = "", size = ""] = asked;
 	const chosenCorpus = (CORPORA as readonly string[]).includes(corpus)
 		? (corpus as Corpus)
 		: state.corpus;
+	const coldQuery = measure === "cold-query";
 	return {
-		measure: (MEASURES as readonly string[]).includes(measure) ? (measure as Measure) : state.measure,
+		measure: coldQuery
+			? "one-shot"
+			: (MEASURES as readonly string[]).includes(measure)
+				? (measure as Measure)
+				: state.measure,
 		constructorCounted:
-			constructor === "counted" || constructor === "not-counted"
+			!coldQuery && (constructor === "counted" || constructor === "not-counted")
 				? constructor === "counted"
-				: state.constructorCounted,
+				: coldQuery
+					? false
+					: state.constructorCounted,
 		corpus: chosenCorpus,
-		size: corpusOf(data, chosenCorpus).sizes.includes(size) ? size : state.size,
+		size: sizeFor(data, chosenCorpus, size || state.size),
 	};
+};
+
+/** The `pareto` parameter for `state`, leaving off the trailing fields that match the page's own view. */
+const viewParam = (state: ParetoState, initial: ParetoState): string => {
+	const fields = [state.measure, constructorField(state), state.corpus, state.size];
+	const defaults = [
+		initial.measure,
+		constructorField(initial),
+		initial.corpus,
+		sizeFor(data, state.corpus, initial.size),
+	];
+	let length = fields.length;
+	while (length > 0 && fields[length - 1] === defaults[length - 1]) length--;
+	return fields.slice(0, length).join(",");
+};
+
+const writeUrl = (param: string) => {
+	const url = new URL(location.href);
+	if (param) url.searchParams.set("pareto", param);
+	else url.searchParams.delete("pareto");
+	url.search = url.search.replaceAll("%2C", ",");
+	if (url.href !== location.href) history.replaceState(history.state, "", url);
 };
 
 export const hydrate = (figure: HTMLElement): void => {
@@ -49,54 +91,80 @@ export const hydrate = (figure: HTMLElement): void => {
 	const tip = figure.querySelector<HTMLElement>(".pareto-tip")!;
 	const caption = figure.querySelector<HTMLElement>("figcaption")!;
 	const table = figure.querySelector<HTMLElement>(".pareto-numbers .table-scroll")!;
-	let state = initialOverride(JSON.parse(figure.dataset.pareto!) as ParetoState);
+	const pageView = JSON.parse(figure.dataset.pareto!) as ParetoState;
+	let state = initialOverride(pageView);
+	let rankedSize = corpusOf(data, state.corpus).ranked ? state.size : pageView.size;
 	let width = 0;
-	let active: string | null = null;
+	let active: string[] = [];
 	let focused: string | null = null;
 
 	const points = () => [...plot.querySelectorAll<SVGGElement>(".pt")];
 	const pointOf = (config: string) =>
 		points().find((point) => point.dataset.config === config) ?? null;
 	const inXOrder = () =>
-		points().sort((a, b) => Number(a.dataset.x) - Number(b.dataset.x) || Number(a.dataset.y) - Number(b.dataset.y));
+		points().sort(
+			(a, b) =>
+				Number(a.dataset.x) - Number(b.dataset.x) || Number(a.dataset.y) - Number(b.dataset.y),
+		);
+
+	const note = (control: string, text: string) => {
+		form.querySelector(`[id$="-${control}-note"]`)!.textContent = text;
+	};
 
 	const syncControls = () => {
-		const note = constructorNote(state);
+		const sizes = corpusOf(data, state.corpus).sizes;
+		const constructorOff = constructorNote(state);
 		for (const input of radios(form, "measure")) input.checked = input.value === state.measure;
 		for (const input of radios(form, "corpus")) input.checked = input.value === state.corpus;
-		for (const input of radios(form, "size")) input.checked = input.value === state.size;
-		for (const input of radios(form, "constructor")) {
-			input.disabled = note !== "";
-			input.checked = !input.disabled && (input.value === "counted") === state.constructorCounted;
+		for (const input of radios(form, "size")) {
+			input.disabled = !sizes.includes(input.value);
+			input.checked = !input.disabled && input.value === state.size;
 		}
-		form.querySelector('[id$="-constructor-note"]')!.textContent = note;
+		for (const input of radios(form, "constructor")) {
+			input.disabled = constructorOff !== "";
+			input.checked =
+				!input.disabled && input.value === constructorField(state);
+		}
+		note("constructor", constructorOff);
+		note("corpus", CORPUS_DEFINITIONS[state.corpus]);
+		note("size", sizeNote(data, state));
+		const front = viewFrontier(data, state, pointsOf(data, state));
+		figure.dataset.frontier = front.length > 1 ? "line" : front.length === 1 ? "point" : "none";
 	};
 
 	const hideTip = () => {
 		tip.hidden = true;
-		active = null;
+		active = [];
 		figure.querySelector(".pt[aria-describedby]")?.removeAttribute("aria-describedby");
 		for (const element of plot.querySelectorAll(".is-active")) element.classList.remove("is-active");
 	};
 
-	const showTip = (config: string) => {
-		const point = pointOf(config);
+	const showTip = (configs: string[]) => {
+		const point = pointOf(configs[0]!);
 		if (!point) return;
 		hideTip();
-		active = config;
-		point.classList.add("is-active");
-		plot.querySelector(`.label[data-config="${CSS.escape(config)}"]`)?.classList.add("is-active");
-		tip.innerHTML = tooltipHtml(data, state, config);
+		active = configs;
+		for (const config of configs) {
+			pointOf(config)?.classList.add("is-active");
+			plot.querySelector(`.label[data-config="${CSS.escape(config)}"]`)?.classList.add("is-active");
+		}
+		tip.innerHTML = tooltipHtml(data, state, configs);
 		tip.hidden = false;
+		const docked = plot.clientWidth < NARROW_PX;
+		tip.classList.toggle("docked", docked);
+		if (docked) {
+			tip.style.left = "";
+			tip.style.top = "";
+			return;
+		}
 		const svg = plot.querySelector("svg")!;
 		const scale = svg.clientWidth / svg.viewBox.baseVal.width;
-		const x = Number(point.dataset.x) * scale;
-		const y = Number(point.dataset.y) * scale;
-		// A phone's chart is too small to share with the tooltip, so it docks under the plot.
-		const at =
-			plot.clientWidth < NARROW_PX
-				? { left: 0, top: plot.clientHeight + 4 }
-				: tipPlacement(x, y, tip.offsetWidth, tip.offsetHeight);
+		const at = tipPlacement(
+			Number(point.dataset.x) * scale,
+			Number(point.dataset.y) * scale,
+			tip.offsetWidth,
+			tip.offsetHeight,
+		);
 		tip.style.left = `${at.left}px`;
 		tip.style.top = `${at.top}px`;
 	};
@@ -142,6 +210,34 @@ export const hydrate = (figure: HTMLElement): void => {
 		return tries.reduce((a, b) => (covered(b) < covered(a) ? b : a));
 	};
 
+	/** The configs under the pointer: the nearest point in reach, and every point drawn on top of it. */
+	const pointsUnder = (event: PointerEvent): string[] => {
+		const svg = plot.querySelector("svg");
+		if (!svg) return [];
+		const box = svg.getBoundingClientRect();
+		const scale = box.width / svg.viewBox.baseVal.width;
+		const x = (event.clientX - box.left) / scale;
+		const y = (event.clientY - box.top) / scale;
+		const reach = (event.pointerType === "touch" ? TOUCH_HIT_PX : HIT_PX) / scale;
+		const centres = points().map((point) => ({
+			config: point.dataset.config!,
+			x: Number(point.dataset.x),
+			y: Number(point.dataset.y),
+		}));
+		const distance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+			Math.hypot(a.x - b.x, a.y - b.y);
+		const nearest = centres
+			.filter((centre) => distance(centre, { x, y }) <= reach)
+			.sort((a, b) => distance(a, { x, y }) - distance(b, { x, y }))[0];
+		if (!nearest) return [];
+		return [
+			nearest.config,
+			...centres
+				.filter((c) => c !== nearest && distance(c, nearest) <= COINCIDENT_PX / scale)
+				.map((c) => c.config),
+		];
+	};
+
 	const setRovingStop = () => {
 		const ordered = inXOrder();
 		const stop = (focused && pointOf(focused)) || ordered[0];
@@ -150,11 +246,14 @@ export const hydrate = (figure: HTMLElement): void => {
 
 	const render = (moved: boolean) => {
 		const before = new Map(
-			points().map((point) => [point.dataset.config!, [Number(point.dataset.x), Number(point.dataset.y)]]),
+			points().map((point) => [
+				point.dataset.config!,
+				[Number(point.dataset.x), Number(point.dataset.y)],
+			]),
 		);
 		const hadFocus = focused !== null && figure.contains(document.activeElement);
 		const shown = active;
-		plot.querySelector("svg")?.remove();
+		for (const stale of plot.querySelectorAll(".pareto-static, svg")) stale.remove();
 		plot.insertAdjacentHTML("afterbegin", chartSvg(data, state, width));
 		setRovingStop();
 		plot.classList.remove("is-moving");
@@ -171,18 +270,19 @@ export const hydrate = (figure: HTMLElement): void => {
 			for (const point of points()) point.style.transform = "";
 		}
 		if (hadFocus && focused) pointOf(focused)?.focus({ preventScroll: true });
-		if (shown) showTip(shown);
+		if (shown.length > 0) showTip(shown);
 	};
 
 	const update = (moved: boolean) => {
 		syncControls();
 		const sentences = captionOf(data, state);
 		// The caption is a live region, so it changes only when the view does.
-		if (caption.textContent !== sentences.map((sentence) => `${sentence} `).join("")) {
+		if (caption.textContent !== sentences.map((sentence) => `${sentence.text} `).join("")) {
 			caption.replaceChildren(
 				...sentences.map((sentence) => {
 					const span = document.createElement("span");
-					span.textContent = `${sentence} `;
+					if (sentence.tone) span.className = sentence.tone;
+					span.textContent = `${sentence.text} `;
 					return span;
 				}),
 			);
@@ -192,22 +292,34 @@ export const hydrate = (figure: HTMLElement): void => {
 	};
 
 	form.addEventListener("change", () => {
+		const corpus = (checkedValue(form, "corpus") as Corpus | undefined) ?? state.corpus;
 		const constructor = checkedValue(form, "constructor");
+		const size = sizeFor(data, corpus, checkedValue(form, "size") ?? rankedSize);
+		if (corpusOf(data, corpus).ranked) rankedSize = size;
 		state = {
 			measure: (checkedValue(form, "measure") as Measure | undefined) ?? state.measure,
 			constructorCounted: constructor ? constructor === "counted" : state.constructorCounted,
-			corpus: (checkedValue(form, "corpus") as Corpus | undefined) ?? state.corpus,
-			size: checkedValue(form, "size") ?? state.size,
+			corpus,
+			size,
 		};
+		hideTip();
 		update(true);
+		writeUrl(viewParam(state, pageView));
 	});
 
-	plot.addEventListener("pointerover", (event) => {
-		const target = (event.target as Element).closest<SVGElement>("[data-config]");
-		if (target) showTip(target.dataset.config!);
-	});
-	plot.addEventListener("pointerleave", () => {
-		if (!focused) hideTip();
+	const pointAt = (event: PointerEvent) => {
+		const under = pointsUnder(event);
+		if (under.length === 0) {
+			if (!focused) hideTip();
+			return;
+		}
+		if (under.join() !== active.join()) showTip(under);
+	};
+	plot.addEventListener("pointermove", pointAt);
+	plot.addEventListener("pointerdown", pointAt);
+	// A finger leaves as it lifts, so a tapped tooltip stays until the next tap.
+	plot.addEventListener("pointerleave", (event) => {
+		if (event.pointerType !== "touch" && !focused) hideTip();
 	});
 	document.addEventListener("pointerdown", (event) => {
 		if (!plot.contains(event.target as Node)) hideTip();
@@ -217,7 +329,7 @@ export const hydrate = (figure: HTMLElement): void => {
 		if (!point) return;
 		focused = point.dataset.config!;
 		setRovingStop();
-		showTip(focused);
+		showTip([focused]);
 		point.setAttribute("aria-describedby", tip.id);
 	});
 	plot.addEventListener("focusout", (event) => {
