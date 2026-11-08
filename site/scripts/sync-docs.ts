@@ -83,12 +83,15 @@ const resolveLink = (page: Page, target: string): string => {
 	if (/^([a-z]+:|\/)/i.test(target)) {
 		return target;
 	}
-	const [path = "", anchor] = target.split("#");
+	const [pathAndQuery = "", anchor] = target.split("#");
+	const [path = "", query] = pathAndQuery.split("?");
 	const resolved = path ? posix.normalize(posix.join(posix.dirname(page.source), path)) : page.source;
 	const hash = anchor === undefined ? "" : `#${anchor}`;
+	const search = query === undefined ? "" : `?${query}`;
 	const route = routeOfDoc.get(resolved);
 	if (route) {
-		return route === page.route && hash ? hash : `/${route}/${hash}`;
+		// A query, such as a Pareto view, needs the page to load again, so it keeps the full route.
+		return route === page.route && hash && !search ? hash : `/${route}/${search}${hash}`;
 	}
 	if (resolved.startsWith("docs/") && resolved.endsWith(".svg")) {
 		return `/charts/${posix.basename(resolved)}`;

@@ -1,8 +1,19 @@
-// Emoji is timed only at its own length, which docs/benchmarks.md keeps out of
-// the speed rankings and the Pareto charts.
-export const CORPORA = ["native", "en"] as const;
+export const CORPORA = ["native", "en", "emoji"] as const;
 export type Corpus = (typeof CORPORA)[number];
 export type Marker = "circle" | "square" | "diamond";
+
+export const CORPUS_LABELS: Record<Corpus, string> = {
+	native: "Native",
+	en: "English",
+	emoji: "Emoji",
+};
+
+/** What each corpus holds, said beside the Corpus control; docs/benchmarks/method.md has the full account. */
+export const CORPUS_DEFINITIONS: Record<Corpus, string> = {
+	native: "Wikidata items under their native names, where Wikidata has one.",
+	en: "The same Wikidata items under their English labels.",
+	emoji: "Every emoji's name and tags, as a picker searches them.",
+};
 
 /** Every time in ms, as `bench/results.json` holds it for one corpus at one list size. */
 export type ParetoTiming = {
@@ -12,7 +23,7 @@ export type ParetoTiming = {
 	perQuery: number;
 	/** The warm-up plus every timed query. */
 	answers: number;
-	/** The probe cells, each in its own fresh process, averaged over the probe kinds. */
+	/** The probe cells: each probe query's median over its fresh processes, then the mean over the probe queries. */
 	probeBuild: number;
 	coldQuery: number;
 	oneShot: number;
@@ -36,16 +47,16 @@ export type ParetoCorpus = {
 	probeKinds: number;
 	/** Rows the corpus's speed tables leave out, because they skip the folding it needs. */
 	unfolded: string[];
+	/** False for a list too short for the published size, whose timings the bench does not rank. */
+	ranked: boolean;
 };
 
 export type ParetoData = {
 	corpora: ParetoCorpus[];
-	/** A timed corpus the chart leaves out, and the one size it is timed at. */
-	untimed: { id: string; size: string };
 	rows: ParetoRow[];
 };
 
-export const MEASURES = ["per-query", "session", "one-shot", "cold-query"] as const;
+export const MEASURES = ["per-query", "session", "one-shot"] as const;
 export type Measure = (typeof MEASURES)[number];
 
 export type ParetoState = {
@@ -59,7 +70,6 @@ export const MEASURE_LABELS: Record<Measure, string> = {
 	"per-query": "Per query",
 	session: "Session",
 	"one-shot": "One-shot",
-	"cold-query": "Cold query",
 };
 
 type Part = { label: string; ms: number; counted: boolean };
@@ -67,12 +77,17 @@ type Part = { label: string; ms: number; counted: boolean };
 export const corpusOf = (data: ParetoData, id: Corpus): ParetoCorpus =>
 	data.corpora.find((corpus) => corpus.id === id)!;
 
-/** One-shot without its constructor is the cold query, so both share every word that follows. */
-const effectiveMeasure = (state: ParetoState): Measure =>
-	state.measure === "one-shot" && !state.constructorCounted ? "cold-query" : state.measure;
+/** The size to show `corpus` at: `size` when it is timed there, else its first. */
+export const sizeFor = (data: ParetoData, corpus: Corpus, size: string): string => {
+	const sizes = corpusOf(data, corpus).sizes;
+	return sizes.includes(size) ? size : sizes[0]!;
+};
 
-export const countsConstructor = (state: ParetoState): boolean =>
-	(state.measure === "session" || state.measure === "one-shot") && state.constructorCounted;
+/** One-shot without its constructor is the cold query. */
+type Timing = Measure | "cold-query";
+
+const timingKind = (state: ParetoState): Timing =>
+	state.measure === "one-shot" && !state.constructorCounted ? "cold-query" : state.measure;
 
 export const sizeLabel = (size: string): string => {
 	const n = Number(size);
@@ -92,13 +107,15 @@ export const formatMrr = (x: number): string => x.toFixed(2);
 const timingOf = (row: ParetoRow, state: ParetoState): ParetoTiming =>
 	row.timings[state.corpus][state.size]!;
 
+const sessionMs = (t: ParetoTiming): number => t.build + t.answers;
+
 export const msOf = (row: ParetoRow, state: ParetoState): number => {
 	const t = timingOf(row, state);
-	switch (effectiveMeasure(state)) {
+	switch (timingKind(state)) {
 		case "per-query":
 			return t.perQuery;
 		case "session":
-			return state.constructorCounted ? t.build + t.answers : t.answers;
+			return state.constructorCounted ? sessionMs(t) : t.answers;
 		case "one-shot":
 			return t.oneShot;
 		case "cold-query":
@@ -108,16 +125,16 @@ export const msOf = (row: ParetoRow, state: ParetoState): number => {
 
 const partsOf = (row: ParetoRow, state: ParetoState, queries: number): Part[] => {
 	const t = timingOf(row, state);
-	switch (effectiveMeasure(state)) {
+	switch (timingKind(state)) {
 		case "per-query":
 			return [
 				{ label: "constructor", ms: t.build, counted: false },
-				{ label: "warm-up answer", ms: t.firstAnswer, counted: false },
+				{ label: "warm-up", ms: t.firstAnswer, counted: false },
 			];
 		case "session":
 			return [
 				{ label: "constructor", ms: t.build, counted: state.constructorCounted },
-				{ label: "warm-up answer", ms: t.firstAnswer, counted: true },
+				{ label: "warm-up", ms: t.firstAnswer, counted: true },
 				{ label: `${queries} queries`, ms: t.answers - t.firstAnswer, counted: true },
 			];
 		case "one-shot":
@@ -130,22 +147,30 @@ const partsOf = (row: ParetoRow, state: ParetoState, queries: number): Part[] =>
 	}
 };
 
-const AXIS_TITLES: Record<Measure, string> = {
-	"per-query": "ms per query",
-	session: "ms per session",
-	"one-shot": "ms per one-shot",
-	"cold-query": "ms per cold query",
+// Longest first; the chart takes the longest that fits its width.
+const AXIS_TITLES: Record<Timing, string[]> = {
+	"per-query": ["ms per query, after a warm-up", "ms per query"],
+	session: ["ms per session, constructor counted", "ms per session"],
+	"one-shot": ["ms per one-shot, constructor counted", "ms per one-shot"],
+	"cold-query": [
+		"ms per cold query: the one-shot without its constructor",
+		"ms per cold query, no constructor",
+	],
 };
 
-const axisTitle = (state: ParetoState): string =>
-	effectiveMeasure(state) === "session" && !state.constructorCounted
-		? "ms per session, no constructor"
-		: AXIS_TITLES[effectiveMeasure(state)];
+const axisTitles = (state: ParetoState): string[] =>
+	timingKind(state) === "session" && !state.constructorCounted
+		? ["ms per session, constructor not counted", "ms per session, no constructor"]
+		: AXIS_TITLES[timingKind(state)];
 
-const unitOf = (state: ParetoState): string => {
-	const measure = effectiveMeasure(state);
-	return measure === "per-query" ? "per query" : measure === "session" ? "per session" : measure;
+const UNITS: Record<Timing, string> = {
+	"per-query": "per query",
+	session: "per session",
+	"one-shot": "one-shot",
+	"cold-query": "cold query",
 };
+
+const unitOf = (state: ParetoState): string => UNITS[timingKind(state)];
 
 export type Point = { row: ParetoRow; mrr: number; ms: number };
 
@@ -167,15 +192,19 @@ export const frontierOf = <T extends { mrr: number; ms: number }>(points: T[]): 
 	return out;
 };
 
+/** The frontier the view may claim: none on a corpus whose timings the bench does not rank. */
+export const viewFrontier = <T extends { mrr: number; ms: number }>(
+	data: ParetoData,
+	state: ParetoState,
+	points: T[],
+): T[] => (corpusOf(data, state.corpus).ranked ? frontierOf(points) : []);
+
+const dominates = (a: Point, b: Point): boolean =>
+	a !== b && a.ms <= b.ms && a.mrr >= b.mrr && (a.ms < b.ms || a.mrr > b.mrr);
+
 const dominatorOf = (point: Point, points: Point[]): Point | undefined =>
 	points
-		.filter(
-			(other) =>
-				other !== point &&
-				other.ms <= point.ms &&
-				other.mrr >= point.mrr &&
-				(other.ms < point.ms || other.mrr > point.mrr),
-		)
+		.filter((other) => dominates(other, point))
 		.sort((a, b) => b.mrr - a.mrr || a.ms - b.ms)[0];
 
 export const escapeHtml = (text: string): string =>
@@ -189,74 +218,120 @@ export const escapeHtml = (text: string): string =>
 export const constructorNote = (state: ParetoState): string =>
 	state.measure === "per-query"
 		? "Per query never counts it: the constructor runs once, before the warm-up answer."
-		: state.measure === "cold-query"
-			? "The cold query never counts it; counted, it is the one-shot."
-			: "";
+		: "";
+
+/** Why the size control is off for the current corpus, said beside it; empty when it is on. */
+export const sizeNote = (data: ParetoData, state: ParetoState): string => {
+	const corpus = corpusOf(data, state.corpus);
+	return corpus.sizes.length === 1
+		? `The ${CORPUS_LABELS[corpus.id]} corpus is timed only at its whole ${sizeLabel(corpus.sizes[0]!)} items.`
+		: "";
+};
 
 const listNames = (names: string[]): string =>
 	names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
+const PROBES = "each probe query's median over its fresh processes, averaged over the";
+
 // The wording follows docs/benchmarks.md's "What each number includes".
-const measureSentences = (state: ParetoState, corpus: ParetoCorpus): string[] => {
+const timeSentences = (state: ParetoState, corpus: ParetoCorpus): string[] => {
 	const items = `${sizeLabel(state.size)} items`;
-	const queries = corpus.timedQueries;
-	const probes = `each of the ${corpus.probeKinds} timed queries in its own fresh process, averaged`;
-	switch (effectiveMeasure(state)) {
+	const queries = `${corpus.timedQueries} timed queries`;
+	const probes = `${PROBES} ${corpus.probeKinds} probe queries`;
+	switch (timingKind(state)) {
 		case "per-query":
 			return [
-				`Time is the mean of the ${queries} queries one searcher answers after a warm-up answer, over ${items}.`,
-				"It leaves out the constructor and the first-contact setup the warm-up absorbs (the JIT, fuzzysort's prepare-all, Ekrina preparing what it matches).",
-				"Lazy Ekrina's whole-list mask build falls inside it, on the first query that needs it; Ekrina (indexed) builds it in the constructor, which is left out.",
-				"Each query runs after the warm-up and every query before it.",
+				`Time is the mean of the ${queries} one searcher answers over ${items} after a warm-up answer, which absorbs first-contact setup; the constructor is left out.`,
+				"Lazy Ekrina builds its whole-list mask on the first query that needs it, inside this time; Ekrina (indexed) builds it in the constructor.",
 			];
 		case "session":
 			return state.constructorCounted
 				? [
-						`Time is the session total: the constructor, a warm-up answer and ${queries} queries, one searcher over ${items}.`,
-						"It includes first-contact setup and Ekrina's whole-list mask build, wherever each design pays it.",
+						`Time is the whole session over ${items}: the constructor, a warm-up answer and ${queries}, every setup cost included wherever each design pays it.`,
 					]
 				: [
-						`Time is a warm-up answer and ${queries} queries, one searcher over ${items}, without the constructor.`,
-						"First-contact setup is in it, and so is lazy Ekrina's whole-list mask build; Ekrina (indexed) builds its mask in the constructor, which is left out.",
+						`Time is a warm-up answer and ${queries} over ${items}, without the constructor.`,
+						"Lazy Ekrina's whole-list mask build is inside it; Ekrina (indexed) builds its mask in the constructor, left out here.",
 					];
 		case "one-shot":
 			return [
-				`Time is the one-shot: the constructor plus the first answer over ${items}, ${probes}.`,
-				"It includes first-contact setup and Ekrina's whole-list mask build when the query needs it, and no earlier query warms anything.",
+				`Time is the constructor plus the first answer over ${items} in a fresh process: ${probes}.`,
 			];
 		case "cold-query":
 			return [
-				`Time is the cold query: the first answer over ${items} without the constructor, ${probes}.`,
-				"It includes first-contact setup and lazy Ekrina's whole-list mask build when the query needs it; Ekrina (indexed) builds its mask in the constructor, which is left out.",
+				`Time is the cold query, the first answer over ${items} in a fresh process without the constructor: ${probes}.`,
+				"Lazy Ekrina's mask build is inside it when the query needs one; Ekrina (indexed)'s is in its constructor, left out here.",
 			];
 	}
 };
 
-const frontierSentence = (points: Point[]): string => {
-	const front = frontierOf(points);
-	const at = (p: Point) => `${p.row.name} (${formatMrr(p.mrr)} MRR at ${formatMs(p.ms)} ms)`;
-	return front.length === 1
+const at = (p: Point) => `${p.row.name} (${formatMrr(p.mrr)} MRR at ${formatMs(p.ms)} ms)`;
+
+const frontierSentence = (front: Point[]): string =>
+	front.length === 1
 		? `${at(front[0]!)} is the whole frontier: the fastest row is also the most accurate.`
 		: `The frontier runs from ${front.map(at).join(" to ")}.`;
+
+/** Where the default Ekrina stands against the frontier, when it is not on it. */
+const ekrinaGapSentence = (points: Point[], front: Point[]): string[] => {
+	const ekrina = points.find((p) => p.row.config === "ekrina");
+	if (!ekrina || front.includes(ekrina)) return [];
+	// The frontier is monotone, so the slowest point dominating Ekrina is the nearest to it.
+	const nearest = front.filter((p) => dominates(p, ekrina)).sort((a, b) => b.ms - a.ms)[0];
+	if (!nearest) return [`${at(ekrina)} is off the frontier.`];
+	const faster = ekrina.ms - nearest.ms;
+	const time =
+		faster > 0
+			? `${formatMs(faster)} ms (${Math.round((faster / ekrina.ms) * 100)}%) faster`
+			: "as fast";
+	const quality =
+		formatMrr(nearest.mrr) === formatMrr(ekrina.mrr)
+			? "the same MRR"
+			: `${formatMrr(nearest.mrr - ekrina.mrr)} higher MRR`;
+	return [`${at(ekrina)} is off it: ${nearest.row.name} is ${time} at ${quality}.`];
 };
 
-/** The caption under the chart: what it plots, what the time includes and leaves out, and the frontier. */
-export const captionOf = (data: ParetoData, state: ParetoState): string[] => {
-	const corpus = corpusOf(data, state.corpus);
-	const notes: string[] = [];
-	if (corpus.unfolded.length > 0) {
-		notes.push(
-			`${listNames(corpus.unfolded)} skip the diacritic folding the ${corpus.id} corpus needs, so its speed tables leave ${corpus.unfolded.length > 1 ? "their" : "its"} times out; they are drawn here all the same.`,
-		);
-	}
-	notes.push(
-		`The ${data.untimed.id} corpus is timed only at its own ${sizeLabel(data.untimed.size)} items, too short to rank speed on, so it stays off this chart.`,
-	);
+// The wording follows docs/benchmarks.md's warning over the emoji scorecard.
+const unrankedSentences = (
+	data: ParetoData,
+	state: ParetoState,
+	corpus: ParetoCorpus,
+): CaptionSentence[] => {
+	const quickest = Math.min(...data.rows.map((row) => sessionMs(timingOf(row, state))));
 	return [
-		`MRR is the scorecard's headline on the ${corpus.id} corpus, over ${corpus.families} query families, and does not depend on list size.`,
-		...measureSentences(state, corpus),
-		frontierSentence(pointsOf(data, state)),
-		...notes,
+		{ text: "These timings cannot rank the libraries.", tone: "warning" },
+		{
+			text: `The ${CORPUS_LABELS[corpus.id]} corpus is only ${sizeLabel(state.size)} items, and a whole session here takes as little as ${formatMs(quickest)} ms, short enough that run-to-run noise can reorder neighbouring rows, so this view draws no frontier.`,
+			tone: "lead",
+		},
+	];
+};
+
+export type CaptionSentence = { text: string; tone?: "lead" | "warning" };
+
+/** The caption under the chart: the takeaway first, then what it plots and what the time includes. */
+export const captionOf = (data: ParetoData, state: ParetoState): CaptionSentence[] => {
+	const corpus = corpusOf(data, state.corpus);
+	const points = pointsOf(data, state);
+	const front = viewFrontier(data, state, points);
+	const lead: CaptionSentence[] = corpus.ranked
+		? [frontierSentence(front), ...ekrinaGapSentence(points, front)].map((text) => ({
+				text,
+				tone: "lead",
+			}))
+		: unrankedSentences(data, state, corpus);
+	const notes =
+		corpus.unfolded.length > 0
+			? [
+					`${listNames(corpus.unfolded)} skip the diacritic folding this corpus needs, so its speed tables leave ${corpus.unfolded.length > 1 ? "them" : "it"} out; ${corpus.unfolded.length > 1 ? "they are" : "it is"} drawn here all the same.`,
+				]
+			: [];
+	return [
+		...lead,
+		{
+			text: `MRR is the scorecard headline on the ${CORPUS_LABELS[corpus.id]} corpus, over ${corpus.families} query families, and does not depend on list size.`,
+		},
+		...[...timeSentences(state, corpus), ...notes].map((text) => ({ text })),
 	];
 };
 
@@ -264,30 +339,34 @@ export const captionOf = (data: ParetoData, state: ParetoState): string[] => {
 export const tableHtml = (data: ParetoData, state: ParetoState): string => {
 	const corpus = corpusOf(data, state.corpus);
 	const points = pointsOf(data, state).sort((a, b) => b.mrr - a.mrr || a.ms - b.ms);
-	const front = new Set(frontierOf(points));
+	const front = new Set(viewFrontier(data, state, points));
 	const parts = partsOf(points[0]!.row, state, corpus.timedQueries);
+	const counted = parts.filter((part) => part.counted);
+	const shownParts = [...(counted.length > 1 ? counted : []), ...parts.filter((p) => !p.counted)];
 	const right = ' style="text-align:right"';
+	// One header row, so the Markdown copy's table keeps its columns.
 	const head = [
 		"<th>Library</th>",
 		`<th${right}>MRR</th>`,
-		`<th${right}>${escapeHtml(axisTitle(state))}</th>`,
-		...parts.map(
+		`<th${right}>${escapeHtml(unitOf(state))}, ms</th>`,
+		...shownParts.map(
 			(part) =>
-				`<th${right}>${escapeHtml(part.label)} ms${part.counted ? "" : " (left out)"}</th>`,
+				`<th${right}>${escapeHtml(part.label)} ms${part.counted ? "" : ", left out"}</th>`,
 		),
-		"<th>Frontier</th>",
+		corpus.ranked ? "<th>Frontier</th>" : "",
 	].join("");
 	const body = points
 		.map((p) => {
 			const name = escapeHtml(p.row.name);
+			const partMs = new Map(
+				partsOf(p.row, state, corpus.timedQueries).map((part) => [part.label, part.ms]),
+			);
 			const cells = [
 				`<td>${p.row.ekrina ? `<strong>${name}</strong>` : name}</td>`,
 				`<td${right}>${formatMrr(p.mrr)}</td>`,
 				`<td${right}>${formatMs(p.ms)}</td>`,
-				...partsOf(p.row, state, corpus.timedQueries).map(
-					(part) => `<td${right}>${formatMs(part.ms)}</td>`,
-				),
-				front.has(p) ? "<td>yes</td>" : '<td class="quiet">no</td>',
+				...shownParts.map((part) => `<td${right}>${formatMs(partMs.get(part.label)!)}</td>`),
+				corpus.ranked ? (front.has(p) ? "<td>yes</td>" : '<td class="quiet">no</td>') : "",
 			];
 			return `<tr>${cells.join("")}</tr>`;
 		})
@@ -295,13 +374,14 @@ export const tableHtml = (data: ParetoData, state: ParetoState): string => {
 	return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 };
 
-/** What the tooltip says about one point. */
-export const tooltipHtml = (data: ParetoData, state: ParetoState, config: string): string => {
+const pointTipHtml = (
+	data: ParetoData,
+	state: ParetoState,
+	points: Point[],
+	front: Point[],
+	point: Point,
+): string => {
 	const corpus = corpusOf(data, state.corpus);
-	const points = pointsOf(data, state);
-	const point = points.find((p) => p.row.config === config)!;
-	const onFrontier = frontierOf(points).includes(point);
-	const dominator = onFrontier ? undefined : dominatorOf(point, points);
 	const parts = partsOf(point.row, state, corpus.timedQueries);
 	const counted = parts.filter((part) => part.counted);
 	const left = parts.filter((part) => !part.counted);
@@ -310,10 +390,20 @@ export const tooltipHtml = (data: ParetoData, state: ParetoState, config: string
 	const partRows = (list: Part[]) =>
 		list.map((part) => row(part.label, `${formatMs(part.ms)} ms`)).join("");
 	const unsummed =
-		effectiveMeasure(state) === "one-shot"
-			? '<p class="tip-note">The parts are separate medians, so they need not add up.</p>'
+		timingKind(state) === "one-shot"
+			? '<p class="tip-note">Each part is its own median, averaged over the probe queries, so the parts need not add up.</p>'
 			: "";
+	const onFrontier = front.includes(point);
+	const dominator = onFrontier ? undefined : dominatorOf(point, points);
+	const standing = !corpus.ranked
+		? ""
+		: onFrontier
+			? "On the frontier."
+			: dominator
+				? `Off the frontier: ${escapeHtml(dominator.row.name)} is ${dominator.ms < point.ms ? "faster" : "as fast"} at ${dominator.mrr > point.mrr ? "a higher" : "the same"} MRR.`
+				: "Off the frontier.";
 	return [
+		'<div class="tip-point">',
 		`<p class="tip-name">${escapeHtml(point.row.name)}</p>`,
 		"<dl>",
 		row("MRR", formatMrr(point.mrr)),
@@ -322,14 +412,20 @@ export const tooltipHtml = (data: ParetoData, state: ParetoState, config: string
 		left.length > 0 ? `<div class="tip-group">left out</div>${partRows(left)}` : "",
 		"</dl>",
 		unsummed,
-		`<p class="tip-note">${
-			onFrontier
-				? "On the frontier."
-				: dominator
-					? `Off the frontier: ${escapeHtml(dominator.row.name)} is ${dominator.ms < point.ms ? "faster" : "as fast"} at ${dominator.mrr > point.mrr ? "a higher" : "the same"} MRR.`
-					: "Off the frontier."
-		}</p>`,
+		standing ? `<p class="tip-note">${standing}</p>` : "",
+		"</div>",
 	].join("");
+};
+
+/** What the tooltip says about the points under the pointer, one section each. */
+export const tooltipHtml = (data: ParetoData, state: ParetoState, configs: string[]): string => {
+	const points = pointsOf(data, state);
+	const front = viewFrontier(data, state, points);
+	return configs
+		.map((config) => points.find((p) => p.row.config === config))
+		.filter((point): point is Point => point !== undefined)
+		.map((point) => pointTipHtml(data, state, points, front, point))
+		.join("");
 };
 
 export const ariaLabelOf = (point: Point, onFrontier: boolean, state: ParetoState): string =>
@@ -393,7 +489,9 @@ const FAR = [24, 40, 60].flatMap((r): [number, number, Anchor][] => [
 	[0, r + 10, "middle"],
 ]);
 
-const priorityOf = (p: Placed): number => (p.row.ekrina ? 3 : p.onFrontier ? 2 : 1);
+// The frontier's labels are the result, so they get the clearest spots; Ekrina's
+// default is next because the caption measures it against the frontier.
+const priorityOf = (p: Placed): number => (p.onFrontier ? 3 : p.row.config === "ekrina" ? 2 : 1);
 
 const clustersOf = (points: Placed[]): Placed[][] => {
 	const parent = points.map((_, i) => i);
@@ -526,8 +624,8 @@ const markerPath = (marker: Marker, x: number, y: number, grow = 0): string => {
 		case "circle":
 			return `<circle cx="${x}" cy="${y}" r="${DOT_R + grow}"/>`;
 		case "square": {
-			const h = DOT_R - 0.5 + grow;
-			return `<rect x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}"/>`;
+			const h = DOT_R + 1 + grow;
+			return `<rect class="hollow" x="${x - h}" y="${y - h}" width="${2 * h}" height="${2 * h}"/>`;
 		}
 		case "diamond": {
 			const h = DOT_R + 3 + grow;
@@ -546,7 +644,7 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const plotW = W - M.left - M.right;
 	const plotH = H - M.top - M.bottom;
 	const points = pointsOf(data, state);
-	const front = frontierOf(points);
+	const front = viewFrontier(data, state, points);
 
 	const mrrs = points.map((p) => p.mrr);
 	const yLo = Math.max(0, Math.floor((Math.min(...mrrs) - 0.04) * 10) / 10);
@@ -608,20 +706,16 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const yLabels = yTicks
 		.map((t) => `<text x="${M.left - 8}" y="${Y(t) + 4}" text-anchor="end">${t.toFixed(1)}</text>`)
 		.join("");
-	const title = axisTitle(state);
+	const titles = axisTitles(state);
 	const xTitle =
-		[`${title}, log scale, lower is better`, `${title}, log scale`].find(
-			(text) => textWidth(text) <= plotW + M.left - 8,
-		) ?? title;
+		titles
+			.flatMap((title) => [`${title}, log scale, lower is better`, `${title}, log scale`, title])
+			.find((text) => textWidth(text) <= plotW + M.left - 8) ?? titles.at(-1)!;
 	const frontierPath = frontPlaced.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join("");
 
-	// Ekrina's three rows can share a spot: the hollow diamond draws last, around whatever it covers.
-	const MARKER_LAYER: Record<Marker, number> = { square: 0, circle: 1, diamond: 2 };
-	const drawOrder = [...placed].sort(
-		(a, b) =>
-			Number(a.row.ekrina) - Number(b.row.ekrina) ||
-			MARKER_LAYER[a.row.marker] - MARKER_LAYER[b.row.marker],
-	);
+	// Ekrina's three rows can share a spot, so its default draws last, inside the hollow variants' outlines.
+	const layerOf = (p: Placed) => (p.row.config === "ekrina" ? 2 : p.row.ekrina ? 1 : 0);
+	const drawOrder = [...placed].sort((a, b) => layerOf(a) - layerOf(b));
 	const leaders = placed
 		.filter((p) => p.label?.leader)
 		.map((p) => {
@@ -634,7 +728,6 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 			const kind = p.row.ekrina ? "ekrina" : "field";
 			return [
 				`<g class="pt ${kind}${p.onFrontier ? " front" : ""}" data-config="${escapeHtml(p.row.config)}" data-x="${p.x}" data-y="${p.y}" tabindex="-1" role="img" aria-label="${escapeHtml(ariaLabelOf(p, p.onFrontier, state))}">`,
-				`<circle class="hit" cx="${p.x}" cy="${p.y}" r="13"/>`,
 				`<g class="ring">${markerPath(p.row.marker, p.x, p.y, 4)}</g>`,
 				`<g class="mark">${markerPath(p.row.marker, p.x, p.y)}</g>`,
 				"</g>",
@@ -645,13 +738,16 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		.filter((p) => p.label)
 		.map((p) => {
 			const l = p.label!;
-			const strong = p.row.ekrina || p.onFrontier;
-			return `<text class="label${strong ? " strong" : ""}" data-config="${escapeHtml(p.row.config)}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}">${escapeHtml(p.row.name)}</text>`;
+			const config = escapeHtml(p.row.config);
+			const text = `<text class="label${p.onFrontier ? " front" : ""}" data-config="${config}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}">${escapeHtml(p.row.name)}</text>`;
+			if (!p.onFrontier) return text;
+			const { x0, y0, x1, y1 } = l.box;
+			return `<rect class="label-mark" data-config="${config}" x="${r1(x0)}" y="${r1(y0)}" width="${r1(x1 - x0)}" height="${r1(y1 - y0)}"/>${text}`;
 		})
 		.join("");
 
 	return [
-		`<svg class="pareto-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="${escapeHtml(`MRR against ${axisTitle(state)}, log scale`)}">`,
+		`<svg class="pareto-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="group" aria-label="${escapeHtml(`MRR against ${titles[0]}, log scale`)}">`,
 		`<g class="grid" aria-hidden="true">${grid}</g>`,
 		`<g class="axis" aria-hidden="true">`,
 		`<line x1="${M.left}" y1="${M.top + plotH}" x2="${M.left + plotW}" y2="${M.top + plotH}"/>`,
@@ -660,7 +756,7 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 		`<g class="ticks" aria-hidden="true">${xLabels}${yLabels}</g>`,
 		`<text class="title" x="${M.left - 8}" y="${M.top - 14}" aria-hidden="true">MRR, higher is better</text>`,
 		`<text class="title" x="${M.left + plotW}" y="${H - 6}" text-anchor="end" aria-hidden="true">${escapeHtml(xTitle)}</text>`,
-		`<path class="frontier" d="${frontierPath}" aria-hidden="true"/>`,
+		frontPlaced.length > 1 ? `<path class="frontier" d="${frontierPath}" aria-hidden="true"/>` : "",
 		`<g class="leaders" aria-hidden="true">${leaders}</g>`,
 		`<g class="marks">${marks}</g>`,
 		`<g class="labels" aria-hidden="true">${labels}</g>`,

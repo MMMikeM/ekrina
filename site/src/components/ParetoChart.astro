@@ -5,13 +5,19 @@ import {
 	chartSvg,
 	constructorNote,
 	CORPORA,
+	CORPUS_DEFINITIONS,
+	CORPUS_LABELS,
+	corpusOf,
 	MEASURE_LABELS,
 	MEASURES,
 	type Measure,
 	type ParetoData,
 	type ParetoState,
+	pointsOf,
 	sizeLabel,
+	sizeNote,
 	tableHtml,
+	viewFrontier,
 } from "../pareto.ts";
 
 interface Props {
@@ -23,16 +29,19 @@ const { measure } = Astro.props;
 const state: ParetoState = { measure, constructorCounted: true, corpus: "native", size: "10000" };
 const id = `pareto-${measure}`;
 const note = constructorNote(state);
-const sizes = data.corpora[0]!.sizes;
-// Read before script runs, the chart lays out at about the content column's width.
-const SERVER_WIDTH = 640;
+const sizes = [...new Set(data.corpora.filter((corpus) => corpus.ranked).flatMap((corpus) => corpus.sizes))];
+const front = viewFrontier(data, state, pointsOf(data, state));
+const frontier = front.length > 1 ? "line" : front.length === 1 ? "point" : "none";
+// Without script the chart cannot lay out to its column, so both widths ship and CSS shows one.
+const WIDE_PX = 640;
+const NARROW_PX = 340;
 ---
 
-<figure class="pareto" data-pareto={JSON.stringify(state)}>
+<figure class="pareto" data-pareto={JSON.stringify(state)} data-frontier={frontier}>
 	<form class="pareto-controls decoration not-content" aria-label="What the chart plots" hidden>
 		<fieldset>
 			<legend>Measure</legend>
-			<div class="segmented measure">
+			<div class="segmented">
 				{
 					MEASURES.map((option) => (
 						<label>
@@ -66,46 +75,60 @@ const SERVER_WIDTH = 640;
 			</div>
 			<p class="control-note" id={`${id}-constructor-note`}>{note}</p>
 		</fieldset>
-		<fieldset>
+		<fieldset aria-describedby={`${id}-corpus-note`}>
 			<legend>Corpus</legend>
 			<div class="segmented">
 				{
 					CORPORA.map((corpus) => (
 						<label>
 							<input type="radio" name={`${id}-corpus`} value={corpus} checked={corpus === state.corpus} />
-							<span>{corpus}</span>
+							<span>{CORPUS_LABELS[corpus]}</span>
 						</label>
 					))
 				}
 			</div>
+			<p class="control-note" id={`${id}-corpus-note`}>{CORPUS_DEFINITIONS[state.corpus]}</p>
 		</fieldset>
-		<fieldset>
+		<fieldset aria-describedby={`${id}-size-note`}>
 			<legend>Size</legend>
 			<div class="segmented">
 				{
 					sizes.map((size) => (
 						<label>
-							<input type="radio" name={`${id}-size`} value={size} checked={size === state.size} />
+							<input
+								type="radio"
+								name={`${id}-size`}
+								value={size}
+								checked={size === state.size}
+								disabled={!corpusOf(data, state.corpus).sizes.includes(size)}
+							/>
 							<span>{sizeLabel(size)}</span>
 						</label>
 					))
 				}
 			</div>
+			<p class="control-note" id={`${id}-size-note`}>{sizeNote(data, state)}</p>
 		</fieldset>
 	</form>
 	<div class="pareto-plot decoration not-content">
-		<Fragment set:html={chartSvg(data, state, SERVER_WIDTH)} />
+		<div class="pareto-static wide" set:html={chartSvg(data, state, WIDE_PX)} />
+		<div class="pareto-static narrow" set:html={chartSvg(data, state, NARROW_PX)} />
 		<div class="pareto-tip" id={`${id}-tip`} role="tooltip" hidden></div>
 	</div>
 	<ul class="pareto-key decoration not-content" aria-hidden="true">
 		<li><svg viewBox="-8 -8 16 16"><circle class="ekrina" r="5.5"></circle></svg>Ekrina</li>
 		<li><svg viewBox="-9 -9 18 18"><path class="ekrina hollow" d="M0 -8L8 0L0 8L-8 0Z"></path></svg>Ekrina (acronym)</li>
-		<li><svg viewBox="-8 -8 16 16"><rect class="ekrina" x="-5" y="-5" width="10" height="10"></rect></svg>Ekrina (indexed)</li>
+		<li><svg viewBox="-8 -8 16 16"><rect class="ekrina hollow" x="-6" y="-6" width="12" height="12"></rect></svg>Ekrina (indexed)</li>
 		<li><svg viewBox="-8 -8 16 16"><circle class="field" r="5.5"></circle></svg>Other libraries</li>
-		<li><svg viewBox="0 -8 22 16"><line class="frontier" x1="1" y1="0" x2="21" y2="0"></line></svg>Pareto frontier</li>
+		<li class="key-front"><span class="front-swatch">On the frontier</span></li>
+		<li class="key-line"><svg viewBox="0 -8 22 16"><line class="frontier" x1="1" y1="0" x2="21" y2="0"></line></svg>Pareto frontier</li>
 	</ul>
 	<figcaption aria-live="polite">
-		{captionOf(data, state).map((sentence) => <span>{`${sentence} `}</span>)}
+		{
+			captionOf(data, state).map((sentence) => (
+				<span class={sentence.tone}>{`${sentence.text} `}</span>
+			))
+		}
 	</figcaption>
 	<details class="pareto-numbers">
 		<summary>The chart's numbers</summary>
@@ -186,29 +209,22 @@ const SERVER_WIDTH = 640;
 		display: none;
 	}
 
-	/* Four measures don't fit one row on a phone, so they take two. */
-	@container pareto (width < 30rem) {
-		.pareto-controls .segmented.measure {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			width: 100%;
-		}
-
-		.pareto-controls .segmented.measure label + label {
-			border-inline-start: 0;
-		}
-
-		.pareto-controls .segmented.measure label:nth-child(even) {
-			border-inline-start: 1px solid var(--line-strong);
-		}
-
-		.pareto-controls .segmented.measure label:nth-child(n + 3) {
-			border-block-start: 1px solid var(--line-strong);
-		}
-	}
-
 	.pareto-plot {
 		position: relative;
+	}
+
+	.pareto-static.narrow {
+		display: none;
+	}
+
+	@container pareto (width < 33rem) {
+		.pareto-static.wide {
+			display: none;
+		}
+
+		.pareto-static.narrow {
+			display: block;
+		}
 	}
 
 	.pareto-svg {
@@ -250,10 +266,6 @@ const SERVER_WIDTH = 640;
 		stroke-width: 1;
 	}
 
-	.pareto-svg .hit {
-		fill: transparent;
-	}
-
 	.pareto-svg .mark > *,
 	.pareto-key .ekrina,
 	.pareto-key .field {
@@ -281,19 +293,22 @@ const SERVER_WIDTH = 640;
 
 	.pareto-svg .ring > * {
 		fill: none;
-		stroke: var(--sl-color-text-accent);
+		stroke: var(--ink);
 		stroke-width: 2;
 		visibility: hidden;
 	}
 
 	.pareto-svg .pt {
-		cursor: default;
 		outline: none;
 	}
 
 	.pareto-svg .pt.is-active .ring > *,
 	.pareto-svg .pt:focus-visible .ring > * {
 		visibility: visible;
+	}
+
+	.pareto-svg .pt:focus-visible .ring > * {
+		stroke: var(--sl-color-text-accent);
 	}
 
 	.pareto-svg .label {
@@ -304,13 +319,24 @@ const SERVER_WIDTH = 640;
 		stroke-linejoin: round;
 	}
 
-	.pareto-svg .label.strong {
-		fill: var(--ink);
+	.pareto-svg .label.front {
+		fill: var(--highlight-ink);
 		font-weight: 500;
+		stroke: none;
+	}
+
+	.pareto-svg .label-mark {
+		fill: var(--highlight);
 	}
 
 	.pareto-svg .label.is-active {
-		fill: var(--sl-color-text-accent);
+		fill: var(--ink);
+		font-weight: 500;
+		text-decoration: underline;
+	}
+
+	.pareto-svg .label.front.is-active {
+		fill: var(--highlight-ink);
 	}
 
 	@media (prefers-reduced-motion: no-preference) {
@@ -348,6 +374,20 @@ const SERVER_WIDTH = 640;
 
 	.pareto-tip[hidden] {
 		display: none;
+	}
+
+	/* On a phone the chart has no room to share, so the tooltip takes its place in the flow, above the key. */
+	.pareto-tip.docked {
+		position: static;
+		width: auto;
+		max-width: none;
+		margin-block-start: var(--space-2xs);
+	}
+
+	.pareto-tip .tip-point + .tip-point {
+		margin-block-start: var(--space-2xs);
+		padding-block-start: var(--space-2xs);
+		border-block-start: 1px solid var(--line-strong);
 	}
 
 	.pareto-tip p {
@@ -425,22 +465,59 @@ const SERVER_WIDTH = 640;
 		width: 1.375rem;
 	}
 
+	.pareto-key .front-swatch {
+		padding: 0 var(--space-3xs);
+		background: var(--highlight);
+		color: var(--highlight-ink);
+		font-weight: 500;
+	}
+
+	.pareto[data-frontier="none"] .key-front,
+	.pareto:not([data-frontier="line"]) .key-line {
+		display: none;
+	}
+
 	.pareto figcaption {
-		max-width: 44em;
+		max-width: 72ch;
 		color: var(--ink-muted);
 		font-size: var(--text-base);
 		line-height: var(--leading-body);
 		text-wrap: pretty;
 	}
 
+	.pareto figcaption :is(.lead, .warning) {
+		color: var(--ink);
+	}
+
+	.pareto figcaption .warning {
+		font-weight: 600;
+	}
+
 	.pareto-numbers summary {
+		width: fit-content;
+		min-height: var(--tap-target);
+		padding-inline: var(--space-2xs);
+		line-height: var(--tap-target);
+		border-radius: var(--radius-control);
 		color: var(--sl-color-text-accent);
 		font-family: var(--__sl-font-mono);
 		font-size: var(--text-sm);
 		cursor: pointer;
 	}
 
+	.pareto-numbers summary:focus-visible {
+		outline: var(--focus-ring);
+		outline-offset: var(--focus-ring-offset);
+	}
+
 	.pareto-numbers .table-scroll {
 		margin-block-start: var(--space-xs);
+	}
+
+	/* The parts' headers are long beside their figures, so they wrap rather than widen the table. */
+	.pareto .pareto-numbers table:has(th[style*="right"]) thead th {
+		vertical-align: bottom;
+		white-space: normal;
+		text-wrap: balance;
 	}
 </style>

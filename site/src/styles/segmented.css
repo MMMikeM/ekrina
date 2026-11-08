@@ -29,9 +29,11 @@
 	font-weight: 600;
 }
 
+/* Pen Blue is under 3:1 against a checked segment's Ink, so a Paper band keeps the ring on Paper. */
 .segmented label:has(input:focus-visible) {
 	outline: var(--focus-ring);
 	outline-offset: -2px;
+	box-shadow: inset 0 0 0 4px var(--paper);
 	z-index: 1;
 }
 
