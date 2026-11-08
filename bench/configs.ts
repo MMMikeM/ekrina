@@ -18,26 +18,12 @@ import fuzzy from "fuzzy";
 import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
 import { createSearcher } from "ekrina";
+import type { Config, Probe } from "./config.ts";
 
 // The bundlers behind vitest unwrap a CJS `exports.default`; node's ESM loader
 // hands back the namespace object instead, and memory.ts runs under plain node.
 const cjsDefault = <T>(mod: T): T => (mod as { default?: T }).default ?? mod;
 const createMicrofuzz = cjsDefault(microfuzzModule);
-
-export type Probe = {
-	count: number;
-	/** Ranked items, best first; null when the library returned matches it declined to rank. */
-	ranked: string[] | null;
-};
-
-export type Config = {
-	name: string;
-	/** Result count only — the shape the runner times. */
-	count: (query: string) => number;
-	probe: (query: string) => Probe;
-	/** Constructor time alone (plus unavoidable per-searcher preparation like uFuzzy's latinize), or null when the library has no constructor at all. */
-	index: (() => number) | null;
-};
 
 const FUSE_ALL: IFuseOptions<string> = {
 	ignoreDiacritics: true,
