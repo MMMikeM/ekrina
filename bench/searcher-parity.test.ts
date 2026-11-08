@@ -9,6 +9,7 @@
  * covers the source the gates live in.
  */
 import { expect, it } from "vite-plus/test";
+import { charMask } from "../src/gates";
 import { SCORES } from "../src/scores";
 import { createSearcher, fuzzyMatch, normaliseText, splitWords } from "../src/index";
 import { prepareBoundedQuery } from "../src/query";
@@ -92,7 +93,8 @@ const withSecondPass = (
 			const held = before.get(item);
 			if (held !== undefined && held <= SCORES.CONTAINS) continue;
 			const field = item.trim();
-			const score = reading.match(field, normaliseText(field))?.score;
+			const normalised = normaliseText(field);
+			const score = reading.match(field, normalised, null, charMask(normalised), false)?.score;
 			if (score !== undefined && score < (held ?? Infinity)) expected.set(item, score);
 		}
 	}

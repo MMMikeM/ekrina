@@ -1,6 +1,15 @@
 import { classCounts } from "./gates";
 import { type PreparedQuery, perQuery } from "./query";
 
+// The most any correction spends.
+export const MAX_EDITS = 2;
+
+// Each class of the query's letters a field lacks costs an edit at least.
+export const lacksBeyondEdits = (missingClasses: number): boolean => {
+	for (let edits = 0; edits < MAX_EDITS; edits++) missingClasses &= missingClasses - 1;
+	return missingClasses !== 0;
+};
+
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
 export const MIN_RESCUE_QUERY_LENGTH = 4;
@@ -30,7 +39,7 @@ const reachesFloor = (normalisedQuery: string, queryWords: string[], floor: numb
 		: queryWords.some((word) => word.length >= floor);
 
 // Whether any rescue may run, and so whether the mask gate may relax to one
-// missing class. Both entry points ask it through rescueTurn, so neither
+// missing class. Both entry points ask it through the rescue stages, so neither
 // corrects what the other cannot.
 export const isRescuableQuery = (normalisedQuery: string, queryWords: string[]): boolean =>
 	reachesFloor(normalisedQuery, queryWords, MIN_RESCUE_QUERY_LENGTH) &&
@@ -48,12 +57,14 @@ export const isShortQuery = (normalisedQuery: string, queryWords: string[]): boo
 // swap or a sparse word is likelier what was meant ("tahn" is "than", not "taha").
 export type RescueTurn = "first" | "last" | null;
 
-export const rescueTurn = (normalisedQuery: string, queryWords: string[]): RescueTurn =>
-	!isRescuableQuery(normalisedQuery, queryWords)
-		? null
-		: isShortQuery(normalisedQuery, queryWords)
-			? "last"
-			: "first";
+export const rescueTurn: (prepared: PreparedQuery) => RescueTurn = perQuery(
+	({ normalisedQuery, queryWords }) =>
+		!isRescuableQuery(normalisedQuery, queryWords)
+			? null
+			: isShortQuery(normalisedQuery, queryWords)
+				? "last"
+				: "first",
+);
 
 export type Edit = (text: string, at: number) => string;
 

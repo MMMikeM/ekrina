@@ -10,7 +10,7 @@
 import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
 import {
-	admitsOneEdit,
+	budgetAdmits,
 	buildRawGate,
 	buildRescueBigramGate,
 	charMask,
@@ -20,6 +20,7 @@ import {
 } from "../src/gates";
 import { matchField } from "../src/match";
 import { prepareQuery } from "../src/query";
+import { earlyRescue, lateRescue } from "../src/rescue";
 import { isRescuableQuery, rescueCounts } from "../src/correction";
 import { normaliseText } from "../src/normalise";
 import { SCORES } from "../src/scores";
@@ -90,13 +91,13 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 			});
 			ms.ladder += time(() => {
 				for (const i of survivors) {
-					if (matchField(raw[i], norm[i], fieldMask[i], q, false, false, true)) sink++;
+					if (matchField(raw[i], norm[i], fieldMask[i], q, false, true)) sink++;
 				}
 			});
 
 			// What the rescue takes when a query needs it: the whole-corpus mask
 			// build, the letter pairs of each item missing exactly one class, then a
-			// relaxed scan admitting those whose pairs fit.
+			// rescue stage admitting those whose pairs fit.
 			const relax = isRescuableQuery(nq, q.queryWords);
 			const search = createSearcher(list);
 			const literal = search(query).filter((r) => r.score <= SCORES.CONTAINS).length;
@@ -111,7 +112,7 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				const oneClassShort: number[] = [];
 				for (let i = 0; i < list.length; i++) {
 					const miss = qm & ~fieldMask[i];
-					if (miss !== 0 && admitsOneEdit(miss, counts)) oneClassShort.push(i);
+					if (miss !== 0 && budgetAdmits(miss, counts, 1)) oneClassShort.push(i);
 				}
 				pairsRead += oneClassShort.length;
 				ms.pairReads += time(() => {
@@ -126,17 +127,19 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				const gate = buildRescueBigramGate(nq, counts);
 				const admits = (i: number): boolean => {
 					const miss = qm & ~fieldMask[i];
-					if (!admitsOneEdit(miss, counts)) return false;
+					if (!budgetAdmits(miss, counts, 1)) return false;
 					if (miss === 0) return true;
-					return rescuePairsAdmit(gate, miss, bigramsLo[i], bigramsHi[i]);
+					return rescuePairsAdmit(gate, miss, { lo: bigramsLo[i], hi: bigramsHi[i] });
 				};
 				let n = 0;
 				for (let i = 0; i < list.length; i++) if (admits(i)) n++;
 				relaxedSurvivors += n;
+				const rescue = (earlyRescue.prepare(q, "none") ?? lateRescue.prepare(q, "none"))!;
 				ms.relaxed += time(() => {
 					for (let i = 0; i < list.length; i++) {
 						if (!admits(i)) continue;
-						if (matchField(raw[i], norm[i], fieldMask[i], q, false, true)) sink++;
+						const held = matchField(raw[i], norm[i], fieldMask[i], q, false);
+						if (rescue.match(raw[i], norm[i], held, fieldMask[i], false)) sink++;
 					}
 				});
 			}
@@ -167,7 +170,7 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 				`  search()      total                                ${p(ms.full)} ms\n` +
 				`  buildIndex()  masks + letter pairs over all N      ${indexBuild.toFixed(3).padStart(7)} ms\n` +
 				(rescuing
-					? `  RESCUE ONLY: mask build ${(ms.maskBuild / rescuing).toFixed(3)} ms, letter pairs for ${(pairsRead / rescuing).toFixed(0)} items one class short ${(ms.pairReads / rescuing).toFixed(3)} ms, relaxed scan admits ${(relaxedSurvivors / rescuing).toFixed(0)} (${((100 * relaxedSurvivors) / (rescuing * 100_000)).toFixed(1)}%) costing ${(ms.relaxed / rescuing).toFixed(3)} ms\n`
+					? `  RESCUE ONLY: mask build ${(ms.maskBuild / rescuing).toFixed(3)} ms, letter pairs for ${(pairsRead / rescuing).toFixed(0)} items one class short ${(ms.pairReads / rescuing).toFixed(3)} ms, rescue stage admits ${(relaxedSurvivors / rescuing).toFixed(0)} (${((100 * relaxedSurvivors) / (rescuing * 100_000)).toFixed(1)}%) costing ${(ms.relaxed / rescuing).toFixed(3)} ms\n`
 					: ""),
 		);
 	}

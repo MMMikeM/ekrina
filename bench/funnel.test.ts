@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
 import {
-	admitsOneEdit,
+	budgetAdmits,
 	buildFuzzyGate,
 	buildPresenceGate,
 	buildRescueBigramGate,
@@ -95,21 +95,14 @@ describe("pre-filter funnel", () => {
 					let rescued = 0;
 					for (let i = 0; i < list.length; i++) {
 						const missingClasses = queryMask & ~masks[i];
-						const maskOk = relaxed
-							? admitsOneEdit(missingClasses, counts)
-							: missingClasses === 0;
+						const maskOk = relaxed ? budgetAdmits(missingClasses, counts, 1) : missingClasses === 0;
 						// The searcher's rescue-scan bigram stage: a field missing
 						// exactly one class is reachable only by an edit at that
 						// class's query position, so the query's untouched bigrams
 						// must all be present (see buildRescueBigramGate).
 						let bigramOk = maskOk;
 						if (bigramOk && missingClasses !== 0 && bigramGate !== null) {
-							bigramOk = rescuePairsAdmit(
-								bigramGate,
-								missingClasses,
-								bigrams[i].lo,
-								bigrams[i].hi,
-							);
+							bigramOk = rescuePairsAdmit(bigramGate, missingClasses, bigrams[i]);
 						}
 						const result = withoutSecondPass(() => fuzzyMatch(list[i], query));
 						if (result) {

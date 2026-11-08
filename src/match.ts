@@ -1,28 +1,12 @@
 import { fuzzyChainMatch } from "./fuzzy";
-import { admitsOneEdit, charMask, readingAdmits } from "./gates";
+import { budgetAdmits, charMask } from "./gates";
 import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
 import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
-import { readings } from "./readings";
-import { rescueCounts, rescueTurn } from "./correction";
-import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
-import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
+import { lacksBeyondEdits } from "./correction";
+import { stages } from "./stages";
+import { BOUNDARY_SCORE, CONTAINS_SCORE } from "./scores";
 import type { MatchOptions, MatchResult } from "./types";
-
-const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult | null => {
-	const { normalisedField, prepared } = rescue;
-	// A phrase was front-gated on presence, so it still owes the fuzzy gate.
-	const chain =
-		prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)
-			? null
-			: fuzzyChainMatch(normalisedField, prepared.normalisedQuery);
-	if (chain === null) return rescuable ? rescueField(rescue) : null;
-	if (!rescuable) return chain;
-	// The field may literally contain the corrected word, so both rescues are
-	// still scored beside the chain.
-	const dropped = missingCharRescue(rescue, chain.ranges);
-	return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
-};
 
 export const matchField = (
 	field: string,
@@ -30,31 +14,13 @@ export const matchField = (
 	fieldMask: number,
 	prepared: PreparedQuery,
 	acronym: boolean,
-	rescuable: boolean,
 	frontGated?: boolean,
 	literalOnly?: boolean,
 ): MatchResult | null => {
 	const { normalisedQuery } = prepared;
-
-	const missingClasses = prepared.queryMask & ~fieldMask;
-	const rescueContext = (): RescueContext => ({
-		rawField: field,
-		normalisedField,
-		prepared,
-		acronymTier: acronym,
-		missingClasses,
-	});
-
-	if (missingClasses !== 0) {
-		return rescuable && admitsOneEdit(missingClasses, rescueCounts(prepared))
-			? rescueField(rescueContext())
-			: null;
-	}
-
+	if ((prepared.queryMask & ~fieldMask) !== 0) return null;
 	const gate = frontGated ? null : frontGate(prepared);
-	if (gate && !gate.test(normalisedField)) {
-		return rescuable ? rescueField(rescueContext()) : null;
-	}
+	if (gate && !gate.test(normalisedField)) return null;
 
 	const literal = literalTiers(field, normalisedField, prepared, acronym);
 	// One character anywhere matches most of any list and ranks none of it, so it
@@ -63,7 +29,10 @@ export const matchField = (
 		return literal !== null && literal.score <= BOUNDARY_SCORE ? literal : null;
 	}
 	if (literal !== null || literalOnly) return literal;
-	return fuzzyOrRescue(rescueContext(), rescuable);
+	// A phrase was front-gated on presence, so it still owes the fuzzy gate.
+	return prepared.queryWords.length > 1 && !prepared.fuzzyGate.test(normalisedField)
+		? null
+		: fuzzyChainMatch(normalisedField, normalisedQuery);
 };
 
 /**
@@ -92,17 +61,19 @@ export const fuzzyMatch = (
 	const field = text.trim();
 	const normalisedField = normaliseText(field);
 	const fieldMask = charMask(normalisedField);
+	// Here no stage can match, so none is asked.
+	if (lacksBeyondEdits(q.queryMask & ~fieldMask)) return null;
 
-	const turn = rescueTurn(q.normalisedQuery, q.queryWords);
-	let result = matchField(field, normalisedField, fieldMask, q, acronym, turn === "first");
-	if (result === null || result.score > CONTAINS_SCORE) {
-		const reading = readings.prepare(q, result === null ? "none" : "fuzzy");
-		const fallback =
-			reading && readingAdmits(reading, fieldMask) ? reading.match(field, normalisedField) : null;
-		result = better(result, fallback);
-	}
-	if (result === null && turn === "last") {
-		result = matchField(field, normalisedField, fieldMask, q, acronym, true);
+	let result = matchField(field, normalisedField, fieldMask, q, acronym);
+	for (let k = 0; k < stages.length; k++) {
+		if (result !== null && result.score <= CONTAINS_SCORE) break;
+		const corrector = stages[k].prepare(q, result === null ? "none" : "fuzzy");
+		if (
+			corrector !== null &&
+			budgetAdmits(corrector.needed & ~fieldMask, corrector.counts, corrector.spare)
+		) {
+			result = corrector.match(field, normalisedField, result, fieldMask, acronym);
+		}
 	}
 	const lead = text.length - text.trimStart().length;
 	if (result && lead) shiftRanges(result.ranges, lead);

@@ -164,8 +164,7 @@ export const buildRescueBigramGate = (
 export const rescuePairsAdmit = (
 	{ requiredLo, requiredHi }: RescueBigramGate,
 	missingClasses: number,
-	lo: number,
-	hi: number,
+	{ lo, hi }: FieldBigrams,
 ): boolean => {
 	const b = 31 - Math.clz32(missingClasses);
 	return ((requiredLo[b] & ~lo) | (requiredHi[b] & ~hi)) === 0;
@@ -329,21 +328,17 @@ export const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
-// `readingAdmits` with a budget of one, as a bit test: the whole-list relaxed
-// pass runs it per item, where the loop measured up to 11% slower on rescue
-// queries. `counts` must hold at least one unit for every class it may name.
-export const admitsOneEdit = (missingClasses: number, counts: Int32Array): boolean =>
-	(missingClasses & (missingClasses - 1)) === 0 &&
-	(missingClasses === 0 || counts[31 - Math.clz32(missingClasses)] === 1);
-
-// `counts` must hold at least one unit for every class `needed` names, so two
-// missing classes overspend a budget of one before any count is read.
-export const readingAdmits = (
-	{ needed, counts, spare }: LetterBudget,
-	fieldMask: number,
-): boolean => {
-	let missing = needed & ~fieldMask;
-	if (spare < 2 && (missing & (missing - 1)) !== 0) return false;
+// `missing` is the `needed` classes a field lacks, and `counts` must hold at
+// least one unit for every class `needed` names. A budget of one is a bit test:
+// the rescue reads the whole list against it, where the counting loop measured
+// up to 11% slower on rescue queries.
+export const budgetAdmits = (missing: number, counts: Int32Array, spare: number): boolean => {
+	if (spare < 2) {
+		return (
+			missing === 0 ||
+			(spare === 1 && (missing & (missing - 1)) === 0 && counts[31 - Math.clz32(missing)] === 1)
+		);
+	}
 	for (let unmatched = 0; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
 		if (unmatched > spare) return false;
@@ -373,8 +368,7 @@ export const pairsOf = (words: string[]): FieldBigrams => {
 
 export const lacksPairsAtMost = (
 	needed: FieldBigrams,
-	lo: number,
-	hi: number,
+	{ lo, hi }: FieldBigrams,
 	limit: number,
 ): boolean => {
 	let missing = 0;

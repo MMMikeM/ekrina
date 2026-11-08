@@ -52,4 +52,5 @@ export const INTERNAL_NAMES: string[] = [
 	"holds",
 	"matchWords",
 	"demotion",
+	"besideLiteral",
 ];

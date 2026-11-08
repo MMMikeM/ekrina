@@ -5,11 +5,12 @@ import {
 	charMask,
 	classCounts,
 	holdsInOrderFrom,
+	type FieldBigrams,
 	lacksPairsAtMost,
-	type LetterBudget,
 	pairsOf,
 } from "./gates";
 import {
+	MAX_EDITS,
 	MAX_RESCUE_WORD_LENGTH,
 	MIN_TYPO_QUERY_LENGTH,
 	withinEdits,
@@ -17,26 +18,9 @@ import {
 } from "./correction";
 import { bestSwap, swapFamily } from "./rescue";
 import { better, CONTAINS_SCORE, correctedMatch } from "./scores";
+import type { Competition, PreparedStage, Stage } from "./stages";
 import type { MatchResult, HighlightRange } from "./types";
 
-export type PreparedReading = LetterBudget & {
-	// Absent when it could reject nothing; reads an item's bigram set (see
-	// rawFieldScan).
-	admitsPairs: ((bigramsLo: number, bigramsHi: number) => boolean) | null;
-	match: (field: string, normalisedField: string) => MatchResult | null;
-	// The reading may match fields the literal pass rejected, so every item is
-	// tried rather than its survivors. One that is not `wholeList` must match
-	// only fields the literal pass lets through (`buildFuzzyGate` for one word,
-	// every word character present for a phrase): the searcher tries just those.
-	wholeList: boolean;
-};
-
-// What the query already matched: nothing, only fuzzy chains, or literally.
-// Beside other matches only readings cheap enough to run beside them are
-// prepared.
-export type Competition = "none" | "fuzzy" | "literal";
-
-const MAX_EDITS = 2;
 // Below this a second edit reaches too many other words: unanswerable 7-letter
 // queries got an answer 20% of the time, against 15% at 8.
 const MIN_TWO_EDIT_WORD_LENGTH = 8;
@@ -59,7 +43,7 @@ type FieldWord = { word: string; offset: number };
 type Reading = {
 	unmatched: number;
 	// Absent when it could reject nothing.
-	admitsPairs?: NonNullable<PreparedReading["admitsPairs"]>;
+	admitsPairs?: (fieldPairs: FieldBigrams) => boolean;
 	// Absent when the reading has no test cheaper than reading the field.
 	holds?: (normalisedField: string) => boolean;
 	matchWords: (field: string, normalisedField: string, words: FieldWord[]) => MatchResult | null;
@@ -313,9 +297,9 @@ const phraseReadings = (prepared: PreparedQuery, joined: string, competing: bool
 		const all = pairsOf(queryWords);
 		applicable.push({
 			unmatched: correctable ? MAX_EDITS : 0,
-			admitsPairs: (lo, hi) =>
-				lacksPairsAtMost(short, lo, hi, 0) &&
-				lacksPairsAtMost(all, lo, hi, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS),
+			admitsPairs: (fieldPairs) =>
+				lacksPairsAtMost(short, fieldPairs, 0) &&
+				lacksPairsAtMost(all, fieldPairs, MAX_EDITS * PAIRS_ONE_EDIT_BREAKS),
 			matchWords: correctPhrase(prepared),
 		});
 	}
@@ -326,8 +310,8 @@ const phraseReadings = (prepared: PreparedQuery, joined: string, competing: bool
 		const pairs = pairsOf([joined]);
 		applicable.push({
 			unmatched: spareBesideSpace,
-			admitsPairs: (lo, hi) =>
-				lacksPairsAtMost(pairs, lo, hi, spareBesideSpace * PAIRS_ONE_EDIT_BREAKS),
+			admitsPairs: (fieldPairs) =>
+				lacksPairsAtMost(pairs, fieldPairs, spareBesideSpace * PAIRS_ONE_EDIT_BREAKS),
 			// With no edit to spend, the joined word is a field word as typed.
 			holds: spareBesideSpace === 0 ? inOrder(joined) : undefined,
 			matchWords: correctWord(joined, 1, spareBesideSpace),
@@ -391,7 +375,7 @@ const wordReadings = (
 // Edit distance over every field word is what makes a reading expensive, so
 // beside other matches only the sparse reading competes; edits stand in only
 // for a query that matched nothing.
-const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedReading | null => {
+const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedStage | null => {
 	const { queryWords } = prepared;
 	if (queryWords.some((word) => word.length > MAX_RESCUE_WORD_LENGTH)) return null;
 	const phrase = queryWords.length > 1;
@@ -411,15 +395,17 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 		counts: classCounts(counted),
 		spare: Math.max(...applicable.map((reading) => reading.unmatched)),
 		admitsPairs: applicable.every((reading) => reading.admitsPairs)
-			? (lo, hi) => applicable.some((reading) => reading.admitsPairs!(lo, hi))
+			? (_missing, item, pairsOf) => {
+					const fieldPairs = pairsOf(item);
+					return applicable.some((reading) => reading.admitsPairs!(fieldPairs));
+				}
 			: null,
-		wholeList: !competing,
-		match: (field, normalisedField) => {
+		match: (field, normalisedField, held) => {
 			if (
 				normalisedField.length > MAX_FIELD_LENGTH ||
 				applicable.every((reading) => reading.holds?.(normalisedField) === false)
 			) {
-				return null;
+				return held;
 			}
 			const words = fieldWords(normalisedField);
 			let best: MatchResult | null = null;
@@ -428,8 +414,10 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 				if (phrase && best !== null) break;
 				best = better(best, reading.matchWords(field, normalisedField, words));
 			}
-			return best;
+			return better(held, best);
 		},
+		wholeList: !competing,
+		besideLiteral: false,
 	};
 };
 
@@ -440,15 +428,13 @@ const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 	queryWords.length === 1 && queryWords[0].length === SWAP_ONLY_LENGTH;
 
 // Indexed by whether the reading competes with matches as typed.
-const preparedReadings = perQuery((): (PreparedReading | null | undefined)[] => []);
+const preparedReadings = perQuery((): (PreparedStage | null | undefined)[] => []);
 
-const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
+const prepare = (prepared: PreparedQuery, competition: Competition): PreparedStage | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
 	return (preparedReadings(prepared)[+competing] ??= prepareReading(prepared, competing));
 };
 
 // An object rather than the bare function so bench/ladder.ts can swap the
-// second pass out.
-export const readings: {
-	prepare: (prepared: PreparedQuery, competition: Competition) => PreparedReading | null;
-} = { prepare };
+// second pass out, which works only while the stages look `prepare` up per call.
+export const readings: Stage = { prepare };

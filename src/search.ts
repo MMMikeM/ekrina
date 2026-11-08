@@ -1,23 +1,20 @@
 import { closesWord } from "./boundaries";
 import {
-	admitsOneEdit,
+	budgetAdmits,
 	buildRawGate,
-	buildRescueBigramGate,
 	buildWordStartRawGate,
 	charMask,
+	type FieldBigrams,
 	rawFieldMask,
 	rawFieldScan,
-	readingAdmits,
-	rescuePairsAdmit,
 } from "./gates";
 import { shiftRanges } from "./ladder";
 import { matchField } from "./match";
 import { normaliseText } from "./normalise";
 import { frontGate, prepareBoundedQuery } from "./query";
-import { rescueCounts, rescueTurn } from "./correction";
 import { resolveFieldSpecs } from "./fields";
 import { CONTAINS_SCORE } from "./scores";
-import { type Competition, type PreparedReading, readings } from "./readings";
+import { type Competition, type PreparedStage, stages } from "./stages";
 import type {
 	Field,
 	FieldMatch,
@@ -157,17 +154,18 @@ export function createSearcher<T, F extends string>(
 	let bigramsLo = new Int32Array(0);
 	let bigramsHi = new Int32Array(0);
 	const bigrams = { lo: 0, hi: 0 };
-	const knowBigrams = (i: number): void => {
+	const pairsOf = (i: number): FieldBigrams => {
 		if (bigramsLo.length === 0) {
 			bigramsLo = new Int32Array(count);
 			bigramsHi = new Int32Array(count);
 		}
-		if (bigramsLo[i] | bigramsHi[i]) return;
-		bigrams.lo = 0;
-		bigrams.hi = 0;
+		bigrams.lo = bigramsLo[i];
+		bigrams.hi = bigramsHi[i];
+		if (bigrams.lo | bigrams.hi) return bigrams;
 		for (let f = 0; f < specCount; f++) rawFieldScan(rawFieldOf(i, f), bigrams);
 		bigramsLo[i] = bigrams.lo;
 		bigramsHi[i] = bigrams.hi;
+		return bigrams;
 	};
 
 	// `withBigrams` takes every item's bigram set in the same pass as its masks,
@@ -254,21 +252,17 @@ export function createSearcher<T, F extends string>(
 		let literalHits = 0;
 		const pageSize = limit ?? Infinity;
 
-		const offerField = (i: number, f: number, match: MatchResult): void => {
+		const setField = (i: number, f: number, match: MatchResult): void => {
 			const at = i * specCount + f;
-			const endsWord = endsOnWordBoundary(normalisedFields[at] as string, match.ranges);
-			if (leads !== null && leads[at]) shiftRanges(match.ranges, leads[at]);
-			const best = fieldMatches[at];
-			if (best !== undefined && !(match.score < best.score)) return;
-			if (best === undefined && !hasMatch(i)) matched.push(i);
+			if (fieldMatches[at] === undefined && !hasMatch(i)) matched.push(i);
 			fieldMatches[at] = match;
-			fieldEndsWord[at] = endsWord ? 1 : 0;
+			fieldEndsWord[at] = endsOnWordBoundary(normalisedFields[at] as string, match.ranges) ? 1 : 0;
 		};
 
-		const scoreItem = (i: number, mayRescue: boolean, frontGated: boolean): void => {
+		const scoreItem = (i: number, frontGated: boolean): void => {
 			// Only a lone field skips chains once a page matches literally: with
 			// several, `fields` reports every match.
-			const literalOnly = !mayRescue && specCount === 1 && literalHits >= pageSize;
+			const literalOnly = specCount === 1 && literalHits >= pageSize;
 			materialise(i);
 			const base = i * specCount;
 			for (let f = 0; f < specCount; f++) {
@@ -278,11 +272,10 @@ export function createSearcher<T, F extends string>(
 					fieldMasks[base + f],
 					prepared,
 					resolvedSpecs[f].acronymTier,
-					mayRescue,
 					frontGated,
 					literalOnly,
 				);
-				if (result) offerField(i, f, result);
+				if (result) setField(i, f, result);
 			}
 			if (holdsLiteral(i)) literalHits++;
 		};
@@ -294,7 +287,7 @@ export function createSearcher<T, F extends string>(
 
 		const admit = (i: number, frontGated: boolean): void => {
 			survivors[survivorCount++] = i;
-			scoreItem(i, false, frontGated);
+			scoreItem(i, frontGated);
 		};
 
 		// Every field the ladder can match outright, none of the near-misses only
@@ -337,74 +330,71 @@ export function createSearcher<T, F extends string>(
 			}
 		};
 
-		// Restart from the whole corpus, tolerating one missing query letter —
-		// what a substitution typo looks like from a mask (see matchField).
-		const relaxedPass = (): void => {
-			const masks = (unionMasks ??= buildUnionMasks());
-			const counts = rescueCounts(prepared);
-			const bigramGate = buildRescueBigramGate(normalisedQuery, counts);
-			forgetMatches();
-			for (let i = 0; i < count; i++) {
-				const missingClasses = queryMask & ~masks[i];
-				if (!admitsOneEdit(missingClasses, counts)) continue;
-				if (missingClasses !== 0) {
-					knowBigrams(i);
-					if (!rescuePairsAdmit(bigramGate, missingClasses, bigramsLo[i], bigramsHi[i])) continue;
-				}
-				scoreItem(i, true, false);
-			}
-		};
-
-		// A fallback match joins the item's results, or replaces a weaker fuzzy or
-		// corrected one; a literal match is never touched.
-		const offerFallbacks = (i: number, reading: PreparedReading): void => {
+		const correctItem = (i: number, stage: PreparedStage): void => {
 			const base = i * specCount;
 			for (let f = 0; f < specCount; f++) {
-				if (!readingAdmits(reading, fieldMasks[base + f])) continue;
+				const at = base + f;
+				if (!budgetAdmits(stage.needed & ~fieldMasks[at], stage.counts, stage.spare)) continue;
 				materialise(i);
-				const result = reading.match(trimmedField(i, f), normalisedFields[base + f] as string);
-				if (result) offerField(i, f, result);
+				const held = fieldMatches[at] ?? null;
+				const result = stage.match(
+					trimmedField(i, f),
+					normalisedFields[at] as string,
+					held,
+					fieldMasks[at],
+					resolvedSpecs[f].acronymTier,
+				);
+				if (result !== held) setField(i, f, result as MatchResult);
 			}
 		};
 
-		const secondPass = (): void => {
-			const competition: Competition =
-				literalHits > 0 ? "literal" : matched.length > 0 ? "fuzzy" : "none";
-			const reading = readings.prepare(prepared, competition);
-			if (reading === null) return;
+		// Into the previous keystroke's survivor buffer, which the literal pass has
+		// finished reading. A bare mask test: with the stages' other gates inside
+		// this loop, a query matching nothing ran up to 50% slower.
+		const budgetCandidates = ({ needed, counts, spare }: PreparedStage): number => {
+			const masks = unionMasks as Int32Array;
+			const candidates = (survivorCache.survivors ??= new Int32Array(count));
+			let found = 0;
+			for (let i = 0; i < count; i++) {
+				const missing = needed & ~masks[i];
+				if (missing === 0 || budgetAdmits(missing, counts, spare)) candidates[found++] = i;
+			}
+			return found;
+		};
+
+		const runStage = (stage: PreparedStage): void => {
 			// A phrase's literal gates read only its words' characters; a single
-			// word's read its punctuation too, which no second-pass reading needs.
+			// word's read its punctuation too, which no stage needs.
 			const survivorsOnly =
-				!reading.wholeList && (multiWord || normalisedQuery === prepared.queryWords[0]);
-			// Fills every item's field masks, which the readings' gate reads.
+				!stage.wholeList && (multiWord || normalisedQuery === prepared.queryWords[0]);
+			// Fills every item's field masks, which the stages' gates read.
 			if (!survivorsOnly) unionMasks ??= buildUnionMasks();
 			const masks = unionMasks;
+			// Survivors hold every letter of the query, so only the whole list is
+			// read against the letter budget.
+			const scanned = survivorsOnly ? survivorCount : budgetCandidates(stage);
+			const items = survivorsOnly ? survivors : (survivorCache.survivors as Int32Array);
 			// An item's union mask and bigram set span all its fields, so it is
-			// skipped only when no field's reading admits both.
-			const { needed, spare, admitsPairs } = reading;
-			const scanned = survivorsOnly ? survivorCount : count;
+			// skipped only when no field could pass.
+			const { needed, admitsPairs, besideLiteral } = stage;
 			for (let k = 0; k < scanned; k++) {
-				const i = survivorsOnly ? survivors[k] : k;
-				if (masks !== null) {
-					const missing = needed & ~masks[i];
-					if (missing !== 0 && (spare === 0 || !readingAdmits(reading, masks[i]))) continue;
-					if (admitsPairs !== null) {
-						knowBigrams(i);
-						if (!admitsPairs(bigramsLo[i], bigramsHi[i])) continue;
-					}
-				}
-				if (holdsLiteral(i)) continue;
-				offerFallbacks(i, reading);
+				const i = items[k];
+				if (masks !== null && admitsPairs !== null && !admitsPairs(needed & ~masks[i], i, pairsOf))
+					continue;
+				if (!besideLiteral && holdsLiteral(i)) continue;
+				correctItem(i, stage);
 			}
 		};
 
 		literalPass();
-		// Taken before the relaxed pass, which rescores the literal hits.
-		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
-		const turn = rescueTurn(normalisedQuery, prepared.queryWords);
-		if (turn === "first" && offeringSecondPass) relaxedPass();
-		if (offeringSecondPass) secondPass();
-		if (turn === "last" && matched.length === 0) relaxedPass();
+		if (literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF)) {
+			for (const stage of stages) {
+				const competition: Competition =
+					literalHits > 0 ? "literal" : matched.length > 0 ? "fuzzy" : "none";
+				const corrector = stage.prepare(prepared, competition);
+				if (corrector !== null) runStage(corrector);
+			}
+		}
 
 		survivorCache.query = normalisedQuery;
 		survivorCache.multiWord = multiWord;
@@ -459,6 +449,12 @@ export function createSearcher<T, F extends string>(
 	// Callers can see key order, so it stays item, score, tier, ranges, text, field,
 	// corrected, fields.
 	const resultOf = (i: number): SearchResult<T, F> => {
+		// A stage reads the match a field holds, so matches stay in trimmed-field
+		// offsets until they are reported.
+		for (let at = i * specCount; leads !== null && at < (i + 1) * specCount; at++) {
+			const match = fieldMatches[at];
+			if (match !== undefined) shiftRanges(match.ranges, leads[at]);
+		}
 		const f = sortedField(i);
 		const { tier, ranges, corrected } = fieldMatches[i * specCount + f] as MatchResult;
 		const result: SearchResult<T> & { field?: string; fields?: Record<string, FieldMatch> } = {

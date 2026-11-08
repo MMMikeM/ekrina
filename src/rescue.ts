@@ -1,5 +1,5 @@
 import { isBoundaryAt, opensWord } from "./boundaries";
-import { charMask } from "./gates";
+import { buildRescueBigramGate, charMask, rescuePairsAdmit } from "./gates";
 import { literalTiers } from "./ladder";
 import { type PreparedQuery, perQuery, prepareQuery } from "./query";
 import {
@@ -11,15 +11,16 @@ import {
 	minTypoQueryLength,
 	rawQuery,
 	rawWordOf,
+	rescueCounts,
+	rescueTurn,
 	swapAdjacentAt,
 	wordStartsOf,
 } from "./correction";
+import type { PreparedStage, Stage } from "./stages";
 import { CONTAINS_SCORE, correctedMatch, preferBetter, TYPO_PENALTY } from "./scores";
 import type { HighlightRanges, MatchResult } from "./types";
 
-// The field currently being rescued against the prepared query, allocated by
-// matchField only when a field actually reaches a rescue site.
-export type RescueContext = {
+type RescueContext = {
 	rawField: string;
 	normalisedField: string;
 	prepared: PreparedQuery;
@@ -320,10 +321,7 @@ const typoRescue = (rescue: RescueContext): MatchResult | null =>
 // dropped keystroke, unless the gap is a separator. It skips the field-scaled
 // floor: the shape pins the correction to one window, so there are no multiple
 // comparisons to guard against (@see bench/longtext.test.ts).
-export const missingCharRescue = (
-	rescue: RescueContext,
-	ranges: HighlightRanges,
-): MatchResult | null => {
+const missingCharRescue = (rescue: RescueContext, ranges: HighlightRanges): MatchResult | null => {
 	const { prepared, normalisedField } = rescue;
 	if (ranges.length !== 2) return null;
 	const [[firstStart, firstEnd], [secondStart, secondEnd]] = ranges;
@@ -360,5 +358,50 @@ export const bestSwap = (
 		true,
 	);
 
-export const rescueField = (rescue: RescueContext): MatchResult | null =>
+const rescueField = (rescue: RescueContext): MatchResult | null =>
 	rescue.prepared.queryWords.length > 1 ? multiWordRescue(rescue) : typoRescue(rescue);
+
+// Nothing held is enough to go on: a field the literal pass never scored failed
+// a gate that only false-passes, so it holds no literal match or chain either.
+const rescueBeside = (rescue: RescueContext, held: MatchResult | null): MatchResult | null => {
+	if (held === null) return rescueField(rescue);
+	if (held.score <= CONTAINS_SCORE) return held;
+	// The field may literally contain the corrected word, so both rescues are
+	// still scored beside the chain, which keeps a tie with them.
+	const dropped = missingCharRescue(rescue, held.ranges);
+	return preferBetter(preferBetter(dropped, rescueField(rescue)), held);
+};
+
+const rescueStage = perQuery((prepared): PreparedStage => {
+	const counts = rescueCounts(prepared);
+	const pairsGate = buildRescueBigramGate(prepared.normalisedQuery, counts);
+	return {
+		needed: prepared.queryMask,
+		counts,
+		spare: 1,
+		admitsPairs: (missing, item, pairsOf) =>
+			missing === 0 || rescuePairsAdmit(pairsGate, missing, pairsOf(item)),
+		match: (rawField, normalisedField, held, fieldMask, acronymTier) =>
+			rescueBeside(
+				{
+					rawField,
+					normalisedField,
+					prepared,
+					acronymTier,
+					missingClasses: prepared.queryMask & ~fieldMask,
+				},
+				held,
+			),
+		wholeList: true,
+		besideLiteral: true,
+	};
+});
+
+export const earlyRescue: Stage = {
+	prepare: (prepared) => (rescueTurn(prepared) === "first" ? rescueStage(prepared) : null),
+};
+
+export const lateRescue: Stage = {
+	prepare: (prepared, competition) =>
+		competition === "none" && rescueTurn(prepared) === "last" ? rescueStage(prepared) : null,
+};

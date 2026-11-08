@@ -76,6 +76,7 @@ What breaks is the seven names below, what a result holds, and the same query re
   - A keystroke that ran a correction still narrows the next one to its literal survivors, word boundaries in ASCII text are read from a table, and only the page `limit` returns is put in order: typing takes about 15% less and document-length fields about 11% less, with identical results.
   - A searcher lets go of the last query's matches once it has returned them, up to 4 MB after a two-letter query over 100k items.
   - A field lacking a letter the query holds twice is turned away before the one-edit rescue looks at it, which no edit could fix: `fuzzyMatch` over a list takes about 29% less.
+  - A correction no longer reruns the literal tiers and the fuzzy chain on items the literal pass already scored: a query of five letters or more over a list of 1,200-character fields takes 35–39% less, and a two-word query over the native corpus about 20% less, with identical results.
 
   Against the 1.1.2 run in `bench/results.json`'s history:
   - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);
