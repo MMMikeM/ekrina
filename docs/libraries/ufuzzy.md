@@ -32,10 +32,10 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-ufuzzy-scorecard-emoji -->
-| Library               |  MRR | Junk | index ms | cold ms | session ms | per query |
-|-----------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
-| **uFuzzy (all opts)** | 0.65 |   0% |        — |       — |          — |         — |
-| uFuzzy                | 0.23 |   0% |        — |       — |          — |         — |
+| Library               |  MRR | Junk |
+|-----------------------|-----:|-----:|
+| **uFuzzy (all opts)** | 0.65 |   0% |
+| uFuzzy                | 0.23 |   0% |
 <!-- bench:end -->
 
 ## Speed at 100k

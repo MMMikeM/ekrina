@@ -384,27 +384,42 @@ const scorecardTable = (
 	corpus: string,
 	shown: Set<string>,
 	emphasised: Set<string> = new Set(),
+	timedAtOwnSize = false,
 ): string => {
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
+	const shownRows = rows.filter((r) => shown.has(r.library));
+	const quality = (r: (typeof rows)[number]): string[] => {
+		const name = displayName(r.library);
+		return [
+			emphasised.has(r.library) ? `**${name}**` : name,
+			r.mrr.toFixed(2),
+			r.junk === undefined ? "—" : percent(r.junk),
+		];
+	};
+	// A corpus too small for the 10k timings is timed at its own size, shown only
+	// where the doc warns that those timings cannot rank.
+	const size = shownRows.some((r) => cellOf(a, corpus, "batch", PROBE_SIZE, r.library))
+		? PROBE_SIZE
+		: timedAtOwnSize
+			? timedSizeOf(a, corpus)
+			: null;
+	if (size === null) {
+		return mdTable(["Library", "MRR", "Junk"], shownRows.map(quality), ["left", "right", "right"]);
+	}
 	return mdTable(
 		["Library", "MRR", "Junk", "index ms", "cold ms", "session ms", "per query"],
-		rows
-			.filter((r) => shown.has(r.library))
-			.map((r) => {
-				const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
-				const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
-				const name = displayName(r.library);
-				return [
-					emphasised.has(r.library) ? `**${name}**` : name,
-					r.mrr.toFixed(2),
-					r.junk === undefined ? "—" : percent(r.junk),
-					batch ? ms(batch.indexMs) : "—",
-					cold == null ? "—" : ms(cold),
-					batch ? ms(sessionMsOf(batch)) : "—",
-					batch ? ms(batch.restMs ?? batch.queryMs) : "—",
-				];
-			}),
+		shownRows.map((r) => {
+			const batch = cellOf(a, corpus, "batch", size, r.library);
+			const cold = meanColdOf(a, corpus, size, r.library);
+			return [
+				...quality(r),
+				batch ? ms(batch.indexMs) : "—",
+				cold == null ? "—" : ms(cold),
+				batch ? ms(sessionMsOf(batch)) : "—",
+				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
+			];
+		}),
 		["left", "right", "right", "right", "right", "right", "right"],
 	);
 };
@@ -544,7 +559,7 @@ export const regions = (a: Artifact): Record<string, string> => {
 		out[`batch-${corpus}`] = batchTable(a, corpus, headline, isRanked(a, corpus));
 	}
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
-		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline);
+		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline, new Set(), true);
 	}
 
 	for (const corpus of Object.keys(a.families ?? {})) {

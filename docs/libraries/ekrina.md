@@ -34,11 +34,11 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-ekrina-scorecard-emoji -->
-| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
-|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
-| Ekrina           | 0.91 |   0% |        — |       — |          — |         — |
-| Ekrina (indexed) | 0.91 |   0% |        — |       — |          — |         — |
-| Ekrina (acronym) | 0.91 |   0% |        — |       — |          — |         — |
+| Library          |  MRR | Junk |
+|------------------|-----:|-----:|
+| Ekrina           | 0.91 |   0% |
+| Ekrina (indexed) | 0.91 |   0% |
+| Ekrina (acronym) | 0.91 |   0% |
 <!-- bench:end -->
 
 ## Speed at 100k

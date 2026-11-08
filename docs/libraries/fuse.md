@@ -47,11 +47,11 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-fuse-scorecard-emoji -->
-| Library             |  MRR | Junk | index ms | cold ms | session ms | per query |
-|---------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
-| **Fuse.js (tuned)** | 0.71 |  35% |        — |       — |          — |         — |
-| Fuse.js (all opts)  | 0.67 |  85% |        — |       — |          — |         — |
-| Fuse.js             | 0.65 |  92% |        — |       — |          — |         — |
+| Library             |  MRR | Junk |
+|---------------------|-----:|-----:|
+| **Fuse.js (tuned)** | 0.71 |  35% |
+| Fuse.js (all opts)  | 0.67 |  85% |
+| Fuse.js             | 0.65 |  92% |
 <!-- bench:end -->
 
 ## Speed at 100k

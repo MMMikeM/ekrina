@@ -549,21 +549,23 @@ Which column matters depends on workload: search-as-you-type → **per query**; 
 | fuzzy             | 0.29 |   3% |     0.03 |    1.67 |      34.52 |      1.36 |
 <!-- bench:end -->
 
-**emoji corpus** (quality only here; its timing is listed, unranked, under "Size, speed & search type"):
+**emoji corpus**, timed at its whole 1,923 items rather than 10k.
+**Its timings cannot rank the libraries**: a whole session here takes as little as <!-- bench:{{ fixed(lowest("scorecard-emoji", "Ekrina+Ekrina (indexed)+Ekrina (acronym)+fast-fuzzy+Fuse.js (tuned)+uFuzzy (all opts)+fuzzysort+@nozbe/microfuzz+match-sorter+fuzzy", "session ms"), 2) }} -->8.67<!-- bench:end --> ms, short enough that run-to-run noise can reorder neighbouring rows.
+They are shown for completeness; the en and native corpora carry the speed comparison.
 
 <!-- bench:scorecard-emoji -->
 | Library           |  MRR | Junk | index ms | cold ms | session ms | per query |
 |-------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
-| Ekrina            | 0.91 |   0% |        — |       — |          — |         — |
-| Ekrina (indexed)  | 0.91 |   0% |        — |       — |          — |         — |
-| Ekrina (acronym)  | 0.91 |   0% |        — |       — |          — |         — |
-| fast-fuzzy        | 0.84 |  26% |        — |       — |          — |         — |
-| Fuse.js (tuned)   | 0.71 |  35% |        — |       — |          — |         — |
-| uFuzzy (all opts) | 0.65 |   0% |        — |       — |          — |         — |
-| fuzzysort         | 0.52 |  25% |        — |       — |          — |         — |
-| @nozbe/microfuzz  | 0.47 |  24% |        — |       — |          — |         — |
-| match-sorter      | 0.45 |  24% |        — |       — |          — |         — |
-| fuzzy             | 0.39 |  24% |        — |       — |          — |         — |
+| Ekrina            | 0.91 |   0% |     0.17 |    3.41 |      18.76 |      0.57 |
+| Ekrina (indexed)  | 0.91 |   0% |     1.28 |    2.22 |      18.20 |      0.55 |
+| Ekrina (acronym)  | 0.91 |   0% |     0.18 |    4.03 |      20.46 |      0.58 |
+| fast-fuzzy        | 0.84 |  26% |    12.31 |   11.19 |     116.51 |      3.90 |
+| Fuse.js (tuned)   | 0.71 |  35% |     0.74 |    5.56 |      93.30 |      3.60 |
+| uFuzzy (all opts) | 0.65 |   0% |     4.11 |    1.18 |      20.27 |      0.63 |
+| fuzzysort         | 0.52 |  25% |     0.03 |    3.06 |       8.67 |      0.22 |
+| @nozbe/microfuzz  | 0.47 |  24% |     2.00 |    0.85 |      15.75 |      0.54 |
+| match-sorter      | 0.45 |  24% |     0.03 |    5.13 |      48.46 |      1.75 |
+| fuzzy             | 0.39 |  24% |     0.03 |    1.22 |      18.78 |      0.73 |
 <!-- bench:end -->
 
 _Ekrina tops all three corpora_<!-- bench:{{ assert(gt(lowest("scorecard-native+scorecard-en+scorecard-emoji", "Ekrina", "MRR"), highest("scorecard-native+scorecard-en+scorecard-emoji", "fast-fuzzy+Fuse.js (tuned)+uFuzzy (all opts)+fuzzysort+@nozbe/microfuzz+match-sorter+fuzzy", "MRR")), "Ekrina scores the highest MRR on every corpus") }} --><!-- bench:end --> at <!-- bench:{{ span(lowest("scorecard-native+scorecard-en+scorecard-emoji", "Ekrina", "MRR"), highest("scorecard-native+scorecard-en+scorecard-emoji", "Ekrina", "MRR"), 2) }} -->0.91–0.92<!-- bench:end -->, with no junk<!-- bench:{{ assert(lt(highest("scorecard-native+scorecard-en+scorecard-emoji", "Ekrina+Ekrina (acronym)+Ekrina (indexed)", "Junk"), 0.5), "no Ekrina row answers a query nothing answers") }} --><!-- bench:end -->; the nearest rows are fast-fuzzy at <!-- bench:{{ span(lowest("scorecard-native+scorecard-en+scorecard-emoji", "fast-fuzzy", "MRR"), highest("scorecard-native+scorecard-en+scorecard-emoji", "fast-fuzzy", "MRR"), 2) }} -->0.80–0.84<!-- bench:end -->, answering <!-- bench:{{ fraction(div(mean(n("scorecard-native", "fast-fuzzy", "Junk"), n("scorecard-en", "fast-fuzzy", "Junk"), n("scorecard-emoji", "fast-fuzzy", "Junk")), 100)) }} -->a quarter<!-- bench:end --> of the queries nothing answers, and Fuse.js (tuned) at <!-- bench:{{ span(lowest("scorecard-native+scorecard-en+scorecard-emoji", "Fuse.js (tuned)", "MRR"), highest("scorecard-native+scorecard-en+scorecard-emoji", "Fuse.js (tuned)", "MRR"), 2) }} -->0.71–0.76<!-- bench:end -->, answering <!-- bench:{{ span(mul(div(lowest("scorecard-native+scorecard-en+scorecard-emoji", "Fuse.js (tuned)", "Junk"), 100), 100), mul(div(highest("scorecard-native+scorecard-en+scorecard-emoji", "Fuse.js (tuned)", "Junk"), 100), 100), 0, "%") }} -->35–47%<!-- bench:end --> of them.
@@ -708,7 +710,7 @@ Omitted: fast-fuzzy and fuzzy, which have no folding option at all, and the base
 ### emoji corpus, unranked
 
 The whole 1,923-item list, timed the same way as the other two corpora but at its own length.
-That is too short to rank speed on, so these rows have no geomean and stay out of the scorecard, the Pareto charts and the library pages.
+That is too short to rank speed on, so these rows have no geomean, appear in the scorecard only under its warning, and stay out of the Pareto charts and the library pages.
 
 <!-- bench:speed-emoji -->
 | Library           |    index | cold query |    total | total rel |
