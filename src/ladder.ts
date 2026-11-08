@@ -20,8 +20,9 @@ const boundaryTier = (
 	haystack: string,
 	needle: string,
 	tier: "boundary-cased" | "boundary",
+	from = 0,
 ): MatchResult | null => {
-	const at = wordStartOccurrence(haystack, needle);
+	const at = wordStartOccurrence(haystack, needle, from);
 	if (at === -1) return null;
 	const score = tier === "boundary-cased" ? BOUNDARY_CASED_SCORE : BOUNDARY_SCORE;
 	return { score, tier, ranges: [[at, at + needle.length - 1]] };
@@ -71,16 +72,11 @@ const acronymTier = (normalisedField: string, normalisedQuery: string): MatchRes
 	};
 };
 
-const containsTier = (normalisedField: string, normalisedQuery: string): MatchResult | null => {
-	const at = normalisedField.indexOf(normalisedQuery);
-	return at > -1
-		? {
-				score: CONTAINS_SCORE,
-				tier: "contains",
-				ranges: [[at, at + normalisedQuery.length - 1]],
-			}
-		: null;
-};
+const containsTier = (at: number, normalisedQuery: string): MatchResult => ({
+	score: CONTAINS_SCORE,
+	tier: "contains",
+	ranges: [[at, at + normalisedQuery.length - 1]],
+});
 
 // In ladder order. Acronym is tried before contains so a field matching both
 // ways gets the better tier.
@@ -102,12 +98,13 @@ export const literalTiers = (
 			ranges: [[0, normalisedField.length - 1]],
 		};
 	}
-	if (normalisedField.startsWith(normalisedQuery)) {
+	const firstAt = normalisedField.indexOf(normalisedQuery);
+	if (firstAt === 0) {
 		return { score: PREFIX_SCORE, tier: "prefix", ranges: [[0, normalisedQuery.length - 1]] };
 	}
 	const boundary =
 		boundaryTier(field, query, "boundary-cased") ??
-		boundaryTier(normalisedField, normalisedQuery, "boundary");
+		(firstAt === -1 ? null : boundaryTier(normalisedField, normalisedQuery, "boundary", firstAt));
 	if (boundary) return boundary;
 
 	if (queryWords.length > 1) {
@@ -120,7 +117,7 @@ export const literalTiers = (
 		if (result) return result;
 	}
 
-	return containsTier(normalisedField, normalisedQuery);
+	return firstAt === -1 ? null : containsTier(firstAt, normalisedQuery);
 };
 
 // Results are fresh per call, so their ranges can shift in place.
