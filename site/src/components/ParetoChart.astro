@@ -1,0 +1,446 @@
+---
+import raw from "../data/pareto.json";
+import {
+	captionOf,
+	chartSvg,
+	constructorNote,
+	CORPORA,
+	MEASURE_LABELS,
+	MEASURES,
+	type Measure,
+	type ParetoData,
+	type ParetoState,
+	sizeLabel,
+	tableHtml,
+} from "../pareto.ts";
+
+interface Props {
+	measure: Measure;
+}
+
+const data = raw as ParetoData;
+const { measure } = Astro.props;
+const state: ParetoState = { measure, constructorCounted: true, corpus: "native", size: "10000" };
+const id = `pareto-${measure}`;
+const note = constructorNote(state);
+const sizes = data.corpora[0]!.sizes;
+// Read before script runs, the chart lays out at about the content column's width.
+const SERVER_WIDTH = 640;
+---
+
+<figure class="pareto" data-pareto={JSON.stringify(state)}>
+	<form class="pareto-controls decoration not-content" aria-label="What the chart plots" hidden>
+		<fieldset>
+			<legend>Measure</legend>
+			<div class="segmented measure">
+				{
+					MEASURES.map((option) => (
+						<label>
+							<input type="radio" name={`${id}-measure`} value={option} checked={option === measure} />
+							<span>{MEASURE_LABELS[option]}</span>
+						</label>
+					))
+				}
+			</div>
+		</fieldset>
+		<fieldset aria-describedby={`${id}-constructor-note`}>
+			<legend>Constructor</legend>
+			<div class="segmented">
+				{
+					[
+						{ value: "counted", label: "Counted" },
+						{ value: "not-counted", label: "Not counted" },
+					].map((option) => (
+						<label>
+							<input
+								type="radio"
+								name={`${id}-constructor`}
+								value={option.value}
+								checked={!note && option.value === "counted"}
+								disabled={Boolean(note)}
+							/>
+							<span>{option.label}</span>
+						</label>
+					))
+				}
+			</div>
+			<p class="control-note" id={`${id}-constructor-note`}>{note}</p>
+		</fieldset>
+		<fieldset>
+			<legend>Corpus</legend>
+			<div class="segmented">
+				{
+					CORPORA.map((corpus) => (
+						<label>
+							<input type="radio" name={`${id}-corpus`} value={corpus} checked={corpus === state.corpus} />
+							<span>{corpus}</span>
+						</label>
+					))
+				}
+			</div>
+		</fieldset>
+		<fieldset>
+			<legend>Size</legend>
+			<div class="segmented">
+				{
+					sizes.map((size) => (
+						<label>
+							<input type="radio" name={`${id}-size`} value={size} checked={size === state.size} />
+							<span>{sizeLabel(size)}</span>
+						</label>
+					))
+				}
+			</div>
+		</fieldset>
+	</form>
+	<div class="pareto-plot decoration not-content">
+		<Fragment set:html={chartSvg(data, state, SERVER_WIDTH)} />
+		<div class="pareto-tip" id={`${id}-tip`} role="tooltip" hidden></div>
+	</div>
+	<ul class="pareto-key decoration not-content" aria-hidden="true">
+		<li><svg viewBox="-8 -8 16 16"><circle class="ekrina" r="5.5"></circle></svg>Ekrina</li>
+		<li><svg viewBox="-9 -9 18 18"><path class="ekrina hollow" d="M0 -8L8 0L0 8L-8 0Z"></path></svg>Ekrina (acronym)</li>
+		<li><svg viewBox="-8 -8 16 16"><rect class="ekrina" x="-5" y="-5" width="10" height="10"></rect></svg>Ekrina (indexed)</li>
+		<li><svg viewBox="-8 -8 16 16"><circle class="field" r="5.5"></circle></svg>Other libraries</li>
+		<li><svg viewBox="0 -8 22 16"><line class="frontier" x1="1" y1="0" x2="21" y2="0"></line></svg>Pareto frontier</li>
+	</ul>
+	<figcaption aria-live="polite">
+		{captionOf(data, state).map((sentence) => <span>{`${sentence} `}</span>)}
+	</figcaption>
+	<details class="pareto-numbers">
+		<summary>The chart's numbers</summary>
+		<div class="table-scroll" set:html={tableHtml(data, state)} />
+	</details>
+</figure>
+
+<script>
+	import { hydrate } from "../pareto-client.ts";
+
+	for (const figure of document.querySelectorAll<HTMLElement>("figure.pareto")) {
+		hydrate(figure);
+	}
+</script>
+
+<style is:global>
+	.pareto {
+		container: pareto / inline-size;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-s);
+		margin-block: var(--space-l);
+	}
+
+	.pareto-controls {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: var(--space-s);
+	}
+
+	.pareto-controls[hidden] {
+		display: none;
+	}
+
+	.pareto-controls fieldset {
+		display: grid;
+		align-content: start;
+		gap: var(--space-3xs);
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.pareto-controls legend {
+		padding: 0;
+		margin-block-end: var(--space-3xs);
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+	}
+
+	.pareto-controls .segmented {
+		width: fit-content;
+	}
+
+	.pareto-controls .segmented label {
+		white-space: nowrap;
+	}
+
+	.pareto-controls .segmented label:has(input:disabled) {
+		color: var(--ink-muted);
+		cursor: not-allowed;
+	}
+
+	.pareto-controls .control-note {
+		max-width: 14rem;
+		margin: 0;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+		line-height: var(--leading-snug);
+		text-wrap: pretty;
+	}
+
+	.pareto-controls .control-note:empty {
+		display: none;
+	}
+
+	/* Four measures don't fit one row on a phone, so they take two. */
+	@container pareto (width < 30rem) {
+		.pareto-controls .segmented.measure {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			width: 100%;
+		}
+
+		.pareto-controls .segmented.measure label + label {
+			border-inline-start: 0;
+		}
+
+		.pareto-controls .segmented.measure label:nth-child(even) {
+			border-inline-start: 1px solid var(--line-strong);
+		}
+
+		.pareto-controls .segmented.measure label:nth-child(n + 3) {
+			border-block-start: 1px solid var(--line-strong);
+		}
+	}
+
+	.pareto-plot {
+		position: relative;
+	}
+
+	.pareto-svg {
+		display: block;
+		width: 100%;
+		height: auto;
+		overflow: visible;
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+		font-variant-numeric: tabular-nums;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.pareto-svg .grid line {
+		stroke: var(--line);
+	}
+
+	.pareto-svg .axis line {
+		stroke: var(--line-strong);
+	}
+
+	.pareto-svg .ticks text,
+	.pareto-svg .title {
+		fill: var(--ink-muted);
+	}
+
+	.pareto-svg .frontier,
+	.pareto-key .frontier {
+		fill: none;
+		stroke: var(--ink);
+		stroke-width: 1.5;
+		stroke-linejoin: round;
+		stroke-linecap: round;
+		opacity: 0.55;
+	}
+
+	.pareto-svg .leader {
+		stroke: var(--ink-muted);
+		stroke-width: 1;
+	}
+
+	.pareto-svg .hit {
+		fill: transparent;
+	}
+
+	.pareto-svg .mark > *,
+	.pareto-key .ekrina,
+	.pareto-key .field {
+		stroke: var(--paper);
+		stroke-width: 1.5;
+	}
+
+	.pareto-svg .ekrina .mark > *,
+	.pareto-key .ekrina {
+		fill: var(--chart-ekrina);
+	}
+
+	.pareto-svg .field .mark > *,
+	.pareto-key .field {
+		fill: var(--chart-field);
+	}
+
+	.pareto-svg .mark > .hollow,
+	.pareto-key .hollow {
+		fill: none;
+		stroke: var(--chart-ekrina);
+		stroke-width: 2;
+		stroke-linejoin: round;
+	}
+
+	.pareto-svg .ring > * {
+		fill: none;
+		stroke: var(--sl-color-text-accent);
+		stroke-width: 2;
+		visibility: hidden;
+	}
+
+	.pareto-svg .pt {
+		cursor: default;
+		outline: none;
+	}
+
+	.pareto-svg .pt.is-active .ring > *,
+	.pareto-svg .pt:focus-visible .ring > * {
+		visibility: visible;
+	}
+
+	.pareto-svg .label {
+		fill: var(--ink-muted);
+		paint-order: stroke;
+		stroke: var(--paper);
+		stroke-width: 4px;
+		stroke-linejoin: round;
+	}
+
+	.pareto-svg .label.strong {
+		fill: var(--ink);
+		font-weight: 500;
+	}
+
+	.pareto-svg .label.is-active {
+		fill: var(--sl-color-text-accent);
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.pareto-plot.is-moving .pt {
+			transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+		}
+
+		.pareto-plot.is-moving :is(.labels, .leaders, .frontier) {
+			animation: pareto-fade 260ms ease-out 140ms both;
+		}
+	}
+
+	@keyframes pareto-fade {
+		from {
+			opacity: 0;
+		}
+	}
+
+	.pareto-tip {
+		position: absolute;
+		z-index: 3;
+		width: max-content;
+		max-width: min(17rem, 100%);
+		padding: var(--space-2xs) var(--space-xs);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-control);
+		background: var(--paper);
+		color: var(--ink);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+		font-variant-numeric: tabular-nums;
+		line-height: var(--leading-snug);
+		pointer-events: none;
+	}
+
+	.pareto-tip[hidden] {
+		display: none;
+	}
+
+	.pareto-tip p {
+		margin: 0;
+	}
+
+	.pareto-tip .tip-name {
+		font-weight: 500;
+	}
+
+	.pareto-tip dl {
+		display: grid;
+		grid-template-columns: auto auto;
+		gap: 0 var(--space-s);
+		margin: var(--space-3xs) 0;
+	}
+
+	.pareto-tip dl > div:not(.tip-group) {
+		display: contents;
+	}
+
+	.pareto-tip dt {
+		color: var(--ink-muted);
+	}
+
+	.pareto-tip dd {
+		margin: 0;
+		text-align: end;
+	}
+
+	.pareto-tip .tip-plotted :is(dt, dd) {
+		color: var(--ink);
+		font-weight: 500;
+	}
+
+	.pareto-tip .tip-group {
+		grid-column: 1 / -1;
+		margin-block-start: var(--space-3xs);
+		padding-block-start: var(--space-3xs);
+		border-block-start: 1px solid var(--line);
+		color: var(--ink-muted);
+	}
+
+	.pareto-tip .tip-note {
+		color: var(--ink-muted);
+		text-wrap: pretty;
+	}
+
+	.pareto-key {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-3xs) var(--space-m);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		color: var(--ink-muted);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-xs);
+	}
+
+	.pareto-key li {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2xs);
+		margin: 0;
+	}
+
+	.pareto-key svg {
+		width: 1rem;
+		height: 1rem;
+		overflow: visible;
+	}
+
+	.pareto-key svg:has(.frontier) {
+		width: 1.375rem;
+	}
+
+	.pareto figcaption {
+		max-width: 44em;
+		color: var(--ink-muted);
+		font-size: var(--text-base);
+		line-height: var(--leading-body);
+		text-wrap: pretty;
+	}
+
+	.pareto-numbers summary {
+		color: var(--sl-color-text-accent);
+		font-family: var(--__sl-font-mono);
+		font-size: var(--text-sm);
+		cursor: pointer;
+	}
+
+	.pareto-numbers .table-scroll {
+		margin-block-start: var(--space-xs);
+	}
+</style>
