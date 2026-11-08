@@ -55,6 +55,9 @@ const NARROW_PX = 340;
 		</fieldset>
 		<fieldset aria-describedby={`${id}-constructor-note`}>
 			<legend>Constructor</legend>
+			<p class="control-hint" id={`${id}-constructor-note`}>
+				{notes.constructor.map((text) => <span data-active={text === note || undefined}>{text}</span>)}
+			</p>
 			<div class="segmented">
 				{
 					[
@@ -74,11 +77,8 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-constructor-note`}>
-				{notes.constructor.map((text) => <span data-active={text === note || undefined}>{text}</span>)}
-			</p>
 		</fieldset>
-		<fieldset aria-describedby={`${id}-corpus-note`}>
+		<fieldset class="corpus-control" aria-describedby={`${id}-corpus-note`}>
 			<legend>Corpus</legend>
 			<div class="segmented">
 				{
@@ -90,7 +90,7 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-corpus-note`}>
+			<p class="corpus-definition" id={`${id}-corpus-note`}>
 				{
 					notes.corpus.map((text, i) => (
 						<span data-active={CORPORA[i] === state.corpus || undefined}>{text}</span>
@@ -98,8 +98,11 @@ const NARROW_PX = 340;
 				}
 			</p>
 		</fieldset>
-		<fieldset aria-describedby={`${id}-size-note`}>
+		<fieldset class="size-control" aria-describedby={`${id}-size-note`}>
 			<legend>Size</legend>
+			<p class="control-hint" id={`${id}-size-note`}>
+				{notes.size.map((text) => <span data-active={text === sizeNote(data, state) || undefined}>{text}</span>)}
+			</p>
 			<div class="segmented">
 				{
 					sizes.map((size) => (
@@ -116,9 +119,6 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-size-note`}>
-				{notes.size.map((text) => <span data-active={text === sizeNote(data, state) || undefined}>{text}</span>)}
-			</p>
 		</fieldset>
 	</form>
 	<div class="pareto-plot decoration not-content">
@@ -165,10 +165,25 @@ const NARROW_PX = 340;
 	}
 
 	.pareto-controls {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		gap: var(--space-s);
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--space-s) var(--space-m);
+	}
+
+	@container pareto (width >= 39rem) {
+		.pareto-controls {
+			grid-template-columns: max-content minmax(0, 1fr);
+		}
+
+		/* The corpus spans under Size so its definition reads on one line; Size sits over its empty right half. */
+		.pareto-controls .corpus-control {
+			grid-area: 2 / 1 / 3 / -1;
+		}
+
+		.pareto-controls .size-control {
+			grid-area: 2 / 2;
+			align-self: start;
+		}
 	}
 
 	.pareto-controls[hidden] {
@@ -177,28 +192,38 @@ const NARROW_PX = 340;
 
 	.pareto-controls fieldset {
 		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
 		align-content: start;
-		gap: var(--space-3xs);
+		align-items: baseline;
+		column-gap: var(--space-2xs);
 		min-width: 0;
 		margin: 0;
 		padding: 0;
 		border: 0;
 	}
 
+	/* Floated, the legend leaves the fieldset's special legend slot and lays out as a grid item beside its hint. */
 	.pareto-controls legend {
+		float: left;
 		padding: 0;
-		margin-block-end: var(--space-3xs);
 		color: var(--ink-muted);
 		font-family: var(--__sl-font-mono);
 		font-size: var(--text-xs);
 	}
 
 	.pareto-controls .segmented {
+		grid-column: 1 / -1;
 		width: fit-content;
+		margin-block-start: var(--space-3xs);
 	}
 
 	.pareto-controls .segmented label {
 		white-space: nowrap;
+	}
+
+	.pareto-controls .segmented:has(input:disabled),
+	.pareto-controls .segmented:has(input:disabled) label + label {
+		border-color: var(--line);
 	}
 
 	.pareto-controls .segmented label:has(input:disabled) {
@@ -206,31 +231,34 @@ const NARROW_PX = 340;
 		cursor: not-allowed;
 	}
 
-	.pareto-controls .control-note {
-		max-width: 14rem;
+	.pareto-controls :is(.control-hint, .corpus-definition) {
+		display: grid;
+		min-width: 0;
 		margin: 0;
 		color: var(--ink-muted);
 		font-family: var(--__sl-font-mono);
 		font-size: var(--text-xs);
 		line-height: var(--leading-snug);
-		text-wrap: pretty;
 	}
 
-	.pareto-controls .control-note:empty {
-		display: none;
-	}
-
-	.pareto-controls .control-note {
-		display: grid;
-	}
-
-	.pareto-controls .control-note > span {
+	.pareto-controls :is(.control-hint, .corpus-definition) > span {
 		grid-area: 1 / 1;
 		visibility: hidden;
 	}
 
-	.pareto-controls .control-note > [data-active] {
+	.pareto-controls :is(.control-hint, .corpus-definition) > [data-active] {
 		visibility: visible;
+	}
+
+	.pareto-controls .control-hint > span {
+		padding-inline-start: var(--space-2xs);
+		border-inline-start: 1px solid var(--line);
+	}
+
+	.pareto-controls .corpus-definition {
+		grid-column: 1 / -1;
+		margin-block-start: var(--space-2xs);
+		text-wrap: pretty;
 	}
 
 	.pareto-plot {
@@ -264,6 +292,10 @@ const NARROW_PX = 340;
 
 	.pareto-svg .grid line {
 		stroke: var(--line);
+	}
+
+	.pareto-svg .grid.minor line {
+		stroke-opacity: 0.45;
 	}
 
 	.pareto-svg .axis line {
