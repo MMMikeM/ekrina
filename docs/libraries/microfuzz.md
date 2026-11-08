@@ -1,7 +1,7 @@
 # @nozbe/microfuzz
 
 Every configuration of @nozbe/microfuzz the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **@nozbe/microfuzz**: the defaults.
@@ -14,50 +14,50 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-microfuzz-scorecard-native -->
-| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.41 |   7% |     4.88 |    3.12 |    36.50 |        1.38 |
-| @nozbe/microfuzz (all opts) | 0.41 |   7% |     4.74 |    3.28 |    36.06 |        1.37 |
+| Library                     |  MRR | Junk | index ms | cold ms | session ms | per query |
+|-----------------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **@nozbe/microfuzz**        | 0.41 |   7% |     4.50 |    2.97 |      39.55 |      1.33 |
+| @nozbe/microfuzz (all opts) | 0.41 |   7% |     4.59 |    2.96 |      40.08 |      1.34 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-microfuzz-scorecard-en -->
-| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.40 |   3% |     4.65 |    2.89 |    35.00 |        1.32 |
-| @nozbe/microfuzz (all opts) | 0.40 |   3% |     4.22 |    2.88 |    33.28 |        1.26 |
+| Library                     |  MRR | Junk | index ms | cold ms | session ms | per query |
+|-----------------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **@nozbe/microfuzz**        | 0.40 |   3% |     4.21 |    2.86 |      37.36 |      1.25 |
+| @nozbe/microfuzz (all opts) | 0.40 |   3% |     4.21 |    2.89 |      37.18 |      1.25 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-microfuzz-scorecard-emoji -->
-| Library                     |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **@nozbe/microfuzz**        | 0.47 |  24% |        — |       — |        — |           — |
-| @nozbe/microfuzz (all opts) | 0.47 |  24% |        — |       — |        — |           — |
+| Library                     |  MRR | Junk |
+|-----------------------------|-----:|-----:|
+| **@nozbe/microfuzz**        | 0.47 |  24% |
+| @nozbe/microfuzz (all opts) | 0.47 |  24% |
 <!-- bench:end -->
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the <!-- bench:{{ constant("100%") }} -->100%<!-- bench:end --> row.
 
 **en corpus:**
 
 <!-- bench:library-microfuzz-speed-en -->
 | Library                     |    index | cold query |    total | total rel |
 |-----------------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**                  |  0.25 ms |    8.13 ms |  8.36 ms |  **100%** |
-| @nozbe/microfuzz            | 51.10 ms |   16.62 ms | 64.70 ms |      774% |
-| @nozbe/microfuzz (all opts) | 49.20 ms |   17.01 ms | 68.41 ms |      818% |
+| **Ekrina**                  |  0.23 ms |    8.10 ms |  8.34 ms |  **100%** |
+| @nozbe/microfuzz            | 48.59 ms |   16.54 ms | 65.41 ms |      784% |
+| @nozbe/microfuzz (all opts) | 48.81 ms |   16.66 ms | 66.19 ms |      793% |
 <!-- bench:end -->
 
 <!-- bench:library-microfuzz-batch-en -->
-| Library                     | batch/query | batch total | batch rel |
-|-----------------------------|------------:|------------:|----------:|
-| **Ekrina**                  |     1.74 ms |    50.87 ms |  **100%** |
-| @nozbe/microfuzz            |    11.39 ms |   296.54 ms |      583% |
-| @nozbe/microfuzz (all opts) |    11.28 ms |   292.94 ms |      576% |
+| Library                     |    build | first answer | session total | per query | per query rel |
+|-----------------------------|---------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**                  |  0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| @nozbe/microfuzz            | 48.59 ms |     21.25 ms |     337.63 ms |  11.16 ms |          679% |
+| @nozbe/microfuzz (all opts) | 48.81 ms |     21.23 ms |     338.58 ms |  11.19 ms |          681% |
 <!-- bench:end -->
 
 **native corpus:**
@@ -65,22 +65,22 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:library-microfuzz-speed-native -->
 | Library                     |    index | cold query |    total | total rel |
 |-----------------------------|---------:|-----------:|---------:|----------:|
-| **Ekrina**                  |  0.22 ms |    9.74 ms |  9.98 ms |  **100%** |
-| @nozbe/microfuzz            | 53.32 ms |   18.25 ms | 69.26 ms |      694% |
-| @nozbe/microfuzz (all opts) | 51.37 ms |   18.14 ms | 69.48 ms |      696% |
+| **Ekrina**                  |  0.23 ms |    9.94 ms | 10.19 ms |  **100%** |
+| @nozbe/microfuzz            | 51.83 ms |   18.51 ms | 70.90 ms |      696% |
+| @nozbe/microfuzz (all opts) | 51.90 ms |   18.42 ms | 70.83 ms |      695% |
 <!-- bench:end -->
 
 <!-- bench:library-microfuzz-batch-native -->
-| Library                     | batch/query | batch total | batch rel |
-|-----------------------------|------------:|------------:|----------:|
-| **Ekrina**                  |     1.91 ms |    55.61 ms |  **100%** |
-| @nozbe/microfuzz            |    12.00 ms |   309.28 ms |      556% |
-| @nozbe/microfuzz (all opts) |    12.09 ms |   311.07 ms |      559% |
+| Library                     |    build | first answer | session total | per query | per query rel |
+|-----------------------------|---------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**                  |  0.23 ms |      9.75 ms |      56.79 ms |   1.96 ms |      **100%** |
+| @nozbe/microfuzz            | 51.83 ms |     21.46 ms |     363.84 ms |  12.11 ms |          619% |
+| @nozbe/microfuzz (all opts) | 51.90 ms |     21.43 ms |     366.44 ms |  12.21 ms |          624% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
-MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
+MRR@10 per family, scored as in [Match quality, by query family](../benchmarks/families.md).
 
 **native corpus:**
 

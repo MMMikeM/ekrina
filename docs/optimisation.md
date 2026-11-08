@@ -45,9 +45,9 @@ It is also monotone under query extension, which the survivor cache depends on: 
 `TYPO_PENALTY` is 2.1, so the best possible correction scores 2.1, strictly worse than any `exact`, `prefix`, `boundary` or `contains` match, all of which score at or below `SCORES.CONTAINS` (2).
 Once ten literal-tier hits exist, no correction can enter the top ten, so computing them is work no caller can observe through the ranking.
 
-Before the budget, the rescue ran 17,616 times per query to produce about five corrected results, roughly 3,500 attempts per correction.
+Before the cutoff, the rescue ran 17,616 times per query to produce about five corrected results, roughly 3,500 attempts per correction.
 
-The budget counts _literal-tier_ hits rather than all results, because `fuzzy` starts at CONTAINS and rises past 2.1, so fuzzy hits must not be allowed to crowd out a correction.
+The cutoff counts _literal-tier_ hits rather than all results, because `fuzzy` starts at CONTAINS and rises past 2.1, so fuzzy hits must not be allowed to crowd out a correction.
 
 ### Lazy fields
 
@@ -90,7 +90,7 @@ The negative results are the more useful half, because each was a confident hypo
 | **Lazy ranges**                                 | 1.08–1.67 range entries per result, and the fuzzy tier's ranges fall out of the chain walk that produces the score. Nothing to defer.                                                                                                                                                                                                                                  |
 | **`missingClasses` dispatch**                   | Sound and adds no work, but its effect sits below the harness's ±3% noise floor, so it cannot be claimed.                                                                                                                                                                                                                                                              |
 
-Every attempt to beat a native regex on time per test lost.
+No attempt to beat a native regex on time per test won.
 The `indexOf` scan that now gates a single word only ties the regex per test; it wins because a query compiles nothing, where each regex holding `\p{L}` cost about 0.2 ms to compile (docs/performance.md).
 The anchored gate won because it makes Irregexp reject _earlier_; the bigram mask lost because it tried to replace Irregexp with a JS loop.
 

@@ -1,7 +1,7 @@
 # uFuzzy
 
 Every configuration of uFuzzy the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **uFuzzy**: the defaults, with in-order terms, no diacritic folding and no typo mode.
@@ -14,33 +14,33 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-ufuzzy-scorecard-native -->
-| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.66 |   0% |     4.42 |    1.62 |    16.21 |        0.61 |
-| uFuzzy                | 0.21 |   0% |     4.04 |    0.83 |     5.46 |        0.18 |
+| Library               |  MRR | Junk | index ms | cold ms | session ms | per query |
+|-----------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **uFuzzy (all opts)** | 0.66 |   0% |     4.33 |    1.47 |      20.85 |      0.63 |
+| uFuzzy                | 0.21 |   0% |     3.76 |    0.81 |       9.10 |      0.18 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-ufuzzy-scorecard-en -->
-| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.66 |   0% |     4.24 |    1.40 |    14.77 |        0.55 |
-| uFuzzy                | 0.21 |   0% |     3.78 |    0.77 |     5.09 |        0.17 |
+| Library               |  MRR | Junk | index ms | cold ms | session ms | per query |
+|-----------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **uFuzzy (all opts)** | 0.66 |   0% |     4.35 |    1.42 |      19.42 |      0.56 |
+| uFuzzy                | 0.21 |   0% |     3.70 |    0.77 |       8.76 |      0.17 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-ufuzzy-scorecard-emoji -->
-| Library               |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|-----------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **uFuzzy (all opts)** | 0.65 |   0% |        — |       — |        — |           — |
-| uFuzzy                | 0.23 |   0% |        — |       — |        — |           — |
+| Library               |  MRR | Junk |
+|-----------------------|-----:|-----:|
+| **uFuzzy (all opts)** | 0.65 |   0% |
+| uFuzzy                | 0.23 |   0% |
 <!-- bench:end -->
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the <!-- bench:{{ constant("100%") }} -->100%<!-- bench:end --> row.
 Only the en corpus is shown, because the native tables list only configurations that fold diacritics and of this library's configurations only uFuzzy (all opts) does; its native row is in [the headline native tables](../benchmarks.md#native-corpus), and the emoji corpus is timed only unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked).
 
 **en corpus:**
@@ -48,22 +48,22 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:library-ufuzzy-speed-en -->
 | Library           |   index | cold query |    total | total rel |
 |-------------------|--------:|-----------:|---------:|----------:|
-| **Ekrina**        | 0.25 ms |    8.13 ms |  8.36 ms |  **100%** |
-| uFuzzy            | 3.67 ms |    2.18 ms |  6.02 ms |       72% |
-| uFuzzy (all opts) | 7.84 ms |    3.24 ms | 11.44 ms |      137% |
+| **Ekrina**        | 0.23 ms |    8.10 ms |  8.34 ms |  **100%** |
+| uFuzzy            | 3.84 ms |    2.24 ms |  6.06 ms |       73% |
+| uFuzzy (all opts) | 8.03 ms |    3.16 ms | 11.19 ms |      134% |
 <!-- bench:end -->
 
 <!-- bench:library-ufuzzy-batch-en -->
-| Library           | batch/query | batch total | batch rel |
-|-------------------|------------:|------------:|----------:|
-| **Ekrina**        |     1.74 ms |    50.87 ms |  **100%** |
-| uFuzzy            |     1.46 ms |    37.97 ms |       75% |
-| uFuzzy (all opts) |     2.07 ms |    54.01 ms |      106% |
+| Library           |   build | first answer | session total | per query | per query rel |
+|-------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**        | 0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| uFuzzy            | 3.84 ms |      2.96 ms |      42.82 ms |   1.50 ms |           91% |
+| uFuzzy (all opts) | 8.03 ms |      4.38 ms |      62.46 ms |   2.09 ms |          127% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
-MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
+MRR@10 per family, scored as in [Match quality, by query family](../benchmarks/families.md).
 
 **native corpus:**
 

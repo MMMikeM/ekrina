@@ -68,9 +68,9 @@ const METRICS: Record<
 		heading: "Ranking quality vs. per-query session time",
 		subtitle: (families, queries) =>
 			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
-		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
+		axis: "Per query: searcher built once, 24 distinct queries after a warm-up. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
-		tail: "Ekrina owns the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Ekrina sits at the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -82,7 +82,7 @@ const METRICS: Record<
 			`MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
-		tail: "A no-index substring scan, fuzzy, owns the fastest cold one-shot; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, where Ekrina (acronym) answers the acronym query without building the whole-list mask index, Ekrina (indexed) moves the mask build into construction and lands a little behind Ekrina, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Fuzzy, a no-index substring scan, is the fastest cold one-shot; every other configuration, including Fuse.js and fuzzysort, is dominated.",
 	},
 };
 
@@ -140,6 +140,20 @@ const frontierOf = <T extends { mrr: number; ms: number }>(pts: T[]): T[] => {
 	return out;
 };
 
+// The chart's own description, which the docs reuse as its alt text.
+const describe = (metric: Metric, data: Point[], families: number): string => {
+	const front = frontierOf(
+		data.map((d) => ({ n: displayName(d.name), mrr: d.mrr, ms: d[metric] })),
+	);
+	return (
+		`Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR ` +
+		`(how highly each ranks the queried item) against ${metric === "query" ? "mean milliseconds per query across one searcher's 24-query session, after a warm-up that takes each library's one-time setup except lazy Ekrina's index build" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
+		`on a log scale, on the native 10k corpus over ${families} query families. ` +
+		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
+		METRICS[metric].tail
+	);
+};
+
 const render = (
 	C: Palette,
 	metric: Metric,
@@ -159,16 +173,11 @@ const render = (
 	}));
 	const front = frontierOf(pts);
 	const onFrontier = new Set(front.map((p) => p.n));
+	const desc = describe(metric, data, families);
 	const color = (p: (typeof pts)[number]): string =>
 		p.isEkrina ? C.ekrina : onFrontier.has(p.n) ? C.frontier : C.dom;
 	const emphasized = (p: (typeof pts)[number]): boolean => p.isEkrina || onFrontier.has(p.n);
 	const frontierPath = front.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" ");
-	const desc =
-		`Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR ` +
-		`(how highly each ranks the queried item) against ${metric === "query" ? "mean milliseconds per query across one searcher's 24-query session, after a warm-up that takes each library's one-time setup except lazy Ekrina's index build" : "total milliseconds for one cold search (index build plus the first, cold query)"}, ` +
-		`on a log scale, on the native 10k corpus over ${families} query families. ` +
-		`The Pareto frontier runs ${front.map((p) => `${p.n} (${p.mrr.toFixed(2)} MRR at ${p.ms.toFixed(2)} ms)`).join(" to ")}. ` +
-		M.tail;
 
 	const grid = [
 		...M.ticks.map(
@@ -294,7 +303,7 @@ const render = (
 };
 
 /** Both charts draw native 10k: MRR from the scorecard, times from the cold matrix. */
-export const renderPareto = (artifact: Artifact): void => {
+const chartData = (artifact: Artifact): { data: Point[]; families: number; queries: number } => {
 	const scorecard = artifact.scorecard.corpora.native;
 	if (!scorecard?.length) throw new Error("no native scorecard — run the quality stage first");
 	const kinds = Object.keys(artifact.coldMatrix.native ?? {}).filter((k) => k !== "batch");
@@ -316,6 +325,33 @@ export const renderPareto = (artifact: Artifact): void => {
 		});
 	const families = artifact.families?.native?.filter((family) => family.scored).length ?? 0;
 	const queries = artifact.probes.native?.length ?? 0;
+	return { data, families, queries };
+};
+
+const attribute = (text: string): string =>
+	text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+/** Each chart as the docs embed it, keyed by its region: light and dark, its description as alt text. */
+export const paretoPictures = (artifact: Artifact): Record<string, string> => {
+	const { data, families } = chartData(artifact);
+	return Object.fromEntries(
+		(Object.keys(METRICS) as Metric[]).map((metric) => {
+			const { file } = METRICS[metric];
+			return [
+				`${file}-picture`,
+				[
+					"<picture>",
+					`  <source media="(prefers-color-scheme: dark)" srcset="./${file}-dark.svg">`,
+					`  <img alt="${attribute(describe(metric, data, families))}" src="./${file}-light.svg">`,
+					"</picture>",
+				].join("\n"),
+			];
+		}),
+	);
+};
+
+export const renderPareto = (artifact: Artifact): void => {
+	const { data, families, queries } = chartData(artifact);
 	for (const metric of Object.keys(METRICS) as Metric[]) {
 		const { file } = METRICS[metric];
 		writeFileSync(

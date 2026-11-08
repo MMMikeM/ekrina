@@ -1,24 +1,27 @@
 # Fuse.js
 
 Every configuration of Fuse.js the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **Fuse.js**: the defaults, `new Fuse(list)`.
 - **Fuse.js (all opts)**: adds `includeMatches` for ranges, `ignoreDiacritics` for folding, and `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order.
-- **Fuse.js (tuned)**: all opts with `threshold` 0.45 rather than the default 0.6, chosen by a sweep against an earlier version of this bench.
+- **Fuse.js (tuned)**: all opts with `threshold` <!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> rather than the default 0.6, chosen by a sweep against an earlier version of this bench.
 
 ## The threshold
 
 Tuned differs from all opts only in `threshold`, so the two rows below isolate it.
-MRR is unrounded, so the ties the two-decimal tables show are broken; rows are the median, across the scored families, of each family's median result-set size (`medianRows` in [`bench/results.json`](../../bench/results.json)); junk is the scorecard's.
+MRR is unrounded, because the two-decimal tables show these rows tied.
+Rows are the median, across the scored families, of each family's median result-set size (`medianRows` in [`bench/results.json`](../../bench/results.json)).
+Junk is the scorecard's.
 
 | `threshold` | MRR en / native / emoji | rows en / native / emoji | junk en / native / emoji |
 |---|--:|--:|--:|
-| 0.6 (default, all opts) | 0.755 / 0.753 / 0.670 | 551 / 387 / 114 | 0.95 / 0.91 / 0.85 |
-| **0.45 (tuned)** | **0.758 / 0.757 / 0.713** | **32 / 31 / 8** | **0.46 / 0.47 / 0.35** |
+| 0.6 (default, all opts) | <!-- bench:{{ fixed(headlineMrr("en", "fuse.js (all opts)"), 3) }} -->0.755<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("native", "fuse.js (all opts)"), 3) }} -->0.753<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("emoji", "fuse.js (all opts)"), 3) }} -->0.670<!-- bench:end --> | <!-- bench:{{ medianRows("en", "fuse.js (all opts)") }} -->551<!-- bench:end --> / <!-- bench:{{ medianRows("native", "fuse.js (all opts)") }} -->387<!-- bench:end --> / <!-- bench:{{ medianRows("emoji", "fuse.js (all opts)") }} -->114<!-- bench:end --> | <!-- bench:{{ fixed(div(n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.95<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.91<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.85<!-- bench:end --> |
+| **<!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> (tuned)** | **<!-- bench:{{ fixed(headlineMrr("en", "fuse.js (tuned)"), 3) }} -->0.758<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("native", "fuse.js (tuned)"), 3) }} -->0.757<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("emoji", "fuse.js (tuned)"), 3) }} -->0.713<!-- bench:end -->** | **<!-- bench:{{ medianRows("en", "fuse.js (tuned)") }} -->32<!-- bench:end --> / <!-- bench:{{ medianRows("native", "fuse.js (tuned)") }} -->31<!-- bench:end --> / <!-- bench:{{ medianRows("emoji", "fuse.js (tuned)") }} -->8<!-- bench:end -->** | **<!-- bench:{{ fixed(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.46<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.47<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.35<!-- bench:end -->** |
 
-At 0.45 Fuse.js scores higher on every corpus, most on emoji, returns 6–8% of the rows, and answers 41–52% as many of the queries nothing answers.
+At <!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> Fuse.js scores higher on every corpus, most on emoji, returns <!-- bench:{{ span(mul(min(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), mul(max(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), 0, "%") }} -->6–8%<!-- bench:end --> of the rows, and answers <!-- bench:{{ span(mul(min(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), mul(max(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), 0, "%") }} -->41–52%<!-- bench:end --> as many of the queries nothing answers.<!-- bench:{{ assert(gt(min(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")), sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)"))), 0), "tuned Fuse.js scores higher than all opts on every corpus") }} --><!-- bench:end --><!-- bench:{{ assert(gt(sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)")), max(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")))), "tuned Fuse.js gains most on emoji") }} --><!-- bench:end -->
+It does lose the "an absent word added" family: tuned Fuse.js scores 0 on it on every corpus, as the family tables below show.
 
 ## Scorecard
 
@@ -27,36 +30,36 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fuse-scorecard-native -->
-| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 |  47% |     1.08 |   17.70 |   283.39 |       11.18 |
-| Fuse.js (all opts)  | 0.75 |  91% |     1.12 |   18.23 |   385.80 |       15.30 |
-| Fuse.js             | 0.72 |  99% |     1.15 |   15.98 |   423.67 |       17.11 |
+| Library             |  MRR | Junk | index ms | cold ms | session ms | per query |
+|---------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **Fuse.js (tuned)** | 0.76 |  47% |     1.11 |   14.98 |     278.14 |     10.92 |
+| Fuse.js (all opts)  | 0.75 |  91% |     1.11 |   17.86 |     351.03 |     13.82 |
+| Fuse.js             | 0.72 |  99% |     1.09 |   15.29 |     396.44 |     15.91 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-fuse-scorecard-en -->
-| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.76 |  46% |     1.06 |   13.91 |   235.35 |        9.25 |
-| Fuse.js (all opts)  | 0.76 |  95% |     1.24 |   15.68 |   309.27 |       12.07 |
-| Fuse.js             | 0.72 | 100% |     1.07 |   13.22 |   319.01 |       12.82 |
+| Library             |  MRR | Junk | index ms | cold ms | session ms | per query |
+|---------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **Fuse.js (tuned)** | 0.76 |  46% |     1.06 |   13.59 |     239.56 |      9.36 |
+| Fuse.js (all opts)  | 0.76 |  95% |     1.06 |   15.92 |     304.97 |     11.96 |
+| Fuse.js             | 0.72 | 100% |     1.05 |   13.43 |     323.61 |     12.94 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-fuse-scorecard-emoji -->
-| Library             |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|---------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **Fuse.js (tuned)** | 0.71 |  35% |        — |       — |        — |           — |
-| Fuse.js (all opts)  | 0.67 |  85% |        — |       — |        — |           — |
-| Fuse.js             | 0.65 |  92% |        — |       — |        — |           — |
+| Library             |  MRR | Junk |
+|---------------------|-----:|-----:|
+| **Fuse.js (tuned)** | 0.71 |  35% |
+| Fuse.js (all opts)  | 0.67 |  85% |
+| Fuse.js             | 0.65 |  92% |
 <!-- bench:end -->
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the <!-- bench:{{ constant("100%") }} -->100%<!-- bench:end --> row.
 The native tables list only the configurations that fold diacritics, so base Fuse.js, which doesn't, is timed on en only; the emoji corpus is timed only unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked).
 
 **en corpus:**
@@ -64,19 +67,19 @@ The native tables list only the configurations that fold diacritics, so base Fus
 <!-- bench:library-fuse-speed-en -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
-| **Ekrina**         | 0.25 ms |    8.13 ms |   8.36 ms |  **100%** |
-| Fuse.js            | 4.69 ms |  105.67 ms | 110.54 ms |     1322% |
-| Fuse.js (all opts) | 4.76 ms |  124.39 ms | 129.26 ms |     1546% |
-| Fuse.js (tuned)    | 4.79 ms |   98.60 ms | 103.51 ms |     1238% |
+| **Ekrina**         | 0.23 ms |    8.10 ms |   8.34 ms |  **100%** |
+| Fuse.js            | 4.92 ms |  108.36 ms | 113.23 ms |     1357% |
+| Fuse.js (all opts) | 4.88 ms |  126.22 ms | 131.11 ms |     1572% |
+| Fuse.js (tuned)    | 4.93 ms |  100.15 ms | 105.01 ms |     1259% |
 <!-- bench:end -->
 
 <!-- bench:library-fuse-batch-en -->
-| Library            | batch/query | batch total | batch rel |
-|--------------------|------------:|------------:|----------:|
-| **Ekrina**         |     1.74 ms |    50.87 ms |  **100%** |
-| Fuse.js            |   130.98 ms |  3227.68 ms |     6345% |
-| Fuse.js (all opts) |   119.14 ms |  2993.41 ms |     5885% |
-| Fuse.js (tuned)    |    94.48 ms |  2366.18 ms |     4652% |
+| Library            |   build | first answer | session total | per query | per query rel |
+|--------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**         | 0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| Fuse.js            | 4.92 ms |     87.46 ms |    3293.28 ms | 133.43 ms |         8124% |
+| Fuse.js (all opts) | 4.88 ms |    131.07 ms |    3043.51 ms | 121.19 ms |         7378% |
+| Fuse.js (tuned)    | 4.93 ms |    102.14 ms |    2417.26 ms |  96.18 ms |         5856% |
 <!-- bench:end -->
 
 **native corpus:**
@@ -84,22 +87,22 @@ The native tables list only the configurations that fold diacritics, so base Fus
 <!-- bench:library-fuse-speed-native -->
 | Library            |   index | cold query |     total | total rel |
 |--------------------|--------:|-----------:|----------:|----------:|
-| **Ekrina**         | 0.22 ms |    9.74 ms |   9.98 ms |  **100%** |
-| Fuse.js (all opts) | 5.16 ms |  139.72 ms | 144.92 ms |     1453% |
-| Fuse.js (tuned)    | 5.25 ms |  111.46 ms | 116.62 ms |     1169% |
+| **Ekrina**         | 0.23 ms |    9.94 ms |  10.19 ms |  **100%** |
+| Fuse.js (all opts) | 5.35 ms |  142.40 ms | 147.68 ms |     1450% |
+| Fuse.js (tuned)    | 5.38 ms |  113.15 ms | 118.45 ms |     1163% |
 <!-- bench:end -->
 
 <!-- bench:library-fuse-batch-native -->
-| Library            | batch/query | batch total | batch rel |
-|--------------------|------------:|------------:|----------:|
-| **Ekrina**         |     1.91 ms |    55.61 ms |  **100%** |
-| Fuse.js (all opts) |   146.00 ms |  3655.11 ms |     6573% |
-| Fuse.js (tuned)    |   117.18 ms |  2924.89 ms |     5260% |
+| Library            |   build | first answer | session total | per query | per query rel |
+|--------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**         | 0.23 ms |      9.75 ms |      56.79 ms |   1.96 ms |      **100%** |
+| Fuse.js (all opts) | 5.35 ms |    149.48 ms |    3579.04 ms | 142.68 ms |         7292% |
+| Fuse.js (tuned)    | 5.38 ms |    114.78 ms |    2788.46 ms | 111.18 ms |         5682% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
-MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
+MRR@10 per family, scored as in [Match quality, by query family](../benchmarks/families.md).
 
 **native corpus:**
 
