@@ -683,7 +683,6 @@ const logAxis = (lo: number, hi: number, plotW: number): TimeAxis => {
 	};
 };
 
-// From zero to the same end as the log axis, so switching scale never changes the range.
 const linearAxis = (hi: number, plotW: number): TimeAxis => ({
 	fraction: (ms) => ms / hi,
 	ticks: linearTicks(hi, plotW),
@@ -725,6 +724,32 @@ const niceAbove = (v: number): number => {
 // setting and every corpus timed like this one, so switching any of those moves points rather
 // than the axis under them; the emoji list is a fiftieth the size and gets its own.
 const SHARED_AXES: Measure[][] = [["one-shot", "per-query"], ["session"]];
+
+// A linear axis spanning both list sizes would squash the smaller one against zero, so it ends at
+// the slowest time of its own size, across every corpus; the emoji list sits with the smaller size.
+const linearEndOf = (data: ParetoData, measure: Measure, size: string): number => {
+	const largest = Math.max(...data.corpora.flatMap((corpus) => corpus.sizes.map(Number)));
+	const sameSize = (other: string) => (Number(other) === largest) === (Number(size) === largest);
+	const measures = SHARED_AXES.find((group) => group.includes(measure))!;
+	const ms = measures.flatMap((shared) =>
+		data.corpora.flatMap((corpus) =>
+			corpus.sizes.filter(sameSize).flatMap((other) =>
+				[true, false].flatMap((constructorCounted) =>
+					data.rows.map((row) =>
+						msOf(row, {
+							measure: shared,
+							constructorCounted,
+							corpus: corpus.id,
+							size: other,
+							scale: "linear",
+						}),
+					),
+				),
+			),
+		),
+	);
+	return niceAbove(Math.max(...ms) * 1.15);
+};
 
 const axesOf = (data: ParetoData, measure: Measure, corpus: Corpus) => {
 	const measures = SHARED_AXES.find((group) => group.includes(measure))!;
@@ -781,7 +806,10 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const front = viewFrontier(data, state, points);
 
 	const { yLo, yHi, msLo, msHi } = axesOf(data, state.measure, state.corpus);
-	const xAxis = state.scale === "log" ? logAxis(msLo, msHi, plotW) : linearAxis(msHi, plotW);
+	const xAxis =
+		state.scale === "log"
+			? logAxis(msLo, msHi, plotW)
+			: linearAxis(linearEndOf(data, state.measure, state.size), plotW);
 	const X = (ms: number) => r1(M.left + xAxis.fraction(ms) * plotW);
 	const Y = (mrr: number) => r1(M.top + ((yHi - mrr) / (yHi - yLo)) * plotH);
 
