@@ -113,6 +113,20 @@ const themedCharts = (markdown: string) =>
 			`<img class="chart chart-light" alt="${alt}" src="${light}">\n<img class="chart chart-dark" alt="${alt}" src="${dark}">`,
 	);
 
+// The site draws both Pareto charts live (ParetoChart.astro), opening on the
+// view each static chart shows. MarkdownContent.astro swaps the wrapper for the
+// component; renderers that skip it, such as llms-full.txt, keep the picture.
+const PARETO_VIEWS: Record<string, string> = { query: "per-query", total: "one-shot" };
+const liveParetoCharts = (markdown: string) =>
+	markdown.replace(
+		/<!-- bench:pareto-(\w+)-picture -->\n([\s\S]*?)\n<!-- bench:end -->/g,
+		(_, chart: string, picture: string) => {
+			const view = PARETO_VIEWS[chart];
+			if (!view) throw new Error(`no live view for the pareto-${chart} chart`);
+			return `<div data-pareto="${view}">\n${picture}\n</div>`;
+		},
+	);
+
 const lastCommitted = (source: string) =>
 	execFileSync("git", ["log", "-1", "--format=%cI", "--", source], {
 		cwd: repoRoot,
@@ -144,7 +158,8 @@ for (const page of pages) {
 	mkdirSync(dirname(out), { recursive: true });
 	writeFileSync(
 		out,
-		frontmatterOf(page) + themedCharts(rewriteLinks(page, withoutMarkers(page.body))),
+		frontmatterOf(page) +
+			themedCharts(rewriteLinks(page, withoutMarkers(liveParetoCharts(page.body)))),
 	);
 }
 for (const chart of readdirSync(join(repoRoot, "docs")).filter((file) => file.endsWith(".svg"))) {
