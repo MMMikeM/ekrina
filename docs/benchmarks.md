@@ -96,7 +96,7 @@ Each number starts its clock at a different point, so each leaves different setu
 | **session total** | yes | yes | yes | it is the whole session |
 | **typing** (`hinton`) | no | no | no: built before the clock starts | five other queries, then each keystroke extends the last |
 
-Speed ranks on **per query**, the cost a user feels on every keystroke.
+Speed ranks on **per query**, the time a user waits on every keystroke.
 It leaves every constructor and the first answer out, so each batch table keeps **build**, **first answer** and **session total** beside it: the setup a design moves off that clock stays in view, and **one-shot** covers a single answer from a fresh list.
 
 ### Where this bench leans
@@ -109,9 +109,9 @@ The timings lean both ways:
 
 - **per query** leaves every constructor out and lets the warm-up absorb first-contact setup, which suits libraries that index up front, and fuzzysort, whose prepare-all lands in the warm-up.
   Lazy Ekrina's mask build stays inside it, which is why Ekrina takes <!-- bench:{{ cell("batch-native", "Ekrina", "per query") }} -->1.96 ms<!-- bench:end --> per query on native at 100k against Ekrina (indexed)'s <!-- bench:{{ cell("batch-native", "Ekrina (indexed)", "per query") }} -->1.43 ms<!-- bench:end --><!-- bench:{{ assert(gt(n("batch-native", "Ekrina", "per query"), n("batch-native", "Ekrina (indexed)", "per query")), "lazy Ekrina is slower per query than Ekrina (indexed)") }} --><!-- bench:end -->.
-- **session total** charges each design for its setup wherever it pays it; read it beside per query when a searcher answers only a handful of queries.
+- **session total** includes each design's setup wherever it happens; read it beside per query when a searcher answers only a handful of queries.
 - **cold query** includes Ekrina's mask build whenever the query needs one; Ekrina (indexed) shows the same work moved into its constructor.
-- **typing** shows Ekrina's survivor cache, the design choice that makes each keystroke cheaper than the last: Ekrina's time per keystroke falls <!-- bench:{{ times(div(sessionMs("ekrina", "hin"), sessionMs("ekrina", "hinto")), 1) }} -->16.0×<!-- bench:end --> across `hinton`.
+- **typing** shows Ekrina's survivor cache, the design choice that makes each keystroke faster than the last: Ekrina's time per keystroke falls <!-- bench:{{ times(div(sessionMs("ekrina", "hin"), sessionMs("ekrina", "hinto")), 1) }} -->16.0×<!-- bench:end --> across `hinton`.
 
 ## Scorecard
 
@@ -120,7 +120,7 @@ One line per configuration: MRR and junk from [`bench/hits.test.ts`](../bench/hi
 **junk** = the share of the 100 queries nothing answers that the library answered anyway, averaged over the five kinds.
 **index ms** = the constructor call (from the batch cell's fresh processes).
 **cold ms** = the mean first-answer time across the six timed queries, each in its own fresh process.
-**session ms** = the constructor plus one fresh process answering a warm-up match and then every representative query once: the realistic session, setup included wherever the library pays it.
+**session ms** = the constructor plus one fresh process answering a warm-up match and then every representative query once: the realistic session, setup included wherever the library does it.
 **per query** = the mean of the 24 queries after the warm-up: how long a query takes once the searcher has answered real queries.
 
 **native corpus:**
@@ -183,7 +183,7 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 <!-- bench:pareto-query-picture -->
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./pareto-query-dark.svg">
-  <img alt="Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR (how highly each ranks the queried item) against mean milliseconds per query across one searcher's 24-query session, after a warm-up that takes each library's one-time setup except lazy Ekrina's index build, on a log scale, on the native 10k corpus over 33 query families. The Pareto frontier runs fuzzysort (0.46 MRR at 0.24 ms) to Ekrina (indexed) (0.91 MRR at 0.31 ms). Ekrina owns the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated." src="./pareto-query-light.svg">
+  <img alt="Scatter plot of eight JavaScript fuzzy search libraries, each at its best-scoring configuration and Ekrina in three, comparing MRR (how highly each ranks the queried item) against mean milliseconds per query across one searcher's 24-query session, after a warm-up that takes each library's one-time setup except lazy Ekrina's index build, on a log scale, on the native 10k corpus over 33 query families. The Pareto frontier runs fuzzysort (0.46 MRR at 0.24 ms) to Ekrina (indexed) (0.91 MRR at 0.31 ms). Ekrina sits at the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated." src="./pareto-query-light.svg">
 </picture>
 <!-- bench:end -->
 
@@ -360,7 +360,7 @@ fuzzysort retains nothing until its first `go()` fills its `prepare()` cache, wh
 
 While typing, each query extends the last.
 Ekrina's prefix-narrowing cache rescans only the previous query's mask-gate survivors, so successive keystrokes get faster<!-- bench:{{ assert(gt(min(sub(n("session", "Ekrina", "`hin`"), n("session", "Ekrina", "`hint`")), sub(n("session", "Ekrina", "`hint`"), n("session", "Ekrina", "`hinto`"))), 0), "each Ekrina keystroke is faster than the one before") }} --><!-- bench:end -->.
-Every other library scans the whole list per keystroke; fuzzysort's later keystrokes are cheaper only because its first one prepared every target.
+Every other library scans the whole list per keystroke; fuzzysort's later keystrokes are faster only because its first one prepared every target.
 
 <!-- bench:session -->
 | Library            | `hin` | `hint` | `hinto` | session |

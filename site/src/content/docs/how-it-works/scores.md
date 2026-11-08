@@ -22,7 +22,7 @@ Each match reports a numeric `score` (for sorting) and a categorical `tier`:
 | +2.1  | `corrected`        | per mistake fixed (`genric`; two add 4.2)  |
 
 A `corrected` match scores as the corrected query's tier + 2.1 per mistake, which puts even a corrected exact hit above `contains` (2).
-A word typed sparsely is a `corrected` match too, starting just above `contains` and scoring higher, so ranking lower, the more of the word it skipped: `hget` for "Huguette" scores 3.25.
+A word typed sparsely is a `corrected` match too, starting just above `contains`, with the score rising the more of the word it skipped: `hget` for "Huguette" scores 3.25.
 A correction is a guess at what you meant, so the literal hit always ranks first.
 `score <= SCORES.CONTAINS` is therefore exactly "the query text appears here", and filtering to it opts out of typo matching entirely.
 

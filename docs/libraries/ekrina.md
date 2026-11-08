@@ -1,7 +1,6 @@
 # Ekrina
 
 Every configuration of Ekrina the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The scorecard and speed tables there show every Ekrina configuration.
 
 - **Ekrina**: the defaults, `createSearcher(list)`.
 - **Ekrina (acronym)**: `createSearcher(list, { selectField: (item) => item, acronym: true })`, a field spec that adds the word-initials tier.

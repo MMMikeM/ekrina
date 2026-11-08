@@ -108,12 +108,12 @@ What breaks is the seven names below, what a result holds, and the same query re
 
 - **A query is matched on its first 256 characters, and one holding a word over 64 characters is never corrected.**
   Leading spaces don't count towards the 256, and the cut never splits a character.
-  Before this, a query of a few thousand characters made the gate regex throw an uncaught `SyntaxError`, a single long word made typo correction cost time and memory quadratic in its length (0.4 s and ~220 MB at 1,000 characters), and a phrase with an absent word of 16,385 characters never returned.
+  Before this, a query of a few thousand characters made the gate regex throw an uncaught `SyntaxError`, a single long word made typo correction take time and memory quadratic in its length (0.4 s and ~220 MB at 1,000 characters), and a phrase with an absent word of 16,385 characters never returned.
   `test/hostile-text.test.ts` holds each hostile query shape from an external review, and `pnpm bench --quality` reproduces every published rank and MRR.
 - **A phrase that repeats one word walks each field once.**
   Each copy resumes after the last, so a field whose word starts sit between mid-word hits is no longer rescanned per copy: 64 copies of `the` over 50 such fields went from 452 ms to 25 ms.
 - **`fuzzyMatch` builds its gates only for a field that gets past the character check.**
-  Matching every row of a list one call at a time no longer pays for gates most rows never reach, which matters most for a long query: 10,000 rows against a 256-character word went from 380 ms to under 10 ms.
+  Matching every row of a list one call at a time no longer builds gates most rows never reach, which matters most for a long query: 10,000 rows against a 256-character word went from 380 ms to under 10 ms.
 - **The cache of rare-character folds is bounded**, so queries naming many distinct code points cannot grow it towards all of Unicode.
 
 ## 1.1.1 (2026-10-30)
@@ -174,7 +174,7 @@ Design decisions worth recording, with the measurements that made them:
 - **Typo corrections sort below every literal tier.**
   `TYPO_PENALTY` (2.1, exported) is added to the corrected query's tier, so even a corrected exact hit (2.1) sits under a true `contains` (2).
   A correction is a guess about what the user meant, so it ranks below a substring match of what they actually typed.
-  With the penalty at 0.9 the guess won, and it was measurable, infix queries lost the intended item from MRR 0.973 to 0.906 as other items' corrections displaced it.
+  With the penalty at 0.9 the guess won, and infix queries' MRR fell from 0.973 to 0.906 as other items' corrections displaced the intended item.
 - **One `corrected` tier for every one-character edit** - swap ("geenric"), insertion ("generric"), deletion ("genric"), substitution ("genaric") - with `MatchResult.corrected` carrying the fixed query in the caller's casing.
   Which edit fired is derivable by diffing and nothing actionable branches on it.
   MRR of the intended item over the ascii corpus: insertion 0.004 → 0.998, substitution 0.000 → 0.996; deletion 0.968 via the fuzzy tier before the rescue existed, 0.962 ranked as a typo under the penalty.

@@ -36,14 +36,14 @@ Behavioural differences:
   Ekrina's `fields` holds each named field that matched, with its `ranges`, its `tier` and the `text` they index; a field that didn't match is absent.
   The result itself carries the best field's `tier`, `ranges` and `text`, and its name in `field`, so a single-field search reads `result.ranges` with no `fields` at all.
   The `[start, end]` inclusive convention is unchanged, so an existing highlight helper keeps working once it reads `.ranges`.
-- **The scores are an API contract here.**
+- **Scores.**
   microfuzz documents its values as "not an API contract, can change between releases"; the shared tiers happen to agree today.
   Ekrina exports them as `SCORES`, pins them in `test/tier-constants.test.ts`, and treats a changed score as a breaking change with a CHANGELOG entry.
 - **There is no `strategy` option.**
   `'smart'` is the always-on behaviour.
   `'off'` becomes `results.filter((r) => r.score <= SCORES.CONTAINS)`, which is exactly "the query text appears here".
   `'aggressive'` has no equivalent on purpose, because the density floor that refuses scattered chains is what holds the long-text junk rate to about {/* bench:{{ pct(div(n("longtext", "16384", "fuzzy junk"), 100)) }} */}1%{/* bench:end */}.
-- **Typos match.**
+- **Typo correction.**
   On the same queries microfuzz scores {/* bench:{{ span(lowest("scorecard-en+scorecard-native+scorecard-emoji", "@nozbe/microfuzz", "MRR"), highest("scorecard-en+scorecard-native+scorecard-emoji", "@nozbe/microfuzz", "MRR"), 2) }} */}0.40–0.47{/* bench:end */} MRR and Ekrina {/* bench:{{ span(lowest("scorecard-en+scorecard-native+scorecard-emoji", "Ekrina", "MRR"), highest("scorecard-en+scorecard-native+scorecard-emoji", "Ekrina", "MRR"), 2) }} */}0.91–0.92{/* bench:end */} ([the scorecard](/benchmarks/#scorecard)).
 - **`normalizeText` is `normaliseText`.**
   EU spelling across the public surface, `splitWords` and `normaliseText` included.

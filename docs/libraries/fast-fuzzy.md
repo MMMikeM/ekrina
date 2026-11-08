@@ -1,7 +1,7 @@
 # fast-fuzzy
 
 Every configuration of fast-fuzzy the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **fast-fuzzy**: the defaults.

@@ -70,7 +70,7 @@ const METRICS: Record<
 			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
 		axis: "Per query: searcher built once, 24 distinct queries after a warm-up. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
-		tail: "Ekrina owns the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Ekrina sits at the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
@@ -82,7 +82,7 @@ const METRICS: Record<
 			`MRR over ${families} query families · native 10k corpus · fresh process per search`,
 		axis: "Cold one-shot: constructor + first answer, fresh process. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs cold one-shot time",
-		tail: "A no-index substring scan, fuzzy, owns the fastest cold one-shot; Ekrina and Ekrina (acronym) share a near-zero build and differ only in query time, where Ekrina (acronym) answers the acronym query without building the whole-list mask index, Ekrina (indexed) moves the mask build into construction and lands a little behind Ekrina, fuzzysort's prepare-all pass lands in its cold query and moves it off this frontier, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Fuzzy, a no-index substring scan, is the fastest cold one-shot; every other configuration, including Fuse.js and fuzzysort, is dominated.",
 	},
 };
 

@@ -78,7 +78,7 @@ The rules that picked the query families ([`bench/catalogue.ts`](../../bench/cat
 - **The headline weights were fixed before measuring**: typos <!-- bench:{{ constant("0.35") }} -->0.35<!-- bench:end -->, phonetic <!-- bench:{{ constant("0.25") }} -->0.25<!-- bench:end -->, partial words <!-- bench:{{ constant("0.15") }} -->0.15<!-- bench:end -->, query shape <!-- bench:{{ constant("0.15") }} -->0.15<!-- bench:end --> and noise <!-- bench:{{ constant("0.10") }} -->0.10<!-- bench:end -->.
   A library's MRR is the weighted mean of its group means, and the [families tables](./families.md) stay unweighted.
   Acronyms and plurals are reported but carry no weight, since both are behaviours one library was built around.
-- **Queries nothing answers are probed at several distances**, so no library's edit budget decides where "unanswerable" starts: corpus words pushed three, four and five edits from every word in the list, random letters four edits from everything, and pairs of words each three edits away, twenty of each.
+- **Queries nothing answers are probed at several distances**, so no library's edit limit decides where "unanswerable" starts: corpus words pushed three, four and five edits from every word in the list, random letters four edits from everything, and pairs of words each three edits away, twenty of each.
 
 Separately from the sampled families, each corpus derives one representative query per probe kind, the query the speed tables time and the batch answers.
 Each kind takes the first item, from a fixed start, that can carry it: two plain words, a long enough word, a word at most two items hold ([`bench/corpus.ts`](../../bench/corpus.ts)).
@@ -133,7 +133,8 @@ The query families were fixed, weights included, before any library was measured
 
 ## The backend one-shot workload
 
-**Backend one-shot workload** (a fresh process runs constructor + first answer): the chart is in [the comparison](../compare.md), which shows it deliberately, since it is the less flattering of the two Pareto charts.
+The backend one-shot workload is a fresh process running constructor + first answer.
+Its chart is in [the comparison](../compare.md), which shows it deliberately, since it is the less flattering of the two Pareto charts.
 Its frontier runs `fuzzy` → Ekrina (acronym): a no-index substring scan at <!-- bench:{{ cell("scorecard-native", "fuzzy", "MRR") }} -->0.30<!-- bench:end --> MRR owns the fast end<!-- bench:{{ assert(lt(oneShot("native", 10000, "fuzzy"), min(oneShot("native", 10000, "ekrina"), oneShot("native", 10000, "ekrina (acronym)"), oneShot("native", 10000, "ekrina (indexed)"), oneShot("native", 10000, "fast-fuzzy"), oneShot("native", 10000, "fuse.js (tuned)"), oneShot("native", 10000, "uFuzzy (all opts)"), oneShot("native", 10000, "fuzzysort"), oneShot("native", 10000, "@nozbe/microfuzz"), oneShot("native", 10000, "match-sorter"))), "fuzzy has the fastest native 10k one-shot") }} --><!-- bench:end --> (<!-- bench:{{ fixed(oneShot("native", 10000, "fuzzy"), 2) }} -->1.86<!-- bench:end --> ms), and Ekrina (acronym) reaches <!-- bench:{{ cell("scorecard-native", "Ekrina (acronym)", "MRR") }} -->0.91<!-- bench:end --> at <!-- bench:{{ fixed(oneShot("native", 10000, "ekrina (acronym)"), 2) }} -->3.20<!-- bench:end --> ms, with Ekrina <!-- bench:{{ pct(sub(div(oneShot("native", 10000, "ekrina"), oneShot("native", 10000, "ekrina (acronym)")), 1)) }} -->10%<!-- bench:end --> behind it at <!-- bench:{{ fixed(oneShot("native", 10000, "ekrina"), 2) }} -->3.52<!-- bench:end --> ms and Ekrina (indexed) <!-- bench:{{ pct(sub(div(oneShot("native", 10000, "ekrina (indexed)"), oneShot("native", 10000, "ekrina (acronym)")), 1)) }} -->22%<!-- bench:end --> behind at <!-- bench:{{ fixed(oneShot("native", 10000, "ekrina (indexed)"), 2) }} -->3.90<!-- bench:end --> ms.<!-- bench:{{ assert(lt(oneShot("native", 10000, "ekrina (acronym)"), min(oneShot("native", 10000, "ekrina"), oneShot("native", 10000, "ekrina (indexed)"))), "Ekrina (acronym) has the fastest one-shot of the Ekrina rows") }} --><!-- bench:end -->
 This is where Ekrina's lazy preparation shows up, against a <!-- bench:{{ cell("scorecard-native", "Ekrina", "index ms") }} -->0.17<!-- bench:end --> ms constructor.
 A fresh searcher's first answer prepares the text of every item it matches, and a single-word query finds them with a scan of the raw strings.
@@ -151,7 +152,8 @@ Only uFuzzy is affected in practice.
 Fuse.js (Bitap) and fast-fuzzy (edit distance) are typo-tolerant in every configuration here.
 Every child consumes its result counts, the runner asserts they are identical across a cell's processes, and [`bench/hits.test.ts`](../../bench/hits.test.ts) records per-library match counts for every query, so the [timings](../benchmarks.md#size-speed--search-type) are known to be timing comparable work.
 
-Ekrina's batch is carried by its architecture, a staged reject path (a per-item union of char-class bitmasks, then a gate chosen by query type, an `indexOf` subsequence scan for one word and a presence regex for several) cuts most items before any tier is tried, and the lazy preparation happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
+Ekrina's batch is fast because a staged reject path (a per-item union of char-class bitmasks, then a gate chosen by query type, an `indexOf` subsequence scan for one word and a presence regex for several) cuts most items before any tier is tried.
+Preparation is lazy and happens once per session: each item's text the first time it matches, and the mask index on the first multi-word query or the first that reaches the rescue.
 
 Ekrina (acronym) runs strictly _more_ code per query than Ekrina on every timed query but the acronym probe `tfts`, so wherever its cells come in under Ekrina's on the others, the gap is load swing rather than speed.
 `tfts` is the exception because Ekrina (acronym) matches it literally and never builds the whole-list mask index for it, where Ekrina does (the third case under the backend one-shot chart).
@@ -210,7 +212,7 @@ No measured cell in these pages is typed by hand.
 - `pnpm vpr bench --scope=native-10k` scopes a dev run to one corpus (`native`) or one corpus at one size (`native-10k`).
   A scoped run measures a partial matrix, so it prints and stops: neither `results.json` nor the docs are touched.
 
-_Both charts read the [scorecard](../benchmarks.md#scorecard) out of [`bench/results.json`](../../bench/results.json) ([`pareto.ts`](../pareto.ts)), so they cannot disagree with it; `pnpm vpr bench --all` redraws them._
+_The two Pareto charts in [the comparison](../compare.md) read the [scorecard](../benchmarks.md#scorecard) out of [`bench/results.json`](../../bench/results.json) ([`pareto.ts`](../pareto.ts)), so they cannot disagree with it; `pnpm vpr bench --all` redraws them._
 
 The pre-filter funnel ([`bench/funnel.test.ts`](../../bench/funnel.test.ts)) is a diagnostic rather than a published table; `pnpm vpr bench:test` runs it.
 Improvements to the benchmarks are welcome.

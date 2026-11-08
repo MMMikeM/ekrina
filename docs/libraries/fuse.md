@@ -1,7 +1,7 @@
 # Fuse.js
 
 Every configuration of Fuse.js the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **Fuse.js**: the defaults, `new Fuse(list)`.
@@ -11,7 +11,9 @@ That row is in bold in the scorecard below.
 ## The threshold
 
 Tuned differs from all opts only in `threshold`, so the two rows below isolate it.
-MRR is unrounded, so the ties the two-decimal tables show are broken; rows are the median, across the scored families, of each family's median result-set size (`medianRows` in [`bench/results.json`](../../bench/results.json)); junk is the scorecard's.
+MRR is unrounded, because the two-decimal tables show these rows tied.
+Rows are the median, across the scored families, of each family's median result-set size (`medianRows` in [`bench/results.json`](../../bench/results.json)).
+Junk is the scorecard's.
 
 | `threshold` | MRR en / native / emoji | rows en / native / emoji | junk en / native / emoji |
 |---|--:|--:|--:|
@@ -19,6 +21,7 @@ MRR is unrounded, so the ties the two-decimal tables show are broken; rows are t
 | **<!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> (tuned)** | **<!-- bench:{{ fixed(headlineMrr("en", "fuse.js (tuned)"), 3) }} -->0.758<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("native", "fuse.js (tuned)"), 3) }} -->0.757<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("emoji", "fuse.js (tuned)"), 3) }} -->0.713<!-- bench:end -->** | **<!-- bench:{{ medianRows("en", "fuse.js (tuned)") }} -->32<!-- bench:end --> / <!-- bench:{{ medianRows("native", "fuse.js (tuned)") }} -->31<!-- bench:end --> / <!-- bench:{{ medianRows("emoji", "fuse.js (tuned)") }} -->8<!-- bench:end -->** | **<!-- bench:{{ fixed(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.46<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.47<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.35<!-- bench:end -->** |
 
 At <!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> Fuse.js scores higher on every corpus, most on emoji, returns <!-- bench:{{ span(mul(min(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), mul(max(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), 0, "%") }} -->6–8%<!-- bench:end --> of the rows, and answers <!-- bench:{{ span(mul(min(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), mul(max(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), 0, "%") }} -->41–52%<!-- bench:end --> as many of the queries nothing answers.<!-- bench:{{ assert(gt(min(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")), sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)"))), 0), "tuned Fuse.js scores higher than all opts on every corpus") }} --><!-- bench:end --><!-- bench:{{ assert(gt(sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)")), max(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")))), "tuned Fuse.js gains most on emoji") }} --><!-- bench:end -->
+It does lose the "an absent word added" family: tuned Fuse.js scores 0 on it on every corpus, as the family tables below show.
 
 ## Scorecard
 

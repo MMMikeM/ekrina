@@ -56,7 +56,7 @@ Multi-word queries get an order-independent presence regex, because the multi-wo
 Single-word queries get a subsequence gate: with one word there is no ordering concern, and one in-order pass is both stricter and faster than the presence gate's k lookaheads.
 For pure a–z queries the mask is already an exact distinct-character presence check, so the presence regex is skipped as redundant (`needsPresenceGate` in `prepareQuery`).
 
-The single-word gate on normalised text is an `indexOf` scan rather than a regex, because compiling was the cost, not testing.
+The single-word gate on normalised text is an `indexOf` scan rather than a regex, because constructing the regex took longer than running it.
 In a fresh process a regex holding `[\p{L}\p{N}_]` took 0.165 ms to construct and 0.106 ms more on its first test, against 0.009 + 0.043 ms for `\w`, and a query compiled 2.4 gates on average (its own and its corrections'): 982 compiles over 400 distinct en@10k queries, against 156k tests.
 Per test the scan matches the regex (70 vs 69 ns on `hinton`, 80 vs 74 on `ameri`, 57 vs 44 on `gensler`, over every en@100k mask survivor), with no verdict different, and it stays linear at any length, so it needs no long-text fallback.
 The raw-text gates keep a regex, anchored on `(?<!\w)`: ASCII `\w` is a strict subset of the word characters, so the anchor admits a superset and still only false-passes.
@@ -82,7 +82,7 @@ Backspace and replacement queries fall back to a full scan.
 A query that ran the relaxed rescue still seeds the cache with its literal survivors: the rescue scores items outside them but never adds to them.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
-### Corrections are budgeted
+### Corrections stop once ten literal hits exist
 
 Every correction scores at least `TYPO_PENALTY` (2.1), above `SCORES.CONTAINS` (2), so once ten literal hits sit at or below `CONTAINS` no correction can reach a top-ten page.
 The rescue is then skipped as provably invisible work.
@@ -91,7 +91,7 @@ The count is taken over the whole corpus before any correction is attempted, so 
 ### Word membership is an `indexOf` scan
 
 `wordStartOccurrence` finds an occurrence that starts a word with an `indexOf` walk, yielding membership and position in one pass, with no per-field `Set` living on the heap.
-The stated trade is that for document-length fields (`strategy: "off"` body text) membership is O(field length) per query word where a Set was O(1).
+The downside is that for document-length fields (`strategy: "off"` body text) membership is O(field length) per query word where a Set was O(1).
 It is bounded in practice (the mask rejects most items first, the scan stops at the first absent word, and the tier only runs for multi-word queries that missed every earlier tier) and unmeasured by the short-string bench corpora.
 Revisit trigger: a long-field corpus probe showing the multi-word tier dominating query time; the fix is an opt-in per-field word index for long fields, not a return of the always-on Set.
 
@@ -190,7 +190,7 @@ Only four-character queries that match nothing get slower (median first answer i
 A four-character miss now takes as long as a five-character miss (`zzzzz`) already did, and a query that matches as typed takes as long as it did before.
 `fuzzyMatch` sees one string, so it applies the fallback to that string alone and corrects whenever the string has no match as typed, where the searcher holds back while any other item matches.
 
-### Sparse matches are priced by what they skip
+### Sparse matches are scored by how much of the word they skip
 
 The second pass scores a word typed sparsely inside a longer one at `CONTAINS + 0.05` plus a weight times the share of the longer word left untyped.
 At a weight of 0.5 the reading ranked "constatn" on "Constantine" (2.19) and "diea" on "Daniela" (2.26) above the one-edit corrections that finish a word ("Constant Djakpa", 2.60), so on real misspellings the two-edit matcher scored 0.57 on en and 0.65 on native where the one-edit matcher it replaced scored 0.73.
@@ -231,7 +231,7 @@ The junk probes stay at 0 of 100 on every corpus, the long-text rates are unchan
 
 On real misspellings the two-edit matcher scored 0.65 on en and native against the one-edit matcher's 0.73, and the two queries behind the gap were both sparse readings: `constatn` read as "Constan**t**i**n**" (2.40) above the one-edit "Constant" (2.60), and `rela` as "Ra**f**a**ela**" above "Real".
 Two changes close it and pass it.
-A sparse reading costs 0.15 more for each letter it skips past the first, so a reading that needs several insertions falls below a correction that finishes a word, while one dropped letter keeps its place.
+A sparse reading adds 0.15 to its score for each letter it skips past the first, so a reading that needs several insertions falls below a correction that finishes a word, while one dropped letter keeps its place.
 And a four-letter word with two neighbouring letters swapped is corrected wherever the fix starts a field word, even beside fuzzy chains: `tahn`, `htis`, `tehy` and `suop` all had a chain such as "Taha Hussein" matching as typed, which kept the one-edit rescue's short correction from running, and the fix's targets never pass the literal gates, so this reading alone scans the whole list.
 A swap keeps every letter, which is why it is safe this short where a drop or a substitution was not ("Short corrections are a fallback").
 Real-misspelling MRR, one-edit matcher → two-edit matcher before → after:
@@ -245,14 +245,14 @@ Real-misspelling MRR, one-edit matcher → two-edit matcher before → after:
 | native held-out |     0.50 |   0.50 |  0.60 |
 
 The skip penalty was swept from 0 to 0.35: 0.15 gives the best mean headline (0.8952 → 0.8972), and from 0.25 two dropped vowels lose up to 0.13 held out for no further gain held out.
-At 0.15 the cost is two dropped vowels at 0.90–0.95 held out, from 1.00.
+At 0.15 two dropped vowels fall to 0.90–0.95 held out, from 1.00.
 Letting every query with only fuzzy chains read in full, rather than just the four-letter ones, scored the same and ran 8–30% slower, so only the swap reading reaches the whole list; three interleaved rounds put that build level with the one before it.
 The junk probes stay at 0 of 100 on every corpus and the long-text rates are unchanged.
 
 ### A fuzzy chain enters a later word at its start
 
 The fuzzy tier is the first relevant answer for 5–7% of the scored queries (22, 17 and 18 of 330 on en, native and emoji), nearly all of them two words typed as one (`pedroalonso`) and initials (`tfts`).
-With fuzzy results dropped and every correction kept, headline MRR fell 0.9154 → 0.8981 (en), 0.9096 → 0.9014 (native) and 0.9131 → 0.9062 (emoji), the acronym family went to 0 on every corpus, and the median result set for a three-letter prefix shrank from 51 rows to 8 on en: the tier earns its MRR from a few families and carries a long tail of weak rows.
+With fuzzy results dropped and every correction kept, headline MRR fell 0.9154 → 0.8981 (en), 0.9096 → 0.9014 (native) and 0.9131 → 0.9062 (emoji), the acronym family went to 0 on every corpus, and the median result set for a three-letter prefix shrank from 51 rows to 8 on en: the tier's MRR comes from a few families and carries a long tail of weak rows.
 That tail is a chain stepping into a later word mid-word, `prow` across "mobile **p**hone with ar**row**"; the useful chains either start each piece at a word or stay inside one.
 
 So a later piece in a new word must open that word, and a piece inside the current word keeps the old rule.
@@ -269,7 +269,7 @@ Both changes together, against the build before them (quality stage, every famil
 | junk                        |         0% → 0% |         0% → 0% |         0% → 0% |
 
 No family's MRR fell, long-text fuzzy junk halved (2.0% → 1.0% from 512 characters up, 200 absent words over the native corpus), and speed did not move (`ab.ts`, seven pairs at 100k: −2.1% to +1.1%).
-Two variants that let a short query's substitution compete beside fuzzy chains were measured first and rejected: run whenever no literal match exists, they cost 0.003–0.010 MRR and 13–17% per query; run only beside chains with a mid-word piece, they cost nothing and fixed nothing, since `prow`'s "**p**erson **row**ing boat" opens every piece at a word.
+Two variants that let a short query's substitution compete beside fuzzy chains were measured first and rejected: run whenever no literal match exists, they lose 0.003–0.010 MRR and run 13–17% slower per query; run only beside chains with a mid-word piece, they change nothing and fix nothing, since `prow`'s "**p**erson **row**ing boat" opens every piece at a word.
 
 ### What a dropped searcher leaves behind
 
@@ -321,7 +321,7 @@ Three other changes were measured and left out:
 
 The live methodology is documented in [benchmarks/method.md](./benchmarks/method.md); these are the lessons that shaped it and constrain any future harness.
 
-- **The corpus drives the table.** The fast-fuzzy flip above showed it, fastest-ish on a shared-prefix word grid and among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
-- **Verify the matching, then time it.** A speed table over unverified matchers compares different jobs. `bench/hits.test.ts` records every library's match count and the queried item's rank per query; it caught uFuzzy silently returning nothing on accent-stripped queries without `latinize`.
-- **Design the corpus property you mean to test.** The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed.
-- **Amortisation has to be measured.** Lazy and cached designs move work rather than remove it; only process-cold measurement (fresh process per sample, [One measurement model](./benchmarks/method.md#one-measurement-model)) shows which call actually takes the time.
+- The corpus drives the table. The fast-fuzzy flip above showed it, fastest-ish on a shared-prefix word grid and among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
+- Verify the matching, then time it. A speed table over unverified matchers compares different jobs. `bench/hits.test.ts` records every library's match count and the queried item's rank per query; it caught uFuzzy silently returning nothing on accent-stripped queries without `latinize`.
+- Design the corpus property you mean to test. The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed.
+- Amortisation has to be measured. Lazy and cached designs move work rather than remove it; only process-cold measurement (fresh process per sample, [One measurement model](./benchmarks/method.md#one-measurement-model)) shows which call actually takes the time.

@@ -43,4 +43,4 @@ To keep an item when any of its named fields matched as typed, test `fields` ins
 ## Why there's no switch
 
 There is no option to turn the fuzzy tier or corrections off, since a filter afterwards gives the same results.
-Corrections are only tried while fewer than ten items match the query as typed, or fewer than `limit` when that is smaller, so they take no time on a query that matches plenty.
+Corrections are only tried while fewer than ten items match the query as typed, or fewer than `limit` when that is smaller, so they are skipped on a query that matches plenty.

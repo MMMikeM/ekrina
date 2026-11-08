@@ -48,28 +48,29 @@ The rankings and the tiers they become:
 
 Behavioural differences:
 
-- **Lower scores are better.**
+- Lower scores are better.
   A ranking is a number that rises as the match gets closer; Ekrina's `score` falls, from `SCORES.EXACT` (0) to `SCORES.CONTAINS` (2) for every match of the text as typed ([Scores and tiers](/how-it-works/scores/)).
-- **Acronyms are opt-in, and rank above `contains`.**
+- Acronyms are opt-in, and rank above `contains`.
   match-sorter tries `ACRONYM` on every key and ranks it below `CONTAINS`.
   Ekrina tries it only on a field with `acronym: true`, and ranks it just above `contains`, at 1.8.
   Without it, `vsc` still finds "Visual Studio Code", as a `fuzzy` match.
-- **`maxRanking` becomes `demoteBy`.**
+- `maxRanking` becomes `demoteBy`.
   Both keep a field's best hit from outranking the others.
   `demoteBy` is added to every score the field produces, so with `demoteBy: SCORES.CONTAINS` an exact body hit ranks level with a title that contains the query.
   There is no `minRanking`, and no per-key `threshold`.
-- **Typos are corrected.**
+- Typos are corrected.
   `termimal` finds nothing in match-sorter; Ekrina finds "Toggle Terminal", with `tier: "corrected"` and `corrected: "terminal"`.
-- **Words match in any order.**
+- Words match in any order.
   match-sorter matches the query as one string, so `code visual` finds nothing; Ekrina finds "Visual Studio Code".
-- **Results carry ranges.**
+- Results carry ranges.
   match-sorter returns the items alone.
   Ekrina returns `{ item, score, tier, ranges, text }`, with `ranges` ready to highlight in `text`.
-- **The searcher remembers the last query.**
+- The searcher remembers the last query.
   A query that extends the previous one usually starts from the items that could have matched the previous one ([which keystrokes rescan](/guides/search-as-you-type/#which-keystrokes-rescan)), which is what search-as-you-type sends, so build the searcher once per list rather than once per keystroke.
-- **No `baseSort` or `sorter`.**
+- No `baseSort` or `sorter`.
   Ties go to a match that ends on a word boundary, then to list order.
-- **Keys are functions.**
+- Keys are functions.
   `"author.name"` becomes `(item) => item.author.name`, and an array key such as `"tags"` becomes `(item) => item.tags.join(" ")`.
   A list of strings needs no key at all: `createSearcher(strings)`.
-- **Accents fold either way, with no `keepDiacritics`.**
+- Accents fold either way, with no `keepDiacritics`.
+  Text and query are both folded, so `cafe` finds "Café" and `café` finds "Cafe", as a `normalised-exact` match.

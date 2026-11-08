@@ -95,32 +95,32 @@ Measured cold, in a fresh process, with nothing warmed (ascii 10k):
 | @nozbe/microfuzz | 12.2 ms |          3.15 ms | 1.145 ms |        2.8× |
 | Fuse.js          |  2.9 ms |         23.14 ms | 18.01 ms |        1.3× |
 
-The first query takes 9–87× the steady-state number the tables published, and it _reorders the field_.
+The first query takes 1.3–87× the steady-state number the tables published, and it _reorders the field_.
 On steady state fuzzysort, uFuzzy and ekrina are within 18% of each other.
 Cold, uFuzzy leads at 2.1 ms, ekrina follows at 3.3, and fuzzysort is last by six times at 18.4, because its lazy prepare-all fires inside the first `go()`.
 A reader choosing on the steady-state table alone would be misled about the experience their users actually have.
 
 ## What we now hold to
 
-- **Run one library per process.**
+- Run one library per process.
   In a shared process, heap pressure, garbage collection, cache residency and inline-cache state all leak between libraries that are supposed to be measured independently.
   Cells run sequentially; running them concurrently reintroduces the contention that isolation removes.
-- **A cold measurement is only possible in a process that has not run that library before.**
+- A cold measurement is only possible in a process that has not run that library before.
   This is the argument for isolation that has nothing to do with noise.
   By the seventh configuration in a shared process, "cold" is unmeasurable.
-- **Publish both cold and warm.**
+- Publish both cold and warm.
   They answer different questions, the first keystroke and the one-shot backend versus the second keystroke and the long-lived server, and they disagree by an order of magnitude.
-- **Record the error bar, always.**
+- Record the error bar, always.
   A cell now carries its median, min, max, mean, sd, p75, p99, relative margin of error and sample count.
-  Without the spread there is no way to tell a result from noise, and for two years there was none.
-- **Keep `min` next to the median rather than choosing.**
+  Without the spread there is no way to tell a result from noise.
+- Keep `min` next to the median rather than choosing.
   The gap between them is a signal.
   fuzzysort's min is stable at ~0.205 ms while its median runs 0.23–0.25 ms with 122–170% spread, because its process-wide `prepare()` cache triggers collections mid-query.
   Publishing only the min would hide a real property of its design.
-- **When a guard false-fires, fix the measurement.**
+- When a guard false-fires, fix the measurement.
   The contamination guard was right to complain, but the reason for it was wrong.
   Loosening it would have silenced the one thing pointing at a genuine defect.
-- **Warm up properly, and collect once, outside the sampling loop.**
+- Warm up properly, and collect once, outside the sampling loop.
   Two iterations leaves the code untiered, and a collection between samples puts its own marking work inside the timed region.
 
 ## Where this leaves older numbers
