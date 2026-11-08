@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import type { Element, ElementContent, Root, Text } from "hast";
+import type { Element, ElementContent, Nodes, Root, Text } from "hast";
 import { matches, select, selectAll } from "hast-util-select";
 import rehypeParse from "rehype-parse";
 import rehypeRemark from "rehype-remark";
@@ -154,7 +154,8 @@ const toMarkdown = async (
 	};
 	remove(
 		tree,
-		(node) => node.type === "comment" || NOISE.some((selector) => matches(selector, node)),
+		(node) =>
+			node.type === "comment" || NOISE.some((selector) => matches(selector, node as Nodes)),
 	);
 	prepareCodeBlocks(tree);
 	prepareTabs(tree);

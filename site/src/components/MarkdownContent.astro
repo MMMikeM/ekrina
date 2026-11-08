@@ -4,6 +4,8 @@ import rehypeParse from "rehype-parse";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { corpusSwitch } from "../corpus-switch.ts";
+import type { Measure } from "../pareto.ts";
+import ParetoChart from "./ParetoChart.astro";
 
 // Starlight scrolls a wide table by making it a block, which also stops it
 // spanning the column; a wrapper scrolls instead, so the table can stay a table.
@@ -19,8 +21,24 @@ const switchCorpora = async (html: string) =>
 		: html;
 
 const content = wrapTables(await switchCorpora(await Astro.slots.render("default")));
+
+// sync-docs.ts wraps each docs page's Pareto picture for the live chart to
+// replace; the split pieces concatenate back to the same document around it.
+const [first = "", ...rest] = content.split(/<div data-pareto="([a-z-]+)">[\s\S]*?<\/div>/);
+const charts = Array.from({ length: rest.length / 2 }, (_, k) => ({
+	measure: rest[2 * k] as Measure,
+	after: rest[2 * k + 1] ?? "",
+}));
 ---
 
 <Default>
-	<Fragment set:html={content} />
+	<Fragment set:html={first} />
+	{
+		charts.map((chart) => (
+			<>
+				<ParetoChart measure={chart.measure} />
+				<Fragment set:html={chart.after} />
+			</>
+		))
+	}
 </Default>
