@@ -111,6 +111,8 @@ export default defineConfig({
 							["how-it-works/corrections", "Every correction rule: what counts as a mistake, when it tries, the limits"],
 							["how-it-works/fuzzy-tier", "Which letter-by-letter matches the fuzzy tier accepts, and the density floor"],
 							["benchmarks", "Match quality (MRR by query family), junk, speed and memory against seven libraries"],
+							["benchmarks/families", "Every query family's MRR per library and corpus, and the queries nothing answers"],
+							["benchmarks/method", "How the benchmarks measure: fresh processes, timing guards, corpora, query families"],
 							["explorer", "Ekrina against any one library, query group by query group"],
 							["libraries/ekrina", "Every Ekrina configuration the bench runs"],
 							["reference", "API overview: every export in one table, generated from the source's JSDoc"],
@@ -144,6 +146,8 @@ export default defineConfig({
 					label: "Benchmarks",
 					items: [
 						{ label: "Quality and speed", slug: "benchmarks" },
+						{ label: "By query family", slug: "benchmarks/families" },
+						{ label: "How it is measured", slug: "benchmarks/method" },
 						{ label: "Compare two libraries", link: "/explorer/" },
 						{ label: "By library", items: [{ autogenerate: { directory: "libraries" } }] },
 					],

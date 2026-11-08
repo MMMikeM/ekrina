@@ -46,6 +46,18 @@ const pages: Page[] = [
 		0,
 	),
 	docsPage(
+		"docs/benchmarks/families.md",
+		"benchmarks/families",
+		"MRR for every query family on every corpus, for Ekrina and seven other fuzzy search libraries, and how often each answers queries nothing answers.",
+		1,
+	),
+	docsPage(
+		"docs/benchmarks/method.md",
+		"benchmarks/method",
+		"How the ekrina benchmarks measure: a fresh process per sample, the timing guards, the Wikidata and emoji corpora, and the query families they score.",
+		2,
+	),
+	docsPage(
 		"docs/compare.md",
 		"compare",
 		"Ekrina against Fuse.js, fast-fuzzy, uFuzzy, fuzzysort, microfuzz, match-sorter and fuzzy: match quality, junk, speed, size and what to pick.",

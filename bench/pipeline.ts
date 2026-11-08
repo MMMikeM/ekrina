@@ -25,6 +25,8 @@ import { omittedFrom, regions } from "./tables.ts";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DOC = new URL("../docs/benchmarks.md", import.meta.url);
+const METHOD = new URL("../docs/benchmarks/method.md", import.meta.url);
+const FAMILIES = new URL("../docs/benchmarks/families.md", import.meta.url);
 const README = new URL("../README.md", import.meta.url);
 const COMPARE = new URL("../docs/compare.md", import.meta.url);
 const LIBRARY_DIR = new URL("../docs/libraries/", import.meta.url);
@@ -314,10 +316,13 @@ const tables = { ...regions(artifact), ...paretoPictures(artifact) };
 
 if (stages.cold || stages.quality || stages.memory || stages.size) save(artifact);
 
-// docs/benchmarks.md carries the headline tables, README.md and
-// docs/compare.md the comparison, each library page its own.
+// docs/benchmarks.md carries the headline tables, docs/benchmarks/ the method
+// and the family tables, README.md and docs/compare.md the comparison, each
+// library page its own.
 const docs = [
 	DOC,
+	METHOD,
+	FAMILIES,
 	README,
 	COMPARE,
 	...readdirSync(LIBRARY_DIR)

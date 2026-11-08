@@ -96,7 +96,7 @@ Each library at its best-scoring configuration, on 10,000 real Wikidata names un
 <!-- bench:end -->
 
 **MRR** is mean reciprocal rank over families of real-world mistakes, where 1 means the right item always comes first, and **Junk** is the share of queries with no right answer that a library answers anyway.
-[The comparison](https://ekrina.thelazyweb.dev/compare/) has the method and what to pick, including where another library wins, and [the benchmarks](https://ekrina.thelazyweb.dev/benchmarks/) have every family.
+[The comparison](https://ekrina.thelazyweb.dev/compare/) has the method and what to pick, including where another library wins, and [the benchmarks](https://ekrina.thelazyweb.dev/benchmarks/families/) have every family.
 
 ## Docs
 

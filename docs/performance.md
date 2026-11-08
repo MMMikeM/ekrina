@@ -177,7 +177,7 @@ So below five characters a correction is a fallback:
 - the searcher offers it only when no item matches the query as typed, so `rsaw` and `kepa`, which do, are never corrected.
 
 MRR rises 0.82 → 0.83 on mixed and 0.77 → 0.79 on ascii, `rsaw` and `kepa` keep their ranks and sets, and the long-text test passes.
-Rescored over the sampled query families that replaced single probes ([benchmarks.md](./benchmarks.md#match-quality-by-query-family)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
+Rescored over the sampled query families that replaced single probes ([benchmarks/families.md](./benchmarks/families.md)), the four-character typo family goes from 0 to 0.59 on mixed and 0.79 on ascii, MRR 0.82 → 0.84 and 0.80 → 0.84, and no other family moves.
 Only four-character queries that match nothing get slower (median first answer in a fresh process, nine rounds interleaved, five-character floor → fallback):
 
 | Query                |             Cold | After `buildIndex()` |
@@ -319,9 +319,9 @@ Three other changes were measured and left out:
 
 ## Benchmarking lessons
 
-The live methodology is documented in [benchmarks.md](./benchmarks.md); these are the lessons that shaped it and constrain any future harness.
+The live methodology is documented in [benchmarks/method.md](./benchmarks/method.md); these are the lessons that shaped it and constrain any future harness.
 
 - **The corpus drives the table.** The fast-fuzzy flip above showed it, fastest-ish on a shared-prefix word grid and among the slowest on natural-language data. State the corpus, and prefer natural-language data unless prefix-clustering is what you mean to measure.
 - **Verify the matching, then time it.** A speed table over unverified matchers compares different jobs. `bench/hits.test.ts` records every library's match count and the queried item's rank per query; it caught uFuzzy silently returning nothing on accent-stripped queries without `latinize`.
 - **Design the corpus property you mean to test.** The en faker generators measured 0% diacritics (faker's French company names too), so diacritic density had to be constructed.
-- **Amortisation has to be measured.** Lazy and cached designs move work rather than remove it; only process-cold measurement (fresh process per sample, benchmarks.md "One measurement model") shows which call actually takes the time.
+- **Amortisation has to be measured.** Lazy and cached designs move work rather than remove it; only process-cold measurement (fresh process per sample, [One measurement model](./benchmarks/method.md#one-measurement-model)) shows which call actually takes the time.

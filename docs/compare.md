@@ -6,7 +6,7 @@ On that measure a 24-query session over 100,000 items averages ~<!-- bench:{{ sp
 Between the libraries, the differences are _match quality_, _what they answer that they shouldn't_, and _what you get back_.
 
 Each library at its best-scoring configuration, native corpus at 10k items, measured November 2026 (the versions are the devDependencies in [`bench/package.json`](../bench/package.json), as the lockfile resolves them).
-That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on; uFuzzy's defaults score <!-- bench:{{ cell("library-ufuzzy-scorecard-native", "uFuzzy", "MRR") }} -->0.21<!-- bench:end --> and Fuse.js's <!-- bench:{{ cell("library-fuse-scorecard-native", "Fuse.js", "MRR") }} -->0.72<!-- bench:end --> ([how each was configured](./benchmarks.md#libraries)):
+That configuration is chosen by these same benchmarks, so every row is the library tuned to the tests it is ranked on; uFuzzy's defaults score <!-- bench:{{ cell("library-ufuzzy-scorecard-native", "uFuzzy", "MRR") }} -->0.21<!-- bench:end --> and Fuse.js's <!-- bench:{{ cell("library-fuse-scorecard-native", "Fuse.js", "MRR") }} -->0.72<!-- bench:end --> ([how each was configured](./benchmarks/method.md#configurations)):
 
 <!-- bench:compare -->
 | Library           |  MRR |    ms | Gzip kB | Junk | Typos     | Tiers | Ranges  | Deps |
@@ -21,11 +21,11 @@ That configuration is chosen by these same benchmarks, so every row is the libra
 | fuzzy             | 0.30 |  1.50 |     0.8 |   7% | none      |  no   | partial |    0 |
 <!-- bench:end -->
 
-The corpora are 100,000 real Wikidata names, under their English labels and under their native ones, plus an emoji picker's labels and tags ([the corpora](./benchmarks.md#the-corpora-and-the-query-families)).
+The corpora are 100,000 real Wikidata names, under their English labels and under their native ones, plus an emoji picker's labels and tags ([the corpora](./benchmarks/method.md#the-corpora-and-the-query-families)).
 The ranking is the same on all three, with Ekrina at <!-- bench:{{ span(lowest("scorecard-en+scorecard-native+scorecard-emoji", "Ekrina", "MRR"), highest("scorecard-en+scorecard-native+scorecard-emoji", "Ekrina", "MRR"), 2) }} -->0.91–0.92<!-- bench:end -->.<!-- bench:{{ assert(sameOrder("MRR", "scorecard-en", "scorecard-native", "scorecard-emoji"), "the MRR ranking is the same on all three corpora") }} --><!-- bench:end -->
 
 - **MRR** is the mean reciprocal rank of the first right answer: in first place it scores 1/1, in second 1/2, and so on, down to 0 below tenth place.
-  It is averaged over 33 query families of ten queries each (330 different queries in total), weighted by group before anything was measured ([how](./benchmarks.md#match-quality-by-query-family)).
+  It is averaged over 33 query families of ten queries each (330 different queries in total), weighted by group before anything was measured ([how](./benchmarks/method.md#the-corpora-and-the-query-families)).
 - **ms** is the average time of 24 different queries in one fresh process, after a single warm-up query that takes each library's one-time setup.
   The warm-up matches literally, so Ekrina builds its index during the first of the 24 that needs it, and that build time is part of the average.
 - **Gzip kB** is `esbuild --bundle --minify` tree-shaken to each library's primary API and gzipped by Node's zlib, rounded to a tenth; the size badge on the README measures the whole published package instead.

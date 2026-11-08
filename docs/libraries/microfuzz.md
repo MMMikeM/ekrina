@@ -80,7 +80,7 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 
 ## Match quality, by query family
 
-MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
+MRR@10 per family, scored as in [Match quality, by query family](../benchmarks/families.md).
 
 **native corpus:**
 
