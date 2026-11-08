@@ -9,7 +9,7 @@ web
 ## Users
 
 Developers choosing a fuzzy-search library for a search-as-you-type interface, such as a command palette or a picker; backend one-shot lookups are a secondary workload.
-LLM agents that recommend a library to those developers, reading the Markdown copy of each page and `llms.txt`, and coding agents using it, which read `dist/AGENTS.md` in the installed package.
+LLM agents that recommend a library to those developers, reading the Markdown copy of each page and `llms.txt`, and coding agents using the package, which read `dist/AGENTS.md` in the installed package.
 
 ## Product Purpose
 

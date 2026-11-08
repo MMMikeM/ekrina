@@ -14,6 +14,7 @@ export default defineConfig({
 			"bench/corpus-*.json",
 			"bench/misspellings.json",
 			"docs/benchmarks.md",
+			"docs/benchmarks",
 			"docs/compare.md",
 			"docs/libraries",
 			"README.md",

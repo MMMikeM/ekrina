@@ -31,21 +31,28 @@ A release is a `vX.Y.Z` tag pushed from `main` (`vpr release`), after the versio
 
 ## Benchmarks and published numbers
 
-Every number in README.md and docs/benchmarks.md is generated, and `vpr bench --all` (`bench/pipeline.ts`) is the only thing that generates them.
+Every number in README.md, docs/benchmarks.md and its detail pages (docs/benchmarks/method.md, docs/benchmarks/families.md) is generated, and `vpr bench --all` (`bench/pipeline.ts`) is the only thing that generates them.
 docs/performance.md is the design-rationale record: decision evidence quoted from the runs that settled decisions, never current standings, and nothing in it is generated.
-`vpr bench --all` builds, measures every library, writes `bench/results.json`, rewrites every marked table in docs/benchmarks.md, README.md, docs/compare.md and docs/libraries/, and redraws the Pareto SVGs, with `BENCH_REPEAT=1` set for its timings.
+`vpr bench --all` builds, measures every library, writes `bench/results.json`, rewrites every marked table in docs/benchmarks.md, docs/benchmarks/, README.md, docs/compare.md and docs/libraries/, and redraws the Pareto SVGs, with `BENCH_REPEAT=1` set for its timings.
 Plain `vpr bench` times ekrina's rows once in the cold stage and prints, touching neither the artifact nor the docs.
 Never hand-edit a cell inside a `<!-- bench:… -->` region — the next run overwrites it, and `vpr bench --check` fails in the meantime.
 
 - `vpr bench --docs` re-emits every table from the committed `results.json` without measuring. This is the one to reach for when reworking prose around a table.
 - `vpr bench --check` exits nonzero, naming the regions, if the doc disagrees with the artifact.
 - `vpr bench --speed` / `--quality` / `--memory` run one stage (ekrina only and printed, unless `--all`); `--runs=N` sets the fresh processes per cold cell (default 1; a full `--all` run takes about four minutes).
-- `vpr bench --size --all` measures every library's gzipped bundle (`bench/size.ts`) and rewrites the size cells and the inline `<!-- bench:ekrina-gzip -->` regions in seconds; sizes live in `results.json`, not `bench/libraries.ts`. `bench/size.test.ts` holds Ekrina's under a budget. An inline region keeps both markers on one line, inside a sentence.
+- `vpr bench --size --all` measures every library's gzipped bundle (`bench/size.ts`) and rewrites the size cells and the inline `<!-- bench:ekrina-gzip -->` regions in seconds; sizes live in `results.json`, not `bench/libraries.ts`. `bench/size.test.ts` holds Ekrina's under a size limit. An inline region keeps both markers on one line, inside a sentence.
 - `vpr bench --only=<library>` re-measures one library's rows and merges them over the committed artifact, guarded by a foreign-anchor check (an untouched library's cell must reproduce within 25%) and a printed old→new delta report to confirm only the expected cells moved. The cross-library ordering then spans two sessions; rerun the full matrix before publishing it as evidence.
 - `vpr bench:test` — the gate funnel and the other assertions, against ekrina's rows unless `BENCH_ONLY=all`. The funnel is a diagnostic, not a published table.
 
 `bench/results.json` is committed: it is the evidence for every published cell, so a number that moves is a reviewable diff.
 Adding a table means adding a region to `regions()` in `bench/tables.ts` and a marker pair in the doc; headings and prose stay outside the markers, except the clause an inline region generates.
+
+A measurement quoted in prose is a figure, never typed by hand: `<!-- bench:{{ cell("scorecard-native", "fuzzysort", "per query") }} -->0.26<!-- bench:end -->` (in `.mdx`, `{/* bench:{{ … }} */}…{/* bench:end */}`), rendered in place by `vpr bench --docs`.
+The figure language is `bench/figures.ts`: `cell`/`n` read a rendered table, so a quoted value always matches the table beside it, `raw` reads `results.json` for values no table shows, and arithmetic and formatting compose on top.
+A sentence whose wording depends on an ordering or the tie band ("fastest", "level", "inside the tie band") carries an `assert(…)` figure, which renders nothing and fails the build once the numbers stop backing it; rewrite the sentence then rather than deleting the assert.
+A deliberate fixed value, such as the 18% density floor, is `constant("18%")`.
+`vpr bench --check` fails on any measurement typed outside a marker in a doc the pipeline manages (the `docs` list in `bench/pipeline.ts`).
+Publish timings with `vpr bench --all --runs=3`, the median of three processes per cell that docs/benchmarks/method.md states.
 
 Guards to respect rather than route around:
 
@@ -115,4 +122,4 @@ Claims about behaviour cite the table or command that produced them, and a claim
 
 Enforced by `vp fmt`/`vp lint`, configured in `vite.config.ts`, not by hand: tabs, double quotes, semicolons, 100 columns. Run `vpr format`.
 
-The generated files the formatter skips (`bench/results.json`, the corpora and misspellings, and every doc with a marked region: `docs/benchmarks.md`, `docs/compare.md`, `docs/libraries/`, `README.md`) and `site/` keep whatever style they have; never reformat them by hand.
+The generated files the formatter skips (`bench/results.json`, the corpora and misspellings, and every doc with a marked region: `docs/benchmarks.md`, `docs/benchmarks/`, `docs/compare.md`, `docs/libraries/`, `README.md`) and `site/` keep whatever style they have; never reformat them by hand.

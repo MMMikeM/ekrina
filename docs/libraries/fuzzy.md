@@ -1,7 +1,7 @@
 # fuzzy
 
 Every configuration of fuzzy the bench runs, over the same corpora and queries as [the benchmarks](../benchmarks.md).
-The headline tables there show whichever scores best on those benchmarks, which makes it the configuration tuned to the tests it is ranked on.
+The headline tables there show the configuration that scores best on those benchmarks, so that row is the one tuned to the tests it is ranked on.
 That row is in bold in the scorecard below.
 
 - **fuzzy**: the defaults, `fuzzy.filter(query, list)`.
@@ -14,33 +14,33 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fuzzy-scorecard-native -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.30 |   7% |     0.03 |    1.83 |    38.96 |        1.54 |
-| fuzzy (all opts) | 0.30 |   7% |     0.03 |    1.90 |    39.69 |        1.57 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **fuzzy**        | 0.30 |   7% |     0.03 |    1.83 |      37.96 |      1.50 |
+| fuzzy (all opts) | 0.30 |   7% |     0.03 |    1.90 |      39.50 |      1.56 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-fuzzy-scorecard-en -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.29 |   3% |     0.03 |    1.70 |    34.02 |        1.34 |
-| fuzzy (all opts) | 0.29 |   3% |     0.03 |    1.77 |    35.71 |        1.41 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **fuzzy**        | 0.29 |   3% |     0.03 |    1.67 |      34.52 |      1.36 |
+| fuzzy (all opts) | 0.29 |   3% |     0.03 |    1.72 |      36.17 |      1.43 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-fuzzy-scorecard-emoji -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.39 |  24% |        — |       — |        — |           — |
-| fuzzy (all opts) | 0.39 |  24% |        — |       — |        — |           — |
+| Library          |  MRR | Junk |
+|------------------|-----:|-----:|
+| **fuzzy**        | 0.39 |  24% |
+| fuzzy (all opts) | 0.39 |  24% |
 <!-- bench:end -->
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the <!-- bench:{{ constant("100%") }} -->100%<!-- bench:end --> row.
 Only the en corpus is shown, because the native tables list only configurations that fold diacritics and this library has no folding option ([native corpus](../benchmarks.md#native-corpus)); the emoji corpus is timed only unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked).
 
 **en corpus:**
@@ -48,22 +48,22 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:library-fuzzy-speed-en -->
 | Library          |   index | cold query |    total | total rel |
 |------------------|--------:|-----------:|---------:|----------:|
-| **Ekrina**       | 0.25 ms |    8.13 ms |  8.36 ms |  **100%** |
-| fuzzy            | 0.03 ms |   13.30 ms | 13.33 ms |      159% |
-| fuzzy (all opts) | 0.04 ms |   13.69 ms | 13.72 ms |      164% |
+| **Ekrina**       | 0.23 ms |    8.10 ms |  8.34 ms |  **100%** |
+| fuzzy            | 0.03 ms |   13.57 ms | 13.60 ms |      163% |
+| fuzzy (all opts) | 0.03 ms |   13.99 ms | 14.02 ms |      168% |
 <!-- bench:end -->
 
 <!-- bench:library-fuzzy-batch-en -->
-| Library          | batch/query | batch total | batch rel |
-|------------------|------------:|------------:|----------:|
-| **Ekrina**       |     1.74 ms |    50.87 ms |  **100%** |
-| fuzzy            |    13.33 ms |   335.88 ms |      660% |
-| fuzzy (all opts) |    14.90 ms |   375.74 ms |      739% |
+| Library          |   build | first answer | session total | per query | per query rel |
+|------------------|--------:|-------------:|--------------:|----------:|--------------:|
+| **Ekrina**       | 0.23 ms |      8.55 ms |      48.14 ms |   1.64 ms |      **100%** |
+| fuzzy            | 0.03 ms |     15.72 ms |     329.25 ms |  13.06 ms |          795% |
+| fuzzy (all opts) | 0.03 ms |     16.83 ms |     345.87 ms |  13.71 ms |          835% |
 <!-- bench:end -->
 
 ## Match quality, by query family
 
-MRR@10 per family, scored as in [Match quality, by query family](../benchmarks.md#match-quality-by-query-family).
+MRR@10 per family, scored as in [Match quality, by query family](../benchmarks/families.md).
 
 **native corpus:**
 

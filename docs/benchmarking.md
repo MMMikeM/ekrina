@@ -68,7 +68,7 @@ flowchart LR
     C & D -->|"total · first · rest-mean"| BA[("batch")]
 ```
 
-- **index**, what the constructor builds: fast-fuzzy's trie is slow to build here, ekrina allocates buffers, fuzzysort has no constructor at all.
+- **index**, what the constructor builds: fast-fuzzy's trie is the heaviest build of the libraries compared, ekrina allocates buffers, fuzzysort has no constructor at all.
 - **cold query**, the first answer, before any lazy slice has run: ekrina's raw-gate scan and rescue mask build, fuzzysort's prepare-all, microfuzz's first-search slice all surface here, per timed query.
 - **one-shot**, index + first answer summed inside one child's consecutive windows, the whole time "given a list, get an answer" takes.
 - **batch**, a short-word warmup match, then the 24 distinct probes once each through one process: the realistic session, and the only warmth anywhere.

@@ -118,7 +118,12 @@ const meanColdOf = (a: Artifact, corpus: string, size: string, lib: string): num
 };
 
 /** Mean one-shot (constructor + first answer, summed per child) across every probe kind. */
-const meanOneShotOf = (a: Artifact, corpus: string, size: string, lib: string): number | null => {
+export const meanOneShotOf = (
+	a: Artifact,
+	corpus: string,
+	size: string,
+	lib: string,
+): number | null => {
 	const cells = probeKinds(a, corpus)
 		.map((k) => cellOf(a, corpus, k, size, lib)?.oneShotMs)
 		.filter((v): v is number => v != null);
@@ -312,6 +317,10 @@ const scaleTable = (
 	]);
 };
 
+// Construction plus every answer: one session from \`new\` to its last result,
+// charging each design for its setup wherever that design pays it.
+const sessionMsOf = (batch: ColdCell): number => batch.indexMs + batch.queryMs;
+
 const batchTable = (
 	a: Artifact,
 	corpus: string,
@@ -324,40 +333,47 @@ const batchTable = (
 	if (!ekrinaBatch)
 		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
 
-	const rows = shown.map((lib) => {
-		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
+	const batches = shown.map((lib) => cellOf(a, corpus, "batch", size, lib) as ColdCell);
+	const ekrinaRest = ekrinaBatch.restMs ?? ekrinaBatch.queryMs;
+	const setup = (b: { build: number; first: number; session: number }): string[] => [
+		`${ms(b.build)} ms`,
+		`${ms(b.first)} ms`,
+		`${ms(b.session)} ms`,
+	];
+	const partsOf = (batch: ColdCell) => ({
+		build: batch.indexMs,
+		first: batch.firstMs,
+		rest: batch.restMs ?? batch.queryMs,
+		session: sessionMsOf(batch),
+	});
+	const rows = shown.map((lib, i) => {
+		const parts = partsOf(batches[i]);
 		const emphasise = (v: string): string => (lib === "ekrina" ? `**${v}**` : v);
 		return [
 			lib === "ekrina" ? "**Ekrina**" : displayName(lib),
-			`${ms(batch.restMs ?? batch.queryMs)} ms`,
-			`${ms(batch.queryMs)} ms`,
-			emphasise(pct(batch.queryMs, ekrinaBatch.queryMs)),
+			...setup(parts),
+			`${ms(parts.rest)} ms`,
+			emphasise(pct(parts.rest, ekrinaRest)),
 		];
 	});
 
-	const agg = {
-		rest: geomean(
-			shown.map((l) => {
-				const c = cellOf(a, corpus, "batch", size, l) as ColdCell;
-				return c.restMs ?? c.queryMs;
-			}),
-		),
-		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
-	};
-	if (aggregate)
+	if (aggregate) {
+		const geo = (part: keyof ReturnType<typeof partsOf>): number =>
+			geomean(batches.map((batch) => partsOf(batch)[part]));
+		const rest = geo("rest");
 		rows.push([
 			"_all libraries (geomean)_",
-			`${ms(agg.rest)} ms`,
-			`${ms(agg.batch)} ms`,
-			pct(agg.batch, ekrinaBatch.queryMs),
+			...setup({ build: geo("build"), first: geo("first"), session: geo("session") }),
+			`${ms(rest)} ms`,
+			pct(rest, ekrinaRest),
 		]);
+	}
 
-	return mdTable(["Library", "batch/query", "batch total", "batch rel"], rows, [
-		"left",
-		"right",
-		"right",
-		"right",
-	]);
+	return mdTable(
+		["Library", "build", "first answer", "session total", "per query", "per query rel"],
+		rows,
+		["left", "right", "right", "right", "right", "right"],
+	);
 };
 
 export const omittedFrom = (a: Artifact, corpus: string): string[] =>
@@ -368,27 +384,42 @@ const scorecardTable = (
 	corpus: string,
 	shown: Set<string>,
 	emphasised: Set<string> = new Set(),
+	timedAtOwnSize = false,
 ): string => {
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
+	const shownRows = rows.filter((r) => shown.has(r.library));
+	const quality = (r: (typeof rows)[number]): string[] => {
+		const name = displayName(r.library);
+		return [
+			emphasised.has(r.library) ? `**${name}**` : name,
+			r.mrr.toFixed(2),
+			r.junk === undefined ? "—" : percent(r.junk),
+		];
+	};
+	// A corpus too small for the 10k timings is timed at its own size, shown only
+	// where the doc warns that those timings cannot rank.
+	const size = shownRows.some((r) => cellOf(a, corpus, "batch", PROBE_SIZE, r.library))
+		? PROBE_SIZE
+		: timedAtOwnSize
+			? timedSizeOf(a, corpus)
+			: null;
+	if (size === null) {
+		return mdTable(["Library", "MRR", "Junk"], shownRows.map(quality), ["left", "right", "right"]);
+	}
 	return mdTable(
-		["Library", "MRR", "Junk", "index ms", "cold ms", "batch ms", "batch/query"],
-		rows
-			.filter((r) => shown.has(r.library))
-			.map((r) => {
-				const batch = cellOf(a, corpus, "batch", PROBE_SIZE, r.library);
-				const cold = meanColdOf(a, corpus, PROBE_SIZE, r.library);
-				const name = displayName(r.library);
-				return [
-					emphasised.has(r.library) ? `**${name}**` : name,
-					r.mrr.toFixed(2),
-					r.junk === undefined ? "—" : percent(r.junk),
-					batch ? ms(batch.indexMs) : "—",
-					cold == null ? "—" : ms(cold),
-					batch ? ms(batch.queryMs) : "—",
-					batch ? ms(batch.restMs ?? batch.queryMs) : "—",
-				];
-			}),
+		["Library", "MRR", "Junk", "index ms", "cold ms", "session ms", "per query"],
+		shownRows.map((r) => {
+			const batch = cellOf(a, corpus, "batch", size, r.library);
+			const cold = meanColdOf(a, corpus, size, r.library);
+			return [
+				...quality(r),
+				batch ? ms(batch.indexMs) : "—",
+				cold == null ? "—" : ms(cold),
+				batch ? ms(sessionMsOf(batch)) : "—",
+				batch ? ms(batch.restMs ?? batch.queryMs) : "—",
+			];
+		}),
 		["left", "right", "right", "right", "right", "right", "right"],
 	);
 };
@@ -528,7 +559,7 @@ export const regions = (a: Artifact): Record<string, string> => {
 		out[`batch-${corpus}`] = batchTable(a, corpus, headline, isRanked(a, corpus));
 	}
 	for (const corpus of Object.keys(a.scorecard.corpora)) {
-		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline);
+		out[`scorecard-${corpus}`] = scorecardTable(a, corpus, headline, new Set(), true);
 	}
 
 	for (const corpus of Object.keys(a.families ?? {})) {

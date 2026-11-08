@@ -5,7 +5,8 @@ sidebar:
   order: 21
 ---
 
-Both build a searcher once over a list and return each `item` with a `score` where lower is better and `[start, end]` ranges, both of which Fuse adds when asked, so most code changes in the constructor and where it reads the ranges.
+Both build a searcher once over a list and return each `item` with a `score`, where lower is better, and `[start, end]` ranges.
+Fuse adds the score and the ranges only when asked, so most code changes in the constructor and where it reads the ranges.
 
 ```diff
 - import Fuse from "fuse.js";

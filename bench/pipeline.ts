@@ -2,7 +2,7 @@ import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderPareto } from "../docs/pareto.ts";
+import { paretoPictures, renderPareto } from "../docs/pareto.ts";
 import {
 	type Artifact,
 	type ColdMatrix,
@@ -16,7 +16,8 @@ import {
 	readRaw,
 	save,
 } from "./artifact.ts";
-import { inject } from "./inject.ts";
+import { BrokenClaim, figureEvaluator } from "./figures.ts";
+import { handTypedFigures, inject } from "./inject.ts";
 import { META } from "./libraries.ts";
 import { gzipBytes } from "./size.ts";
 import { omittedFrom, regions } from "./tables.ts";
@@ -24,9 +25,18 @@ import { omittedFrom, regions } from "./tables.ts";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DOC = new URL("../docs/benchmarks.md", import.meta.url);
+const METHOD = new URL("../docs/benchmarks/method.md", import.meta.url);
+const FAMILIES = new URL("../docs/benchmarks/families.md", import.meta.url);
 const README = new URL("../README.md", import.meta.url);
 const COMPARE = new URL("../docs/compare.md", import.meta.url);
 const LIBRARY_DIR = new URL("../docs/libraries/", import.meta.url);
+// Pages outside the generated set that quote current measurements.
+const QUOTING = [
+	"../docs/benchmarking.md",
+	"../site/src/content/docs/how-it-works/fuzzy-tier.md",
+	"../site/src/content/docs/guides/long-text.md",
+	"../site/src/content/docs/guides/migrate-from-microfuzz.mdx",
+].map((path) => new URL(path, import.meta.url));
 
 const flags = new Set(process.argv.slice(2).filter((a) => !a.includes("=")));
 const options = new Map(
@@ -302,36 +312,68 @@ if (DRY) {
 	process.exit(0);
 }
 
-const tables = regions(artifact);
+const tables = { ...regions(artifact), ...paretoPictures(artifact) };
 
 if (stages.cold || stages.quality || stages.memory || stages.size) save(artifact);
 
-// docs/benchmarks.md carries the headline tables, README.md and
-// docs/compare.md the comparison, each library page its own.
+// docs/benchmarks.md carries the headline tables, docs/benchmarks/ the method
+// and the family tables, README.md and docs/compare.md the comparison, each
+// library page its own.
 const docs = [
 	DOC,
+	METHOD,
+	FAMILIES,
 	README,
 	COMPARE,
 	...readdirSync(LIBRARY_DIR)
 		.filter((file) => file.endsWith(".md"))
 		.map((file) => new URL(file, LIBRARY_DIR)),
+	...QUOTING,
 ];
-const injected = docs.map((url) => ({ url, ...inject(readFileSync(url, "utf8"), tables) }));
-const stale = injected.flatMap(({ url, stale }) =>
-	stale.map((id) => `${relative(repoRoot, fileURLToPath(url))}:${id}`),
+const nameOf = (url: URL): string => relative(repoRoot, fileURLToPath(url));
+const evaluate = figureEvaluator(artifact, tables);
+const brokenClaims: string[] = [];
+const injected = docs.map((url) => {
+	const figure = (source: string): string => {
+		try {
+			return evaluate(source);
+		} catch (error) {
+			if (!(error instanceof BrokenClaim)) throw error;
+			brokenClaims.push(`${nameOf(url)}: ${error.message}`);
+			return "";
+		}
+	};
+	try {
+		return { url, ...inject(readFileSync(url, "utf8"), tables, figure) };
+	} catch (error) {
+		throw new Error(`${nameOf(url)}: ${(error as Error).message}`, { cause: error });
+	}
+});
+const handTyped = injected.flatMap(({ url, doc }) =>
+	handTypedFigures(doc).map(({ line, text }) => `${nameOf(url)}:${line}: ${text}`),
 );
+const stale = injected.flatMap(({ url, stale }) => stale.map((id) => `${nameOf(url)}:${id}`));
 const unmarked = Object.keys(tables).filter((id) =>
 	injected.every(({ unmarked }) => unmarked.includes(id)),
 );
 
 if (unmarked.length) console.error(`generated but marked in no doc: ${unmarked.join(", ")}`);
 
+if (brokenClaims.length) {
+	console.error("claims the numbers no longer back; rewrite each sentence:");
+	for (const claim of brokenClaims) console.error(`  ${claim}`);
+}
+if (handTyped.length) {
+	console.error("measurements typed by hand, outside any marker:");
+	for (const line of handTyped) console.error(`  ${line}`);
+}
+
 if (CHECK) {
 	if (stale.length) {
 		console.error(`stale regions: ${stale.join(", ")}`);
 		console.error("run `pnpm vpr bench --docs` to bring them up to date.");
 	}
-	if (stale.length || unmarked.length) process.exit(1);
+	if (stale.length || unmarked.length || handTyped.length || brokenClaims.length) process.exit(1);
 	console.error("the docs agree with bench/results.json.");
 } else {
 	for (const { url, doc } of injected) writeFileSync(url, doc);
@@ -346,4 +388,5 @@ if (CHECK) {
 		if (omitted.length)
 			console.error(`[${corpus}] omitted (no diacritic folding): ${omitted.join(", ")}`);
 	}
+	if (brokenClaims.length || handTyped.length) process.exit(1);
 }

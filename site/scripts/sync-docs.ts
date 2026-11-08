@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { withoutMarkers } from "../../bench/inject.ts";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,6 +44,18 @@ const pages: Page[] = [
 		"benchmarks",
 		"How ekrina compares with Fuse.js, fuzzysort, uFuzzy and four more: MRR by query family on real corpora, junk results, speed, build time and memory.",
 		0,
+	),
+	docsPage(
+		"docs/benchmarks/families.md",
+		"benchmarks/families",
+		"MRR for every query family on every corpus, for Ekrina and seven other fuzzy search libraries, and how often each answers queries nothing answers.",
+		1,
+	),
+	docsPage(
+		"docs/benchmarks/method.md",
+		"benchmarks/method",
+		"How the ekrina benchmarks measure: a fresh process per sample, the timing guards, the Wikidata and emoji corpora, and the query families they score.",
+		2,
 	),
 	docsPage(
 		"docs/compare.md",
@@ -129,7 +142,10 @@ mkdirSync(chartsDir, { recursive: true });
 for (const page of pages) {
 	const out = join(contentDir, `${page.route}.md`);
 	mkdirSync(dirname(out), { recursive: true });
-	writeFileSync(out, frontmatterOf(page) + themedCharts(rewriteLinks(page, page.body)));
+	writeFileSync(
+		out,
+		frontmatterOf(page) + themedCharts(rewriteLinks(page, withoutMarkers(page.body))),
+	);
 }
 for (const chart of readdirSync(join(repoRoot, "docs")).filter((file) => file.endsWith(".svg"))) {
 	copyFileSync(join(repoRoot, "docs", chart), join(chartsDir, chart));

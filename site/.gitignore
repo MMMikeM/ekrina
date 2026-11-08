@@ -3,6 +3,7 @@ dist/
 .astro/
 # Synced from docs/, or generated from src/, by `pnpm content`.
 src/content/docs/benchmarks.md
+src/content/docs/benchmarks/
 src/content/docs/compare.md
 src/content/docs/libraries/
 src/content/docs/reference/

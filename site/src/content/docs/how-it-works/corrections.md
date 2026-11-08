@@ -34,14 +34,14 @@ It is not general edit distance, which keeps it small and fast.
 
 ## When it tries
 
-- **Only while few items match as typed.**
+- **Few matches as typed.**
   Corrections are tried while fewer than ten items match the query as typed, or fewer than `limit` when that is smaller.
   Past that, a correction would come after ten matches of the query as typed, so none is computed.
   So the same typo can be corrected in a short list and left alone in a long one, where enough items match it as typed.
-- **Short queries only when nothing matches.**
+- **Short queries.**
   A query under five characters is corrected only when no item matches it at all, not even fuzzily, and a wrong letter is tried last, once a swap or a sparse word has found nothing: `tahn` reads as "Than", not "Taha".
   The exceptions are a word typed sparsely, read while fewer than ten items match as typed, as a longer query is, and a swap in a four-letter word, undone when no item contains it literally, even if some match it fuzzily.
-- **Never for a long word.**
+- **Long words and queries.**
   A query holding a word over 64 characters is never corrected, and any query is matched on its first 256 characters.
 
 Separately from corrections, a one-character query matches only where it starts a word (`o` finds "Open File", not "Folder"), since one character anywhere matches most of any list.

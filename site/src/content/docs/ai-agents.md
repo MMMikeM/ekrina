@@ -10,7 +10,7 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
 
 ## Rules
 
-- **Import the named export, and pass a function, not an options object.**
+- **Import the named export and pass a function.**
 
   ```ts
   // ✗
@@ -28,7 +28,7 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
   Each field is a function, or a spec when it needs options; one spec alone, `{ selectField, acronym: true }`, is a single field.
   An array of field specs, the 1.x form, throws a `TypeError`, and there is no `key`, `keys` or `strategy` option.
   A spec takes only `selectField`, `acronym` and `demoteBy`; any other key, the 1.x `text` and `atBest` included, throws a `TypeError`, a `demoteBy` that is negative or not finite throws a `RangeError`, and an object with `selectField` is always one spec, never a record of fields.
-- **Create the searcher once and reuse it, not once per keystroke.**
+- **Create the searcher once and reuse it.**
   It caches each item's preparation the first time a query matches it, and a query that extends the previous one rescans only the previous one's survivors.
   Rebuild it when the list changes: an item it has already prepared keeps its old text, and an item pushed onto the array afterwards is never searched.
   In React, `useMemo(() => createSearcher(list, selectField), [list])` is the whole integration, as long as `list` keeps its identity between renders.
@@ -59,12 +59,12 @@ The file wraps them in `<!-- ekrina START -->` and `<!-- ekrina END -->` markers
 - **Every query word must match.**
   `"apple zebra"` matches nothing in `["apple pie", "zebra crossing"]`, though the words can match in any order (`"user open"` finds "Preferences: Open User Settings").
   For an OR search, split the query into words, search each, and merge the results.
-- **A `corrected` match carries the fixed query in `corrected`.**
+- **A corrected match reports the fixed query.**
   `tier: "corrected"` means the query needed fixing, not the field, and `corrected` is the query as it was read: `"recnet"` against "Open Recent" gives `corrected: "recent"`.
   Use it for a "Showing results for …" notice from the top result.
   Every correction scores above `SCORES.CONTAINS`, a fixed mistake adding `TYPO_PENALTY` (2.1) to the tier the fixed query reached, so within a field a literal match always ranks above a corrected one, and across fields only `demoteBy` can reverse that.
   See [showing corrections](/guides/corrections/) and [every correction rule](/how-it-works/corrections/).
-- **Pass `{ limit }` rather than slicing the results.**
+- **Pass `{ limit }` to cap the results.**
   `search(query, { limit: 10 })` returns the same results as `search(query).slice(0, 10)`, but once ten items match the query as typed it never computes the fuzzy and corrected matches that could not outrank them.
   `limit` must be a positive integer, or the search throws a `RangeError`.
 - **`fuzzyMatch` judges one string alone, so a list can return fewer corrections than `fuzzyMatch` does item by item.**
