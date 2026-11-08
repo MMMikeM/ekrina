@@ -23,7 +23,8 @@ import {
 	rawFile,
 } from "./artifact.ts";
 import { junkProbes } from "./catalogue.ts";
-import { type Config, type Probe, configByName, configs } from "./configs.ts";
+import type { Config, Probe } from "./config.ts";
+import { configByName, configs } from "./configs.ts";
 import { CORPORA, PICKERS } from "./corpus";
 import { type Sample, scoreFamilies, scoreJunk, scorecardOf, tieAround } from "./mrr.ts";
 

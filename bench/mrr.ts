@@ -1,6 +1,6 @@
 import type { FamilyRow, ScorecardRow } from "./artifact.ts";
 import { WEIGHTS } from "./catalogue.ts";
-import type { Config } from "./configs.ts";
+import type { Config } from "./config.ts";
 
 // A sampled query is scored against every item a person typing it could have
 // meant, so no library is credited for breaking a tie the right way. `group`
