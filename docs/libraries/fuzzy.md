@@ -14,28 +14,28 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-fuzzy-scorecard-native -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.30 |   7% |     0.03 |    1.83 |    37.93 |        1.50 |
-| fuzzy (all opts) | 0.30 |   7% |     0.03 |    1.90 |    39.47 |        1.56 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **fuzzy**        | 0.30 |   7% |     0.03 |    1.83 |      37.96 |      1.50 |
+| fuzzy (all opts) | 0.30 |   7% |     0.03 |    1.90 |      39.50 |      1.56 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-fuzzy-scorecard-en -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.29 |   3% |     0.03 |    1.67 |    34.49 |        1.36 |
-| fuzzy (all opts) | 0.29 |   3% |     0.03 |    1.72 |    36.14 |        1.43 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **fuzzy**        | 0.29 |   3% |     0.03 |    1.67 |      34.52 |      1.36 |
+| fuzzy (all opts) | 0.29 |   3% |     0.03 |    1.72 |      36.17 |      1.43 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-fuzzy-scorecard-emoji -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| **fuzzy**        | 0.39 |  24% |        — |       — |        — |           — |
-| fuzzy (all opts) | 0.39 |  24% |        — |       — |        — |           — |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| **fuzzy**        | 0.39 |  24% |        — |       — |          — |         — |
+| fuzzy (all opts) | 0.39 |  24% |        — |       — |          — |         — |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -54,11 +54,11 @@ Only the en corpus is shown, because the native tables list only configurations 
 <!-- bench:end -->
 
 <!-- bench:library-fuzzy-batch-en -->
-| Library          | batch/query | batch total | batch rel |
-|------------------|------------:|------------:|----------:|
-| **Ekrina**       |     1.64 ms |    47.91 ms |  **100%** |
-| fuzzy            |    13.06 ms |   329.22 ms |      687% |
-| fuzzy (all opts) |    13.71 ms |   345.84 ms |      722% |
+| Library          |   build | first answer | per query | session total | session rel |
+|------------------|--------:|-------------:|----------:|--------------:|------------:|
+| **Ekrina**       | 0.23 ms |      8.55 ms |   1.64 ms |      48.14 ms |    **100%** |
+| fuzzy            | 0.03 ms |     15.72 ms |  13.06 ms |     329.25 ms |        684% |
+| fuzzy (all opts) | 0.03 ms |     16.83 ms |  13.71 ms |     345.87 ms |        719% |
 <!-- bench:end -->
 
 ## Match quality, by query family

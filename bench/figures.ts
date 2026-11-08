@@ -216,6 +216,11 @@ const figuresFor = (a: Artifact, tables: Record<string, string>): Figures => ({
 		const [low, high] = [num(lo).toFixed(num(digits)), num(hi).toFixed(num(digits))];
 		return low === high ? `${low}${str(suffix)}` : `${low}–${high}${str(suffix)}`;
 	},
+	fractions: (lo, hi) => {
+		const [low, high] = [lo, hi].map((x) => FRACTIONS[Math.round(1 / num(x))]);
+		if (!low || !high) throw new Error(`no words for 1/${(1 / num(lo)).toFixed(1)}–1/${(1 / num(hi)).toFixed(1)}`);
+		return low === high ? low : `${low} to ${high}`;
+	},
 	fraction: (x) => {
 		const words = FRACTIONS[Math.round(1 / num(x))];
 		if (!words) throw new Error(`no word for 1/${(1 / num(x)).toFixed(1)}`);

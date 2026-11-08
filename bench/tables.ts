@@ -317,6 +317,10 @@ const scaleTable = (
 	]);
 };
 
+// Construction plus every answer: one session from \`new\` to its last result,
+// charging each design for its setup wherever that design pays it.
+const sessionMsOf = (batch: ColdCell): number => batch.indexMs + batch.queryMs;
+
 const batchTable = (
 	a: Artifact,
 	corpus: string,
@@ -329,40 +333,51 @@ const batchTable = (
 	if (!ekrinaBatch)
 		throw new Error(`no ekrina batch cell for '${corpus}' — run the cold stage first`);
 
-	const rows = shown.map((lib) => {
-		const batch = cellOf(a, corpus, "batch", size, lib) as ColdCell;
+	const batches = shown.map((lib) => cellOf(a, corpus, "batch", size, lib) as ColdCell);
+	const ekrinaSession = sessionMsOf(ekrinaBatch);
+	const columns = (b: {
+		build: number;
+		first: number;
+		rest: number;
+		session: number;
+	}): string[] => [
+		`${ms(b.build)} ms`,
+		`${ms(b.first)} ms`,
+		`${ms(b.rest)} ms`,
+		`${ms(b.session)} ms`,
+	];
+	const partsOf = (batch: ColdCell) => ({
+		build: batch.indexMs,
+		first: batch.firstMs,
+		rest: batch.restMs ?? batch.queryMs,
+		session: sessionMsOf(batch),
+	});
+	const rows = shown.map((lib, i) => {
+		const parts = partsOf(batches[i]);
 		const emphasise = (v: string): string => (lib === "ekrina" ? `**${v}**` : v);
 		return [
 			lib === "ekrina" ? "**Ekrina**" : displayName(lib),
-			`${ms(batch.restMs ?? batch.queryMs)} ms`,
-			`${ms(batch.queryMs)} ms`,
-			emphasise(pct(batch.queryMs, ekrinaBatch.queryMs)),
+			...columns(parts),
+			emphasise(pct(parts.session, ekrinaSession)),
 		];
 	});
 
-	const agg = {
-		rest: geomean(
-			shown.map((l) => {
-				const c = cellOf(a, corpus, "batch", size, l) as ColdCell;
-				return c.restMs ?? c.queryMs;
-			}),
-		),
-		batch: geomean(shown.map((l) => (cellOf(a, corpus, "batch", size, l) as ColdCell).queryMs)),
-	};
-	if (aggregate)
+	if (aggregate) {
+		const geo = (part: keyof ReturnType<typeof partsOf>): number =>
+			geomean(batches.map((batch) => partsOf(batch)[part]));
+		const session = geo("session");
 		rows.push([
 			"_all libraries (geomean)_",
-			`${ms(agg.rest)} ms`,
-			`${ms(agg.batch)} ms`,
-			pct(agg.batch, ekrinaBatch.queryMs),
+			...columns({ build: geo("build"), first: geo("first"), rest: geo("rest"), session }),
+			pct(session, ekrinaSession),
 		]);
+	}
 
-	return mdTable(["Library", "batch/query", "batch total", "batch rel"], rows, [
-		"left",
-		"right",
-		"right",
-		"right",
-	]);
+	return mdTable(
+		["Library", "build", "first answer", "per query", "session total", "session rel"],
+		rows,
+		["left", "right", "right", "right", "right", "right"],
+	);
 };
 
 export const omittedFrom = (a: Artifact, corpus: string): string[] =>
@@ -377,7 +392,7 @@ const scorecardTable = (
 	const rows = a.scorecard.corpora[corpus];
 	if (!rows) throw new Error(`no scorecard for corpus '${corpus}' — run the quality stage first`);
 	return mdTable(
-		["Library", "MRR", "Junk", "index ms", "cold ms", "batch ms", "batch/query"],
+		["Library", "MRR", "Junk", "index ms", "cold ms", "session ms", "per query"],
 		rows
 			.filter((r) => shown.has(r.library))
 			.map((r) => {
@@ -390,7 +405,7 @@ const scorecardTable = (
 					r.junk === undefined ? "—" : percent(r.junk),
 					batch ? ms(batch.indexMs) : "—",
 					cold == null ? "—" : ms(cold),
-					batch ? ms(batch.queryMs) : "—",
+					batch ? ms(sessionMsOf(batch)) : "—",
 					batch ? ms(batch.restMs ?? batch.queryMs) : "—",
 				];
 			}),

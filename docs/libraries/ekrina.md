@@ -14,31 +14,31 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 **native corpus:**
 
 <!-- bench:library-ekrina-scorecard-native -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.91 |   0% |     0.17 |    3.35 |    13.84 |        0.32 |
-| Ekrina (indexed) | 0.91 |   0% |     2.13 |    1.76 |    11.21 |        0.31 |
-| Ekrina (acronym) | 0.91 |   0% |     0.19 |    3.02 |    14.12 |        0.32 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| Ekrina           | 0.91 |   0% |     0.17 |    3.35 |      14.01 |      0.32 |
+| Ekrina (indexed) | 0.91 |   0% |     2.13 |    1.76 |      13.34 |      0.31 |
+| Ekrina (acronym) | 0.91 |   0% |     0.19 |    3.02 |      14.30 |      0.32 |
 <!-- bench:end -->
 
 **en corpus:**
 
 <!-- bench:library-ekrina-scorecard-en -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.92 |   0% |     0.16 |    2.99 |    12.58 |        0.29 |
-| Ekrina (indexed) | 0.92 |   0% |     1.47 |    1.81 |     9.98 |        0.24 |
-| Ekrina (acronym) | 0.92 |   0% |     0.18 |    2.73 |    12.68 |        0.28 |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| Ekrina           | 0.92 |   0% |     0.16 |    2.99 |      12.75 |      0.29 |
+| Ekrina (indexed) | 0.92 |   0% |     1.47 |    1.81 |      11.46 |      0.24 |
+| Ekrina (acronym) | 0.92 |   0% |     0.18 |    2.73 |      12.86 |      0.28 |
 <!-- bench:end -->
 
 **emoji corpus** (quality only here; its timing is listed, unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked)):
 
 <!-- bench:library-ekrina-scorecard-emoji -->
-| Library          |  MRR | Junk | index ms | cold ms | batch ms | batch/query |
-|------------------|-----:|-----:|---------:|--------:|---------:|------------:|
-| Ekrina           | 0.91 |   0% |        — |       — |        — |           — |
-| Ekrina (indexed) | 0.91 |   0% |        — |       — |        — |           — |
-| Ekrina (acronym) | 0.91 |   0% |        — |       — |        — |           — |
+| Library          |  MRR | Junk | index ms | cold ms | session ms | per query |
+|------------------|-----:|-----:|---------:|--------:|-----------:|----------:|
+| Ekrina           | 0.91 |   0% |        — |       — |          — |         — |
+| Ekrina (indexed) | 0.91 |   0% |        — |       — |          — |         — |
+| Ekrina (acronym) | 0.91 |   0% |        — |       — |          — |         — |
 <!-- bench:end -->
 
 ## Speed at 100k
@@ -56,11 +56,11 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-en -->
-| Library          | batch/query | batch total | batch rel |
-|------------------|------------:|------------:|----------:|
-| **Ekrina**       |     1.64 ms |    47.91 ms |  **100%** |
-| Ekrina (acronym) |     1.63 ms |    49.34 ms |      103% |
-| Ekrina (indexed) |     1.24 ms |    34.21 ms |       71% |
+| Library          |   build | first answer | per query | session total | session rel |
+|------------------|--------:|-------------:|----------:|--------------:|------------:|
+| **Ekrina**       | 0.23 ms |      8.55 ms |   1.64 ms |      48.14 ms |    **100%** |
+| Ekrina (acronym) | 0.26 ms |     10.24 ms |   1.63 ms |      49.60 ms |        103% |
+| Ekrina (indexed) | 6.63 ms |      4.47 ms |   1.24 ms |      40.84 ms |         85% |
 <!-- bench:end -->
 
 **native corpus:**
@@ -74,11 +74,11 @@ The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), a
 <!-- bench:end -->
 
 <!-- bench:library-ekrina-batch-native -->
-| Library          | batch/query | batch total | batch rel |
-|------------------|------------:|------------:|----------:|
-| **Ekrina**       |     1.96 ms |    56.56 ms |  **100%** |
-| Ekrina (acronym) |     1.97 ms |    59.02 ms |      104% |
-| Ekrina (indexed) |     1.43 ms |    39.35 ms |       70% |
+| Library          |   build | first answer | per query | session total | session rel |
+|------------------|--------:|-------------:|----------:|--------------:|------------:|
+| **Ekrina**       | 0.23 ms |      9.75 ms |   1.96 ms |      56.79 ms |    **100%** |
+| Ekrina (acronym) | 0.25 ms |     11.84 ms |   1.97 ms |      59.27 ms |        104% |
+| Ekrina (indexed) | 8.53 ms |      4.98 ms |   1.43 ms |      47.88 ms |         84% |
 <!-- bench:end -->
 
 ## Match quality, by query family

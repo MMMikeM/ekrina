@@ -68,7 +68,7 @@ const METRICS: Record<
 		heading: "Ranking quality vs. per-query session time",
 		subtitle: (families, queries) =>
 			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
-		axis: "Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better",
+		axis: "Per query: searcher built once, 24 distinct queries after a warm-up. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
 		tail: "Ekrina owns the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},

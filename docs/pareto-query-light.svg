@@ -51,7 +51,7 @@
     <text x="54" y="107.3" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">0.9</text>
     <text x="54" y="66" text-anchor="end" fill="#898781" font-size="12" font-variant-numeric="tabular-nums">1.0</text>
   </g>
-  <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Batch per-query: searcher built once, 24 distinct queries. Log scale, lower is better</text>
+  <text x="428" y="479" text-anchor="middle" fill="#52514e" font-size="13">Per query: searcher built once, 24 distinct queries after a warm-up. Log scale, lower is better</text>
   <text transform="translate(18,248) rotate(-90)" text-anchor="middle" fill="#52514e" font-size="13">Rank of queried item: 1st = 1.0, 10th = 0.1</text>
   <path d="M93.6 285.2 L127.5 99.2" fill="none" stroke="#1baf7a" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>
   <g transform="translate(78,70)">
