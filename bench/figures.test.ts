@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { Artifact } from "./artifact.ts";
-import { figureEvaluator, parseFigure } from "./figures.ts";
+import { BrokenClaim, figureEvaluator, parseFigure } from "./figures.ts";
 
 const table = [
 	"| Library          | batch/query | rel |",
@@ -29,6 +29,8 @@ describe("figures", () => {
 		expect(figure('span(5.61, 5.83, 1, "×")')).toBe("5.6–5.8×");
 		expect(figure('span(5.61, 5.64, 1, "×")')).toBe("5.6×");
 		expect(figure("fraction(div(11.59, 136.13))")).toBe("a twelfth");
+		expect(figure("fractions(div(11.59, 136.13), div(15.25, 136.13))")).toBe("a twelfth to a ninth");
+		expect(figure("fractions(0.26, 0.24)")).toBe("a quarter");
 		expect(figure('constant("18%")')).toBe("18%");
 		expect(figure('unsourced("0.8%", "400-word draw")')).toBe("0.8%");
 		expect(() => figure('unsourced("0.8%", " ")')).toThrow("names no source");
@@ -36,9 +38,7 @@ describe("figures", () => {
 
 	it("a claim renders nothing while it holds and fails the build once it does not", () => {
 		expect(figure('assert(within(0.34, 0.31, 0.15), "acronym ties indexed")')).toBe("");
-		expect(() => figure('assert(within(0.36, 0.31, 0.15), "Ekrina ties indexed")')).toThrow(
-			"claim no longer holds: Ekrina ties indexed",
-		);
+		expect(() => figure('assert(within(0.36, 0.31, 0.15), "Ekrina ties indexed")')).toThrow(new BrokenClaim("Ekrina ties indexed"));
 	});
 
 	it("a bare condition, an unknown figure or a missing cell is an error, not a value", () => {
@@ -100,9 +100,7 @@ describe("figures over families and orderings", () => {
 
 	it("two tables share an order unless some pair of rows swaps, and a tie is no swap", () => {
 		expect(ordered('assert(sameOrder("MRR", "en", "native"), "same")')).toBe("");
-		expect(() => ordered('assert(sameOrder("MRR", "en", "native", "emoji"), "same")')).toThrow(
-			"claim no longer holds: same",
-		);
+		expect(() => ordered('assert(sameOrder("MRR", "en", "native", "emoji"), "same")')).toThrow(new BrokenClaim("same"));
 	});
 });
 

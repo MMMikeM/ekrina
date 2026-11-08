@@ -108,6 +108,9 @@ const str = (v: Value): string => {
 
 type Figures = Record<string, (...args: Value[]) => Value>;
 
+/** A claim in the prose that the numbers no longer back. */
+export class BrokenClaim extends Error {}
+
 // A row's label columns are those before the first right-aligned one (at least
 // the first), so a family table's rows match by group as well as by family.
 const labelledRows = (
@@ -220,7 +223,7 @@ const figuresFor = (a: Artifact, tables: Record<string, string>): Figures => ({
 	},
 	// Claims: render nothing, and fail the build once the numbers stop backing them.
 	assert: (condition, claim) => {
-		if (condition !== true) throw new Error(`claim no longer holds: ${str(claim)}`);
+		if (condition !== true) throw new BrokenClaim(str(claim));
 		return "";
 	},
 	lt: (x, y) => num(x) < num(y),

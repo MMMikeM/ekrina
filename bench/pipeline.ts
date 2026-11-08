@@ -16,7 +16,7 @@ import {
 	readRaw,
 	save,
 } from "./artifact.ts";
-import { figureEvaluator } from "./figures.ts";
+import { BrokenClaim, figureEvaluator } from "./figures.ts";
 import { handTypedFigures, inject } from "./inject.ts";
 import { META } from "./libraries.ts";
 import { gzipBytes } from "./size.ts";
@@ -326,8 +326,18 @@ const docs = [
 	...QUOTING,
 ];
 const nameOf = (url: URL): string => relative(repoRoot, fileURLToPath(url));
-const figure = figureEvaluator(artifact, tables);
+const evaluate = figureEvaluator(artifact, tables);
+const brokenClaims: string[] = [];
 const injected = docs.map((url) => {
+	const figure = (source: string): string => {
+		try {
+			return evaluate(source);
+		} catch (error) {
+			if (!(error instanceof BrokenClaim)) throw error;
+			brokenClaims.push(`${nameOf(url)}: ${error.message}`);
+			return "";
+		}
+	};
 	try {
 		return { url, ...inject(readFileSync(url, "utf8"), tables, figure) };
 	} catch (error) {
@@ -344,6 +354,10 @@ const unmarked = Object.keys(tables).filter((id) =>
 
 if (unmarked.length) console.error(`generated but marked in no doc: ${unmarked.join(", ")}`);
 
+if (brokenClaims.length) {
+	console.error("claims the numbers no longer back; rewrite each sentence:");
+	for (const claim of brokenClaims) console.error(`  ${claim}`);
+}
 if (handTyped.length) {
 	console.error("measurements typed by hand, outside any marker:");
 	for (const line of handTyped) console.error(`  ${line}`);
@@ -354,7 +368,7 @@ if (CHECK) {
 		console.error(`stale regions: ${stale.join(", ")}`);
 		console.error("run `pnpm vpr bench --docs` to bring them up to date.");
 	}
-	if (stale.length || unmarked.length || handTyped.length) process.exit(1);
+	if (stale.length || unmarked.length || handTyped.length || brokenClaims.length) process.exit(1);
 	console.error("the docs agree with bench/results.json.");
 } else {
 	for (const { url, doc } of injected) writeFileSync(url, doc);
@@ -369,4 +383,5 @@ if (CHECK) {
 		if (omitted.length)
 			console.error(`[${corpus}] omitted (no diacritic folding): ${omitted.join(", ")}`);
 	}
+	if (brokenClaims.length || handTyped.length) process.exit(1);
 }
