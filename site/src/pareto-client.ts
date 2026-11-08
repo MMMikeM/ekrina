@@ -108,7 +108,9 @@ export const hydrate = (figure: HTMLElement): void => {
 		);
 
 	const note = (control: string, text: string) => {
-		form.querySelector(`[id$="-${control}-note"]`)!.textContent = text;
+		for (const variant of form.querySelectorAll(`[id$="-${control}-note"] > span`)) {
+			variant.toggleAttribute("data-active", variant.textContent === text);
+		}
 	};
 
 	const syncControls = () => {

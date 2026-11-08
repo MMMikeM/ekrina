@@ -5,11 +5,11 @@ import {
 	chartSvg,
 	constructorNote,
 	CORPORA,
-	CORPUS_DEFINITIONS,
 	CORPUS_LABELS,
 	corpusOf,
 	MEASURE_LABELS,
 	MEASURES,
+	noteTexts,
 	type Measure,
 	type ParetoData,
 	type ParetoState,
@@ -29,6 +29,7 @@ const { measure } = Astro.props;
 const state: ParetoState = { measure, constructorCounted: true, corpus: "native", size: "10000" };
 const id = `pareto-${measure}`;
 const note = constructorNote(state);
+const notes = noteTexts(data);
 const sizes = [...new Set(data.corpora.filter((corpus) => corpus.ranked).flatMap((corpus) => corpus.sizes))];
 const front = viewFrontier(data, state, pointsOf(data, state));
 const frontier = front.length > 1 ? "line" : front.length === 1 ? "point" : "none";
@@ -73,7 +74,9 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-constructor-note`}>{note}</p>
+			<p class="control-note" id={`${id}-constructor-note`}>
+				{notes.constructor.map((text) => <span data-active={text === note || undefined}>{text}</span>)}
+			</p>
 		</fieldset>
 		<fieldset aria-describedby={`${id}-corpus-note`}>
 			<legend>Corpus</legend>
@@ -87,7 +90,13 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-corpus-note`}>{CORPUS_DEFINITIONS[state.corpus]}</p>
+			<p class="control-note" id={`${id}-corpus-note`}>
+				{
+					notes.corpus.map((text, i) => (
+						<span data-active={CORPORA[i] === state.corpus || undefined}>{text}</span>
+					))
+				}
+			</p>
 		</fieldset>
 		<fieldset aria-describedby={`${id}-size-note`}>
 			<legend>Size</legend>
@@ -107,7 +116,9 @@ const NARROW_PX = 340;
 					))
 				}
 			</div>
-			<p class="control-note" id={`${id}-size-note`}>{sizeNote(data, state)}</p>
+			<p class="control-note" id={`${id}-size-note`}>
+				{notes.size.map((text) => <span data-active={text === sizeNote(data, state) || undefined}>{text}</span>)}
+			</p>
 		</fieldset>
 	</form>
 	<div class="pareto-plot decoration not-content">
@@ -207,6 +218,19 @@ const NARROW_PX = 340;
 
 	.pareto-controls .control-note:empty {
 		display: none;
+	}
+
+	.pareto-controls .control-note {
+		display: grid;
+	}
+
+	.pareto-controls .control-note > span {
+		grid-area: 1 / 1;
+		visibility: hidden;
+	}
+
+	.pareto-controls .control-note > [data-active] {
+		visibility: visible;
 	}
 
 	.pareto-plot {
