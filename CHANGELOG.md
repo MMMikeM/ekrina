@@ -73,12 +73,22 @@ What breaks is the seven names below, what a result holds, and the same query re
   - The searcher keeps no per-item copy of trimmed text or of scores.
   - The raw scans look up each non-ASCII character's class in a table instead of folding it.
   - With `limit`, once `limit` items match literally, the rest skip the fuzzy chain, which takes about a fifth off one- to three-letter queries over a large list.
+  - A keystroke that ran a correction still narrows the next one to its literal survivors, word boundaries in ASCII text are read from a table, and only the page `limit` returns is put in order: typing takes about 15% less and document-length fields about 11% less, with identical results.
+  - A searcher lets go of the last query's matches once it has returned them, up to 4 MB after a two-letter query over 100k items.
+  - A field lacking a letter the query holds twice is turned away before the one-edit rescue looks at it, which no edit could fix: `fuzzyMatch` over a list takes about 29% less.
 
   Against the 1.1.2 run in `bench/results.json`'s history:
   - a query takes 43–45% less once a searcher is warm (0.54–0.64 → 0.31–0.35 ms at 10k);
   - the 24 queries of a 100k session take 11–18% less, and a first answer 6–45% less;
   - a 100k searcher holds 1.18 MB rather than 1.94 MB until its first query, and up to 0.3 MB more once it has answered three.
 
+- **A fuzzy chain enters a later word only at its start.**
+  `prow` no longer matches "mobile **p**hone with ar**row**", while "**p**erson **row**ing boat", `vsc` and initials such as `tfts` still match; inside one word a piece may still start mid-word.
+  That trims the tail of weak fuzzy rows (a three-letter prefix's median result set 51 → 41 on en) and halves long-text fuzzy junk, with no family's MRR lower (docs/performance.md).
+  A short query's wrong-letter correction is now tried after its swap and sparse readings, and only when they find nothing, so `tahn` still reads as "Than" rather than "Taha".
+  The swap keeps the caller's casing, as every other swap does, so `Tahn` scores 2.1 against "Than" in a searcher and in `fuzzyMatch` alike.
+- **A no-break space or a dash outside ASCII in a query is a separator like any other.**
+  It counted as a character the field had to hold, so `new` + no-break space + `york` found neither "new york" nor "new-york" in a searcher, and `fuzzyMatch` returned "New York" as a correction at 1.5.
 - **The benchmark measures real data.**
   The synthetic corpora are replaced by real ones:
   - 100,000 well-known Wikidata entities, under their English names and again under their native names;

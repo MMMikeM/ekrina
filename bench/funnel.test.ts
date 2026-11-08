@@ -10,10 +10,18 @@
  */
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
-import { buildFuzzyGate, buildPresenceGate, buildRescueBigramGate, charMask } from "../src/gates";
-import { isRescuableQuery } from "../src/rescue";
+import {
+	buildFuzzyGate,
+	buildPresenceGate,
+	buildRescueBigramGate,
+	charMask,
+	classCounts,
+	lacksAtMostOneLetter,
+	rawFieldScan,
+} from "../src/gates";
+import { isRescuableQuery } from "../src/correction";
 import { splitWords } from "../src/boundaries";
-import { normaliseText, rawFieldScan } from "../src/normalise";
+import { normaliseText } from "../src/normalise";
 import { CORPORA } from "./corpus";
 import { withoutSecondPass } from "./ladder";
 
@@ -67,7 +75,7 @@ describe("pre-filter funnel", () => {
 				const rows: FunnelRow[] = [];
 				for (const query of queries) {
 					const normalisedQuery = normaliseText(query);
-					const queryMask = charMask(normalisedQuery);
+					const queryMask = charMask(splitWords(normalisedQuery).join(""));
 					const gate =
 						splitWords(normalisedQuery).length > 1
 							? buildPresenceGate(normalisedQuery)
@@ -76,7 +84,8 @@ describe("pre-filter funnel", () => {
 					// Modelling the relaxed gate unconditionally would count items
 					// through a filter production never applies, overstating the cut.
 					const relaxed = isRescuableQuery(normalisedQuery, splitWords(normalisedQuery));
-					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery) : null;
+					const counts = classCounts(splitWords(normalisedQuery).join(""));
+					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery, counts) : null;
 
 					let maskPass = 0;
 					let bigramPass = 0;
@@ -86,7 +95,7 @@ describe("pre-filter funnel", () => {
 					for (let i = 0; i < list.length; i++) {
 						const missingClasses = queryMask & ~masks[i];
 						const maskOk = relaxed
-							? (missingClasses & (missingClasses - 1)) === 0
+							? lacksAtMostOneLetter(missingClasses, counts)
 							: missingClasses === 0;
 						// The searcher's rescue-scan bigram stage: a field missing
 						// exactly one class is reachable only by an edit at that

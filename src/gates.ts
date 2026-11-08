@@ -1,6 +1,5 @@
-import { wordChar, wordStartOccurrence } from "./boundaries";
-import { bigramBit, bigramClass, unitMask } from "./normalise";
-import { unfoldTable } from "./unfold";
+import { isBoundaryAt, wordChar, wordStartOccurrence } from "./boundaries";
+import { computeFold, foldChar, unfoldTable } from "./normalise";
 
 /** A pre-gate: false only when the text cannot match the query. */
 export type Gate = { test: (text: string) => boolean };
@@ -27,18 +26,13 @@ export const holdsInOrderFrom = (text: string, query: string, k: number, from: n
 
 /**
  * The fuzzy tier's pre-gate, and for single-word queries the whole ladder's:
- * the query in order, starting where the chunk assembler can start, after no
- * word character or with its first three characters consecutive. Every earlier
- * tier implies such a subsequence too, and a field with no admissible first
- * placement has no chain to assemble. Plain `indexOf` rather than a regex,
- * which costs more to compile than most gates spend testing; the earliest
- * admissible start admits whatever a later one does, so one placement is enough.
- * It steps by code unit, so beside an astral character it can only false-pass.
+ * the query in order, starting where the chunk assembler can start. Every
+ * earlier tier implies such a subsequence too. The earliest admissible start
+ * admits whatever a later one does, so one placement is enough.
  *
  * Monotone under query extension, which is what lets the survivor cache in
  * search.ts reuse the previous keystroke's survivors: extending the query
- * lengthens the subsequence and never changes the first three characters, so
- * the gate only ever admits fewer fields.
+ * lengthens the subsequence and never changes the first three characters.
  */
 export const buildFuzzyGate = (normalisedQuery: string): Gate => {
 	const first = normalisedQuery[0];
@@ -73,8 +67,7 @@ export const buildRawGate = (normalisedQuery: string): Gate | null => {
 		accepted.push(sources);
 	}
 	const at = accepted.map((sources) => `[${sources}][\\u0300-\\u036f]*`);
-	// `[^x]*x` leaves each attempt exactly one place to stop per step, so it
-	// cannot backtrack (same survivors, 16%/8% less gate time on ascii/mixed).
+	// `[^x]*x` leaves each attempt one place to stop per step, so it cannot backtrack.
 	const after = accepted.map((sources, k) => `[^${sources}]*${at[k]}`);
 	// `\w` is the word characters' ASCII part, so after any other letter the
 	// anchor can only false-pass; `\p{L}` takes about 0.2 ms to compile.
@@ -98,23 +91,24 @@ export const buildWordStartRawGate = (normalisedQuery: string): RegExp | null =>
 	return sources === undefined ? null : new RegExp(`(?<!\\w)[${sources}]`, "u");
 };
 
-/**
- * A 32-bit character-class mask (fuzzysort-style O(1) pre-gate): bits 0–25 for
- * a–z, bits 26–29 for digits (bucketed), bits 30–31 for non-ASCII (bucketed);
- * separators are skipped so they are never required of the field. Query and
- * field use the same buckets, so a collision can only false-pass, never
- * false-reject. `(queryMask & fieldMask) !== queryMask` means some query class
- * is absent and no tier can match.
- */
+// ASCII separators set no bit, so they are never required of the field. Query
+// and field share the buckets, so a collision can only false-pass.
 export const charMask = (normalised: string): number => {
 	let mask = 0;
 	for (let i = 0; i < normalised.length; i++) mask |= unitMask(normalised.charCodeAt(i));
 	return mask;
 };
 
-// True when the mask is an exact distinct-char presence check: no lossy bucket
-// bits set, so the presence-gate regex could not reject anything further.
+// No bucketed bits: the mask alone is the presence gate.
 export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
+
+// The one-edit rescue's letter budget: a substitution or a drop leaves out a
+// single query unit, so a field may lack only a class the query holds once.
+// `counts` is `classCounts` of the query's words, which holds at least one unit
+// for every class the mask names.
+export const lacksAtMostOneLetter = (missingClasses: number, counts: Int32Array): boolean =>
+	(missingClasses & (missingClasses - 1)) === 0 &&
+	(missingClasses === 0 || counts[31 - Math.clz32(missingClasses)] === 1);
 
 /**
  * Order-independent presence gate: every distinct word-character of the query
@@ -136,33 +130,31 @@ export const buildPresenceGate = (normalisedQuery: string): RegExp => {
 
 /**
  * Query-side half of the rescue bigram gate, for fields missing exactly one of
- * the query's character classes. Such a field is only reachable by an edit at
- * the query's sole character of the missing class β (two β characters would
- * need two edits), and every rescue-eligible tier is a contiguous occurrence —
- * so every query bigram NOT touching the β position must appear in the field's
- * bigram set: `requiredLo/requiredHi[β]` hold exactly those. Two or more β
- * characters store all-ones, which no real field covers (a hazard-degraded
- * field is all-ones too and still passes). Hash collisions stay
- * false-pass-only on both sides: a required bit colliding with a touching
- * pair's is still owed by the intact remainder of the window, and field-side
- * collisions only add coverage.
+ * the query's character classes, β. Only an edit at the query's sole β
+ * character can reach such a field, and every rescue-eligible tier is a
+ * contiguous occurrence, so every pair inside a query word not touching that
+ * position must be in the field's bigram set. A class the query holds more
+ * than once has no entry: `lacksAtMostOneLetter` already rejects a field
+ * lacking it. A required bit colliding with a touching pair's is still owed by
+ * the intact rest of the window, so collisions only false-pass.
  */
 export type RescueBigramGate = { requiredLo: Int32Array; requiredHi: Int32Array };
 
-export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate => {
+export const buildRescueBigramGate = (
+	normalisedQuery: string,
+	counts: Int32Array,
+): RescueBigramGate => {
 	const requiredLo = new Int32Array(32);
 	const requiredHi = new Int32Array(32);
-	const occurrences = new Int32Array(32);
-	const classAt = (at: number): number => bigramClass(normalisedQuery.charCodeAt(at));
+	// A separator outside ASCII has a class, but no field need hold it. Nor need
+	// it hold either half of a surrogate pair, which reads as a boundary: that
+	// only false-passes.
+	const classAt = (at: number): number =>
+		isBoundaryAt(normalisedQuery, at) ? 0 : bigramClass(normalisedQuery.charCodeAt(at));
 	for (let soleAt = 0; soleAt < normalisedQuery.length; soleAt++) {
 		// A class's mask bit is its bigram class less one.
 		const b = classAt(soleAt) - 1;
-		if (b < 0) continue;
-		if (occurrences[b]++) {
-			requiredLo[b] = -1;
-			requiredHi[b] = -1;
-			continue;
-		}
+		if (b < 0 || counts[b] !== 1) continue;
 		for (let at = 1; at < normalisedQuery.length; at++) {
 			const before = classAt(at - 1);
 			const unitClass = classAt(at);
@@ -174,4 +166,208 @@ export const buildRescueBigramGate = (normalisedQuery: string): RescueBigramGate
 		}
 	}
 	return { requiredLo, requiredHi };
+};
+
+// `charMask`'s bit for one code unit: a letter as its lower case, digits in
+// four buckets, non-ASCII in two, and nothing for an ASCII separator.
+const unitMask = (unit: number): number => {
+	if (unit >= 97 && unit <= 122) return 1 << (unit - 97);
+	// Raw ASCII capitals, which rawFieldMask and rawFieldScan read before folding.
+	if (unit >= 65 && unit <= 90) return 1 << (unit - 65);
+	if (unit >= 48 && unit <= 57) return 1 << (26 + (unit & 3));
+	if (unit > 127) return 1 << (30 + (unit & 1));
+	return 0;
+};
+
+// `charMask`'s class for one code unit, shifted so 0 can mean "not a word
+// character": class n sets mask bit n − 1, for every class.
+const bigramClass = (unit: number): number => 32 - Math.clz32(unitMask(unit));
+
+const bigramBit = (prev: number, cur: number): number => (prev * 37 + cur) & 63;
+
+// A field's bigram set — adjacent same-word class pairs and consecutive
+// word-initial pairs, 64 bits in two int32s.
+export type FieldBigrams = { lo: number; hi: number };
+
+// Every BMP code point folds to exactly one unit, so each unit's fold has a
+// fixed class, kept as a stand-in unit of that class (0x80/0x81 for the two
+// non-ASCII buckets). computeFold rather than foldChar, so the fold's string
+// is not retained for every distinct unit in the list.
+const STAND_INS = " abcdefghijklmnopqrstuvwxyz0123\x80\x81";
+let standIns: Uint8Array | null = null;
+
+const standIn = (unit: number): number => {
+	const table = (standIns ??= new Uint8Array(0x10000));
+	return (
+		table[unit] ||
+		(table[unit] = STAND_INS.charCodeAt(
+			bigramClass(computeFold(String.fromCharCode(unit)).charCodeAt(0)),
+		))
+	);
+};
+
+const standInMasks = new Int32Array(130);
+for (let unit = 0; unit < 130; unit++) standInMasks[unit] = unitMask(unit);
+
+const NON_ASCII_BITS = 3 << 30;
+
+const isSurrogate = (unit: number): boolean => unit >> 11 === 0x1b;
+
+const isCombiningMark = (unit: number): boolean => unit >= 0x300 && unit <= 0x36f;
+
+/**
+ * `charMask(normaliseText(raw))` without building the normalised string. Runs
+ * once per field, when a searcher first needs a whole-list pass. May only
+ * false-pass: skipping NFC can only add mask bits, except that NFC, which
+ * normaliseText applies to a field holding a combining mark, can compose units
+ * (Hangul jamo) into one of the other non-ASCII bucket, so such a field takes
+ * both non-ASCII bits.
+ */
+export const rawFieldMask = (raw: string): number => {
+	let mask = 0;
+	for (let i = 0; i < raw.length; i++) {
+		const unit = raw.charCodeAt(i);
+		// A surrogate's fold depends on its partner, so it takes both non-ASCII
+		// bits, which can only false-pass.
+		mask |=
+			unit < 128
+				? standInMasks[unit]
+				: isSurrogate(unit) || isCombiningMark(unit)
+					? NON_ASCII_BITS
+					: standInMasks[standIn(unit)];
+	}
+	return mask;
+};
+
+/**
+ * `charMask(normaliseText(raw))` without building the normalised string, also
+ * accumulating the field's bigram set into `into`.
+ *
+ * Both halves may only false-pass: a combining mark, where NFC may compose the
+ * field and raw adjacency stops matching normalised adjacency, degrades the
+ * bigram set to all-bits and gives the mask both non-ASCII bits (rawFieldMask).
+ */
+export const rawFieldScan = (raw: string, into: FieldBigrams): number => {
+	let mask = 0;
+	let bigramsLo = 0;
+	let bigramsHi = 0;
+	let prevClass = 0;
+	let lastWordInitial = 0;
+	let degraded = false;
+	// One inline body for raw ASCII units and folded ones alike: every factored
+	// shape — shared helper, closure, module scratch, single mask-write site off
+	// `bigramClass − 1` — measured 8–15% slower on the whole-corpus build.
+	for (let i = 0; i < raw.length; i++) {
+		let unit = raw.charCodeAt(i);
+		let folded = "";
+		if (unit > 127) {
+			if (isCombiningMark(unit)) degraded = true;
+			if (isSurrogate(unit)) {
+				const codePoint = raw.codePointAt(i) as number;
+				if (codePoint > 0xffff) i++;
+				folded = foldChar(String.fromCodePoint(codePoint));
+				unit = folded.charCodeAt(0);
+			} else unit = standIn(unit);
+		}
+		for (let k = 0; ;) {
+			let unitClass = 0;
+			if (unit >= 97 && unit <= 122) {
+				mask |= 1 << (unit - 97);
+				unitClass = unit - 96;
+			} else if (unit >= 65 && unit <= 90) {
+				mask |= 1 << (unit - 65);
+				unitClass = unit - 64;
+			} else if (unit >= 48 && unit <= 57) {
+				mask |= 1 << (26 + (unit & 3));
+				unitClass = 27 + (unit & 3);
+			} else if (unit > 127) {
+				mask |= 1 << (30 + (unit & 1));
+				unitClass = 31 + (unit & 1);
+			}
+			if (unitClass !== 0) {
+				const pairStart = prevClass !== 0 ? prevClass : lastWordInitial;
+				if (pairStart !== 0) {
+					// Branchless: which half the bit lands in is data-dependent, and
+					// branching on it made the whole-corpus scan ~40% slower.
+					const bit = (pairStart * 37 + unitClass) & 63;
+					const inLow = (bit >> 5) - 1;
+					bigramsLo |= (1 << bit) & inLow;
+					bigramsHi |= (1 << bit) & ~inLow;
+				}
+				if (prevClass === 0) lastWordInitial = unitClass;
+			}
+			prevClass = unitClass;
+			if (++k >= folded.length) break;
+			unit = folded.charCodeAt(k);
+		}
+	}
+	if (degraded) {
+		into.lo = -1;
+		into.hi = -1;
+		return mask | NON_ASCII_BITS;
+	}
+	into.lo |= bigramsLo;
+	into.hi |= bigramsHi;
+	return mask;
+};
+
+// A gate, so it may only false-pass: a field whose missing `needed` bits hold
+// more than `spare` of the query's code units has no match. Units, not code
+// points, because every correction edits units: an absent unit costs an edit.
+export type LetterBudget = { needed: number; counts: Int32Array; spare: number };
+
+// How many of the query's code units each character class holds, so a field
+// lacking a class leaves that many units unmatched.
+export const classCounts = (letters: string): Int32Array => {
+	const counts = new Int32Array(32);
+	for (let at = 0; at < letters.length; at++) {
+		counts[31 - Math.clz32(unitMask(letters.charCodeAt(at)))]++;
+	}
+	return counts;
+};
+
+export const readingAdmits = (
+	{ needed, counts, spare }: LetterBudget,
+	fieldMask: number,
+): boolean => {
+	let unmatched = 0;
+	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
+		unmatched += counts[31 - Math.clz32(missing & -missing)];
+		if (unmatched > spare) return false;
+	}
+	return true;
+};
+
+// Only pairs of ASCII letters and digits, where a field's bigram set and the
+// normalised query are sure to agree.
+export const pairsOf = (words: string[]): FieldBigrams => {
+	const pairs = { lo: 0, hi: 0 };
+	for (const word of words) {
+		for (let at = 1; at < word.length; at++) {
+			const before = word.charCodeAt(at - 1);
+			const unit = word.charCodeAt(at);
+			if (before > 127 || unit > 127) continue;
+			const beforeClass = bigramClass(before);
+			const unitClass = bigramClass(unit);
+			if (beforeClass === 0 || unitClass === 0) continue;
+			const bit = bigramBit(beforeClass, unitClass);
+			if (bit < 32) pairs.lo |= 1 << bit;
+			else pairs.hi |= 1 << (bit - 32);
+		}
+	}
+	return pairs;
+};
+
+export const lacksPairsAtMost = (
+	needed: FieldBigrams,
+	lo: number,
+	hi: number,
+	limit: number,
+): boolean => {
+	let missing = 0;
+	for (let rest = needed.lo & ~lo; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
+	for (let rest = needed.hi & ~hi; rest !== 0; rest &= rest - 1)
+		if (++missing > limit) return false;
+	return true;
 };

@@ -3,8 +3,8 @@
 // observable through `createSearcher` — a dropped bit makes results vanish
 // silently.
 import { describe, expect, it } from "vite-plus/test";
-import { charMask } from "../src/gates";
-import { normaliseText, rawFieldMask, rawFieldScan } from "../src/normalise";
+import { charMask, rawFieldMask, rawFieldScan } from "../src/gates";
+import { normaliseText } from "../src/normalise";
 
 // Skipping NFC and the trim may only ADD bits. A bit the normalised form sets
 // and the raw form does not is a gate that false-rejects, which is the one

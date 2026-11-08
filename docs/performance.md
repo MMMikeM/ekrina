@@ -78,7 +78,8 @@ Construction is allocation, the first query that needs the masks carries the def
 
 When a query extends the previous one (the typing case), only the previous survivors are rescanned.
 This is sound only because the cache stores a gate-pass set: gates are monotone under query extension, since extending a query only adds requirements, while the match set is not (`"brown bread"` matches `borw` as a corrected `brow` and fails `bor`, which is too short to correct), so caching matches would be wrong.
-Backspace and replacement queries fall back to a full scan, and the relaxed rescue set is not a gate-pass set, so it never seeds the cache.
+Backspace and replacement queries fall back to a full scan.
+A query that ran the relaxed rescue still seeds the cache with its literal survivors: the rescue scores items outside them but never adds to them.
 `bench/session.test.ts` measures the effect keystroke by keystroke, each at its correct cache state.
 
 ### Corrections are budgeted
@@ -247,6 +248,28 @@ The skip penalty was swept from 0 to 0.35: 0.15 gives the best mean headline (0.
 At 0.15 the cost is two dropped vowels at 0.90–0.95 held out, from 1.00.
 Letting every query with only fuzzy chains read in full, rather than just the four-letter ones, scored the same and ran 8–30% slower, so only the swap reading reaches the whole list; three interleaved rounds put that build level with the one before it.
 The junk probes stay at 0 of 100 on every corpus and the long-text rates are unchanged.
+
+### A fuzzy chain enters a later word at its start
+
+The fuzzy tier is the first relevant answer for 5–7% of the scored queries (22, 17 and 18 of 330 on en, native and emoji), nearly all of them two words typed as one (`pedroalonso`) and initials (`tfts`).
+With fuzzy results dropped and every correction kept, headline MRR fell 0.9154 → 0.8981 (en), 0.9096 → 0.9014 (native) and 0.9131 → 0.9062 (emoji), the acronym family went to 0 on every corpus, and the median result set for a three-letter prefix shrank from 51 rows to 8 on en: the tier earns its MRR from a few families and carries a long tail of weak rows.
+That tail is a chain stepping into a later word mid-word, `prow` across "mobile **p**hone with ar**row**"; the useful chains either start each piece at a word or stay inside one.
+
+So a later piece in a new word must open that word, and a piece inside the current word keeps the old rule.
+Removing those chains exposed a second fault they had been hiding: a short query's substitution rescue ran whenever nothing matched, so once `suop` lost its junk chain it read as "stop" (2.6) over the swap that reads "soup" (3.0), and `tahn` as "Taha" over "Than".
+So a short query's substitution now runs after the second pass, and only when its swap and sparse readings find nothing too.
+
+Both changes together, against the build before them (quality stage, every family):
+
+|                             |              en |          native |           emoji |
+| --------------------------- | --------------: | --------------: | --------------: |
+| headline MRR                | 0.9154 → 0.9156 | 0.9096 → 0.9096 | 0.9131 → 0.9131 |
+| acronym family (unweighted) |   0.635 → 0.635 |   0.369 → 0.369 |   0.351 → 0.401 |
+| median rows, prefix of 3    |         51 → 41 |         44 → 34 |         40 → 34 |
+| junk                        |         0% → 0% |         0% → 0% |         0% → 0% |
+
+No family's MRR fell, long-text fuzzy junk halved (2.0% → 1.0% from 512 characters up, 200 absent words over the native corpus), and speed did not move (`ab.ts`, seven pairs at 100k: −2.1% to +1.1%).
+Two variants that let a short query's substitution compete beside fuzzy chains were measured first and rejected: run whenever no literal match exists, they cost 0.003–0.010 MRR and 13–17% per query; run only beside chains with a mid-word piece, they cost nothing and fixed nothing, since `prow`'s "**p**erson **row**ing boat" opens every piece at a word.
 
 ### What a dropped searcher leaves behind
 

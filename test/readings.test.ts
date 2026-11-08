@@ -208,17 +208,37 @@ describe("a swap in a four-letter word", () => {
 			item: "Louder Than Bombs",
 			score: SCORES.BOUNDARY + TYPO_PENALTY,
 			tier: "corrected",
-			corrected: "Than",
+			corrected: "than",
 			ranges: [[7, 10]],
 			text: "Louder Than Bombs",
+		});
+	});
+
+	it("scores as fuzzyMatch scores it, in the caller's casing", () => {
+		const items = ["Than", "Taha Hussein"];
+		expect(search(items)("Tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "Tahn"),
+			score: SCORES.EXACT + TYPO_PENALTY,
+			corrected: "Than",
+		});
+		expect(search(items)("tahn")[0]).toMatchObject({
+			...fuzzyMatch("Than", "tahn"),
+			score: SCORES.NORMALISED_EXACT + TYPO_PENALTY,
+			corrected: "than",
 		});
 	});
 
 	it("finishes a longer word it starts", () => {
 		expect(search(["Thanksgiving", "Taha Hussein"])("tahn")[0]).toMatchObject({
 			score: SCORES.PREFIX + TYPO_PENALTY,
-			corrected: "Than",
+			corrected: "than",
 		});
+	});
+
+	it("is read before a substitution, which would land on another word", () => {
+		expect(search(["Taha Hussein", "Louder Than Bombs"])("tahn").map((r) => r.corrected)).toEqual([
+			"than",
+		]);
 	});
 
 	it("is not tried once a field matches it literally", () => {
@@ -338,12 +358,9 @@ describe("a space counts as one edit", () => {
 		expect(fuzzyMatch("Hillside", "hil sidx")).toBeNull();
 	});
 
-	it("rejoins a split word beside weaker matches", () => {
+	it("rejoins a split word, which keeps a short query's substitutions out", () => {
 		const items = ["Mlle Anne Marty", "Marianne Lowe"];
-		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual([
-			"Marianne Lowe",
-			"Mlle Anne Marty",
-		]);
+		expect(searcher(items)("mari anne").map((r) => r.item)).toEqual(["Marianne Lowe"]);
 		const typed = searcher(["Mari Annx Shop", "Marianne Lowe"])("mari annx");
 		expect(typed.map((r) => r.item)).toEqual(["Mari Annx Shop"]);
 	});
