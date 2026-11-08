@@ -1,4 +1,5 @@
-import type { PreparedQuery } from "./query";
+import { classCounts } from "./gates";
+import { type PreparedQuery, perQuery } from "./query";
 
 // Below this a correction describes the field rather than the query: almost
 // every field offers a window one character away from a 3-character string.
@@ -67,20 +68,21 @@ export const dropCharAt: Edit = (text, at) => text.slice(0, at) + text.slice(at 
 export const rawQuery = ({ query, normalisedQuery }: PreparedQuery): string =>
 	query.length === normalisedQuery.length ? query : normalisedQuery;
 
-export const wordStartsOf = (prepared: PreparedQuery): number[] => {
-	let starts = prepared.wordStarts;
-	if (starts === undefined) {
-		starts = [];
-		let from = 0;
-		for (const word of prepared.queryWords) {
-			const wordAt = prepared.normalisedQuery.indexOf(word, from);
-			starts.push(wordAt);
-			from = wordAt + word.length;
-		}
-		prepared.wordStarts = starts;
+export const wordStartsOf: (prepared: PreparedQuery) => number[] = perQuery((prepared) => {
+	const starts: number[] = [];
+	let from = 0;
+	for (const word of prepared.queryWords) {
+		const wordAt = prepared.normalisedQuery.indexOf(word, from);
+		starts.push(wordAt);
+		from = wordAt + word.length;
 	}
 	return starts;
-};
+});
+
+// How many of the query's letters each class holds, for the one-edit budget.
+export const rescueCounts: (prepared: PreparedQuery) => Int32Array = perQuery((prepared) =>
+	classCounts(prepared.queryWords.join("")),
+);
 
 export const rawWordOf = (prepared: PreparedQuery, wordIndex: number): string => {
 	const wordStart = wordStartsOf(prepared)[wordIndex];

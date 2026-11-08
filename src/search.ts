@@ -13,8 +13,8 @@ import {
 import { shiftRanges } from "./ladder";
 import { matchField } from "./match";
 import { normaliseText } from "./normalise";
-import { frontGate, prepareBoundedQuery, rescueBudget } from "./query";
-import { rescueTurn } from "./correction";
+import { frontGate, prepareBoundedQuery } from "./query";
+import { rescueCounts, rescueTurn } from "./correction";
 import { resolveFieldSpecs } from "./fields";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
@@ -341,12 +341,12 @@ export function createSearcher<T, F extends string>(
 		// what a substitution typo looks like from a mask (see matchField).
 		const relaxedPass = (): void => {
 			const masks = (unionMasks ??= buildUnionMasks());
-			const budget = rescueBudget(prepared);
-			const bigramGate = buildRescueBigramGate(normalisedQuery, budget.counts);
+			const counts = rescueCounts(prepared);
+			const bigramGate = buildRescueBigramGate(normalisedQuery, counts);
 			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
-				if (!admitsOneEdit(missingClasses, budget.counts)) continue;
+				if (!admitsOneEdit(missingClasses, counts)) continue;
 				if (missingClasses !== 0) {
 					knowBigrams(i);
 					if (!rescuePairsAdmit(bigramGate, missingClasses, bigramsLo[i], bigramsHi[i])) continue;

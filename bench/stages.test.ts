@@ -10,17 +10,17 @@
 import { expect, it } from "vite-plus/test";
 import { splitWords } from "../src/boundaries";
 import {
+	admitsOneEdit,
 	buildRawGate,
 	buildRescueBigramGate,
 	charMask,
 	rawFieldMask,
 	rawFieldScan,
-	readingAdmits,
 	rescuePairsAdmit,
 } from "../src/gates";
 import { matchField } from "../src/match";
-import { prepareQuery, rescueBudget } from "../src/query";
-import { isRescuableQuery } from "../src/correction";
+import { prepareQuery } from "../src/query";
+import { isRescuableQuery, rescueCounts } from "../src/correction";
 import { normaliseText } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createSearcher } from "../src/search";
@@ -107,11 +107,11 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 					for (let i = 0; i < list.length; i++) sink += rawFieldMask(list[i]);
 				});
 				const qm = q.queryMask;
-				const budget = rescueBudget(q);
+				const counts = rescueCounts(q);
 				const oneClassShort: number[] = [];
 				for (let i = 0; i < list.length; i++) {
 					const miss = qm & ~fieldMask[i];
-					if (miss !== 0 && readingAdmits(budget, fieldMask[i])) oneClassShort.push(i);
+					if (miss !== 0 && admitsOneEdit(miss, counts)) oneClassShort.push(i);
 				}
 				pairsRead += oneClassShort.length;
 				ms.pairReads += time(() => {
@@ -123,10 +123,10 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 						sink += a.lo;
 					}
 				});
-				const gate = buildRescueBigramGate(nq, budget.counts);
+				const gate = buildRescueBigramGate(nq, counts);
 				const admits = (i: number): boolean => {
 					const miss = qm & ~fieldMask[i];
-					if (!readingAdmits(budget, fieldMask[i])) return false;
+					if (!admitsOneEdit(miss, counts)) return false;
 					if (miss === 0) return true;
 					return rescuePairsAdmit(gate, miss, bigramsLo[i], bigramsHi[i]);
 				};

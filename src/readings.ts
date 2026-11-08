@@ -1,6 +1,6 @@
 import { asciiWordUnits, WORD_CHARS } from "./boundaries";
 import { literalTiers, shiftRanges } from "./ladder";
-import { type PreparedQuery, prepareQuery } from "./query";
+import { type PreparedQuery, perQuery, prepareQuery } from "./query";
 import {
 	charMask,
 	classCounts,
@@ -439,9 +439,12 @@ const prepareReading = (prepared: PreparedQuery, competing: boolean): PreparedRe
 const readsSwaps = ({ queryWords }: PreparedQuery): boolean =>
 	queryWords.length === 1 && queryWords[0].length === SWAP_ONLY_LENGTH;
 
+// Indexed by whether the reading competes with matches as typed.
+const preparedReadings = perQuery((): (PreparedReading | null | undefined)[] => []);
+
 const prepare = (prepared: PreparedQuery, competition: Competition): PreparedReading | null => {
 	const competing = competition === "literal" || (competition === "fuzzy" && !readsSwaps(prepared));
-	return ((prepared.readings ??= [])[+competing] ??= prepareReading(prepared, competing));
+	return (preparedReadings(prepared)[+competing] ??= prepareReading(prepared, competing));
 };
 
 // An object rather than the bare function so bench/ladder.ts can swap the

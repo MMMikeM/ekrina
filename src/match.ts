@@ -2,9 +2,9 @@ import { fuzzyChainMatch } from "./fuzzy";
 import { admitsOneEdit, charMask, readingAdmits } from "./gates";
 import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
-import { frontGate, type PreparedQuery, prepareBoundedQuery, rescueBudget } from "./query";
+import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
 import { readings } from "./readings";
-import { rescueTurn } from "./correction";
+import { rescueCounts, rescueTurn } from "./correction";
 import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
 import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
 import type { MatchOptions, MatchResult } from "./types";
@@ -46,7 +46,7 @@ export const matchField = (
 	});
 
 	if (missingClasses !== 0) {
-		return rescuable && admitsOneEdit(missingClasses, rescueBudget(prepared).counts)
+		return rescuable && admitsOneEdit(missingClasses, rescueCounts(prepared))
 			? rescueField(rescueContext())
 			: null;
 	}

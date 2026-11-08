@@ -11,13 +11,13 @@
 import { describe, expect, it } from "vite-plus/test";
 import { fuzzyMatch } from "../src/index";
 import {
+	admitsOneEdit,
 	buildFuzzyGate,
 	buildPresenceGate,
 	buildRescueBigramGate,
 	charMask,
 	classCounts,
 	rawFieldScan,
-	readingAdmits,
 	rescuePairsAdmit,
 } from "../src/gates";
 import { isRescuableQuery } from "../src/correction";
@@ -86,7 +86,6 @@ describe("pre-filter funnel", () => {
 					// through a filter production never applies, overstating the cut.
 					const relaxed = isRescuableQuery(normalisedQuery, splitWords(normalisedQuery));
 					const counts = classCounts(splitWords(normalisedQuery).join(""));
-					const budget = { needed: queryMask, counts, spare: 1 };
 					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery, counts) : null;
 
 					let maskPass = 0;
@@ -97,7 +96,7 @@ describe("pre-filter funnel", () => {
 					for (let i = 0; i < list.length; i++) {
 						const missingClasses = queryMask & ~masks[i];
 						const maskOk = relaxed
-							? readingAdmits(budget, masks[i])
+							? admitsOneEdit(missingClasses, counts)
 							: missingClasses === 0;
 						// The searcher's rescue-scan bigram stage: a field missing
 						// exactly one class is reachable only by an edit at that

@@ -1,21 +1,8 @@
 import { splitWords } from "./boundaries";
-import {
-	buildFuzzyGate,
-	buildPresenceGate,
-	charMask,
-	classCounts,
-	type Gate,
-	isExactMask,
-	type LetterBudget,
-} from "./gates";
+import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
 import { normaliseText } from "./normalise";
-import type { PreparedReading } from "./readings";
-import type { CorrectionSubject } from "./rescue";
 
-// Query-derived state, built once per query and reused across every field. The
-// lazy fields share one protocol: undefined = not built yet, null = the query
-// admits none. Declared required so every PreparedQuery keeps one object shape
-// as the corrections fill them in.
+// Query-derived state, built once per query and reused across every field.
 export type PreparedQuery = {
 	query: string;
 	normalisedQuery: string;
@@ -24,13 +11,6 @@ export type PreparedQuery = {
 	queryMask: number;
 	presenceGate: Gate | null;
 	fuzzyGate: Gate;
-	rescueState: CorrectionSubject | undefined;
-	rescueBudget: LetterBudget | undefined;
-	lastCorrection: PreparedQuery | undefined;
-	wordStarts: number[] | undefined;
-	wordRescueStates: (CorrectionSubject | undefined)[] | undefined;
-	// Indexed by whether the reading competes with matches as typed.
-	readings: (PreparedReading | null | undefined)[] | undefined;
 };
 
 // Trimmed, so the exact-case tiers ignore padding as the normalised ones do.
@@ -48,12 +28,6 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		queryMask,
 		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalisedQuery),
-		rescueState: undefined,
-		rescueBudget: undefined,
-		lastCorrection: undefined,
-		wordStarts: undefined,
-		wordRescueStates: undefined,
-		readings: undefined,
 	};
 };
 
@@ -97,11 +71,19 @@ const longestFirst = (words: string[]): string[] =>
 export const frontGate = ({ queryWords, presenceGate, fuzzyGate }: PreparedQuery): Gate | null =>
 	queryWords.length > 1 ? presenceGate : fuzzyGate;
 
-// One edit: a substitution or a drop leaves out a single query unit. Built
-// lazily, since every correction prepares a query too and none is rescued.
-export const rescueBudget = (prepared: PreparedQuery): LetterBudget =>
-	(prepared.rescueBudget ??= {
-		needed: prepared.queryMask,
-		counts: classCounts(prepared.queryWords.join("")),
-		spare: 1,
-	});
+// Lazy state for the latest query, built on first use. A search uses one query
+// throughout, and prepareBoundedQuery keeps only the latest, so one entry is
+// all a cache needs.
+export const perQuery = <T>(
+	build: (prepared: PreparedQuery) => T,
+): ((prepared: PreparedQuery) => T) => {
+	let owner: PreparedQuery | null = null;
+	let value = undefined as T;
+	return (prepared) => {
+		if (prepared !== owner) {
+			value = build(prepared);
+			owner = prepared;
+		}
+		return value;
+	};
+};

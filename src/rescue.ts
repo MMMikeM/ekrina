@@ -1,7 +1,7 @@
 import { isBoundaryAt, opensWord } from "./boundaries";
 import { charMask } from "./gates";
 import { literalTiers } from "./ladder";
-import { type PreparedQuery, prepareQuery } from "./query";
+import { type PreparedQuery, perQuery, prepareQuery } from "./query";
 import {
 	dropCharAt,
 	type Edit,
@@ -49,20 +49,17 @@ const substituteRaw = (raw: string, normalised: string, corrected: string): stri
 	return corrected;
 };
 
-const prepareCorrection = (
-	prepared: PreparedQuery,
-	rawCorrected: string,
-	normalisedCorrected: string,
-): PreparedQuery => {
-	const cached = prepared.lastCorrection;
+let lastCorrection: PreparedQuery | undefined;
+
+const prepareCorrection = (rawCorrected: string, normalisedCorrected: string): PreparedQuery => {
 	if (
-		cached !== undefined &&
-		cached.query === rawCorrected &&
-		cached.normalisedQuery === normalisedCorrected
+		lastCorrection !== undefined &&
+		lastCorrection.query === rawCorrected &&
+		lastCorrection.normalisedQuery === normalisedCorrected
 	) {
-		return cached;
+		return lastCorrection;
 	}
-	return (prepared.lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
+	return (lastCorrection = prepareQuery(rawCorrected, normalisedCorrected));
 };
 
 // Only a literal tier counts: rescuing a fuzzy chain is an invented edit on top
@@ -174,10 +171,12 @@ const substitutedWindows = (
 	return windows;
 };
 
-const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject => {
-	const cache = (prepared.wordRescueStates ??= prepared.queryWords.map(() => undefined));
-	return (cache[wordIndex] ??= absentWordSubject(prepared, wordIndex));
-};
+const absentWordSubjects = perQuery((prepared) =>
+	prepared.queryWords.map((): CorrectionSubject | undefined => undefined),
+);
+
+const wordRescueStateOf = (prepared: PreparedQuery, wordIndex: number): CorrectionSubject =>
+	(absentWordSubjects(prepared)[wordIndex] ??= absentWordSubject(prepared, wordIndex));
 
 const spliceCorrectedWord = (
 	prepared: PreparedQuery,
@@ -193,12 +192,12 @@ const spliceCorrectedWord = (
 		prepared.normalisedQuery.slice(wordEnd);
 	const raw = rawQuery(prepared);
 	const rawCorrected = raw.slice(0, wordStart) + rawWord + raw.slice(wordEnd);
-	return prepareCorrection(prepared, rawCorrected, normalisedCorrected);
+	return prepareCorrection(rawCorrected, normalisedCorrected);
 };
 
 // What a rescue corrects — the whole query, or a phrase's one absent word —
 // with the two ways a correction of it becomes a scoreable query.
-export type CorrectionSubject = {
+type CorrectionSubject = {
 	queryText: string;
 	anchors: string[];
 	variants: RescueVariant[];
@@ -219,7 +218,6 @@ const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
 	anchors: correctionAnchors(prepared.normalisedQuery),
 	fromWindow: (corrected) =>
 		prepareCorrection(
-			prepared,
 			substituteRaw(rawQuery(prepared), prepared.normalisedQuery, corrected),
 			corrected,
 		),
@@ -313,10 +311,10 @@ const multiWordRescue = (rescue: RescueContext): MatchResult | null => {
 	return correctSubject(rescue, wordRescueStateOf(prepared, absentIndex));
 };
 
-const typoRescue = (rescue: RescueContext): MatchResult | null => {
-	const { prepared } = rescue;
-	return correctSubject(rescue, (prepared.rescueState ??= wholeQuerySubject(prepared)));
-};
+const wholeQuerySubjectOf = perQuery(wholeQuerySubject);
+
+const typoRescue = (rescue: RescueContext): MatchResult | null =>
+	correctSubject(rescue, wholeQuerySubjectOf(rescue.prepared));
 
 // A fuzzy assembly of exactly two chunks around a one-character gap is a
 // dropped keystroke, unless the gap is a separator. It skips the field-scaled
@@ -337,7 +335,6 @@ export const missingCharRescue = (
 	return scoreCorrectedQuery(
 		rescue,
 		prepareCorrection(
-			prepared,
 			raw.slice(0, insertAt) + gapChar + raw.slice(insertAt),
 			normalisedField.slice(firstStart, secondEnd + 1),
 		),
