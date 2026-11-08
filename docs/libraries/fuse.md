@@ -6,7 +6,7 @@ That row is in bold in the scorecard below.
 
 - **Fuse.js**: the defaults, `new Fuse(list)`.
 - **Fuse.js (all opts)**: adds `includeMatches` for ranges, `ignoreDiacritics` for folding, and `useExtendedSearch`, which turns space-separated terms into an AND of fuzzy patterns in any order.
-- **Fuse.js (tuned)**: all opts with `threshold` 0.45 rather than the default 0.6, chosen by a sweep against an earlier version of this bench.
+- **Fuse.js (tuned)**: all opts with `threshold` <!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> rather than the default 0.6, chosen by a sweep against an earlier version of this bench.
 
 ## The threshold
 
@@ -15,10 +15,10 @@ MRR is unrounded, so the ties the two-decimal tables show are broken; rows are t
 
 | `threshold` | MRR en / native / emoji | rows en / native / emoji | junk en / native / emoji |
 |---|--:|--:|--:|
-| 0.6 (default, all opts) | 0.755 / 0.753 / 0.670 | 551 / 387 / 114 | 0.95 / 0.91 / 0.85 |
-| **0.45 (tuned)** | **0.758 / 0.757 / 0.713** | **32 / 31 / 8** | **0.46 / 0.47 / 0.35** |
+| 0.6 (default, all opts) | <!-- bench:{{ fixed(headlineMrr("en", "fuse.js (all opts)"), 3) }} -->0.755<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("native", "fuse.js (all opts)"), 3) }} -->0.753<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("emoji", "fuse.js (all opts)"), 3) }} -->0.670<!-- bench:end --> | <!-- bench:{{ medianRows("en", "fuse.js (all opts)") }} -->551<!-- bench:end --> / <!-- bench:{{ medianRows("native", "fuse.js (all opts)") }} -->387<!-- bench:end --> / <!-- bench:{{ medianRows("emoji", "fuse.js (all opts)") }} -->114<!-- bench:end --> | <!-- bench:{{ fixed(div(n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.95<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.91<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"), 100), 2) }} -->0.85<!-- bench:end --> |
+| **<!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> (tuned)** | **<!-- bench:{{ fixed(headlineMrr("en", "fuse.js (tuned)"), 3) }} -->0.758<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("native", "fuse.js (tuned)"), 3) }} -->0.757<!-- bench:end --> / <!-- bench:{{ fixed(headlineMrr("emoji", "fuse.js (tuned)"), 3) }} -->0.713<!-- bench:end -->** | **<!-- bench:{{ medianRows("en", "fuse.js (tuned)") }} -->32<!-- bench:end --> / <!-- bench:{{ medianRows("native", "fuse.js (tuned)") }} -->31<!-- bench:end --> / <!-- bench:{{ medianRows("emoji", "fuse.js (tuned)") }} -->8<!-- bench:end -->** | **<!-- bench:{{ fixed(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.46<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.47<!-- bench:end --> / <!-- bench:{{ fixed(div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), 100), 2) }} -->0.35<!-- bench:end -->** |
 
-At 0.45 Fuse.js scores higher on every corpus, most on emoji, returns 6–8% of the rows, and answers 41–52% as many of the queries nothing answers.
+At <!-- bench:{{ constant("0.45") }} -->0.45<!-- bench:end --> Fuse.js scores higher on every corpus, most on emoji, returns <!-- bench:{{ span(mul(min(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), mul(max(div(medianRows("en", "fuse.js (tuned)"), medianRows("en", "fuse.js (all opts)")), div(medianRows("native", "fuse.js (tuned)"), medianRows("native", "fuse.js (all opts)")), div(medianRows("emoji", "fuse.js (tuned)"), medianRows("emoji", "fuse.js (all opts)"))), 100), 0, "%") }} -->6–8%<!-- bench:end --> of the rows, and answers <!-- bench:{{ span(mul(min(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), mul(max(div(n("library-fuse-scorecard-en", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-en", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-native", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-native", "Fuse.js (all opts)", "Junk")), div(n("library-fuse-scorecard-emoji", "Fuse.js (tuned)", "Junk"), n("library-fuse-scorecard-emoji", "Fuse.js (all opts)", "Junk"))), 100), 0, "%") }} -->41–52%<!-- bench:end --> as many of the queries nothing answers.<!-- bench:{{ assert(gt(min(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")), sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)"))), 0), "tuned Fuse.js scores higher than all opts on every corpus") }} --><!-- bench:end --><!-- bench:{{ assert(gt(sub(headlineMrr("emoji", "fuse.js (tuned)"), headlineMrr("emoji", "fuse.js (all opts)")), max(sub(headlineMrr("en", "fuse.js (tuned)"), headlineMrr("en", "fuse.js (all opts)")), sub(headlineMrr("native", "fuse.js (tuned)"), headlineMrr("native", "fuse.js (all opts)")))), "tuned Fuse.js gains most on emoji") }} --><!-- bench:end -->
 
 ## Scorecard
 
@@ -56,7 +56,7 @@ The columns are [the scorecard's](../benchmarks.md#scorecard).
 
 ## Speed at 100k
 
-The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the 100% row.
+The columns are [the speed tables'](../benchmarks.md#size-speed--search-type), at 100k, with Ekrina as the <!-- bench:{{ constant("100%") }} -->100%<!-- bench:end --> row.
 The native tables list only the configurations that fold diacritics, so base Fuse.js, which doesn't, is timed on en only; the emoji corpus is timed only unranked, in [the benchmarks](../benchmarks.md#emoji-corpus-unranked).
 
 **en corpus:**

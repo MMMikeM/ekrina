@@ -118,7 +118,12 @@ const meanColdOf = (a: Artifact, corpus: string, size: string, lib: string): num
 };
 
 /** Mean one-shot (constructor + first answer, summed per child) across every probe kind. */
-const meanOneShotOf = (a: Artifact, corpus: string, size: string, lib: string): number | null => {
+export const meanOneShotOf = (
+	a: Artifact,
+	corpus: string,
+	size: string,
+	lib: string,
+): number | null => {
 	const cells = probeKinds(a, corpus)
 		.map((k) => cellOf(a, corpus, k, size, lib)?.oneShotMs)
 		.filter((v): v is number => v != null);

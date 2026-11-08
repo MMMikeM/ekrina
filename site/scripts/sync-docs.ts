@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { withoutMarkers } from "../../bench/inject.ts";
 import { dirname, join, posix } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -129,7 +130,10 @@ mkdirSync(chartsDir, { recursive: true });
 for (const page of pages) {
 	const out = join(contentDir, `${page.route}.md`);
 	mkdirSync(dirname(out), { recursive: true });
-	writeFileSync(out, frontmatterOf(page) + themedCharts(rewriteLinks(page, page.body)));
+	writeFileSync(
+		out,
+		frontmatterOf(page) + themedCharts(rewriteLinks(page, withoutMarkers(page.body))),
+	);
 }
 for (const chart of readdirSync(join(repoRoot, "docs")).filter((file) => file.endsWith(".svg"))) {
 	copyFileSync(join(repoRoot, "docs", chart), join(chartsDir, chart));
