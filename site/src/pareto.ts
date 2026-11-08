@@ -228,6 +228,24 @@ export const sizeNote = (data: ParetoData, state: ParetoState): string => {
 		: "";
 };
 
+/** Every text each control note can show; the note keeps room for its longest so a switch never moves the controls. */
+export const noteTexts = (data: ParetoData): Record<"constructor" | "corpus" | "size", string[]> => {
+	const views = MEASURES.flatMap((measure) =>
+		data.corpora.map((corpus) => ({
+			measure,
+			constructorCounted: true,
+			corpus: corpus.id,
+			size: corpus.sizes[0]!,
+		})),
+	);
+	const distinct = (texts: string[]) => [...new Set(texts.filter(Boolean))];
+	return {
+		constructor: distinct(views.map(constructorNote)),
+		corpus: CORPORA.map((corpus) => CORPUS_DEFINITIONS[corpus]),
+		size: distinct(views.map((view) => sizeNote(data, view))),
+	};
+};
+
 const listNames = (names: string[]): string =>
 	names.length < 2 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
@@ -619,6 +637,43 @@ const logTicks = (lo: number, hi: number, plotW: number): number[] => {
 
 const tickLabel = (t: number): string => (t >= 1000 ? t.toLocaleString("en-GB") : String(t));
 
+const MANTISSAS = [1, 2, 5];
+
+const niceBelow = (v: number): number => {
+	const e = Math.floor(Math.log10(v));
+	const m = MANTISSAS.findLast((m) => m * 10 ** e <= v)!;
+	return Number((m * 10 ** e).toPrecision(6));
+};
+
+const niceAbove = (v: number): number => {
+	const e = Math.floor(Math.log10(v));
+	const m = [...MANTISSAS, 10].find((m) => m * 10 ** e >= v)!;
+	return Number((m * 10 ** e).toPrecision(6));
+};
+
+// One time axis per measure, spanning every corpus, size and constructor setting,
+// so switching any of those moves points rather than the axis under them.
+const axesOf = (data: ParetoData, measure: Measure) => {
+	const views = data.corpora.flatMap((corpus) =>
+		corpus.sizes.flatMap((size) =>
+			[true, false].map((constructorCounted) => ({
+				measure,
+				constructorCounted,
+				corpus: corpus.id,
+				size,
+			})),
+		),
+	);
+	const ms = views.flatMap((view) => data.rows.map((row) => msOf(row, view)));
+	const mrrs = data.rows.flatMap((row) => CORPORA.map((corpus) => row.mrr[corpus]));
+	return {
+		xLo: Math.log10(niceBelow(Math.min(...ms) / 1.15)),
+		xHi: Math.log10(niceAbove(Math.max(...ms) * 1.15)),
+		yLo: Math.max(0, Math.floor((Math.min(...mrrs) - 0.04) * 10) / 10),
+		yHi: Math.min(1, Math.ceil((Math.max(...mrrs) + 0.04) * 10) / 10),
+	};
+};
+
 const markerPath = (marker: Marker, x: number, y: number, grow = 0): string => {
 	switch (marker) {
 		case "circle":
@@ -646,14 +701,7 @@ export const chartSvg = (data: ParetoData, state: ParetoState, width: number): s
 	const points = pointsOf(data, state);
 	const front = viewFrontier(data, state, points);
 
-	const mrrs = points.map((p) => p.mrr);
-	const yLo = Math.max(0, Math.floor((Math.min(...mrrs) - 0.04) * 10) / 10);
-	const yHi = Math.min(1, Math.ceil((Math.max(...mrrs) + 0.04) * 10) / 10);
-	const logs = points.map((p) => Math.log10(p.ms));
-	const span = Math.max(...logs) - Math.min(...logs);
-	const pad = Math.max(0.12, span * 0.07);
-	const xLo = Math.min(...logs) - pad;
-	const xHi = Math.max(...logs) + pad;
+	const { yLo, yHi, xLo, xHi } = axesOf(data, state.measure);
 	const X = (ms: number) => r1(M.left + ((Math.log10(ms) - xLo) / (xHi - xLo)) * plotW);
 	const Y = (mrr: number) => r1(M.top + ((yHi - mrr) / (yHi - yLo)) * plotH);
 
