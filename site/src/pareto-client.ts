@@ -7,10 +7,12 @@ import {
 	CORPUS_DEFINITIONS,
 	corpusOf,
 	MEASURES,
+	SCALES,
 	type Corpus,
 	type Measure,
 	type ParetoData,
 	type ParetoState,
+	type Scale,
 	pointsOf,
 	sizeFor,
 	sizeNote,
@@ -37,11 +39,11 @@ const checkedValue = (form: HTMLFormElement, control: string) =>
 const constructorField = (state: ParetoState) =>
 	state.constructorCounted ? "counted" : "not-counted";
 
-// A link can open the chart on a view: ?pareto=one-shot,not-counted,en,100000.
+// A link can open the chart on a view: ?pareto=one-shot,not-counted,en,100000,linear.
 // Anything it doesn't recognise, or leaves off the end, keeps the page's own choice.
 const initialOverride = (state: ParetoState): ParetoState => {
 	const asked = new URLSearchParams(location.search).get("pareto")?.split(",") ?? [];
-	const [measure = "", constructor = "", corpus = "", size = ""] = asked;
+	const [measure = "", constructor = "", corpus = "", size = "", scale = ""] = asked;
 	const chosenCorpus = (CORPORA as readonly string[]).includes(corpus)
 		? (corpus as Corpus)
 		: state.corpus;
@@ -60,17 +62,19 @@ const initialOverride = (state: ParetoState): ParetoState => {
 					: state.constructorCounted,
 		corpus: chosenCorpus,
 		size: sizeFor(data, chosenCorpus, size || state.size),
+		scale: (SCALES as readonly string[]).includes(scale) ? (scale as Scale) : state.scale,
 	};
 };
 
 /** The `pareto` parameter for `state`, leaving off the trailing fields that match the page's own view. */
 const viewParam = (state: ParetoState, initial: ParetoState): string => {
-	const fields = [state.measure, constructorField(state), state.corpus, state.size];
+	const fields = [state.measure, constructorField(state), state.corpus, state.size, state.scale];
 	const defaults = [
 		initial.measure,
 		constructorField(initial),
 		initial.corpus,
 		sizeFor(data, state.corpus, initial.size),
+		initial.scale,
 	];
 	let length = fields.length;
 	while (length > 0 && fields[length - 1] === defaults[length - 1]) length--;
@@ -87,6 +91,7 @@ const writeUrl = (param: string) => {
 
 export const hydrate = (figure: HTMLElement): void => {
 	const form = figure.querySelector<HTMLFormElement>(".pareto-controls")!;
+	const scaleForm = figure.querySelector<HTMLFormElement>(".pareto-scale")!;
 	const plot = figure.querySelector<HTMLElement>(".pareto-plot")!;
 	const tip = figure.querySelector<HTMLElement>(".pareto-tip")!;
 	const caption = figure.querySelector<HTMLElement>("figcaption")!;
@@ -117,6 +122,7 @@ export const hydrate = (figure: HTMLElement): void => {
 		const sizes = corpusOf(data, state.corpus).sizes;
 		const constructorOff = constructorNote(state);
 		for (const input of radios(form, "measure")) input.checked = input.value === state.measure;
+		for (const input of radios(scaleForm, "scale")) input.checked = input.value === state.scale;
 		for (const input of radios(form, "corpus")) input.checked = input.value === state.corpus;
 		for (const input of radios(form, "size")) {
 			input.disabled = !sizes.includes(input.value);
@@ -303,6 +309,7 @@ export const hydrate = (figure: HTMLElement): void => {
 			constructorCounted: constructor ? constructor === "counted" : state.constructorCounted,
 			corpus,
 			size,
+			scale: state.scale,
 		};
 		hideTip();
 		update(true);
@@ -369,7 +376,16 @@ export const hydrate = (figure: HTMLElement): void => {
 		render(false);
 	}).observe(plot);
 
+	scaleForm.addEventListener("change", () => {
+		const scale = checkedValue(scaleForm, "scale") as Scale | undefined;
+		state = { ...state, scale: scale ?? state.scale };
+		hideTip();
+		update(true);
+		writeUrl(viewParam(state, pageView));
+	});
+
 	form.hidden = false;
+	scaleForm.hidden = false;
 	width = Math.round(plot.clientWidth);
 	update(false);
 };
