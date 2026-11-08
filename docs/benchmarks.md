@@ -176,7 +176,7 @@ They are shown for completeness; the en and native corpora carry the speed compa
 | fuzzy             | 0.39 |  24% |     0.03 |    1.22 |      18.78 |      0.73 |
 <!-- bench:end -->
 
-The scorecard's timing columns are exactly what the Pareto charts draw, one per workload; both draw the native 10k scorecard.
+The Pareto charts draw the native 10k scorecard, its MRR against one of its timing columns each: per query below, and the one-shot in [the comparison](./compare.md?pareto=one-shot).
 
 **Frontend workload** (one searcher answers every keystroke, so its index, built at load or by the first query that needs it, is paid once per session):
 
@@ -187,9 +187,9 @@ The scorecard's timing columns are exactly what the Pareto charts draw, one per 
 </picture>
 <!-- bench:end -->
 
-fuzzysort owns the fast end, <!-- bench:{{ cell("scorecard-native", "fuzzysort", "MRR") }} -->0.46<!-- bench:end --> MRR at <!-- bench:{{ cell("scorecard-native", "fuzzysort", "per query") }} -->0.24<!-- bench:end --> ms with bare output<!-- bench:{{ assert(lt(n("scorecard-native", "fuzzysort", "per query"), lowest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)+fast-fuzzy+Fuse.js (tuned)+uFuzzy (all opts)+@nozbe/microfuzz+match-sorter+fuzzy", "per query")), "fuzzysort answers fastest per query") }} --><!-- bench:end -->, and Ekrina (indexed) reaches <!-- bench:{{ cell("scorecard-native", "Ekrina (indexed)", "MRR") }} -->0.91<!-- bench:end --> at <!-- bench:{{ cell("scorecard-native", "Ekrina (indexed)", "per query") }} -->0.31<!-- bench:end --> ms; uFuzzy (all opts), at <!-- bench:{{ cell("scorecard-native", "uFuzzy (all opts)", "MRR") }} -->0.66<!-- bench:end --> MRR and <!-- bench:{{ cell("scorecard-native", "uFuzzy (all opts)", "per query") }} -->0.63<!-- bench:end --> ms, is slower than every Ekrina row<!-- bench:{{ assert(gt(n("scorecard-native", "uFuzzy (all opts)", "per query"), highest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)", "per query")), "uFuzzy (all opts) is slower per query than every Ekrina row") }} --><!-- bench:end --> and below them on quality.<!-- bench:{{ assert(lt(n("scorecard-native", "uFuzzy (all opts)", "MRR"), lowest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)", "MRR")), "uFuzzy (all opts) scores below every Ekrina row") }} --><!-- bench:end -->
+Per query on native at 10k, fuzzysort owns the fast end, <!-- bench:{{ cell("scorecard-native", "fuzzysort", "MRR") }} -->0.46<!-- bench:end --> MRR at <!-- bench:{{ cell("scorecard-native", "fuzzysort", "per query") }} -->0.24<!-- bench:end --> ms with bare output<!-- bench:{{ assert(lt(n("scorecard-native", "fuzzysort", "per query"), lowest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)+fast-fuzzy+Fuse.js (tuned)+uFuzzy (all opts)+@nozbe/microfuzz+match-sorter+fuzzy", "per query")), "fuzzysort answers fastest per query") }} --><!-- bench:end -->, and Ekrina (indexed) reaches <!-- bench:{{ cell("scorecard-native", "Ekrina (indexed)", "MRR") }} -->0.91<!-- bench:end --> at <!-- bench:{{ cell("scorecard-native", "Ekrina (indexed)", "per query") }} -->0.31<!-- bench:end --> ms; uFuzzy (all opts), at <!-- bench:{{ cell("scorecard-native", "uFuzzy (all opts)", "MRR") }} -->0.66<!-- bench:end --> MRR and <!-- bench:{{ cell("scorecard-native", "uFuzzy (all opts)", "per query") }} -->0.63<!-- bench:end --> ms, is slower than every Ekrina row<!-- bench:{{ assert(gt(n("scorecard-native", "uFuzzy (all opts)", "per query"), highest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)", "per query")), "uFuzzy (all opts) is slower per query than every Ekrina row") }} --><!-- bench:end --> and below them on quality.<!-- bench:{{ assert(lt(n("scorecard-native", "uFuzzy (all opts)", "MRR"), lowest("scorecard-native", "Ekrina+Ekrina (acronym)+Ekrina (indexed)", "MRR")), "uFuzzy (all opts) scores below every Ekrina row") }} --><!-- bench:end -->
 
-**Backend one-shot workload** (a fresh process runs constructor + first answer): the chart is in [the comparison](./compare.md), which shows it deliberately, since it is the less flattering of the two Pareto charts.
+**Backend one-shot workload** (a fresh process runs constructor + first answer): [the comparison](./compare.md?pareto=one-shot) leads with the one-shot chart deliberately, since it is the less flattering of the two Pareto charts.
 
 ## Size, speed & search type
 
@@ -279,7 +279,7 @@ Omitted: fast-fuzzy and fuzzy, which have no folding option at all, and the base
 ### emoji corpus, unranked
 
 The whole 1,923-item list, timed the same way as the other two corpora but at its own length.
-That is too short to rank speed on, so these rows have no geomean, appear in the scorecard only under its warning, and stay out of the Pareto charts and the library pages.
+That is too short to rank speed on, so these rows have no geomean, appear in the scorecard only under its warning, and stay out of the static Pareto charts and the library pages; the site's interactive chart draws them under the same warning, with no frontier.
 
 <!-- bench:speed-emoji -->
 | Library           |    index | cold query |    total | total rel |

@@ -37,8 +37,16 @@ const memoize = <K, V>(compute: (key: K) => V) => {
 	};
 };
 
+const moduleSymbol = (module: string): Symbol => {
+	const symbol = checker.getSymbolOfSourceFile(moduleFile(module));
+	if (!symbol) {
+		throw new Error(`${moduleFile(module)} is not a module`);
+	}
+	return symbol;
+};
+
 const exportsOf = memoize((module: string) =>
-	checker.getExportsOfModule(checker.getSymbolOfSourceFile(moduleFile(module))).map((symbol) => ({
+	checker.getExportsOfModule(moduleSymbol(module)).map((symbol) => ({
 		name: symbol.name,
 		symbol: resolveAlias(symbol),
 	})),
