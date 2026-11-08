@@ -5,7 +5,7 @@
 	"scripts": {
 		"content": "node scripts/sync-docs.ts && node scripts/explorer-data.ts && node scripts/pareto-data.ts && node scripts/generate-reference.ts",
 		"dev": "pnpm run content && astro dev",
-		"build": "pnpm run content && astro build && node scripts/check-dist.ts",
+		"build": "pnpm run content && tsc --noEmit && astro build && node scripts/check-dist.ts",
 		"preview": "astro preview"
 	},
 	"devDependencies": {
