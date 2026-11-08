@@ -20,16 +20,20 @@ describe("figures", () => {
 
 	it("arithmetic composes over cells and raw artifact values", () => {
 		expect(
-			figure('pct(div(n("speed", "Ekrina (indexed)", "batch/query"), n("speed", "Ekrina", "batch/query")))'),
+			figure(
+				'pct(div(n("speed", "Ekrina (indexed)", "batch/query"), n("speed", "Ekrina", "batch/query")))',
+			),
 		).toBe("86%");
 		expect(figure('fixed(raw("coldMatrix", "en", "batch", "10000", "ekrina", "restMs"), 2)')).toBe(
 			"0.36",
 		);
-		expect(figure('times(div(4.97, 0.36), 1)')).toBe("13.8×");
+		expect(figure("times(div(4.97, 0.36), 1)")).toBe("13.8×");
 		expect(figure('span(5.61, 5.83, 1, "×")')).toBe("5.6–5.8×");
 		expect(figure('span(5.61, 5.64, 1, "×")')).toBe("5.6×");
 		expect(figure("fraction(div(11.59, 136.13))")).toBe("a twelfth");
-		expect(figure("fractions(div(11.59, 136.13), div(15.25, 136.13))")).toBe("a twelfth to a ninth");
+		expect(figure("fractions(div(11.59, 136.13), div(15.25, 136.13))")).toBe(
+			"a twelfth to a ninth",
+		);
 		expect(figure("fractions(0.26, 0.24)")).toBe("a quarter");
 		expect(figure('constant("18%")')).toBe("18%");
 		expect(figure('unsourced("0.8%", "400-word draw")')).toBe("0.8%");
@@ -38,7 +42,9 @@ describe("figures", () => {
 
 	it("a claim renders nothing while it holds and fails the build once it does not", () => {
 		expect(figure('assert(within(0.34, 0.31, 0.15), "acronym ties indexed")')).toBe("");
-		expect(() => figure('assert(within(0.36, 0.31, 0.15), "Ekrina ties indexed")')).toThrow(new BrokenClaim("Ekrina ties indexed"));
+		expect(() => figure('assert(within(0.36, 0.31, 0.15), "Ekrina ties indexed")')).toThrow(
+			new BrokenClaim("Ekrina ties indexed"),
+		);
 	});
 
 	it("a bare condition, an unknown figure or a missing cell is an error, not a value", () => {
@@ -75,11 +81,25 @@ describe("figures over families and orderings", () => {
 		],
 	};
 	const scorecard = (rows: Array<[string, number]>): string =>
-		["| Library | MRR |", "|---|--:|", ...rows.map(([row, mrr]) => `| ${row} | ${mrr} |`)].join("\n");
+		["| Library | MRR |", "|---|--:|", ...rows.map(([row, mrr]) => `| ${row} | ${mrr} |`)].join(
+			"\n",
+		);
 	const ordered = figureEvaluator({ families } as unknown as Artifact, {
-		en: scorecard([["x", 0.9], ["y", 0.5], ["z", 0.5]]),
-		native: scorecard([["x", 0.8], ["y", 0.6], ["z", 0.4]]),
-		emoji: scorecard([["x", 0.4], ["y", 0.6], ["z", 0.1]]),
+		en: scorecard([
+			["x", 0.9],
+			["y", 0.5],
+			["z", 0.5],
+		]),
+		native: scorecard([
+			["x", 0.8],
+			["y", 0.6],
+			["z", 0.4],
+		]),
+		emoji: scorecard([
+			["x", 0.4],
+			["y", 0.6],
+			["z", 0.1],
+		]),
 	});
 
 	it("the headline MRR is the group-weighted mean before rounding", () => {
@@ -100,7 +120,9 @@ describe("figures over families and orderings", () => {
 
 	it("two tables share an order unless some pair of rows swaps, and a tie is no swap", () => {
 		expect(ordered('assert(sameOrder("MRR", "en", "native"), "same")')).toBe("");
-		expect(() => ordered('assert(sameOrder("MRR", "en", "native", "emoji"), "same")')).toThrow(new BrokenClaim("same"));
+		expect(() => ordered('assert(sameOrder("MRR", "en", "native", "emoji"), "same")')).toThrow(
+			new BrokenClaim("same"),
+		);
 	});
 });
 
@@ -120,7 +142,12 @@ describe("figures across table cells and raw timings", () => {
 	].join("\n");
 	const cold = (oneShotMs: number) => ({ "10000": { ekrina: { oneShotMs } } });
 	const timed = {
-		probes: { en: [{ query: "gensler", cells: { ekrina: { count: 1 } } }, { query: "lopez pexro", cells: {} }] },
+		probes: {
+			en: [
+				{ query: "gensler", cells: { ekrina: { count: 1 } } },
+				{ query: "lopez pexro", cells: {} },
+			],
+		},
 		coldMatrix: {
 			en: {
 				"short-word": cold(3),
@@ -145,7 +172,9 @@ describe("figures across table cells and raw timings", () => {
 	it("rows match by any label column, so a family table reads by family or by group", () => {
 		expect(across('labelCell("families-native", "dropped letter", "fuzzy")')).toBe("0.62");
 		expect(across('lowest("families-native+families-en", "typos", "Ekrina+fuzzy")')).toBe("0.1");
-		expect(across('highest("families-native", "dropped letter+accents added", "fuzzy")')).toBe("0.62");
+		expect(across('highest("families-native", "dropped letter+accents added", "fuzzy")')).toBe(
+			"0.62",
+		);
 		expect(() => across('labelCell("families-native", "typos", "fuzzy")')).toThrow("2 rows");
 	});
 

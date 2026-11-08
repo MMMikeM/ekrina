@@ -71,11 +71,13 @@ describe("figures marked inline", () => {
 	it("an MDX page marks figures with JSX comments", () => {
 		const doc = 'Junk stays near {/* bench:{{ constant("1%") }} */}2%{/* bench:end */}.';
 		const { doc: next } = inject(doc, {}, figure);
-		expect(next).toBe('Junk stays near {/* bench:{{ constant("1%") }} */}<constant("1%")>{/* bench:end */}.');
+		expect(next).toBe(
+			'Junk stays near {/* bench:{{ constant("1%") }} */}<constant("1%")>{/* bench:end */}.',
+		);
 	});
 
 	it("a claim renders nothing between its markers", () => {
-		const doc = "Fastest.<!-- bench:{{ assert(lt(1, 2), \"x\") }} --><!-- bench:end -->";
+		const doc = 'Fastest.<!-- bench:{{ assert(lt(1, 2), "x") }} --><!-- bench:end -->';
 		expect(inject(doc, {}, () => "").doc).toBe(doc);
 	});
 
@@ -93,7 +95,7 @@ describe("hand-typed figures", () => {
 	it("a measurement in prose is reported with its line, one inside a marker is not", () => {
 		const doc = [
 			"Ekrina answers in 0.31 ms.",
-			'Ekrina answers in <!-- bench:{{ x() }} -->0.31 ms<!-- bench:end -->.',
+			"Ekrina answers in <!-- bench:{{ x() }} -->0.31 ms<!-- bench:end -->.",
 			region("a", "| 0.31 ms |"),
 			"It scores 0.91 MRR.",
 		].join("\n");

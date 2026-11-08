@@ -11,7 +11,9 @@ type Expr = Value | Call;
 
 const TOKEN = /\s*(?:"((?:[^"\\]|\\.)*)"|(-?\d+(?:\.\d+)?)|([A-Za-z_]\w*)|([(),]))/y;
 
-const tokenise = (source: string): Array<{ kind: "str" | "num" | "name" | "punct"; text: string }> => {
+const tokenise = (
+	source: string,
+): Array<{ kind: "str" | "num" | "name" | "punct"; text: string }> => {
 	const tokens: Array<{ kind: "str" | "num" | "name" | "punct"; text: string }> = [];
 	TOKEN.lastIndex = 0;
 	while (TOKEN.lastIndex < source.length) {
@@ -70,7 +72,10 @@ const tableCell = (table: string, row: string, column: string): string => {
 	const col = header.indexOf(column);
 	if (col === -1) throw new Error(`no column '${column}' in [${header.join(", ")}]`);
 	const label = (cell: string): string => cell.replace(/^\*\*|\*\*$|^_|_$/g, "");
-	const found = lines.slice(2).map(cellsOf).find((cells) => label(cells[0] ?? "") === row);
+	const found = lines
+		.slice(2)
+		.map(cellsOf)
+		.find((cells) => label(cells[0] ?? "") === row);
 	if (found === undefined) throw new Error(`no row '${row}'`);
 	return label(found[col] ?? "");
 };
@@ -218,7 +223,8 @@ const figuresFor = (a: Artifact, tables: Record<string, string>): Figures => ({
 	},
 	fractions: (lo, hi) => {
 		const [low, high] = [lo, hi].map((x) => FRACTIONS[Math.round(1 / num(x))]);
-		if (!low || !high) throw new Error(`no words for 1/${(1 / num(lo)).toFixed(1)}–1/${(1 / num(hi)).toFixed(1)}`);
+		if (!low || !high)
+			throw new Error(`no words for 1/${(1 / num(lo)).toFixed(1)}–1/${(1 / num(hi)).toFixed(1)}`);
 		return low === high ? low : `${low} to ${high}`;
 	},
 	fraction: (x) => {
@@ -300,7 +306,18 @@ const figuresFor = (a: Artifact, tables: Record<string, string>): Figures => ({
 			"eighteen",
 			"nineteen",
 		];
-		const tens = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+		const tens = [
+			"",
+			"",
+			"twenty",
+			"thirty",
+			"forty",
+			"fifty",
+			"sixty",
+			"seventy",
+			"eighty",
+			"ninety",
+		];
 		const whole = Math.round(num(x));
 		if (whole < 0 || whole > 99) throw new Error(`no words for ${whole}`);
 		if (whole < 20) return small[whole];
@@ -326,7 +343,9 @@ const figuresFor = (a: Artifact, tables: Record<string, string>): Figures => ({
 		return rows.every((_, i) =>
 			rows.every((_, j) =>
 				orders.every((order) =>
-					orders.every((other) => Math.sign(order[i] - order[j]) * Math.sign(other[i] - other[j]) >= 0),
+					orders.every(
+						(other) => Math.sign(order[i] - order[j]) * Math.sign(other[i] - other[j]) >= 0,
+					),
 				),
 			),
 		);
@@ -359,7 +378,8 @@ export const figureEvaluator = (
 	};
 	return (source) => {
 		const value = evaluate(parseFigure(source));
-		if (typeof value === "boolean") throw new Error(`figure '${source}' is a condition; wrap it in assert`);
+		if (typeof value === "boolean")
+			throw new Error(`figure '${source}' is a condition; wrap it in assert`);
 		return typeof value === "number" ? String(value) : value;
 	};
 };
