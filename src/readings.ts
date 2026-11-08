@@ -12,16 +12,13 @@ import {
 import {
 	MAX_RESCUE_WORD_LENGTH,
 	MIN_TYPO_QUERY_LENGTH,
-	rawWordOf,
-	swapAdjacentAt,
 	withinEdits,
 	wordStartsOf,
 } from "./correction";
+import { bestSwap, swapFamily } from "./rescue";
 import { better, CONTAINS_SCORE, correctedMatch } from "./scores";
 import type { MatchResult, HighlightRange } from "./types";
 
-// What one query admits under a reading, prepared once and tried against
-// fields that matched nothing else.
 export type PreparedReading = LetterBudget & {
 	// Absent when it could reject nothing; reads an item's bigram set (see
 	// rawFieldScan).
@@ -49,7 +46,7 @@ const MIN_REJOINED_LENGTH = 6;
 const MIN_PHRASE_CORRECTION_LENGTH = 5;
 // Under the default rescue's floor only a swap is safe to undo: it keeps every
 // letter, where a drop or a substitution leaves three that most fields hold.
-const SWAP_ONLY_LENGTH = 4;
+const SWAP_ONLY_LENGTH = MIN_TYPO_QUERY_LENGTH - 1;
 const MIN_SCATTER_LENGTH = 4;
 // Longer text holds a near-namesake two edits from absent words: 173 absent
 // probes junked once at 1,024 characters and never up to 512.
@@ -59,8 +56,6 @@ const wordRun = new RegExp(`[${WORD_CHARS}]+`, "gu");
 
 type FieldWord = { word: string; offset: number };
 
-// One way of reading the query: how many of its letters a field may lack, the
-// pairs and the cheap test a field must pass first, and the reading itself.
 type Reading = {
 	unmatched: number;
 	// Absent when it could reject nothing.
@@ -354,35 +349,6 @@ const stuckKeyForm = (word: string): string | null => {
 	return form.length >= MIN_TYPO_QUERY_LENGTH ? form : null;
 };
 
-type Swap = { normalised: string; asTyped: PreparedQuery };
-
-// Every adjacent swap of a short word. Swaps at different places change
-// different letters, so only a swap of two equal ones repeats a form: the word.
-const swapForms = (word: string, typedWord: string): Swap[] => {
-	const forms: Swap[] = [];
-	for (let k = 0; k + 1 < word.length; k++) {
-		if (word[k] !== word[k + 1]) {
-			const normalised = swapAdjacentAt(word, k);
-			forms.push({ normalised, asTyped: prepareQuery(swapAdjacentAt(typedWord, k), normalised) });
-		}
-	}
-	return forms;
-};
-
-// A swap undone only where the form starts a field word, so it lands at a word
-// start as the default's short corrections do. Like the default's, it keeps the
-// caller's casing, so both price a swap the same.
-const swapWord =
-	(swaps: Swap[]): Reading["matchWords"] =>
-	(field, normalisedField, words) => {
-		let best: MatchResult | null = null;
-		for (const { normalised, asTyped } of swaps) {
-			if (!words.some((candidate) => candidate.word.startsWith(normalised))) continue;
-			best = better(best, scoreCorrection(1, field, normalisedField, asTyped, asTyped.query));
-		}
-		return best;
-	};
-
 const wordReadings = (
 	prepared: PreparedQuery,
 	word: string,
@@ -411,11 +377,12 @@ const wordReadings = (
 			matchWords: correctWord(stuck, 1, MAX_EDITS - 1),
 		});
 	} else if (!competing && readsSwaps(prepared)) {
-		const swaps = swapForms(word, rawWordOf(prepared, 0));
+		const swaps = swapFamily(prepared);
 		applicable.push({
 			unmatched: 0,
-			holds: (normalisedField) => swaps.some((swap) => normalisedField.includes(swap.normalised)),
-			matchWords: swapWord(swaps),
+			holds: (normalisedField) =>
+				swaps.variants.some((swap) => normalisedField.includes(swap.normalised)),
+			matchWords: (field, normalisedField) => bestSwap(field, normalisedField, prepared, swaps),
 		});
 	}
 	return applicable;
@@ -477,11 +444,6 @@ const prepare = (prepared: PreparedQuery, competition: Competition): PreparedRea
 	return ((prepared.readings ??= [])[+competing] ??= prepareReading(prepared, competing));
 };
 
-// The second pass, tried on fields up to 512 characters once the ladder and
-// its one-edit rescue have run. A sparse word, or a word split by a stray space
-// alone, competes while fewer than ten items match the query as typed, and a
-// swap in a four-letter word while none matches it literally; other mistakes
-// are corrected only when nothing matches it otherwise.
 // An object rather than the bare function so bench/ladder.ts can swap the
 // second pass out.
 export const readings: {

@@ -1,19 +1,20 @@
 import { closesWord } from "./boundaries";
 import {
+	admitsOneEdit,
 	buildRawGate,
 	buildRescueBigramGate,
 	buildWordStartRawGate,
 	charMask,
-	lacksAtMostOneLetter,
 	rawFieldMask,
 	rawFieldScan,
 	readingAdmits,
+	rescuePairsAdmit,
 } from "./gates";
 import { shiftRanges } from "./ladder";
 import { matchField } from "./match";
 import { normaliseText } from "./normalise";
-import { frontGate, prepareBoundedQuery } from "./query";
-import { rescueCounts, rescueTurn } from "./correction";
+import { frontGate, prepareBoundedQuery, rescueBudget } from "./query";
+import { rescueTurn } from "./correction";
 import { resolveFieldSpecs } from "./fields";
 import { CONTAINS_SCORE } from "./scores";
 import { type Competition, type PreparedReading, readings } from "./readings";
@@ -145,17 +146,12 @@ export function createSearcher<T, F extends string>(
 	// never does.
 	let leads: Int32Array | null = null;
 
-	// The one structure that knows something about every item, so the one that
-	// needs a whole-list pass. Single-word literal gating runs against the
-	// caller's own strings instead, so unless the caller asks for it up front, it
-	// is built by the first multi-word query or rescue, and never for a session
-	// of single words that all match literally.
+	// Built by the first whole-list pass or buildIndex: single-word literal gating
+	// reads the caller's own strings, so a session of them never needs it.
 	let unionMasks: Int32Array | null = null;
 
 	const rawFieldOf = (i: number, f: number): string => resolvedSpecs[f].selector(list[i]) || "";
-	// Each item's bigram set across its fields, computed the first time a gate
-	// reads it: only items that already passed the mask gate ever need one. An
-	// empty set reads as not yet computed, so an item without a single letter
+	// An empty set reads as not yet computed, so an item without a single letter
 	// pair is rescanned each time it is asked about, instead of every item
 	// paying a byte for a known flag.
 	let bigramsLo = new Int32Array(0);
@@ -224,8 +220,7 @@ export function createSearcher<T, F extends string>(
 	// under query extension — an item the shorter query rejected stays rejected —
 	// and the cached set is always a GATE-passing set of the same gate kind; the
 	// match set itself is not monotone (a field can match "borw" as a corrected
-	// "brow" while failing "bor", which is too short to correct). The two lists
-	// double-buffer so the query path stays allocation-free.
+	// "brow" while failing "bor", which is too short to correct).
 	const survivorCache = {
 		query: "",
 		multiWord: false,
@@ -254,10 +249,8 @@ export function createSearcher<T, F extends string>(
 
 		const survivors = (survivorCache.spare ??= new Int32Array(count));
 		let survivorCount = 0;
-		// A correction scores at least TYPO_PENALTY (2.1), so once RESCUE_CUTOFF
-		// literal hits sit at or below SCORES.CONTAINS (2) no correction can reach
-		// the page — the rescue becomes provably invisible work. Fuzzy hits score
-		// above 2.1 too, so they cannot crowd a correction out of the count.
+		// Corrections and fuzzy chains both score above SCORES.CONTAINS, so only
+		// literal hits can fill the page ahead of a correction.
 		let literalHits = 0;
 		const pageSize = limit ?? Infinity;
 
@@ -272,10 +265,9 @@ export function createSearcher<T, F extends string>(
 			fieldEndsWord[at] = endsWord ? 1 : 0;
 		};
 
-		const scoreItem = (i: number, mayRescue: boolean, preGated: boolean): void => {
-			// Fuzzy and corrected matches score above SCORES.CONTAINS, so once a page
-			// of items matches literally, no chain found after it can reach the page.
-			// Only a lone field skips them: with several, `fields` reports every match.
+		const scoreItem = (i: number, mayRescue: boolean, frontGated: boolean): void => {
+			// Only a lone field skips chains once a page matches literally: with
+			// several, `fields` reports every match.
 			const literalOnly = !mayRescue && specCount === 1 && literalHits >= pageSize;
 			materialise(i);
 			const base = i * specCount;
@@ -287,7 +279,7 @@ export function createSearcher<T, F extends string>(
 					prepared,
 					resolvedSpecs[f].acronymTier,
 					mayRescue,
-					preGated,
+					frontGated,
 					literalOnly,
 				);
 				if (result) offerField(i, f, result);
@@ -300,9 +292,9 @@ export function createSearcher<T, F extends string>(
 			normalisedQuery.startsWith(survivorCache.query) &&
 			multiWord === survivorCache.multiWord;
 
-		const admit = (i: number, preGated: boolean): void => {
+		const admit = (i: number, frontGated: boolean): void => {
 			survivors[survivorCount++] = i;
-			scoreItem(i, false, preGated);
+			scoreItem(i, false, frontGated);
 		};
 
 		// Every field the ladder can match outright, none of the near-misses only
@@ -349,23 +341,15 @@ export function createSearcher<T, F extends string>(
 		// what a substitution typo looks like from a mask (see matchField).
 		const relaxedPass = (): void => {
 			const masks = (unionMasks ??= buildUnionMasks());
-			const counts = rescueCounts(prepared);
-			const bigramGate = buildRescueBigramGate(normalisedQuery, counts);
+			const budget = rescueBudget(prepared);
+			const bigramGate = buildRescueBigramGate(normalisedQuery, budget.counts);
 			forgetMatches();
 			for (let i = 0; i < count; i++) {
 				const missingClasses = queryMask & ~masks[i];
-				if (!lacksAtMostOneLetter(missingClasses, counts)) continue;
+				if (!admitsOneEdit(missingClasses, budget.counts)) continue;
 				if (missingClasses !== 0) {
-					// The one absent letter is where the edit must be, so the query's
-					// remaining pairs must all be present (see buildRescueBigramGate).
-					const b = 31 - Math.clz32(missingClasses);
 					knowBigrams(i);
-					if (
-						(bigramGate.requiredLo[b] & ~bigramsLo[i]) |
-						(bigramGate.requiredHi[b] & ~bigramsHi[i])
-					) {
-						continue;
-					}
+					if (!rescuePairsAdmit(bigramGate, missingClasses, bigramsLo[i], bigramsHi[i])) continue;
 				}
 				scoreItem(i, true, false);
 			}
@@ -415,9 +399,6 @@ export function createSearcher<T, F extends string>(
 		};
 
 		literalPass();
-		// A correction can only matter while fewer than a page of literal hits
-		// exist; below that the near-misses have to be looked at. A short query's
-		// correction only stands in for a missing match (see rescueTurn).
 		// Taken before the relaxed pass, which rescores the literal hits.
 		const offeringSecondPass = literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF);
 		const turn = rescueTurn(normalisedQuery, prepared.queryWords);

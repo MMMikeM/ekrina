@@ -89,9 +89,8 @@ const chainFrom = (
 
 		if (queryAt === normalisedQuery.length) return chunks;
 
-		// indexOf from past each rejected occurrence, never one char at a time —
-		// stepping would re-find the same occurrence per step and turn a far-away
-		// reject into O(gap²).
+		// indexOf past each rejected occurrence: stepping one unit at a time makes
+		// a far-away reject O(gap²).
 		const wordEnd = nextBoundary(normalisedField, chunkEnd);
 		let at = normalisedField.indexOf(queryChar, chunkEnd);
 		while (

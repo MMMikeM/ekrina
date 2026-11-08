@@ -1,5 +1,13 @@
 import { splitWords } from "./boundaries";
-import { buildFuzzyGate, buildPresenceGate, charMask, type Gate, isExactMask } from "./gates";
+import {
+	buildFuzzyGate,
+	buildPresenceGate,
+	charMask,
+	classCounts,
+	type Gate,
+	isExactMask,
+	type LetterBudget,
+} from "./gates";
 import { normaliseText } from "./normalise";
 import type { PreparedReading } from "./readings";
 import type { CorrectionSubject } from "./rescue";
@@ -17,7 +25,7 @@ export type PreparedQuery = {
 	presenceGate: Gate | null;
 	fuzzyGate: Gate;
 	rescueState: CorrectionSubject | undefined;
-	rescueCounts: Int32Array | undefined;
+	rescueBudget: LetterBudget | undefined;
 	lastCorrection: PreparedQuery | undefined;
 	wordStarts: number[] | undefined;
 	wordRescueStates: (CorrectionSubject | undefined)[] | undefined;
@@ -41,7 +49,7 @@ export const prepareQuery = (query: string, normalisedQuery: string): PreparedQu
 		presenceGate: needsPresenceGate ? buildPresenceGate(normalisedQuery) : null,
 		fuzzyGate: buildFuzzyGate(normalisedQuery),
 		rescueState: undefined,
-		rescueCounts: undefined,
+		rescueBudget: undefined,
 		lastCorrection: undefined,
 		wordStarts: undefined,
 		wordRescueStates: undefined,
@@ -88,3 +96,12 @@ const longestFirst = (words: string[]): string[] =>
 // reject, so a phrase is gated on presence instead.
 export const frontGate = ({ queryWords, presenceGate, fuzzyGate }: PreparedQuery): Gate | null =>
 	queryWords.length > 1 ? presenceGate : fuzzyGate;
+
+// One edit: a substitution or a drop leaves out a single query unit. Built
+// lazily, since every correction prepares a query too and none is rescued.
+export const rescueBudget = (prepared: PreparedQuery): LetterBudget =>
+	(prepared.rescueBudget ??= {
+		needed: prepared.queryMask,
+		counts: classCounts(prepared.queryWords.join("")),
+		spare: 1,
+	});

@@ -16,8 +16,9 @@ import {
 	buildRescueBigramGate,
 	charMask,
 	classCounts,
-	lacksAtMostOneLetter,
 	rawFieldScan,
+	readingAdmits,
+	rescuePairsAdmit,
 } from "../src/gates";
 import { isRescuableQuery } from "../src/correction";
 import { splitWords } from "../src/boundaries";
@@ -85,6 +86,7 @@ describe("pre-filter funnel", () => {
 					// through a filter production never applies, overstating the cut.
 					const relaxed = isRescuableQuery(normalisedQuery, splitWords(normalisedQuery));
 					const counts = classCounts(splitWords(normalisedQuery).join(""));
+					const budget = { needed: queryMask, counts, spare: 1 };
 					const bigramGate = relaxed ? buildRescueBigramGate(normalisedQuery, counts) : null;
 
 					let maskPass = 0;
@@ -95,7 +97,7 @@ describe("pre-filter funnel", () => {
 					for (let i = 0; i < list.length; i++) {
 						const missingClasses = queryMask & ~masks[i];
 						const maskOk = relaxed
-							? lacksAtMostOneLetter(missingClasses, counts)
+							? readingAdmits(budget, masks[i])
 							: missingClasses === 0;
 						// The searcher's rescue-scan bigram stage: a field missing
 						// exactly one class is reachable only by an edit at that
@@ -103,11 +105,12 @@ describe("pre-filter funnel", () => {
 						// must all be present (see buildRescueBigramGate).
 						let bigramOk = maskOk;
 						if (bigramOk && missingClasses !== 0 && bigramGate !== null) {
-							const b = 31 - Math.clz32(missingClasses);
-							bigramOk =
-								((bigramGate.requiredLo[b] & ~bigrams[i].lo) |
-									(bigramGate.requiredHi[b] & ~bigrams[i].hi)) ===
-								0;
+							bigramOk = rescuePairsAdmit(
+								bigramGate,
+								missingClasses,
+								bigrams[i].lo,
+								bigrams[i].hi,
+							);
 						}
 						const result = withoutSecondPass(() => fuzzyMatch(list[i], query));
 						if (result) {

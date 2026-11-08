@@ -118,6 +118,17 @@ const buildRescueVariants = (raw: string, normalisedQuery: string): RescueVarian
 	return variants;
 };
 
+// -1 unless exactly one unit differs: with none, the contains tier owns the window.
+const soleMismatchAt = (field: string, windowStart: number, subject: string): number => {
+	let mismatchAt = -1;
+	for (let i = 0; i < subject.length; i++) {
+		if (field[windowStart + i] === subject[i]) continue;
+		if (mismatchAt !== -1) return -1;
+		mismatchAt = i;
+	}
+	return mismatchAt;
+};
+
 // A drop, a substitution or a swap leaves one half of the subject intact, unless
 // the swap straddles the split, so a field holding none of the three holds no
 // correction. The halves come first: substitutedWindows reads them.
@@ -153,16 +164,9 @@ const substitutedWindows = (
 			const windowStart = halfAt - offset;
 			if (windowStart < 0 || windowStart + subjectLength > normalisedField.length) continue;
 			if (atWordStart && !opensWord(normalisedField, windowStart)) continue;
-			let mismatches = 0;
-			let mismatchAt = -1;
-			for (let i = 0; i < subjectLength; i++) {
-				if (normalisedField[windowStart + i] === subjectText[i]) continue;
-				mismatchAt = i;
-				if (++mismatches > 1) break;
-			}
-			// Exactly one: zero would mean the contains tier already owns it. A
-			// separator in its place splits the word rather than correcting it.
-			if (mismatches !== 1 || isBoundaryAt(normalisedField, windowStart + mismatchAt)) continue;
+			const mismatchAt = soleMismatchAt(normalisedField, windowStart, subjectText);
+			// A separator in its place splits the word rather than correcting it.
+			if (mismatchAt === -1 || isBoundaryAt(normalisedField, windowStart + mismatchAt)) continue;
 			const corrected = normalisedField.slice(windowStart, windowStart + subjectLength);
 			if (!windows.includes(corrected)) windows.push(corrected);
 		}
@@ -202,11 +206,17 @@ export type CorrectionSubject = {
 	fromWindow: (corrected: string) => PreparedQuery;
 };
 
-const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
-	queryText: prepared.normalisedQuery,
-	anchors: correctionAnchors(prepared.normalisedQuery),
-	variants: buildRescueVariants(rawQuery(prepared), prepared.normalisedQuery),
+type VariantFamily = Pick<CorrectionSubject, "queryText" | "variants" | "fromVariant">;
+
+const variantFamily = (raw: string, normalised: string): VariantFamily => ({
+	queryText: normalised,
+	variants: buildRescueVariants(raw, normalised),
 	fromVariant: (variant) => (variant.prepared ??= prepareQuery(variant.raw, variant.normalised)),
+});
+
+const wholeQuerySubject = (prepared: PreparedQuery): CorrectionSubject => ({
+	...variantFamily(rawQuery(prepared), prepared.normalisedQuery),
+	anchors: correctionAnchors(prepared.normalisedQuery),
 	fromWindow: (corrected) =>
 		prepareCorrection(
 			prepared,
@@ -232,7 +242,7 @@ const absentWordSubject = (prepared: PreparedQuery, wordIndex: number): Correcti
 
 const scoreEnumeratedVariants = (
 	rescue: RescueContext,
-	subject: CorrectionSubject,
+	subject: VariantFamily,
 	fieldFloor: number,
 	short: boolean,
 ): MatchResult | null => {
@@ -333,6 +343,25 @@ export const missingCharRescue = (
 		),
 	);
 };
+
+// A lone word's swaps, which the readings try beside fuzzy chains where the
+// rescue waits for no match (@see readings.ts). The word alone, as typed, so a
+// query's punctuation need not appear in the field.
+export const swapFamily = (prepared: PreparedQuery): VariantFamily =>
+	variantFamily(rawWordOf(prepared, 0), prepared.queryWords[0]);
+
+export const bestSwap = (
+	field: string,
+	normalisedField: string,
+	prepared: PreparedQuery,
+	swaps: VariantFamily,
+): MatchResult | null =>
+	scoreEnumeratedVariants(
+		{ rawField: field, normalisedField, prepared, acronymTier: false, missingClasses: 0 },
+		swaps,
+		0,
+		true,
+	);
 
 export const rescueField = (rescue: RescueContext): MatchResult | null =>
 	rescue.prepared.queryWords.length > 1 ? multiWordRescue(rescue) : typoRescue(rescue);

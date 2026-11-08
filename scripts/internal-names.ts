@@ -56,6 +56,6 @@ export const INTERNAL_NAMES: string[] = [
 	"unmatched",
 	"holds",
 	"matchWords",
-	"rescueCounts",
+	"rescueBudget",
 	"demotion",
 ];

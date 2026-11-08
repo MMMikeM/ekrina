@@ -1,10 +1,10 @@
 import { fuzzyChainMatch } from "./fuzzy";
-import { charMask, lacksAtMostOneLetter, readingAdmits } from "./gates";
+import { admitsOneEdit, charMask, readingAdmits } from "./gates";
 import { literalTiers, shiftRanges } from "./ladder";
 import { normaliseText } from "./normalise";
-import { frontGate, type PreparedQuery, prepareBoundedQuery } from "./query";
+import { frontGate, type PreparedQuery, prepareBoundedQuery, rescueBudget } from "./query";
 import { readings } from "./readings";
-import { rescueCounts, rescueTurn } from "./correction";
+import { rescueTurn } from "./correction";
 import { missingCharRescue, type RescueContext, rescueField } from "./rescue";
 import { better, BOUNDARY_SCORE, CONTAINS_SCORE, preferBetter } from "./scores";
 import type { MatchOptions, MatchResult } from "./types";
@@ -24,7 +24,6 @@ const fuzzyOrRescue = (rescue: RescueContext, rescuable: boolean): MatchResult |
 	return preferBetter(preferBetter(dropped, rescueField(rescue)), chain);
 };
 
-// `preGated` means the caller already ran the front gate on this string.
 export const matchField = (
 	field: string,
 	normalisedField: string,
@@ -32,16 +31,12 @@ export const matchField = (
 	prepared: PreparedQuery,
 	acronym: boolean,
 	rescuable: boolean,
-	preGated?: boolean,
+	frontGated?: boolean,
 	literalOnly?: boolean,
 ): MatchResult | null => {
 	const { normalisedQuery } = prepared;
 
 	const missingClasses = prepared.queryMask & ~fieldMask;
-	if (rescuable ? !lacksAtMostOneLetter(missingClasses, rescueCounts(prepared)) : missingClasses) {
-		return null;
-	}
-
 	const rescueContext = (): RescueContext => ({
 		rawField: field,
 		normalisedField,
@@ -50,9 +45,13 @@ export const matchField = (
 		missingClasses,
 	});
 
-	if (missingClasses !== 0) return rescueField(rescueContext());
+	if (missingClasses !== 0) {
+		return rescuable && admitsOneEdit(missingClasses, rescueBudget(prepared).counts)
+			? rescueField(rescueContext())
+			: null;
+	}
 
-	const gate = preGated ? null : frontGate(prepared);
+	const gate = frontGated ? null : frontGate(prepared);
 	if (gate && !gate.test(normalisedField)) {
 		return rescuable ? rescueField(rescueContext()) : null;
 	}

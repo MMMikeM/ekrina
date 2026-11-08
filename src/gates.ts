@@ -102,14 +102,6 @@ export const charMask = (normalised: string): number => {
 // No bucketed bits: the mask alone is the presence gate.
 export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
 
-// The one-edit rescue's letter budget: a substitution or a drop leaves out a
-// single query unit, so a field may lack only a class the query holds once.
-// `counts` is `classCounts` of the query's words, which holds at least one unit
-// for every class the mask names.
-export const lacksAtMostOneLetter = (missingClasses: number, counts: Int32Array): boolean =>
-	(missingClasses & (missingClasses - 1)) === 0 &&
-	(missingClasses === 0 || counts[31 - Math.clz32(missingClasses)] === 1);
-
 /**
  * Order-independent presence gate: every distinct word-character of the query
  * must appear somewhere in the field — a necessary condition for every tier.
@@ -134,7 +126,7 @@ export const buildPresenceGate = (normalisedQuery: string): RegExp => {
  * character can reach such a field, and every rescue-eligible tier is a
  * contiguous occurrence, so every pair inside a query word not touching that
  * position must be in the field's bigram set. A class the query holds more
- * than once has no entry: `lacksAtMostOneLetter` already rejects a field
+ * than once has no entry: the rescue's letter budget already rejects a field
  * lacking it. A required bit colliding with a touching pair's is still owed by
  * the intact rest of the window, so collisions only false-pass.
  */
@@ -159,13 +151,24 @@ export const buildRescueBigramGate = (
 			const before = classAt(at - 1);
 			const unitClass = classAt(at);
 			if (before === 0 || unitClass === 0 || at - 1 === soleAt || at === soleAt) continue;
-			// Shift counts are taken mod 32, so one shift serves both halves.
 			const bit = bigramBit(before, unitClass);
 			if (bit < 32) requiredLo[b] |= 1 << bit;
-			else requiredHi[b] |= 1 << bit;
+			else requiredHi[b] |= 1 << (bit - 32);
 		}
 	}
 	return { requiredLo, requiredHi };
+};
+
+// `missingClasses` must name exactly one class: the one absent letter is where
+// the edit must be, so the query's remaining pairs must all be present.
+export const rescuePairsAdmit = (
+	{ requiredLo, requiredHi }: RescueBigramGate,
+	missingClasses: number,
+	lo: number,
+	hi: number,
+): boolean => {
+	const b = 31 - Math.clz32(missingClasses);
+	return ((requiredLo[b] & ~lo) | (requiredHi[b] & ~hi)) === 0;
 };
 
 // `charMask`'s bit for one code unit: a letter as its lower case, digits in
@@ -321,17 +324,27 @@ export type LetterBudget = { needed: number; counts: Int32Array; spare: number }
 export const classCounts = (letters: string): Int32Array => {
 	const counts = new Int32Array(32);
 	for (let at = 0; at < letters.length; at++) {
-		counts[31 - Math.clz32(unitMask(letters.charCodeAt(at)))]++;
+		counts[bigramClass(letters.charCodeAt(at)) - 1]++;
 	}
 	return counts;
 };
 
+// `readingAdmits` with a budget of one, as a bit test: the whole-list relaxed
+// pass runs it per item, where the loop measured up to 11% slower on rescue
+// queries. `counts` must hold at least one unit for every class it may name.
+export const admitsOneEdit = (missingClasses: number, counts: Int32Array): boolean =>
+	(missingClasses & (missingClasses - 1)) === 0 &&
+	(missingClasses === 0 || counts[31 - Math.clz32(missingClasses)] === 1);
+
+// `counts` must hold at least one unit for every class `needed` names, so two
+// missing classes overspend a budget of one before any count is read.
 export const readingAdmits = (
 	{ needed, counts, spare }: LetterBudget,
 	fieldMask: number,
 ): boolean => {
-	let unmatched = 0;
-	for (let missing = needed & ~fieldMask; missing !== 0; missing &= missing - 1) {
+	let missing = needed & ~fieldMask;
+	if (spare < 2 && (missing & (missing - 1)) !== 0) return false;
+	for (let unmatched = 0; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
 		if (unmatched > spare) return false;
 	}

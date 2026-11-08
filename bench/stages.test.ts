@@ -13,13 +13,14 @@ import {
 	buildRawGate,
 	buildRescueBigramGate,
 	charMask,
-	lacksAtMostOneLetter,
 	rawFieldMask,
 	rawFieldScan,
+	readingAdmits,
+	rescuePairsAdmit,
 } from "../src/gates";
 import { matchField } from "../src/match";
-import { prepareQuery } from "../src/query";
-import { isRescuableQuery, rescueCounts } from "../src/correction";
+import { prepareQuery, rescueBudget } from "../src/query";
+import { isRescuableQuery } from "../src/correction";
 import { normaliseText } from "../src/normalise";
 import { SCORES } from "../src/scores";
 import { createSearcher } from "../src/search";
@@ -106,11 +107,11 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 					for (let i = 0; i < list.length; i++) sink += rawFieldMask(list[i]);
 				});
 				const qm = q.queryMask;
-				const counts = rescueCounts(q);
+				const budget = rescueBudget(q);
 				const oneClassShort: number[] = [];
 				for (let i = 0; i < list.length; i++) {
 					const miss = qm & ~fieldMask[i];
-					if (miss !== 0 && lacksAtMostOneLetter(miss, counts)) oneClassShort.push(i);
+					if (miss !== 0 && readingAdmits(budget, fieldMask[i])) oneClassShort.push(i);
 				}
 				pairsRead += oneClassShort.length;
 				ms.pairReads += time(() => {
@@ -122,15 +123,12 @@ it("times every stage of the query path", { timeout: 600_000 }, () => {
 						sink += a.lo;
 					}
 				});
-				const gate = buildRescueBigramGate(nq, counts);
+				const gate = buildRescueBigramGate(nq, budget.counts);
 				const admits = (i: number): boolean => {
 					const miss = qm & ~fieldMask[i];
-					if (!lacksAtMostOneLetter(miss, counts)) return false;
+					if (!readingAdmits(budget, fieldMask[i])) return false;
 					if (miss === 0) return true;
-					const b = 31 - Math.clz32(miss);
-					return (
-						((gate.requiredLo[b] & ~bigramsLo[i]) | (gate.requiredHi[b] & ~bigramsHi[i])) === 0
-					);
+					return rescuePairsAdmit(gate, miss, bigramsLo[i], bigramsHi[i]);
 				};
 				let n = 0;
 				for (let i = 0; i < list.length; i++) if (admits(i)) n++;
