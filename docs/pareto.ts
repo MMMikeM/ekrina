@@ -70,7 +70,7 @@ const METRICS: Record<
 			`MRR over ${families} query families · native 10k corpus · one searcher, ${queries} queries once (batch)`,
 		axis: "Per query: searcher built once, 24 distinct queries after a warm-up. Log scale, lower is better",
 		title: "Fuzzy search libraries: MRR vs per-query time across a 24-query session",
-		tail: "Ekrina sits at the accurate end of the frontier; its faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
+		tail: "Ekrina sits at the accurate end of the frontier, the frontier's faster end is markedly less accurate, and every other configuration, including Fuse.js, is dominated.",
 	},
 	total: {
 		file: "pareto-total",
