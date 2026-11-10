@@ -328,6 +328,11 @@ export const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
+const holdsMoreBitsThan = (bits: number, limit: number): boolean => {
+	for (; limit > 0; limit--) bits &= bits - 1;
+	return bits !== 0;
+};
+
 // `missing` is the `needed` classes a field lacks, and `counts` must hold at
 // least one unit for every class `needed` names. A budget of one is a bit test:
 // the rescue reads the whole list against it, where the counting loop measured
@@ -339,6 +344,7 @@ export const budgetAdmits = (missing: number, counts: Int32Array, spare: number)
 			(spare === 1 && (missing & (missing - 1)) === 0 && counts[31 - Math.clz32(missing)] === 1)
 		);
 	}
+	if (holdsMoreBitsThan(missing, spare)) return false;
 	for (let unmatched = 0; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
 		if (unmatched > spare) return false;
