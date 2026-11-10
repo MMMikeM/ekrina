@@ -60,11 +60,10 @@ export const prepareBoundedQuery = (query: string): PreparedQuery | null => {
 	return lastPrepared;
 };
 
-// Repeats sort together so multiWordTier can resume each copy after the last.
+// Repeats sort together so multiWordTier can resume each copy after the last:
+// the sort by length is stable, so equal lengths keep the first sort's order.
 const longestFirst = (words: string[]): string[] =>
-	words.length > 1
-		? [...words].sort((a, b) => b.length - a.length || Number(a > b) - Number(a < b))
-		: words;
+	words.length > 1 ? [...words].sort().sort((a, b) => b.length - a.length) : words;
 
 // A phrase's words may match out of order, which the subsequence gate would
 // reject, so a phrase is gated on presence instead.

@@ -219,13 +219,11 @@ export function createSearcher<T, F extends string>(
 	// and the cached set is always a GATE-passing set of the same gate kind; the
 	// match set itself is not monotone (a field can match "borw" as a corrected
 	// "brow" while failing "bor", which is too short to correct).
-	const survivorCache = {
-		query: "",
-		multiWord: false,
-		survivors: null as Int32Array | null,
-		spare: null as Int32Array | null,
-		count: 0,
-	};
+	let cachedQuery = "";
+	let cachedMultiWord = false;
+	let cachedSurvivors: Int32Array | null = null;
+	let spareSurvivors: Int32Array | null = null;
+	let cachedCount = 0;
 
 	const search = (query: string, { limit }: SearchOptions = {}): SearchResult<T, F>[] => {
 		if (limit !== undefined && !(Number.isInteger(limit) && limit > 0)) {
@@ -245,7 +243,7 @@ export function createSearcher<T, F extends string>(
 
 		const multiWord = prepared.queryWords.length > 1;
 
-		const survivors = (survivorCache.spare ??= new Int32Array(count));
+		const survivors = (spareSurvivors ??= new Int32Array(count));
 		let survivorCount = 0;
 		// Corrections and fuzzy chains both score above SCORES.CONTAINS, so only
 		// literal hits can fill the page ahead of a correction.
@@ -281,9 +279,9 @@ export function createSearcher<T, F extends string>(
 		};
 
 		const narrowed =
-			survivorCache.survivors !== null &&
-			normalisedQuery.startsWith(survivorCache.query) &&
-			multiWord === survivorCache.multiWord;
+			cachedSurvivors !== null &&
+			normalisedQuery.startsWith(cachedQuery) &&
+			multiWord === cachedMultiWord;
 
 		const admit = (i: number, frontGated: boolean): void => {
 			survivors[survivorCount++] = i;
@@ -297,8 +295,8 @@ export function createSearcher<T, F extends string>(
 				// The gate runs out here because its verdict is what shrinks the
 				// cached set for the next keystroke.
 				const gate = frontGate(prepared);
-				const cached = survivorCache.survivors as Int32Array;
-				for (let k = 0; k < survivorCache.count; k++) {
+				const cached = cachedSurvivors as Int32Array;
+				for (let k = 0; k < cachedCount; k++) {
 					const i = cached[k];
 					const base = i * specCount;
 					let admitted = gate === null;
@@ -366,7 +364,7 @@ export function createSearcher<T, F extends string>(
 		// this loop, a query matching nothing ran up to 50% slower.
 		const budgetCandidates = ({ needed, counts, spare }: PreparedStage): number => {
 			const masks = unionMasks as Int32Array;
-			const candidates = (survivorCache.survivors ??= new Int32Array(count));
+			const candidates = (cachedSurvivors ??= new Int32Array(count));
 			let found = 0;
 			for (let i = 0; i < count; i++) {
 				const missing = needed & ~masks[i];
@@ -386,7 +384,7 @@ export function createSearcher<T, F extends string>(
 			// Survivors hold every letter of the query, so only the whole list is
 			// read against the letter budget.
 			const scanned = survivorsOnly ? survivorCount : budgetCandidates(stage);
-			const items = survivorsOnly ? survivors : (survivorCache.survivors as Int32Array);
+			const items = survivorsOnly ? survivors : (cachedSurvivors as Int32Array);
 			// An item's union mask and bigram set span all its fields, so it is
 			// skipped only when no field could pass.
 			const { needed, admitsPairs, besideLiteral } = stage;
@@ -400,7 +398,7 @@ export function createSearcher<T, F extends string>(
 		};
 
 		literalPass();
-		if (literalHits < Math.min(RESCUE_CUTOFF, limit ?? RESCUE_CUTOFF)) {
+		if (literalHits < Math.min(RESCUE_CUTOFF, pageSize)) {
 			for (const stage of stages) {
 				const competition: Competition =
 					literalHits > 0 ? "literal" : matched.length > 0 ? "fuzzy" : "none";
@@ -409,17 +407,17 @@ export function createSearcher<T, F extends string>(
 			}
 		}
 
-		survivorCache.query = normalisedQuery;
-		survivorCache.multiWord = multiWord;
+		cachedQuery = normalisedQuery;
+		cachedMultiWord = multiWord;
 		// A single character's word-start set cannot seed the cache: the next
 		// keystroke may match mid-word. The rescues leave the literal survivors as
 		// they were.
 		if (singleChar) {
-			survivorCache.survivors = null;
+			cachedSurvivors = null;
 		} else {
-			survivorCache.spare = survivorCache.survivors;
-			survivorCache.survivors = survivors;
-			survivorCache.count = survivorCount;
+			spareSurvivors = cachedSurvivors;
+			cachedSurvivors = survivors;
+			cachedCount = survivorCount;
 		}
 
 		// Within a score, a match that ends on a word boundary ranks first ("will"
