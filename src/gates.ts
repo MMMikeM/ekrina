@@ -72,7 +72,7 @@ export const buildRawGate = (normalisedQuery: string): Gate | null => {
 	// `\w` is the word characters' ASCII part, so after any other letter the
 	// anchor can only false-pass; `\p{L}` takes about 0.2 ms to compile.
 	const regex = new RegExp(
-		`(?:(?<!\\w)${at[0]}${after.slice(1).join("")}|${at.slice(0, 3).join("")}${after.slice(3).join("")})`,
+		`(?<!\\w)${at[0]}${after.slice(1).join("")}|${at.slice(0, 3).join("")}${after.slice(3).join("")}`,
 		"u",
 	);
 	return {
@@ -109,13 +109,10 @@ export const isExactMask = (mask: number): boolean => (mask & ~0x3ffffff) === 0;
  * matches, and separators are excluded so `"foo bar"` still gates `"bar/foo"`.
  */
 export const buildPresenceGate = (normalisedQuery: string): RegExp => {
-	const seen = new Set<string>();
 	let src = "^";
-	for (const char of normalisedQuery) {
+	for (const char of new Set(normalisedQuery)) {
 		// Only word characters get here, and none is special in a class.
-		if (seen.has(char) || !wordChar.test(char)) continue;
-		seen.add(char);
-		src += `(?=[^]*[${char}])`;
+		if (wordChar.test(char)) src += `(?=[^]*[${char}])`;
 	}
 	return new RegExp(src);
 };
@@ -328,17 +325,15 @@ export const classCounts = (letters: string): Int32Array => {
 	return counts;
 };
 
+const holdsMoreBitsThan = (bits: number, limit: number): boolean => {
+	for (; limit > 0; limit--) bits &= bits - 1;
+	return bits !== 0;
+};
+
 // `missing` is the `needed` classes a field lacks, and `counts` must hold at
-// least one unit for every class `needed` names. A budget of one is a bit test:
-// the rescue reads the whole list against it, where the counting loop measured
-// up to 11% slower on rescue queries.
+// least one unit for every class `needed` names.
 export const budgetAdmits = (missing: number, counts: Int32Array, spare: number): boolean => {
-	if (spare < 2) {
-		return (
-			missing === 0 ||
-			(spare === 1 && (missing & (missing - 1)) === 0 && counts[31 - Math.clz32(missing)] === 1)
-		);
-	}
+	if (holdsMoreBitsThan(missing, spare)) return false;
 	for (let unmatched = 0; missing !== 0; missing &= missing - 1) {
 		unmatched += counts[31 - Math.clz32(missing & -missing)];
 		if (unmatched > spare) return false;
