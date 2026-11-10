@@ -307,7 +307,8 @@ Writing the rescue's letter-pair gate back into the searcher's loop would recove
 Three shapes were measured on the way:
 
 - One whole-list loop serving every stage kept each stage's gates live in its compiled body, and a query matching nothing took 0.30 → 0.45 ms; a loop per stage that only tests the letter budget, with the pair gate and the correction run over its candidates, brought it to 0.27.
-- The rescue's one-edit budget is a bit test rather than the readings' counting loop: run through the loop, the relaxed pass measured 1.7% slower over the cold matrix and up to 15% on its rescue cells.
+- The rescue's one-edit budget was a bit test rather than the readings' counting loop: run through the loop, the relaxed pass measured 1.7% slower over the cold matrix and up to 15% on its rescue cells.
+  Once the budget turned a field away on the number of classes it lacks before counting their units, the loop measured level with the bit test (five typo queries at 100k within 3% either way, indexed and not, and their sum within 1%), and the bit test was removed for 26 gzipped bytes.
 - `fuzzyMatch` turns away a field lacking more letter classes than any stage can supply before preparing the stages, which every stage's budget implies anyway: without it, `fuzzyMatch` over a label list measured 13% slower than before the change, and with it 4%.
 
 `literalTiers` finds the normalised query once and reuses its position for the prefix, boundary and contains tiers: long fields 6% faster, literal queries 2–3%, the cold matrix 0.6%.

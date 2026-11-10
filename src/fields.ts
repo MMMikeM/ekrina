@@ -35,7 +35,7 @@ const resolveField = <T>(field: Field<T>, fieldName: string | undefined): Resolv
 	checkSpecKeys(field, where);
 	const demotion = field.demoteBy ?? 0;
 	// A negative or NaN shift would carry a guess to or below SCORES.CONTAINS.
-	if (!(typeof demotion === "number" && demotion >= 0 && demotion < Infinity)) {
+	if (!(Number.isFinite(demotion) && demotion >= 0)) {
 		throw new RangeError(
 			`${where}: demoteBy must be a finite number of at least 0, got ${demotion}`,
 		);
