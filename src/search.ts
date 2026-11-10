@@ -311,22 +311,35 @@ export function createSearcher<T, F extends string>(
 			}
 			// The presence gate has no raw-text form yet, so multi-word queries
 			// take the mask path.
-			const gate = singleChar
-				? buildWordStartRawGate(normalisedQuery)
-				: unionMasks === null && !multiWord
-					? buildRawGate(normalisedQuery)
-					: null;
-			if (gate === null) {
+			const rawGate = multiWord
+				? null
+				: singleChar
+					? buildWordStartRawGate(normalisedQuery)
+					: buildRawGate(normalisedQuery);
+			if (rawGate === null) {
 				// A superset of what the gate admits, so caching these survivors
 				// keeps the narrowing sound.
 				const masks = (unionMasks ??= buildUnionMasks());
 				for (let i = 0; i < count; i++) if ((queryMask & ~masks[i]) === 0) admit(i, false);
 				return;
 			}
+			const masks = unionMasks;
+			// One character matches only where it starts a word, which the fuzzy
+			// gate does not ask. A scan without masks never looks: the read alone
+			// measured 3–6% on it.
+			const looksForNormalised = masks !== null && !singleChar;
 			for (let i = 0; i < count; i++) {
+				if (masks !== null && (queryMask & ~masks[i]) !== 0) continue;
+				const base = i * specCount;
+				// The regex costs more than the fuzzy gate on a field already normalised.
+				const normalised = looksForNormalised && normalisedFields[base] !== undefined;
 				let admitted = false;
-				for (let f = 0; f < specCount && !admitted; f++) admitted = gate.test(rawFieldOf(i, f));
-				if (admitted) admit(i, false);
+				for (let f = 0; f < specCount && !admitted; f++) {
+					admitted = normalised
+						? prepared.fuzzyGate.test(normalisedFields[base + f] as string)
+						: rawGate.test(rawFieldOf(i, f));
+				}
+				if (admitted) admit(i, normalised && specCount === 1);
 			}
 		};
 
