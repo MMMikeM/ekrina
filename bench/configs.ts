@@ -18,6 +18,7 @@ import fuzzy from "fuzzy";
 import fuzzysort from "fuzzysort";
 import { matchSorter } from "match-sorter";
 import { createSearcher } from "ekrina";
+import { createFuzzySearch as createSearcher112 } from "ekrina-1.1.2";
 import type { Config, Probe } from "./config.ts";
 
 // The bundlers behind vitest unwrap a CJS `exports.default`; node's ESM loader
@@ -117,7 +118,7 @@ const uFuzzyProbe =
 // A configuration builds its searcher inside `make`, so asking for one by name
 // constructs one searcher instead of all fourteen — what memory.ts needs to
 // attribute a heap delta to a single configuration.
-type Definition = { name: string; make: () => Omit<Config, "name"> };
+type Definition = { name: string; baseline?: true; make: () => Omit<Config, "name"> };
 
 const definitions = (list: string[]): Definition[] => [
 	// ekrina prepares nothing at construction: the char-class masks are built only
@@ -161,6 +162,18 @@ const definitions = (list: string[]): Definition[] => [
 				count: (q) => acronym(q).length,
 				probe: (q) => rankedOnly(acronym(q).map((r) => r.item)),
 				index: () => consume(createSearcher(list, spec)),
+			};
+		},
+	},
+	{
+		name: "ekrina@1.1.2",
+		baseline: true,
+		make: () => {
+			const released = createSearcher112(list);
+			return {
+				count: (q) => released(q).length,
+				probe: (q) => rankedOnly(released(q).map((r) => r.item)),
+				index: () => consume(createSearcher112(list)),
 			};
 		},
 	},
@@ -310,8 +323,16 @@ const definitions = (list: string[]): Definition[] => [
 	},
 ];
 
+// A baseline is a published release, measured to compare the working tree with.
+// bench/pipeline.ts turns them off for a run that writes the artifact, whose
+// tables hold the libraries of bench/libraries.ts and no past Ekrina.
+const BASELINES = process.env.BENCH_BASELINES !== "0";
+
+const measured = (list: string[]): Definition[] =>
+	definitions(list).filter((d) => BASELINES || !d.baseline);
+
 /** Every configuration name, in table order, without constructing anything. */
-export const CONFIG_NAMES: string[] = definitions([]).map((d) => d.name);
+export const CONFIG_NAMES: string[] = measured([]).map((d) => d.name);
 
 /** The names BENCH_ONLY selects, in table order. */
 export const SELECTED_NAMES: string[] = CONFIG_NAMES.filter(selected);
@@ -322,7 +343,7 @@ export const SELECTED_NAMES: string[] = CONFIG_NAMES.filter(selected);
  * so the per-cell harnesses keep working during a narrowed pipeline run.
  */
 export const configs = (list: string[], only?: string): Config[] =>
-	definitions(list)
+	measured(list)
 		.filter((d) => (only == null ? selected(d.name) : d.name === only))
 		.map((d) => ({ name: d.name, ...d.make() }));
 

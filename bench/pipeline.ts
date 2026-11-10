@@ -66,6 +66,8 @@ const LIBRARIES = ONLY || (ALL ? "all" : "ekrina");
 
 const measures = !DOCS_ONLY && !CHECK;
 const DRY = SCOPE !== "" || (measures && !ALL && !ONLY);
+// Every stage is a child process and reads this through bench/configs.ts.
+if (!DRY) process.env.BENCH_BASELINES = "0";
 const named =
 	flags.has("--speed") || flags.has("--quality") || flags.has("--memory") || flags.has("--size");
 const stages = {
