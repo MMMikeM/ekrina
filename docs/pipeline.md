@@ -99,7 +99,7 @@ Run by any query that cannot narrow: the first one, and any later one that isn't
 A typed sequence runs it on its first keystroke, and each unrelated query runs it again.
 
 Building the masks only when a query needs them, and gating the raw text until then, makes the first query faster than an index built up front would, and a long run of unrelated queries slower.
-`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 5.9–6.5 ms at 100k), and every query that cannot narrow then filters on the masks rather than running the raw gate (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
+`search.buildIndex()` builds them at construction instead, the masks and every bigram set in one fused scan per field (`rawFieldScan`; the whole constructor takes 5.9–6.5 ms at 100k), and every query that cannot narrow then filters on the masks first, a single word running its gate on only the items they let through (the `Ekrina (indexed)` rows in [benchmarks.md](./benchmarks.md)).
 
 ## What the survivor cache does
 
